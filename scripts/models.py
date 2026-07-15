@@ -2,6 +2,17 @@ from dataclasses import dataclass
 
 
 # ==========================
+# 開催情報
+# ==========================
+@dataclass
+class RaceMeeting:
+    race_date: str
+    organization: str
+    place: str
+    race_list_url: str
+
+
+# ==========================
 # レース情報
 # ==========================
 @dataclass

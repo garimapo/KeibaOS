@@ -6,47 +6,45 @@ NAR Provider
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import requests
 
 from scripts.logger import get_logger
 
 
 class NARProvider:
-    """地方競馬公式サイト(NAR)へ接続するProvider。"""
+    """地方競馬公式サイト(NAR)への通信を担当する。"""
 
     BASE_URL = "https://www.keiba.go.jp/"
+    TODAY_RACE_LIST_URL = (
+        "https://www.keiba.go.jp/KeibaWeb/TodayRaceInfo/TopTodayRaceListMini"
+    )
 
     def __init__(self) -> None:
         self.logger = get_logger(__name__)
 
-    def fetch_top_page(self) -> str:
+        self.session = requests.Session()
+
+        self.session.headers.update(
+            {
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 "
+                    "Chrome/138.0 Safari/537.36"
+                )
+            }
+        )
+
+    def _get(self, url: str) -> str:
         """
-        NAR公式トップページのHTMLを取得する。
-
-        Returns
-        -------
-        str
-            HTML文字列
-
-        Raises
-        ------
-        requests.RequestException
-            通信エラー
+        HTMLを取得する共通処理
         """
 
-        self.logger.info("Connecting to NAR...")
+        self.logger.info(f"GET {url}")
 
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 "
-                "Chrome/138.0 Safari/537.36"
-            )
-        }
-
-        response = requests.get(
-            self.BASE_URL,
-            headers=headers,
+        response = self.session.get(
+            url,
             timeout=10,
         )
 
@@ -54,14 +52,44 @@ class NARProvider:
 
         response.encoding = response.apparent_encoding
 
-        self.logger.info("Connected to NAR successfully.")
+        return response.text
 
-        # HTML保存（解析用）
+    def fetch_top_page(self) -> str:
+        """
+        NARトップページ取得
+        """
+
+        html = self._get(self.BASE_URL)
+
+        Path("logs").mkdir(exist_ok=True)
+
         with open(
             "logs/nar_top.html",
             "w",
             encoding="utf-8",
         ) as f:
-            f.write(response.text)
+            f.write(html)
 
-        return response.text
+        self.logger.info("Top page loaded.")
+
+        return html
+
+    def fetch_today_race_list(self) -> str:
+        """
+        今日の開催一覧HTML取得
+        """
+
+        html = self._get(self.TODAY_RACE_LIST_URL)
+
+        Path("logs").mkdir(exist_ok=True)
+
+        with open(
+            "logs/today_race_list.html",
+            "w",
+            encoding="utf-8",
+        ) as f:
+            f.write(html)
+
+        self.logger.info("Today's race list loaded.")
+
+        return html

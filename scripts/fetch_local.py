@@ -1,37 +1,36 @@
-from datetime import datetime
-
 from scripts.models import Race
+from scripts.parsers.nar_parser import NARParser
 from scripts.providers.nar_provider import NARProvider
 
 
 class LocalFetcher:
+    """
+    地方競馬開催情報取得
+    """
 
     def __init__(self) -> None:
         self.provider = NARProvider()
+        self.parser = NARParser()
 
-    def get_today_races(self):
+    def get_today_races(self) -> list[Race]:
+        """
+        今日の地方競馬開催情報を取得する。
+        """
 
         print("地方競馬開催情報取得")
 
-        # 接続確認
-        html = self.provider.fetch_top_page()
+        # 開催一覧HTML取得
+        html = self.provider.fetch_today_race_list()
 
-        print(f"NAR HTML取得成功（{len(html)}文字）")
+        # 開催一覧解析
+        meetings = self.parser.parse_today_race_list(html)
 
-        races = []
+        print("===== 今日の開催 =====")
 
-        # まだ解析はしない
-        races.append(
-            Race(
-                race_date=datetime.today().strftime("%Y-%m-%d"),
-                organization="地方",
-                place="大井",
-                race_no=11,
-                race_name="サンプル",
-                distance=1600,
-                track="ダート",
-                weather="晴"
+        for meeting in meetings:
+            print(
+                f"{meeting.place} : {meeting.race_list_url}"
             )
-        )
 
-        return races
+        # Ver0.6ではRace取得はまだ実装しない
+        return []
