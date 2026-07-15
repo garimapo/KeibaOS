@@ -1,18 +1,35 @@
+"""
+KeibaOS Main
+
+KeibaOSのエントリーポイント。
+システム初期化と当日レース取得を実行する。
+"""
+
 from scripts.database import create_tables
 from scripts.fetch_races import fetch_today_races
+from scripts.logger import get_logger
+
+logger = get_logger()
 
 
-def main():
+def main() -> None:
+    """
+    KeibaOSを起動する。
+    """
 
-    print("[START] KeibaAI")
+    logger.info("========== KeibaOS Start ==========")
 
-    create_tables()
+    try:
+        create_tables()
+        logger.info("Database Ready")
 
-    print("[OK] Database Ready")
+        fetch_today_races()
 
-    fetch_today_races()
+        logger.info("========== KeibaOS End ==========")
 
-    print("[END]")
+    except Exception:
+        logger.exception("Unexpected error occurred.")
+        raise
 
 
 if __name__ == "__main__":
