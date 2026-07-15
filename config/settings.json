@@ -1,0 +1,19 @@
+{
+    "version": "1.0",
+
+    "database": "database/keiba.db",
+
+    "prediction_minutes_before": 15,
+
+    "weekday_mode": "地方競馬",
+
+    "weekend_mode": "JRA",
+
+    "buy_rank": "S",
+
+    "ai_mode": "browser",
+
+    "browser": "ChatGPT",
+
+    "future_api": "OpenAI API"
+}
