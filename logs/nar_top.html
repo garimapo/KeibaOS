@@ -1,0 +1,1067 @@
+<!DOCTYPE HTML>
+<html lang="ja">
+
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta content="地方競馬情報サイト" name="title">
+	<meta content="地方競馬の【公式】情報サイトです。開催日程・出馬表・レース結果や、全国に15ある競馬場のデータなど、地方競馬のあらゆる情報をご覧いただけます。" name="description">
+	<meta content="競馬,ケイバ,地方,ばんえい,ダート,レース,騎手,馬" name="keywords">
+	<meta name="viewport"
+		content="target-densitydpi=device-dpi, width=device-width, maximum-scale=1.0, user-scalable=yes">
+	<meta name="format-detection" content="telephone=no">
+    <meta name="thumbnail" content="/img/icon01.jpg">
+    <link rel="apple-touch-icon" href="/img/icon01.jpg">
+
+	<title>地方競馬情報サイト</title>
+    <link rel="alternate" type="application/rss+xml" title="地方競馬情報サイト" href="/feed/index.xml" />
+	<link rel="stylesheet" href="css/reset.css?date=20240315" type="text/css" media="all" />
+	<link rel="stylesheet" href="css/common.css?date=20240315" type="text/css" media="all" />
+	<!--ページ固有CSS-->
+	<link rel="stylesheet" href="css/slick.css?date=20240315" type="text/css" media="all" />
+	<link rel="stylesheet" href="css/top.css?date=20260223" type="text/css" media="all" />
+	<link rel="stylesheet" href="css/slide.css?date=20240315" type="text/css" media="all" />
+
+	<script type="text/javascript" src="js/jquery-1.9.1.min.js?date=20240315"></script>
+	<script>
+		$(function () {
+            $("#topicsPart").load("topics/top", function () {
+				setTopicsHeight();
+				setTopicsTxt();
+			});
+            $("#infoPart").load("topics/header", function () {
+				setTopicsHeight();
+				setTopicsTxt();
+			});
+		});
+		function setTopicsTxt() {
+			//アクティブになった一番目のクラス名を取得
+			var select_tab = $('.topicTab li.active')
+			var select_ctg = select_tab[0].className.split(" ")[0];
+			$('.topicsTxt ul').each(function () {
+				var target_ctg = $(this).attr('class')
+				if ($(this).hasClass(select_ctg)) {
+					$(this).fadeIn("slow");
+				} else {
+					$(this).hide();
+				}
+			});
+		}
+
+		function setTopicsHeight() {
+		}
+	</script>
+	<script type="text/javascript" src="js/common.js?date=20240315"></script>
+	<!--ページ固有JS-->
+	<script type="text/javascript" src="js/new-tab.min.js?date=20240315"></script>
+	<script type="text/JavaScript" src="js/jump_sm.js?date=20240315"></script>
+	<script type="text/javascript" src="js/jquery.matchHeight.js?date=20240315"></script>
+	<script type="text/javascript" src="js/slick.min.js?date=20240315"></script>
+	<script type="text/javascript" src="js/top.js?date=20260223"></script>
+	<script type="text/javascript" src="js/race_info.js?date=20260223"></script>
+
+	<!-- Global site tag (gtag.js?date=20240315) - Google Analytics -->
+	<script async src="https://www.googletagmanager.com/gtag/js?id=UA-111245021-1"></script>
+	<script>
+		window.dataLayer = window.dataLayer || [];
+		function gtag() { dataLayer.push(arguments); }
+		gtag('js', new Date());
+
+		gtag('config', 'UA-111245021-1');
+	</script>
+<!--Clarityコード 2025/8/26設置　開始-->
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "t0c056afc7");
+</script>
+<!--Clarityコード 2025/8/26設置　終了-->
+	<link rel="shortcut icon" href="img/favicon.ico" />
+
+<!--TOPページ導入画面実装-->
+<!--
+<link rel="stylesheet" href="splash/css/splash.css" type="text/css" media="all" />
+<script type="text/javascript" src="splash/js/splashApp.js"></script>
+-->
+
+</head>
+
+<body>
+	<script type="text/javascript">jump_sm();</script>
+	<header>
+		<div class="headerInner">
+			<div class="titleArea">
+				<h1>
+					<span>地方競馬情報サイト</span>
+					<a href="index.html">
+						<img src="img/mainlogo.png?date=20220401" alt="">
+					</a>
+				</h1>
+				<div class="vote">
+					<img id="headerbanner00" src="img/header_banner_00_01.png?date=20220401" alt="">
+				</div>
+				<ul class="bannerArea clearfix">
+					<li>
+                        <a href="/jranet/" target="_blank">
+							<img class="normal" src="img/header_banner_01.png?date=20220401">
+							<img class="min" src="img/header_banner_01_min.png?date=20220401">
+						</a>
+					</li>
+					<li>
+						<a href="https://www.spat4.jp/keiba/pc" target="_blank">
+							<img class="normal" src="img/header_banner_02.png?date=20220401">
+							<img class="min" src="img/header_banner_02_min.png?date=20220401">
+						</a>
+					</li>
+
+					<li>
+						<a href="https://my.keiba.rakuten.co.jp/?scid=keiba_NAR_bet"
+							target="_blank">
+							<img class="normal" src="img/header_banner_03.png?date=20220401">
+							<img class="min" src="img/header_banner_03_min.png?date=20220401">
+						</a>
+					</li>
+
+					<li>
+						<a href="https://www.oddspark.com/keiba/auth/VoteKeibaTop.do" target="_blank">
+							<img class="normal" src="img/header_banner_04.png?date=20220401">
+							<img class="min" src="img/header_banner_04_min.png?date=20220401">
+						</a>
+					</li>
+
+					<li>
+                        <a href="/qa.html" target="_blank">
+							<img class="normal" src="img/header_banner_05FAQ.png?date=20220401">
+							<img class="min" src="img/header_banner_05FAQ_min.png?date=20220401">
+						</a>
+					</li>
+				</ul>
+
+				<div class="topSearch clearfix">
+					<form id="cse-search-box" action="https://google.com/cse">
+						<input type="hidden" name="cx" value="000374752549361390111:sr3uzpcoe-q" />
+						<input type="hidden" name="ie" value="UTF-8" />
+						<input type="text" name="q" size="31" class="searchBox" placeholder="サイト内検索" />
+						<input type="submit" name="sa" value="" class="searchBtn" />
+					</form>
+					<script type="text/javascript"
+						src="https://www.google.com/coop/cse/brand?form=cse-search-boxamp;lang=ja"></script>
+				</div>
+			</div>
+		</div>
+
+		<div class="globalNavi">
+			<ul class="gNavi clearfix">
+				<li class="gNaviitem1">
+					<a href="/KeibaWeb/TodayRaceInfo/TodayRaceInfoTop" target="_blank">
+						<img src="img/icon_gnavi_08.png?date=20220401" alt="">
+						<p>レース情報</p>
+					</a>
+				</li>
+				<li class="gNaviitem2">
+					<a href="/KeibaWeb/MonthlyConveneInfo/MonthlyConveneInfoTop" target="_blank">
+						<img src="img/icon_gnavi_01.png?date=20220401" alt="">
+						<p>開催日程</p>
+					</a>
+				</li>
+				<li class="gNaviitem3">
+					<a href="/live/">
+						<img src="img/icon_gnavi_02.png?date=20220401" alt="">
+						<p>ライブ中継</p>
+					</a>
+				</li>
+				<li class="gNaviitem4">
+					<a href="/dirtgraderace/">
+						<img class="dart" src="img/icon_gnavi_12.png?date=20220401" alt="">
+						<p>ダートグレード競走</p>
+					</a>
+				</li>
+				<li class="gNaviitem5">
+					<a href="/gradedrace/">
+						<img src="img/icon_gnavi_04.png?date=20220401" alt="">
+						<p>シリーズ･重賞競走</p>
+					</a>
+				</li>
+				<li class="gNaviitem6">
+					<a href="/KeibaWeb/DataRoom/DataRoomTop" target="_blank">
+						<img src="img/icon_gnavi_05.png?date=20220401" alt="">
+						<p>データ検索</p>
+					</a>
+				</li>
+				<li class="gNaviitem7">
+					<a href="/guide/">
+						<img src="img/icon_gnavi_06.png?date=20220401" alt="">
+						<p>競馬場ガイド</p>
+					</a>
+				</li>
+			</ul>
+		</div>
+
+	</header>
+
+
+	<!--mainContents-->
+	<div id="mainContainer">
+		<div id="infoPart"></div> 
+<!--
+		<div class="emWrapper">
+			<div class="emergency">
+				<a href="/topics/2025/04/1118504373824.html">川崎競馬第8競走～第10競走の取り止めについて(4/11)</a>
+			</div>
+		</div> 
+-->
+
+		<!-- 告知情報(緊急外) ここから -->
+<!--
+        <div class="emWrapper2">
+        	<div class="emergency2">
+        		<a href="topics/2020/02/10102010.html">2020年3月9日(月) の地方競馬開催はありません</a>
+        	</div>
+        </div>
+-->
+
+		<!-- 告知情報(緊急外) ここまで -->
+
+		<div class="innerWrapper clearfix">
+
+			<!-- ■■■■■■■■通常メインバナー START ■■■■■■■■ -->
+			<div class="slideBlock">
+				<div class="posInner">
+					<div class="slideWrapper">
+
+
+<!--
+					<div class="topSlide">
+						<a href="/dirtgraderace/dirttimeattack/">
+							<img src="/img/banner/dirttimeattack_2026springCP.jpg" alt="ダートタイムアタック早春CP">
+						</a>
+					</div>
+-->
+
+					<div class="topSlide">
+					    <a href="/raceseries/race/gdj2026-4-f/0716/racecard.html">
+					        <img src="https://www.keiba.go.jp/img/2026/gdj4f_02.jpg" alt="GDJノースクイーンカップ0716">
+					    </a>
+					</div>
+					
+					<div class="topSlide">
+					    <a href="/dirtgraderace/2026/0720_mercurycup/racecard.html">
+					        <img src="https://www.keiba.go.jp/img/2026/DG_22.jpg" alt="DGマーキュリーカップ0720">
+					    </a>
+					</div>
+					
+<!-- うまレター　毎月更新：位置はレースバナー直後-->
+
+<!--
+					<div class="topSlide">
+						<a href="https://umaletter.jp/" target="_blank">
+							<img src="/img/2026/umaletter_202607.jpg" alt="うまレター">
+						</a>
+					</div>
+-->
+
+					<div class="topSlide">
+						<a href="/socialcontribution/">
+							<img src="/img/banner/20251205_01_01.jpg" alt="社会貢献活動特設サイト">
+						</a>
+					</div>
+
+					<div class="topSlide">
+						<a href="https://www.keibalovechikusan.com/lp/klc2026cp/" target=”_blank”>
+							<img src="/img/2026/klc2026cp.jpg" alt="KEIBA♡CHIKUSANキャンペーン">
+						</a>
+					</div>
+
+					<div class="topSlide">
+						<a href="https://kids.gakken.co.jp/himitsu/library-work009/" target=”_blank”>
+							<img src="/img/2026/20260416_01_01.jpg" alt="競走馬のふるさとのひみつ">
+						</a>
+					</div>
+
+					<div class="topSlide">
+						<a href="https://kids.gakken.co.jp/himitsu/library-work0010/" target=”_blank”>
+							<img src="/img/2026/20260416_01_02.jpg" alt="獣医師のひみつ">
+						</a>
+					</div>
+
+					<div class="topSlide">
+						<a href="/japandirtpride2025/">
+							<img src="/img/banner/japandirtpride2025_main01.jpg" alt="「ダートに熱を響かせろ。」">
+						</a>
+					</div>
+
+					<div class="topSlide">
+						<a href="https://www.keiba.go.jp/pdf/association/20260330_01_01.pdf">
+							<img src="/img/2026/20260330_01_01.jpg" alt="馬主報奨金">
+						</a>
+					</div>
+
+					<div class="topSlide">
+						<a href="/dirtgraderace/2026/grandbonus/">
+							<img src="/img/2026/20260225_grandbonus.jpg" alt="グランドボーナス">
+						</a>
+					</div>
+
+					<div class="topSlide">
+						<img src="/img/banner/attack_dirtkeiba.png" usemap="#ImageMap" alt="アタック地方競馬/ダート競馬JAPAN">
+							<map name="ImageMap">
+								<area shape="rect" coords="0,0,640,200" href="/about/attack-chihoukeiba.html" alt="アタック地方競馬" />
+								<area shape="rect" coords="0,200,640,400" href="/about/dirtkeiba-japan.html" alt="ダート競馬JAPAN" />
+							</map>
+					</div>
+
+<!--保管庫
+					<div class="topSlide">
+						<a href="https://www.keiba.go.jp/association/training/experience.html">
+							<img src="/img/2026/center2026.jpg" alt="教養センター告知バナー">
+						</a>
+					</div>
+
+					<div class="topSlide">
+					    <a href="https://www.keiba.go.jp/topics/2026/05/1316381299582.html">
+					        <img src="/img/2026/gambling_addiction.png" alt="ギャンブル等依存症問題啓発週間について">
+					    </a>
+					</div>
+
+		            <div class="topSlide">
+		              <a href="/raceseries/race/gdj2026-3/0514/racecard.html">
+		                  <img src="/img/2026/gdj3_06.jpg" alt="GDJのじぎく賞0514">
+		              </a>
+		            </div>
+
+					<div class="topSlide">
+					    <a href="/raceseries/race/gdj2026-4-s/0426/racecard.html">
+					        <img src="/img/2026/gdj4s_04.jpg" alt="GDJ佐賀ヴィーナスカップ0426">
+					    </a>
+					</div>
+
+					<div class="topSlide">
+					    <a href="https://www.keiba.go.jp/raceseries/race/sss2026/0322/racecard.html">
+					        <img src="/img/2026/3ss_02.jpg" alt="3SSネクストスター西日本0322">
+					    </a>
+					</div>
+
+					<div class="topSlide">
+					    <a href="/furlong/2026/20260129_01/">
+					        <img src="/img/2026/20260129_furlong.jpg" alt="REWIND00">
+					    </a>
+					 </div>
+
+					<div class="topSlide">
+						<a href="/ladiesjockeys/ljsthefinal/">
+							<img src="/img/banner/LJSfinal_00.jpg" alt="LJSファイナル_1125">
+						</a>
+					</div>
+
+					<div class="topSlide">
+					    <a href="/dirtgraderace/2025/1229_tokyodaishoten/racecard.html">
+					        <img src="/img/banner/DG_46.jpg" alt="DG東京大賞典1229">
+					    </a>
+					</div>
+
+					<div class="topSlide">
+						<a href="/raceseries/race/gdj2025-4-f/0904-1/racecard.html">
+							<img src="/img/banner/gdj4f_04.jpg" alt="GDJ秋桜賞0904">
+						</a>
+					</div>
+
+					<div class="topSlide">
+					    <a href="/raceseries/race/future2025/1112/racecard.html">
+					        <img src="/img/banner/future_12.jpg" alt="未来優駿_ハイセイコー記念1112">
+					    </a>
+					</div>
+
+					<div class="topSlide">
+					    <a href="/raceseries/race/gdj2025-2/1119/racecard.html">
+					        <img src="/img/banner/gdj2_05.jpg" alt="GDJラブミーチャン記念1119">
+					    </a>
+					</div>
+
+					<div class="topSlide">
+						<img src="/img/banner/20250918_01_02.jpg" usemap="#ImageMap2" alt="アタック地方競馬_コリアカップ">
+							<map name="ImageMap2">
+  								<area shape="rect" coords="0,0,320,400" href="https://www.youtube.com/watch?v=DVUH6g6ZqCY" alt="ディクテオン in コリアカップ（1）" />
+  								<area shape="rect" coords="320,0,640,400" href="https://www.youtube.com/watch?v=n5IueuxslUg" alt="ディクテオン in コリアカップ（2）" />
+							</map>
+					</div>
+
+					<div class="topSlide">
+					    <a href="https://youtu.be/xiq0Hzvn-po">
+					        <img src="/img/banner/20251229_01_01.jpg" alt="東京大賞典ダート競馬JAPAN">
+					    </a>
+					</div>
+
+					<div class="topSlide">
+						<a href="https://umaletter.jp/" target=”_blank”>
+							<img src="/img/banner/umaletter_202509.jpg" alt="うまレター">
+						</a>
+					</div>
+
+					<div class="topSlide">
+						<a href="https://en.surece.co.jp/chihoukeiba2025/01/" target=”_blank”>
+							<img src="/img/banner/20251114_01_01.jpg" alt="地方競馬に関するアンケート実施中！">
+						</a>
+					</div>
+
+					<div class="topSlide">
+						<a href="https://www.keibalovechikusan.com/lp/klc2025cp/" target=”_blank”>
+							<img src="/img/banner/20251118_01_chikusan.jpg" alt="馬事畜産CP">
+						</a>
+					</div>
+
+					<div class="topSlide">
+						<a href="/furlong/2025/20251031_01/">
+					    	<img src="/img/banner/20251104_furlong.jpg" alt="ハルウララ">
+						</a>
+					 </div>
+
+					<div class="topSlide">
+						<a href="/dirtgraderace/dirttimeattack/">
+							<img src="/img/banner/dirttimeattack_2025summerCP.jpg" alt="ダートタイムアタック夏CP">
+						</a>
+					</div>
+
+					<div class="topSlide">
+						<a href="/keibacolorfuldays2024-2025/">
+							<img src="/img/banner/20241129_01_02.jpg" alt="年末年始特設サイト">
+						</a>
+					</div>
+
+					<div class="topSlide">
+						<a href="/topics/2024/12/0909002466027.html">
+							<img src="/img/banner/20241209_anquete.jpg" alt="地方競馬アンケート">
+						</a>
+					</div>
+
+					<div class="topSlide">
+						<a href="/association/training/experience.html">
+							<img src="/img/banner/20250602_01.jpg" alt="オープンキャンパス">
+						</a>
+					</div>
+
+					<div class="topSlide">
+							<img src="/img/banner/JBC2023_furlong.png" usemap="#ImageMap" alt="JBC2023_座標バナー">
+								<map name="ImageMap">
+  									<area shape="rect" coords="0,0,320,200" href="/furlong/2023/20231103_01/" alt="" />
+  									<area shape="rect" coords="0,200,320,400" href="/furlong/2023/20231103_03/" alt="" />
+  									<area shape="rect" coords="320,0,640,200" href="/furlong/2023/20231103_02/" alt="" />
+  									<area shape="rect" coords="320,200,640,400" href="/furlong/2023/20231103_04/" alt="" />
+								</map>
+					</div>
+
+					<div class="topSlide">
+						<a href="/dirtgraderace/newroad/">
+							<img src="/img/banner/20240415_01.jpg" alt="まだ見ぬ夢へ、駆けろ。(ダートクイズクエスト)">
+						</a>
+					</div>
+
+					<div class="topSlide">
+						<a href="/association/owner_info.html">
+							<img src="/img/banner/20240701_01.jpg" alt="褒賞金">
+						</a>
+					</div>
+
+					<div class="topSlide">
+						<a href="/topics/2025/10/0113093985717.html">
+							<img src="/img/banner/20251001_02_01.jpg" alt="公正確保強化月間">
+						</a>
+					</div>
+
+保管庫-->
+
+
+<!--バナーが足りない場合等に表示
+					<div class="topSlide">
+						<a href="keibago/index.html">
+							<img src="img/top_slider_05.jpg">
+						</a>
+					</div>
+					<div class="topSlide">
+						<a href="tabiuma/index.html">
+							<img src="img/top_slider_06.jpg">
+						</a>
+					</div>
+バナーが足りない場合等に表示-->
+
+					</div>
+				</div>
+			</div>
+			<!-- ■■■■■■■■通常スライドバナー END■■■■■■■■ -->
+
+			<div class="contentBlock">
+				<div class="topArea">
+					<!--左側-->
+					<div class="leftArea">
+						<!-- ■■■■■■■■メインバナー1枚固定 START ■■■■■■■■ -->
+						<!-- <div class="contentBlock simpleBanner">
+							<div>
+								<a href="/topics/2023/10/1608152641046.html">
+									<img src="/img/banner/20231012_01.jpg" alt="的場騎手">
+								</a>
+							</div>
+						</div> -->
+						<!-- ■■■■■■■■ メインバナー1枚固定 END ■■■■■■■■ -->
+
+						<!-- ■■■■■■■■サイド大型バナー START ■■■■■■■■ -->
+						<!--<div class="sidebarLeft" style="background-image:url(img/banner/sidebannerL.png);"><a href="#"></a></div>
+						<div class="sidebarRight" style="background-image:url(img/banner/sidebannerR.png);"><a href="#"></a></div>-->
+						<!-- ■■■■■■■■ サイドバナー END ■■■■■■■■ -->
+
+						<!-- 臨時バナー掲載 ここから -->
+<!--
+						<a href="/alljapankeibadrama2025-2026/" target="_blank"><img src="/img/banner/AJKD2526_banner_900x200.jpg" alt="ALL JAPAN KEIBA DRAMA2025-2026" style="width:100%;" class="bannerhover"></a>
+-->
+						<!-- 臨時バナー掲載 ここまで -->
+
+						<!-- 臨時メッセージ ここから -->
+						<!--
+						&nbsp;
+						<p align="center"><span style="color:#009900;">このたびの令和2年7月豪雨により被災された皆様に、心からお見舞い申し上げます。<br>
+						皆様の安全と被災地の一日も早い復旧・復興をお祈り申し上げます。</span></p>
+						&nbsp;
+						-->
+						<!-- 臨時メッセージ ここまで -->
+
+						<!-- ■■■■■■■■3点バナー START ■■■■■■■■ -->
+						<div class="feature">
+							<ul class="clearfix">
+							
+<!-- DG特設 -->
+						<li>
+							<a href="/dirtgraderace/index.html">
+								<img src="/img/banner/dg_logo2021.jpg">
+							</a>
+						</li>
+
+<!-- シリーズ総合サイト -->
+						<li>
+							<a href="/raceseries/">
+								<img src="/img/banner/raceseries_kotei.png">
+							</a>
+						</li>
+
+<!-- レッツ地方競馬 -->
+						<li>
+							<a href="/beginner/">
+								<img src="/img/banner/20250514_01.jpg">
+							</a>
+						</li>
+
+<!-- 地方競馬に関するアンケート実施中 -->
+<!--
+						<li>
+							<a href="https://en.surece.co.jp/chihoukeiba2025/01/" target=”_blank”>
+								<img src="/img/banner/20251114_01_01.jpg" alt="地方競馬に関するアンケート実施中！">
+							</a>
+						</li>
+-->
+<!-- ギャンブル依存症啓発週間 -->
+<!--
+						<li>
+					    <a href="/topics/2026/05/1316381299582.html">
+								<img src="/img/2026/gambling_addiction.png">
+							</a>
+						</li>
+-->
+
+							</ul>
+						</div>
+						<!-- ■■■■■■■■3点バナー END ■■■■■■■■ -->
+
+						<!--トピックス-->
+						<div id="topicsPart"></div>
+					</div><!--/leftArea-->
+
+					<!--右側-->
+					<div class="rightArea">
+						<section class="rightContent">
+                            <h2 class="raceIcon1">レースタイムライン</h2>
+                            <iframe id="parentframe1"
+                                src="/KeibaWeb/TodayRaceInfo/TopTodayRaceInfoMini" width="320">
+                                iframe 対応のブラウザでご覧ください。
+                            </iframe>
+                            <h2 class="raceIcon2">開催情報</h2>
+                            <iframe id="parentframe2"
+                                src="/KeibaWeb/TodayRaceInfo/TopTodayRaceListMini" width="320">
+                                iframe 対応のブラウザでご覧ください。
+                            </iframe>
+                            <iframe id="parentframe3"
+                                src="/KeibaWeb/TodayRaceInfo/TopJyusyoRaceListMini" width="320">
+								iframe 対応のブラウザでご覧ください。
+							</iframe>
+						</section>
+
+						<!-- ■■■■■■■■右側縦バナー START ■■■■■■■■ -->
+<!--
+						<div class="verticalBanner">
+						<div id="prevBtn" class="arrow-top"></div>
+							<div class="slideshow-container">
+
+						<div class="slide">
+							<a href="/keibacolorfuldays2024-2025/crosstalk/">
+								<img src="/img/banner/20241218_kcd_01.jpg" alt="坂井×笹川騎手対談">
+							</a>
+						</div>
+
+						<div class="slide">
+							<a href="/dirtgraderace/index.html">
+								<img src="img/banner/dg_logo2021.jpg" alt="DIRT G RACE">
+							</a>
+						</div>
+
+						<div class="slide">
+							<a href="/raceseries/">
+								<img src="img/banner/raceseries_kotei.png" alt="シリーズ総合サイト">
+							</a>
+						</div>
+
+
+						<div class="slide">
+							<a href="/qa.html">
+								<img src="/img/banner/banner_FAQ.png" alt="ご意見ご要望">
+							</a>
+						</div>
+
+
+						<div class="slide">
+							<a href="/campaign/">
+								<img src="/img/banner/20220421_01.jpg" alt="プレゼントキャンペーン">
+							</a>
+						</div>
+
+						<div class="slide">
+							<a href="/furlong/">
+								<img src="/img/banner/furlong-logo.jpg" alt="ウェブハロン">
+							</a>
+						</div>
+
+						<div class="slide">
+							<a href="/havefun_1.html">
+								<img src="/img/banner/20240521_01_01.jpg" alt="競馬をお楽しみいただくために">
+							</a>
+						</div>
+
+						<div class="slide">
+							<a href="https://spat4-apps.com/">
+								<img src="/img/banner/spat4-apps_320_200.png" alt="SPAT4 apps">
+							</a>
+						</div>
+
+						<div class="slide">
+							<a href="https://spat4special.jp/">
+								<img src="/img/banner/spat4-2024_320_200.jpg" alt="SPAT4 special">
+							</a>
+						</div>
+
+						<div class="slide">
+							<a href="https://www.fujitv.co.jp/umaquartet/">
+								<img src="/img/banner/umaquartet.jpg" alt="うまカルテット">
+							</a>
+						</div>
+
+						<div class="slide">
+							<a href=https://www.keiba.go.jp/pdf/ladiesjockeys/schedule.pdf target="_blank" onclick="gtag('config', 'UA-111245021-1', {'page_path': 'https://www.keiba.go.jp/pdf/ladiesjockeys/schedule.pdf?top-pc'})">
+								<img src="/img/banner/20211122_03.jpg" alt="女性騎手騎乗予定">
+							</a>
+						</div>
+
+						<div class="slide">
+							<a href="/ladiesjockeys/">
+								<img src="/img/banner/20231113_01_02.png" alt="LADIES JOCKEY">
+							</a>
+						</div>
+
+
+						<div class="slide">
+							<a href="/about/attack-chihoukeiba.html" target="_blank">
+								<img src="/img/banner/attack_20220617.png" alt="アタック地方競馬2">
+							</a>
+						</div>
+
+						<div class="slide">
+							<a href="/about/dirtkeiba-japan.html" target="_blank">
+								<img src="/img/banner/dirtjapan_20230907_01.jpg" alt="ダート競馬JAPAN">
+							</a>
+						</div>
+
+						<div class="slide">
+							<a href="/about/koueki.html" target="_blank">
+								<img src="/img/banner/20211215_01.jpg" alt="みんなのくらしと地方競馬">
+							</a>
+						</div>
+
+						<div class="slide">
+							<a href="/kyujin/" target="_blank">
+								<img src="/img/banner/pic_top_12.jpg" alt="厩人">
+							</a>
+						</div>
+-->
+<!--保管庫_ここから
+
+					<div class="slide">
+						<a href="/2020info/">
+							<img src="/img/banner/20210329_09.jpg" alt="入場について">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="/ladiesjockeys/contents/dialog/">
+							<img src="/img/banner/20221107_01.jpg" alt="LDJ_CROSS TALK">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="/furlong/" target="_blank">
+							<img src="/img/banner/furlong-logo.jpg" alt="WEBハロン">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="/beginner/">
+							<img src="/img/banner/20210329_11.jpg" alt="Let's 地方競馬">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="https://dento-kachiku.jp/" target="_blank">
+							<img src="/img/banner/pic_top_19.jpg" alt="家畜が係わる伝統行事">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="/recruit/">
+							<img src="/img/banner/20230328_01_syokuin.jpg" alt="職員採用ページ">
+						</a>
+					</div>
+
+保管庫_ここまで-->
+<!--
+						</div>
+
+						<div id="nextBtn" class="arrow-bottom"></div>
+						</div>
+-->
+						<!-- ■■■■■■■■右側縦バナー END ■■■■■■■■ -->
+
+					</div><!--/rightArea-->
+				</div><!--/topArea-->
+			</div><!--/contentBlock-->
+
+
+			<div class="clearfix bottomPart">
+				<!-- ■■■■■■■■横スライドバナー START ■■■■■■■■ -->
+				<section class="bannerBlock">
+					<article class="aboutSlide">
+
+					<div class="slide">
+						<a href="https://taw.or.jp/">
+							<img src="/img/banner/taw_kv.jpg" alt="TAW">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="https://taw.or.jp/furusato/">
+							<img src="/img/banner/TAW.jpg" alt="TAWふるさと納税">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="/havefun_1.html">
+							<img src="/img/banner/20240521_01_01.jpg" alt="競馬をお楽しみいただくために">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="/furlong/">
+							<img src="/img/banner/furlong-logo.jpg" alt="WEBハロン">
+						</a>
+					</div>
+
+<!--
+					<div class="slide">
+						<a href="https://spat4cp2025-2026.jp/" target=”_blank”>
+							<img src="/img/banner/spat4cp2025-2026.jpg" alt="SPAT4　本日は！ウマ曜日！">
+						</a>
+					</div>
+-->
+					<div class="slide">
+						<a href="/qa.html">
+							<img src="/img/banner/banner_FAQ.png" alt="ご意見ご要望">
+						</a>
+					</div>
+
+
+					<div class="slide">
+						<a href=https://www.keiba.go.jp/pdf/ladiesjockeys/schedule.pdf target="_blank" onclick="gtag('config', 'UA-111245021-1', {'page_path': 'https://www.keiba.go.jp/pdf/ladiesjockeys/schedule.pdf?top-pc'})">
+							<img src="/img/banner/20211122_03.jpg" alt="女性騎手騎乗予定">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="/ladiesjockeys/">
+							<img src="/img/banner/20250328_01_01.jpg" alt="LADIES JOCKEY">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="https://spat4-apps.com/">
+							<img src="/img/banner/spat4-apps_320_200.png" alt="SPAT4 apps">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="https://spat4special.jp/">
+							<img src="/img/banner/spat4-2026_320_200.jpg" alt="SPAT4 special">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="/about/koueki.html" target="_blank">
+							<img src="/img/banner/20211215_01.jpg" alt="みんなのくらしと地方競馬">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="/kyujin/" target="_blank">
+							<img src="/img/banner/pic_top_12.jpg" alt="厩人">
+						</a>
+					</div>
+
+<!--保管庫_ここから
+					<div class="slide">
+						<a href="/beginner/">
+							<img src="/img/banner/20250514_01.jpg" alt="Let's 地方競馬">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="https://spat4cp2025-2026.jp/" target=”_blank”>
+							<img src="/img/banner/20250731_01_01.jpg" alt="SPAT4　本日は！ウマ曜日！">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="https://umaletter.jp/" target=”_blank”>
+							<img src="/img/banner/umaletter_202510.jpg" alt="うまレター">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="https://www.fujitv.co.jp/umaquartet/">
+							<img src="/img/banner/umaquartet.jpg" alt="うまカルテット">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="/about/attack-chihoukeiba.html" target="_blank">
+							<img src="/img/banner/attack_20220617.png" alt="アタック地方競馬">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="/about/dirtkeiba-japan.html" target="_blank">
+							<img src="/img/banner/dirtjapan_20230907_01.jpg" alt="ダート競馬JAPAN">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="/2020info/">
+							<img src="/img/banner/20210329_09.jpg" alt="入場について">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="/ladiesjockeys/contents/dialog/">
+							<img src="/img/banner/20221107_01.jpg" alt="LDJ_CROSS TALK">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="https://dento-kachiku.jp/" target="_blank">
+							<img src="/img/banner/pic_top_19.jpg" alt="家畜が係わる伝統行事">
+						</a>
+					</div>
+
+					<div class="slide">
+						<a href="/recruit/">
+							<img src="/img/banner/20230328_01_syokuin.jpg" alt="職員採用ページ">
+						</a>
+					</div>
+
+保管庫_ここまで-->							
+						
+					</article>
+				</section>
+				<!-- ■■■■■■■■横スライドバナー END ■■■■■■■■ -->
+
+				<section class="linkContent clearfix">
+					<div class="linkContentLeft">
+					
+<!-- 最新のYOUTUBE動画にする場合 -->
+
+	<!-- ダートグレード競走 レース映像 ※DG時はこちらを使用 -->
+
+          <iframe width="420" height="236" src="https://www.youtube.com/embed/?list=PLXcirAp6Gl8TeSGrWuMg8-tX5b-plNQoy" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+	<!-- 騎手シリーズ(YJS/LJS時はこちらを使用)  -->
+<!--
+          <iframe width="420" height="236" src="https://www.youtube.com/embed/u783kCUwmeo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+-->
+
+	<!-- 任意のYoutube動画 ※DG、YJS以外の場合はこちらを使用 -->
+<!--
+          <iframe width="420" height="236" src="https://www.youtube.com/embed/cbPJwDPjZLI" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+-->
+
+    <!--JBCの動画のバックアップ-->
+<!--
+          <iframe width="420" height="236" src="https://www.youtube.com/embed/WSmgBrB-sdM" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+-->
+
+						<ul>
+							<li><a href="https://twitter.com/nar_keiba" target="_blank"
+									class="snsButton snsTwitter"><span class="icon"></span></a></li>
+							<li><a href="https://www.facebook.com/nar.keiba/" target="_blank"
+									class="snsButton snsFacebook"><span class="icon"></span>Facebook</a></li>
+							<li><a href="https://www.instagram.com/nar_keiba_official/" target="_blank"
+									class="snsButton snsInstagram"><span class="icon"></span>Instagram</a></li>
+						</ul>
+					</div>
+					<div class="linkContentRight">
+						<h2 class="voteIcon">ネット投票発売カレンダー</h2>
+						<a href="beginner/step4.html#content6" class="linkBtn">
+							投票サイト特集
+						</a>
+
+						<ul class="linkListWrapper clearfix">
+							<li><a href="/jranet/" target="_blank" class="snsButton snsTwitter"><img
+										src="img/header_banner_01l.png" alt="JRAネット投票×地方競馬特設サイト"></a></li>
+							<li><a href="https://www.nankankeiba.com/spat4_calendar/000000.do"
+									target="_blank" class="snsButton snsFacebook"><img
+										src="img/header_banner_02.png" alt="SPAT4"></a></li>
+							<li><a href="https://keiba.rakuten.co.jp/calendar?l-id=top_subNavi_calendar"
+									target="_blank" class="snsButton snsInstagram"><img
+										src="img/header_banner_03.png" alt="Rakuten競馬"></a></li>
+							<li><a href="https://www.oddspark.com/keiba/KaisaiCalendar.do" target="_blank"
+									class="snsButton snsInstagram"><img src="img/header_banner_04.png"
+										alt="Odds Park"></a></li>
+						</ul>
+						<h2 class="mediaIcon">レースを楽しむ</h2>
+
+						<ul class="linkListWrapper clearfix">
+							<li><a href="about/" class="snsButton snsTwitter"><img
+										src="img/banner_top_media_13.png"></a></li>
+							<li><a href="furlong/" class="snsButton snsFacebook"><img
+										src="img/banner_top_media_12.png"></a></li>
+							<li><a href="keibago/" class="snsButton snsInstagram"><img
+										src="img/banner_top_media_11.png"></a></li>
+							<li><a href="senmonshi/index_map.html" class="snsButton snsInstagram"><img
+										src="img/banner_top_media_10.png"></a></li>
+						</ul>
+					</div>
+				</section>
+
+			</div>
+
+			<div class="narBlock clearfix">
+				<h3>
+					<p>
+						<span>
+							地方競馬からのご案内
+						</span><br>
+						<span class="subTitle">
+							地方競馬全国協会(NAR)
+						</span>
+					</p>
+				</h3>
+				<ul>
+					<li><a href="association/index.html">協会概要</a></li>
+					<li><a href="association/sns.html">公式SNS</a></li>
+					<li><a href="association/procurement.html">調達情報</a></li>
+					<li><a href="association/recruit.html">新規職員採用/社会人採用募集</a></li>
+					<li><a href="association/owner_faq.html">馬主について</a></li>
+					<li><a href="association/training/apply.html">地方競馬の騎手への道</a></li>
+					<li><a href="association/training/training.html">地方競馬教養センター</a></li><br>
+					<li><a href="association/activation.html">競馬活性化計画</a></li>
+					<li><a href="association/livestock.html">畜産振興補助事業</a></li><br>
+					<li><a href="illegal.html">地方競馬からお客様へのお願い</a></li>
+					<li><a href="havefun_1.html">競馬をお楽しみいただくために（のめり込みに不安のある方へ）</a></li>
+					<li><a href="http://www.nta.go.jp/publication/pamph/shotoku/kakuteishinkokukankei/koueikyougi/index.htm"
+							target="_blank">勝馬投票券の払戻金は税法上、課税対象となるケースがあります</a></li>
+					<li>馬券は20歳になってから　ほどよく楽しむ大人の遊び</li>
+				</ul>
+			</div>
+
+		</div>
+	</div>
+	<!--/mainContents -->
+	<!--ページトップへ戻る-->
+	<div class="backBtn"></div>
+
+	<footer class="footer">
+		<ul class="footerMenu">
+			<li>
+				<a href="/index.html">
+					HOME
+				</a>
+			</li>
+			<li>
+				<a href="/association/">
+					地方競馬全国協会（NAR）
+				</a>
+			</li>
+			<li>
+				<a href="/sitemap.html">
+					サイトマップ
+				</a>
+			</li>
+			<li>
+				<a href="/link.html">
+					関連リンク
+				</a>
+			</li>
+			<li>
+				<a href="/terms.html">
+					利用規約
+				</a>
+			</li>
+			<li>
+				<a href="/qa.html">
+					ご意見・ご要望／FAQ
+				</a>
+			</li>
+		</ul>
+
+		<div class="copyright">
+			copyright 1998-NAR (The National Association of Racing) All Rights Reserved
+		</div>
+		<!-- 言語選択 -->
+		<div class="language cp_sl01">
+			<select onChange="location.href=value;">
+				<option value="#">Language</option>
+				<option value="https://www.goracing.jp/english/">English</option>
+				<option value="https://www.goracing.jp/french/">Francais</option>
+				<option value="https://www.goracing.jp/chinese/">中文</option>
+				<option value="https://www.goracing.jp/korea/">한글</option>
+			</select>
+		</div>
+
+	</footer>
+
+	<!-- Yahoo Code for your Target List -->
+	<script type="text/javascript" language="javascript">
+		/* <![CDATA[ */
+		var yahoo_retargeting_id = 'VEKT6KRRV7';
+		var yahoo_retargeting_label = '';
+		var yahoo_retargeting_page_type = '';
+		var yahoo_retargeting_items = [{ item_id: '', category_id: '', price: '', quantity: '' }];
+		/* ]]> */
+	</script>
+	<script type="text/javascript" language="javascript" src="https://b92.yahoo.co.jp/js/s_retargeting.js?date=20240315"></script>
+	<!-- <script type="text/javascript" src="js/slide.js?date=20240315"></script> -->
+	
+</body>
+
+</html>
