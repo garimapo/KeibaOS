@@ -93,3 +93,26 @@ class NARProvider:
         self.logger.info("Today's race list loaded.")
 
         return html
+
+    def fetch_race_list(self, url: str) -> str:
+        """
+        指定された開催ページのレース一覧HTMLを取得する。
+        """
+
+        html = self._get(url)
+
+        Path("logs").mkdir(exist_ok=True)
+
+        file_name = url.rstrip("/").split("/")[-1]
+        file_path = f"logs/{file_name}.html"
+
+        with open(
+            file_path,
+            "w",
+            encoding="utf-8",
+        ) as f:
+            f.write(html)
+
+        self.logger.info(f"Race page loaded: {file_name}")
+
+        return html
