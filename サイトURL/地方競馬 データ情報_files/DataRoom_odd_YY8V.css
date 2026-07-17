@@ -1,0 +1,741 @@
+@charset "UTF-8";
+.noWrapNav {
+  display: flex;
+  flex-flow: nowrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.noWrapNav .chartNavi {
+  /*
+    .cNaviBtn {
+
+      @media print,
+      screen and (max-width: 1170px) {
+
+        &:first-of-type {
+          margin-bottom: 10px;
+        }
+      }
+    }
+    */
+}
+
+#odd_content {
+  /*??????????????? Line430? */
+}
+
+#odd_content .odd_header {
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin: 20px 0 5px;
+  padding-bottom: 5px;
+  border-bottom: 2px solid #949494;
+  width: 1180px;
+}
+
+#odd_content .odd_header::after {
+  content: "";
+}
+
+#odd_content .odd_title {
+  flex: 1 1 auto;
+}
+
+#odd_content .odd_sort {
+  flex: 1 1 100%;
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: flex-end;
+}
+
+#odd_content .odd_sort_item {
+  margin-left: 15px;
+  border-left: 2px solid #949494;
+  padding: 0 0 0 15px;
+  white-space: nowrap;
+  color: #1a74bc;
+  cursor: pointer;
+}
+
+#odd_content .odd_sort_item::after {
+  content: "";
+  display: block;
+  margin-top: 1px;
+  border-top: 1px solid #1a74bc;
+}
+
+#odd_content .odd_sort_item.active {
+  color: #f00;
+}
+
+#odd_content .odd_sort_item.active::after {
+  display: none;
+}
+
+#odd_content .odd_list_item {
+  display: none;
+}
+
+#odd_content .odd_list_item.active {
+  display: block;
+}
+
+#odd_content .formList--item {
+  display: none;
+}
+
+#odd_content .formList--item.active {
+  display: block;
+}
+
+#odd_content .odd_table {
+  margin: 15px 0 20px;
+  border-collapse: collapse;
+  border-spacing: 0;
+  border: none;
+  width: auto;
+}
+
+#odd_content .odd_table tr th:first-child {
+  width: 80px;
+}
+
+#odd_content .odd_table tr:first-child th:nth-child(2) {
+  background: #fff;
+}
+
+#odd_content .odd_table tr:first-child th:nth-child(3) {
+  background: #bfbfbf;
+}
+
+#odd_content .odd_table tr:first-child th:nth-child(4) {
+  background: #ff9890;
+}
+
+#odd_content .odd_table tr:first-child th:nth-child(5) {
+  background: #A6F6F6;
+}
+
+#odd_content .odd_table tr:first-child th:nth-child(6) {
+  background: #FEFEAB;
+}
+
+#odd_content .odd_table tr:first-child th:nth-child(7) {
+  background: #B7FEB7;
+}
+
+#odd_content .odd_table tr:first-child th:nth-child(8) {
+  background: #FCC38A;
+}
+
+#odd_content .odd_table tr:first-child th:nth-child(9) {
+  background: #F6A9E8;
+}
+
+#odd_content .odd_table tr:first-child th {
+  color: #000;
+}
+
+#odd_content .odd_table tr:first-child th:nth-child(n + 2):not(:nth-child(n + 10)) {
+  width: 80px;
+}
+
+#odd_content .odd_table tr:first-child th.mulch {
+  color: #fff;
+  height: 25px;
+  font-size: 12px;
+}
+
+#odd_content .odd_table tr:nth-child(1) th:not(.allcheck):not(.allreset):not(.mulch),
+#odd_content .odd_table tr:nth-child(1) td:not(.allcheck):not(.allreset):not(.mulch), #odd_content .odd_table tr:nth-child(2) th:not(.allcheck):not(.allreset):not(.mulch),
+#odd_content .odd_table tr:nth-child(2) td:not(.allcheck):not(.allreset):not(.mulch) {
+  height: 25px;
+}
+
+#odd_content .odd_table tr:not(.horse_neme) th,
+#odd_content .odd_table tr:not(.horse_neme) td {
+  height: 30px;
+}
+
+#odd_content .odd_table tr.horse_neme th {
+  padding: 0;
+  width: 80px;
+}
+
+#odd_content .odd_table tr.horse_neme td {
+  padding: 3px;
+  vertical-align: top;
+  max-height: 13em;
+}
+
+#odd_content .odd_table tr.horse_neme td:nth-child(18) {
+  padding: 0;
+}
+
+#odd_content .odd_table tr td .column_white_name,
+#odd_content .odd_table tr th .column_white_name {
+  display: inline-block;
+  font-family: -apple-system, BlinkMacSystemFont, "メイリオ", Meiryo, "Helvetica Neue", "Segoe UI", sans-serif;
+  -webkit-writing-mode: vertical-rl;
+  -ms-writing-mode: tb-rl;
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  text-orientation: upright;
+  letter-spacing: 3px;
+  text-align: center;
+  font-weight: bold;
+}
+
+#odd_content .odd_table td,
+#odd_content .odd_table th {
+  padding: 0px 0;
+  border: 1px solid #9f9f9f;
+  box-sizing: border-box;
+  font-weight: bold;
+}
+
+#odd_content .odd_table th:first-child {
+  background: #fff;
+  color: #000;
+}
+
+#odd_content .odd_table th.allcheck, #odd_content .odd_table th.allreset {
+  width: 50px;
+  background: #fff;
+  color: #000;
+  height: 50px !important;
+}
+
+#odd_content .odd_table th.allcheck .column_white_name, #odd_content .odd_table th.allreset .column_white_name {
+  transform: translateY(4px);
+}
+
+#odd_content .odd_table td {
+  background: #fff;
+  vertical-align: middle;
+  text-align: center;
+}
+
+#odd_content .odd_table td:nth-child(n + 2):not(:nth-child(n + 18)) {
+  width: 40px;
+}
+
+#odd_content .odd_table td:nth-child(3) {
+  background: inherit;
+}
+
+#odd_content .odd_table td input[type="checkbox"] {
+  -webkit-appearance: checkbox;
+  margin: auto;
+}
+
+#odd_content .odd_table td input[type="radio"] {
+  -webkit-appearance: radio;
+  margin: auto;
+}
+
+#odd_content .odd_table td.input_cell {
+  padding: 0;
+}
+
+#odd_content .odd_table td.input_cell label {
+  display: block;
+}
+
+#odd_content .odd_table td.static_hold {
+  background-color: #ccc;
+}
+
+#odd_content .odd_table td.static_hold input {
+  display: none;
+}
+
+#odd_content .odd_table td.all_button_cell {
+  padding: 0px;
+}
+
+#odd_content .odd_table td.all_button_cell:empty {
+  padding: 12px 0;
+}
+
+#odd_content .odd_table td .all_button {
+  display: inline-block;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  cursor: pointer;
+}
+
+@media screen and (min-width: 1024px) {
+  #odd_content .odd_table td .all_button {
+    transition: 0.3s;
+  }
+  #odd_content .odd_table td .all_button:hover {
+    background-color: #1a74bc;
+    color: #fff;
+  }
+}
+
+#odd_content .odd_table td .odd_result {
+  padding: 15px 10px;
+  box-sizing: border-box;
+}
+
+#odd_content .odd_table td .odd_result .result_input {
+  border-bottom: 1px solid #000;
+  font-size: 16px;
+}
+
+#odd_content .odd_table td .odd_result__inner {
+  width: 100%;
+}
+
+#odd_content .odd_table td .odd_result select {
+  margin: 20px auto;
+  padding: 5px 10px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#odd_content .odd_table td .odd_view {
+  padding: 10px 15px;
+  background-color: #1a74bc;
+  font-size: 16px;
+  color: #fff;
+  width: 100%;
+  cursor: pointer;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+#odd_content .tableList__select {
+  padding: 0 20px;
+  margin: 3px 0;
+}
+
+#odd_content .tableList__select li {
+  padding: 2px 3px;
+  background-color: #1a74bc;
+  border: 1px solid #fff;
+  font-size: 13px;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+#odd_content .tableList__select li.active {
+  border: 1px solid gold;
+  background-color: #fff;
+  color: #1a74bc;
+  padding-top: 1px;
+}
+
+@media screen and (min-width: 1024px) {
+  #odd_content .tableList__select li {
+    transition: 0.3s;
+  }
+  #odd_content .tableList__select li:hover {
+    border: 1px solid gold;
+    background-color: #fff;
+    color: #1a74bc;
+  }
+}
+
+#odd_content .tableList__select li + li {
+  margin-top: 2px;
+}
+
+#odd_content .odd_ranking {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding-bottom: 50px;
+  width: 1280px;
+}
+
+#odd_content .odd_ranking_item {
+  flex: 0 0 270px;
+  margin-left: 20px;
+  /*
+      @media screen and (min-width: 1024px) {
+
+        &:nth-child(4n + 1) {
+          margin-left: 0;
+        }
+
+        &:nth-child(n + 5) {
+          margin-top: 20px;
+        }
+      }
+
+      @media screen and (max-width: 1070px) {
+        flex: 0 0 31.33%;
+        margin-left: 3%;
+
+        &:nth-child(3n + 1) {
+          margin-left: 0;
+        }
+
+        &:nth-child(n + 4) {
+          margin-top: 20px;
+        }
+      }
+      */
+}
+
+#odd_content .odd_ranking_title {
+  margin: 0 0 3px;
+  color: red;
+}
+
+#odd_content .odd_ranking_table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  border: none;
+  width: 100%;
+}
+
+#odd_content .odd_ranking_table td,
+#odd_content .odd_ranking_table th {
+  border: 1px solid #9f9f9f;
+}
+
+#odd_content .odd_ranking_table thead th {
+  font-weight: bold;
+}
+
+#odd_content .odd_ranking_table tbody td {
+  padding: 5px 10px;
+  background: #fff;
+  white-space: nowrap;
+}
+
+#odd_content .odd_ranking_table tbody td:first-child {
+  width: 35%;
+}
+
+#odd_content .odd_ranking_table tbody td:nth-child(2) {
+  width: 35%;
+  text-align: right;
+}
+
+#odd_content .odd_ranking_table tbody td:nth-child(3) {
+  width: 30%;
+  text-align: right;
+  background: #f0f0f0;
+}
+
+#odd_content .odd_ranking_table tbody td.odd_red {
+  color: #f00;
+}
+
+#odd_content .odd_ranking_table tbody td.odd_blue {
+  color: #1a74bc;
+}
+
+#odd_content .odd_horse_number_list {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: flex-start;
+  align-items: stretch;
+}
+
+#odd_content .odd_horse_number_list > li {
+  flex: 0 0 160px;
+  margin-bottom: 30px;
+}
+
+#odd_content .odd_horse_number_list > li > table {
+  display: table;
+  width: 100%;
+}
+
+#odd_content .odd_horse_number_list > li > table th {
+  width: 100%;
+}
+
+#odd_content .odd_ranking_table tbody td.odd_red,
+#odd_content .odd_popular_table tbody td.odd_red,
+#odd_content .odd_horse_number_list td.odd_red {
+  color: #f00;
+}
+
+#odd_content .odd_ranking_table tbody td.odd_blue,
+#odd_content .odd_horse_number_list td.odd_blue {
+  color: #1a74bc;
+}
+
+#odd_content .odd_post2 {
+  background: #bfbfbf !important;
+}
+
+#odd_content .odd_post3 {
+  background: #ff9890 !important;
+}
+
+#odd_content .odd_post4 {
+  background: #A6F6F6 !important;
+}
+
+#odd_content .odd_post5 {
+  background: #FEFEAB !important;
+}
+
+#odd_content .odd_post6 {
+  background: #B7FEB7 !important;
+}
+
+#odd_content .odd_post7 {
+  background: #FCC38A !important;
+}
+
+#odd_content .odd_post8 {
+  background: #F6A9E8 !important;
+}
+
+#odd_content .odd_bar {
+  text-align: center !important;
+}
+
+#odd_content .odd_select {
+  width: 99%;
+}
+
+#odd_content .odd_select select::-ms-expand {
+  display: none;
+}
+
+#odd_content .odd_select.arrow {
+  position: relative;
+  background: #fff;
+}
+
+#odd_content .odd_select.arrow::before {
+  position: absolute;
+  top: 1em;
+  right: .5em;
+  width: 0;
+  height: 0;
+  padding: 0;
+  content: '';
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #666666;
+  pointer-events: none;
+}
+
+#odd_content .odd_header select {
+  border: 1px solid #ccc;
+  min-width: 200px;
+  padding: 0 7px;
+  font-size: 100%;
+  box-sizing: border-box;
+  background: transparent;
+}
+
+#odd_content .horse_select {
+  flex: 0 0 200px;
+}
+
+#odd_content .horse_select select::-ms-expand {
+  display: none;
+}
+
+#odd_content .horse_select.arrow {
+  position: relative;
+  background: #fff;
+}
+
+#odd_content .horse_select.arrow::before {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 0.5em;
+  width: 0;
+  height: 0;
+  padding: 0;
+  content: "";
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #666666;
+  pointer-events: none;
+}
+
+#odd_content .odd_ranking.none {
+  display: none;
+}
+
+#odd_content .odd_header form {
+  visibility: hidden;
+  display: block;
+}
+
+#odd_content .odd_header form.active {
+  visibility: visible;
+}
+
+#odd_content .odd_popular_table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  border: none;
+  margin: 7px 10px 50px;
+  table-layout: fixed;
+  width: 1020px;
+}
+
+#odd_content .odd_popular_table td,
+#odd_content .odd_popular_table th {
+  padding: inherit 5px;
+  border: 1px solid #9f9f9f;
+  line-height: 1.2;
+}
+
+#odd_content .odd_popular_table td span,
+#odd_content .odd_popular_table th span {
+  font-size: .9em;
+}
+
+#odd_content .odd_popular_table thead th {
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+#odd_content .odd_popular_table tbody td {
+  padding: 7px 5px;
+  white-space: nowrap;
+  background: #fff;
+}
+
+#odd_content .odd_popular_table tbody td:first-child {
+  background: #f0f0f0;
+}
+
+#odd_content .odd_popular_table tbody td:nth-child(4) {
+  width: 350px;
+  text-align: left;
+}
+
+#odd_content .odd_popular_table tbody tr td:nth-child(5) {
+  text-align: right;
+  border-right: double #9f9f9f;
+  border-left: double #9f9f9f;
+}
+
+#odd_content .odd_popular_table tbody tr td:nth-child(6), #odd_content .odd_popular_table tbody tr td:nth-child(7) {
+  width: 100px;
+  text-align: right;
+  border-right-style: none;
+  border-left-style: none;
+}
+
+#odd_content .odd_popular_table tbody tr td:nth-child(8) {
+  border-left: double #9f9f9f;
+}
+
+#odd_content .odd_popular_table tbody tr td:last-child {
+  font-weight: 700;
+  color: #f00;
+}
+
+#odd_content .horse_number h5 {
+  border: 1px solid #9f9f9f;
+  margin: 5px 0;
+  padding: 2px;
+  width: 1290px;
+  text-align: center;
+  font-weight: 700;
+}
+
+#odd_content .horse_number h5 span {
+  padding-left: 15px;
+  font-weight: 700;
+}
+
+#odd_content .horse_number h5.title_gray {
+  background: #bfbfbf;
+}
+
+#odd_content .odd_horse_number_list {
+  width: 100%;
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  box-sizing: border-box;
+  width: 1290px;
+}
+
+#odd_content .odd_horse_number_list:last-child {
+  margin-bottom: 50px;
+}
+
+#odd_content .odd_horse_number_list li {
+  width: 160px;
+  margin: 0 0 10px 0;
+}
+
+#odd_content .odd_horse_number_list table {
+  box-sizing: border-box;
+  border-style: none;
+  margin: 0;
+  width: 160px;
+}
+
+#odd_content .odd_horse_number_list td {
+  border-style: none;
+  box-sizing: content-box;
+  padding: 0 5px;
+  text-align: right;
+  background: #fff;
+  color: #333;
+}
+
+#odd_content .odd_horse_number_list th {
+  padding: 0;
+  background: #fff;
+  color: #333;
+}
+
+#odd_content .odd_horse_number_list li {
+  border-right: 1px solid #9f9f9f;
+  border-top: 1px solid #9f9f9f;
+  border-bottom: 1px solid #9f9f9f;
+}
+
+#odd_content .odd_horse_number_list li:nth-child(1), #odd_content .odd_horse_number_list li:nth-child(9) {
+  border-left: 1px solid #9f9f9f;
+}
+
+#odd_content .odd_horse_number_list.step li:last-child {
+  border-bottom: none;
+}
+
+#odd_content .odd_horse_number_list th {
+  border-bottom: 1px solid #9f9f9f;
+}
+
+#odd_content .odd_horse_number_list td {
+  border-bottom: 1px solid #9f9f9f;
+}
+
+#odd_content .odd_horse_number_list td:first-child {
+  border-right: 1px solid #9f9f9f;
+  background: #f0f0f0;
+}
+
+#odd_content .odd_horse_number_list tr:last-child td {
+  border-bottom: none;
+}
+
+_:-ms-lang(x)::-ms-backdrop,
+.horse_select {
+  margin-left: -3em;
+}

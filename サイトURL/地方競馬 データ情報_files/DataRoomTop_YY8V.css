@@ -1,0 +1,267 @@
+h3 {
+    margin: 0 auto;
+    border-bottom: none;
+}
+
+.innerWrapper {
+    margin: auto;
+}
+
+tbody {
+    width: 900px;
+}
+
+table {
+    width: 100%;
+    height: auto;
+    margin: 0 0 30px;
+    padding: 0;
+    display: block;
+}
+
+table tr td {
+    text-align: center;
+    vertical-align: middle;
+    background-color: #fff;
+}
+
+table tr td.DStitle {
+    width: 13%;
+    background: #555;
+    color: #fff;
+    font-weight: bold;
+}
+
+table tr td.SearchIndex {
+    height: 40px;
+    width: 10%;
+    background-color: #f0f0f0;
+    border: none;
+    text-align: left;
+    padding-left: 13px;
+    font-weight: bold;
+}
+
+table tr td.SearchIndex_even {
+    height: 40px;
+    width: 10%;
+    background-color: #fff;
+    border: none;
+    text-align: left;
+    padding-left: 13px;
+    font-weight: bold;
+}
+
+table tr td.sBcontainer {
+    width: 250px;
+    background-color: #f0f0f0;
+    border: none;
+}
+
+table tr td.sBcontainer_even {
+    width: 250px;
+    background-color: #fff;
+    border: none;
+}
+
+table tr td.condition {
+    width: 18%;
+    background-color: #f0f0f0;
+}
+
+table tr td.condition_even {
+    width: 18%;
+    background-color: #fff;
+}
+
+table tr td.condition.noborder {
+    border-right: none;
+}
+
+table tr td.condition_even.noborder {
+    border-right: none;
+}
+
+table tr td.searchbutton {
+    width: 15%;
+    background-color: #fff;
+    /*border-right: 1px solid #9f9f9f;*/
+}
+
+a.cNaviBtn:hover {
+    transition-duration: 0.8s;
+    opacity: 0.5;
+}
+
+a.cNaviBtn {
+    height: 30%;
+    width: 75%;
+    padding: 8px;
+    font-weight: bold;
+}
+
+input.cNaviBtn:hover {
+    transition-duration: 0.8s;
+    opacity: 0.5;
+}
+
+input.cNaviBtn {
+    height: 30%;
+    width: 75%;
+    padding: 8px;
+    font-weight: bold;
+}
+
+table tr td label.radiolabel {
+    display: flex;
+}
+
+table tr td.input_cell {
+    width: 18%;
+    border-right: 1px solid #9f9f9f;
+    text-align: left;
+}
+
+table tr td.input_cell.gray {
+    background-color: #f0f0f0;
+}
+
+table tr td.input_cell.noborder {
+    border-left: none;
+}
+
+table tr td.input_cell_all {
+    width: 18%;
+    border-right: 1px solid #9f9f9f;
+    border-bottom: 1px solid #9f9f9f;
+    text-align: left;
+}
+
+input.searchBox {
+    width: 100%;
+    height: 30px;
+    margin: 0 auto;
+    padding: 0 5px;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    display: block;
+    /*line-height: 40px;*/
+    font-size: 1em;
+    border: 1px solid #9f9f9f;
+}
+
+.cNaviBtnselect {
+    width: 55px;
+    height: 35px;
+    margin: 0 2px;
+    padding: 0;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    display: inline-block;
+    box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.3);
+    background: #fff;
+    border-radius: 3px;
+    color: #fff;
+    font-size: 12.8px;
+    line-height: 35px;
+    position: relative;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.odd_select {
+    width: 90%;
+}
+
+.odd_select select::-ms-expand {
+    display: none;
+}
+
+.odd_select.arrow {
+    position: relative;
+    margin: 0;
+    padding-left: 6px;
+}
+
+.odd_select.arrow::before {
+    position: absolute;
+    top: .75em;
+    right: .5em;
+    width: 0;
+    height: 0;
+    padding: 0;
+    content: '';
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid #666666;
+    pointer-events: none;
+}
+
+td label input[type="radio"] {
+    -webkit-appearance: radio;
+    margin: auto 10px auto 25px;
+    background: black;
+}
+
+.searchcondition {
+    width: 100%;
+    border: 1px solid #9f9f9f;
+    height: 30px;
+    padding-left: 10px;
+}
+
+.databasesearch_header {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin: 20px 0 5px;
+    padding-bottom: 5px;
+    border-bottom: 2px solid #949494;
+    width: 100%;
+}
+
+div.DataRoomAnnotation {
+    margin-top: -25px;
+    margin-bottom: 20px;
+}
+
+div.DataRoomAnnotation p.DataRoomAnnotationItem {
+    margin-left: 20px;
+}
+
+div.DataRoomAnnotation_alt {
+    margin-top: 25px;
+    margin-bottom: 50px;
+}
+
+div.DataRoomAnnotation_alt p.DataRoomAnnotationItem {
+    margin-left: 0;
+}
+
+table tr td.DStitle {
+    font-size: 19px;
+}
+
+table.databasesearch_table {
+    font-size: 15px;
+    border: 1px solid #9f9f9f;
+}
+
+table tr td label.radiolabel {
+    display: flex;
+    font-size: 14px;
+}
+table tr td.DStitle {
+    width: 16%;
+}
+table tr td.input_cell {
+    width: 15%;
+}
+table tr td.input_cell_all {
+    width: 15%;
+}

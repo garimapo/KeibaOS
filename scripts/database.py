@@ -2,16 +2,20 @@
 KeibaOS Database Module
 
 SQLiteへの接続および
-レース・馬情報の保存を管理する。
+レース・馬情報の保存・取得を管理する。
 """
 
 import sqlite3
 
-from scripts.models import Race, Horse
+from scripts.models import Horse, Race
 
 
 DB_PATH = "database/keiba.db"
 
+
+# ==========================================================
+# Connection
+# ==========================================================
 
 def get_connection() -> sqlite3.Connection:
     """
@@ -20,6 +24,10 @@ def get_connection() -> sqlite3.Connection:
 
     return sqlite3.connect(DB_PATH)
 
+
+# ==========================================================
+# Table Create
+# ==========================================================
 
 def create_tables() -> None:
     """
@@ -60,7 +68,6 @@ def create_tables() -> None:
             """
         )
 
-
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS horses (
@@ -85,22 +92,18 @@ def create_tables() -> None:
             """
         )
 
-
         conn.commit()
 
-        _migrate_race_table(
-            cursor
-        )
+        _migrate_race_table(cursor)
 
         conn.commit()
-
 
 
 def _migrate_race_table(
     cursor: sqlite3.Cursor,
 ) -> None:
     """
-    既存racesテーブル移行処理。
+    racesテーブルのマイグレーション。
     """
 
     cursor.execute(
@@ -112,7 +115,6 @@ def _migrate_race_table(
         for row in cursor.fetchall()
     }
 
-
     required_columns = {
 
         "start_time": "TEXT",
@@ -123,7 +125,6 @@ def _migrate_race_table(
 
         "deba_table_url": "TEXT",
     }
-
 
     for name, dtype in required_columns.items():
 
@@ -137,6 +138,9 @@ def _migrate_race_table(
             )
 
 
+# ==========================================================
+# Exists
+# ==========================================================
 
 def race_exists(
     race: Race,
@@ -170,54 +174,9 @@ def race_exists(
         return cursor.fetchone() is not None
 
 
-
-def get_race_id(
-    race: Race,
-) -> int | None:
-    """
-    レースID取得。
-
-    既存Raceの場合:
-        race_idを返す
-
-    存在しない場合:
-        None
-    """
-
-    with get_connection() as conn:
-
-        cursor = conn.cursor()
-
-        cursor.execute(
-            """
-            SELECT id
-            FROM races
-            WHERE race_date = ?
-              AND organization = ?
-              AND place = ?
-              AND race_no = ?
-            LIMIT 1
-            """,
-            (
-                race.race_date,
-                race.organization,
-                race.place,
-                race.race_no,
-            ),
-        )
-
-        result = cursor.fetchone()
-
-
-        if result is None:
-
-            return None
-
-
-        return int(
-            result[0]
-        )
-
+# ==========================================================
+# Save
+# ==========================================================
 
 def save_race(
     race: Race,
@@ -225,17 +184,14 @@ def save_race(
     """
     レース情報保存。
 
-    保存成功:
-        race_idを返す
-
-    重複:
-        None
+    Returns:
+        race_id: 保存成功
+        None: 重複または保存失敗
     """
 
     if race_exists(race):
 
         return None
-
 
     try:
 
@@ -267,12 +223,26 @@ def save_race(
                     deba_table_url,
 
                     status
+
                 )
 
                 VALUES (
-                    ?,?,?,?,?,?,
-                    ?,?,?,?,?,?,
+
+                    ?, ?, ?,
+                    ?, ?,
+
+                    ?,
+
+                    ?, ?,
+
+                    ?, ?,
+
+                    ?,
+
+                    ?,
+
                     ?
+
                 )
                 """,
                 (
@@ -299,25 +269,19 @@ def save_race(
                 ),
             )
 
-
             race_id = cursor.lastrowid
-
 
             conn.commit()
 
-
-        return race_id
-
+            return int(race_id)
 
     except sqlite3.Error as e:
 
-        print(
-            f"[DB ERROR] {e}"
-        )
+        print(f"[DB ERROR] {e}")
 
-        return None
-
-
+        return None# ==========================================================
+# Horse
+# ==========================================================
 
 def horse_exists(
     horse: Horse,
@@ -347,18 +311,20 @@ def horse_exists(
         return cursor.fetchone() is not None
 
 
-
 def save_horse(
     horse: Horse,
 ) -> bool:
     """
     馬情報保存。
+
+    Returns:
+        True : 保存成功
+        False: 重複または保存失敗
     """
 
     if horse_exists(horse):
 
         return False
-
 
     try:
 
@@ -384,10 +350,23 @@ def save_horse(
                     popularity,
 
                     weight
+
                 )
 
                 VALUES (
-                    ?,?,?,?,?,?,?,?,?
+
+                    ?,
+
+                    ?, ?,
+
+                    ?,
+
+                    ?, ?,
+
+                    ?, ?,
+
+                    ?
+
                 )
                 """,
                 (
@@ -410,14 +389,210 @@ def save_horse(
 
             conn.commit()
 
-
-        return True
-
+            return True
 
     except sqlite3.Error as e:
 
-        print(
-            f"[DB ERROR] {e}"
+        print(f"[DB ERROR] {e}")
+
+        return False# ==========================================================
+# Get
+# ==========================================================
+
+def get_race_id(
+    race: Race,
+) -> int | None:
+    """
+    レースID取得。
+
+    Returns:
+        race_id: 存在する場合
+        None   : 存在しない場合
+    """
+
+    with get_connection() as conn:
+
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT id
+            FROM races
+            WHERE race_date = ?
+              AND organization = ?
+              AND place = ?
+              AND race_no = ?
+            LIMIT 1
+            """,
+            (
+                race.race_date,
+                race.organization,
+                race.place,
+                race.race_no,
+            ),
         )
 
-        return False
+        result = cursor.fetchone()
+
+        if result is None:
+            return None
+
+        return int(result[0])
+
+
+def get_all_races() -> list[tuple[int, Race]]:
+    """
+    登録済みレース一覧を取得する。
+
+    Returns:
+        [
+            (race_id, Race),
+            ...
+        ]
+    """
+
+    with get_connection() as conn:
+
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT
+
+                id,
+
+                race_date,
+                organization,
+                place,
+
+                race_no,
+                race_name,
+
+                start_time,
+
+                distance,
+                track,
+
+                weather,
+                track_condition,
+
+                horse_count,
+
+                deba_table_url
+
+            FROM races
+
+            ORDER BY
+
+                race_date,
+                place,
+                race_no
+            """
+        )
+
+        rows = cursor.fetchall()
+
+        races: list[tuple[int, Race]] = []
+
+        for row in rows:
+
+            race = Race(
+
+                race_date=row[1],
+                organization=row[2],
+                place=row[3],
+
+                race_no=row[4],
+                race_name=row[5],
+
+                start_time=row[6],
+
+                distance=row[7],
+                track=row[8],
+
+                weather=row[9],
+                track_condition=row[10],
+
+                horse_count=row[11],
+
+                deba_table_url=row[12],
+            )
+
+            races.append(
+                (
+                    row[0],
+                    race,
+                )
+            )
+
+        return races
+
+
+def get_horses_by_race(
+    race_id: int,
+) -> list[Horse]:
+    """
+    指定レースの出走馬一覧を取得する。
+    """
+
+    with get_connection() as conn:
+
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT
+
+                race_id,
+
+                frame_no,
+                horse_no,
+
+                horse_name,
+
+                jockey,
+                trainer,
+
+                odds,
+                popularity,
+
+                weight
+
+            FROM horses
+
+            WHERE race_id = ?
+
+            ORDER BY horse_no
+            """,
+            (
+                race_id,
+            ),
+        )
+
+        rows = cursor.fetchall()
+
+        horses: list[Horse] = []
+
+        for row in rows:
+
+            horses.append(
+                Horse(
+
+                    race_id=row[0],
+
+                    frame_no=row[1],
+                    horse_no=row[2],
+
+                    horse_name=row[3],
+
+                    jockey=row[4],
+                    trainer=row[5],
+
+                    odds=row[6],
+                    popularity=row[7],
+
+                    weight=row[8],
+                )
+            )
+
+        return horses

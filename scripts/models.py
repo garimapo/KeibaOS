@@ -23,8 +23,6 @@ class RaceMeeting:
 class Race:
     """
     レース基本情報
-
-    RaceListページから取得する情報を保持する。
     """
 
     race_date: str
@@ -63,6 +61,9 @@ class Horse:
 
     horse_name: str
 
+    # 馬プロフィールページ
+    horse_detail_url: str
+
     jockey: str
     trainer: str
 
@@ -70,6 +71,45 @@ class Horse:
     popularity: int
 
     weight: float
+
+
+# ==========================
+# 過去走情報
+# ==========================
+@dataclass
+class PastRace:
+    """
+    能力評価に使用する過去走データ
+    """
+
+    horse_id: int
+
+    race_date: str
+
+    place: str
+
+    race_name: str
+    race_class: str
+
+    distance: int
+    track: str
+
+    weather: str
+    track_condition: str
+
+    finish: int
+
+    margin: float
+
+    time: str
+
+    weight: float
+    weight_diff: float
+
+    jockey: str
+
+    popularity: int
+    odds: float
 
 
 # ==========================

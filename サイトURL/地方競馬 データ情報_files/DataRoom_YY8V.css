@@ -1,0 +1,1032 @@
+.innerWrapper.auto {
+  width: auto;
+}
+
+.innerWrapper {
+  width: 980px;
+}
+
+h3 {
+  padding: 0 0 0 30px;
+  background: url(../img/icon_h4_bread.png?bld=20240319134801) 0 50% no-repeat;
+  margin: 0 auto 20px;
+  border-bottom: 2px solid #9f9f9f;
+}
+
+h4 {
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+  padding: 0 0;
+  box-sizing: border-box;
+  display: block;
+  font-size: 22px;
+}
+
+li h4 {
+  font-size: 22px;
+}
+
+span.sex {
+  margin-right: 5px;
+}
+
+span.sex.red {
+  color: red;
+}
+
+span.age.red {
+  color: red;
+}
+
+p.annotationRed{
+  color: red;
+  font-weight: bold;
+}
+
+.odd_title {
+  flex: 1 1 auto;
+}
+
+.next {
+  flex: 1 1 100%;
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.plus2bold03 {
+  color: #ff6666;
+  font-weight: bold;
+  text-align: center;
+  font-size: 168%;
+}
+
+table {
+  width: auto;
+  border: none;
+}
+
+table th {
+  width: auto;
+}
+
+table tr td {
+  background-color: #fff;
+}
+
+td a {
+  font-weight: bold;
+}
+
+td.intableheader {
+  text-align: center;
+  background-color: #d9d9d9;
+  color: black;
+  border: 1px solid #9f9f9f;
+  padding: 0;
+}
+
+.intablelabel {
+  text-align: left;
+  background-color: #d9d9d9;
+}
+
+.horseinfo {
+  display: block;
+}
+
+.horseinfo li {
+  display: inline-block;
+  margin-bottom: -10px;
+}
+
+.horseinfo.horse li:nth-child(2) {
+  margin-left: 15px;
+  margin-right: 5px;
+}
+
+.horseinfo.horse li:nth-child(3) {
+  margin-left: 0;
+}
+
+.horseinfo.horse li:nth-child(4) {
+  margin-right: 50px;
+  margin-left: 0;
+}
+
+.horseinfo li:nth-child(3) {
+  margin-left: 15px;
+  margin-right: 5px;
+}
+
+.horseinfo li:nth-child(4) {
+  margin-left: 15px;
+  margin-right: 5px;
+}
+
+.horseinfo li:nth-child(5) {
+  margin-right: 50px;
+}
+
+.horseinfo li a.cNaviBtn:hover {
+  transition-duration: 0.8s;
+  opacity: 0.5;
+}
+
+.horseinfo li a.cNaviBtn {
+  width: 125px;
+  padding: 0;
+  font-weight: bold;
+  text-align: center;
+  bottom: 5px;
+}
+
+.horse_info_table tbody tr td {
+  width: 12.5%;
+  text-align: left;
+  border: 1px solid #9f9f9f;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.horse_info_table tbody tr td.short {
+  width: 7%;
+}
+
+.horse_info_table thead {
+  width: 100%;
+}
+
+.horse_info_table tbody tr td.noborder {
+  border-bottom: none;
+}
+
+.horse_info_table tbody tr td.notopborder {
+  border-top: none;
+}
+
+.horse_info_table tbody tr td:nth-child(2) {
+  width: 25%;
+}
+
+.horse_info_table tbody tr td:nth-child(4) {
+  width: 25%;
+}
+
+.horse_info_table tbody tr td:last-child {
+  text-align: right;
+}
+
+.pedigree {
+  width: 100%;
+}
+
+.pedigree table tbody tr td {
+  width: 116.25px;
+  border: 1px solid #9f9f9f;
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.pedigree table tbody tr td.fathername {
+  width: 348.75px;
+}
+
+.pedigree table tbody tr td.Paternalfathername {
+  width: 348.75px;
+}
+
+.pedigree table tbody tr td.blue {
+  background-color: #dbedf3;
+  text-align: center;
+}
+
+.pedigree table tbody tr td.pink {
+  background-color: #fdccff;
+  text-align: center;
+}
+
+ul.searchconditionindex {
+  display: block;
+  margin-bottom: 10px;
+}
+
+ul.searchconditionindex li {
+  display: inline-block;
+  white-space: nowrap;
+  margin-right: 10px;
+}
+
+.databasesearch_header {
+  align-items: flex-end;
+  margin: 20px 0 0;
+  width: 100%;
+}
+
+.databasesearch_table.RaceHorseList {
+  border: none;
+}
+
+.databasesearch_table.RaceHorseList thead tr th:first-child {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.databasesearch_table.RaceHorseList tbody tr td {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+  border: 1px solid #9f9f9f;
+}
+
+.databasesearch_table.RaceHorseList tbody tr td:first-child {
+  background: #f0f0f0;
+  width: 2%;
+  text-align: center;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.databasesearch_table.RaceHorseList tbody tr td:nth-child(2) {
+  width: 18%;
+}
+
+.databasesearch_table.RaceHorseList tbody tr td:nth-child(3) {
+  width: 9%;
+}
+
+.databasesearch_table.RaceHorseList tbody tr td:nth-child(4) {
+  width: 2%;
+}
+
+.databasesearch_table.RaceHorseList tbody tr td:nth-child(5) {
+  width: 8%;
+}
+
+.databasesearch_table.RaceHorseList tbody tr td:nth-child(6) {
+  width: 30%;
+}
+
+.databasesearch_table.RaceHorseList tbody tr td:nth-child(7) {
+  width: 30%;
+}
+
+.databasesearch_header {
+  align-items: flex-end;
+  margin: 20px 0 0;
+  width: 100%;
+}
+
+.odd_header {
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin: 20px 0 5px;
+  padding-bottom: 5px;
+  border-bottom: 2px solid #9f9f9f;
+  width: 100%;
+}
+
+.grades {
+  width: 640px;
+}
+
+.grades table {
+  width: 640px;
+  table-layout: fixed;
+  display: table;
+}
+
+.grades table thead tr th {
+  width: 40px;
+}
+
+.grades table thead tr th.wide {
+  width: 120px;
+}
+
+.grades table tbody tr td {
+  border: 1px solid #9f9f9f;
+  text-align: right;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.grades table tbody tr td.aligncenter {
+  text-align: center;
+}
+
+.gradescount table {
+  width: 760px;
+  table-layout: fixed;
+  display: table;
+}
+
+.gradescount {
+  width: 760px;
+}
+
+.gradescount table thead tr th {
+  width: 40px;
+  border: 1px solid #9f9f9f;
+}
+
+.gradescount table thead tr th.wide {
+  width: 120px;
+}
+
+.gradescount table tbody tr td {
+  border: 1px solid #9f9f9f;
+  text-align: right;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.gradescount table tbody tr td.aligncenter {
+  text-align: center;
+}
+
+.HorseMarkInfo_table thead tr th {
+  white-space: nowrap;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.HorseMarkInfo_table tbody tr td {
+  text-align: center;
+  border: 1px solid #9f9f9f;
+  padding-left: 5px;
+  padding-right: 5px;
+  white-space: nowrap;
+}
+
+.HorseMarkInfo_table tbody tr td:first-child {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.HorseMarkInfo_table tbody tr td:nth-child(2) {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.HorseMarkInfo_table tbody tr td:nth-child(4) {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.HorseMarkInfo_table tbody tr td:nth-child(5) {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.HorseMarkInfo_table tbody tr td:nth-child(19) {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.HorseMarkInfo_table tbody tr td:nth-child(21) {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.HorseMarkInfo_table tbody tr td:nth-child(22) {
+  text-align: right;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.HorseMarkInfo_table tbody tr td:nth-child(23) {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.HorseMarkInfo_table tbody tr td {
+  min-width: 10px;
+}
+
+/*
+.HorseMarkInfo_table tbody tr td:first-child{
+  width: 1.5%;
+}
+.HorseMarkInfo_table tbody tr td:nth-child(2){
+  width: 1.5%;
+}
+.HorseMarkInfo_table tbody tr td:nth-child(4){
+  width: 7%;
+}
+.HorseMarkInfo_table tbody tr td:nth-child(5){
+  width: 3%;
+}
+.HorseMarkInfo_table tbody tr td:nth-child(19){
+  width: 2.5%;
+}
+.HorseMarkInfo_table tbody tr td:nth-child(21){
+  width: 1.5%;
+}
+.HorseMarkInfo_table tbody tr td:nth-child(22){
+  width: 1.5%;
+}
+.HorseMarkInfo_table tbody tr td:nth-child(23){
+  width: 4%;
+}
+*/
+
+.HorseMarkInfo_table tbody tr td:nth-child(4).pink {
+  background-color: #fdccff;
+}
+
+.HorseMarkInfo_table tbody tr td:nth-child(4).green {
+  background-color: #cbffcc;
+}
+
+.HorseMarkInfo_table tbody tr td:nth-child(4).yellow {
+  background-color: #feffcc;
+}
+
+.HorseMarkInfo_table tbody tr td:nth-child(14).red {
+  background-color: #f4aea7;
+}
+
+.HorseMarkInfo_table tbody tr td:nth-child(14).yellow {
+  background-color: #e5cc59;
+}
+
+.HorseMarkInfo_table tbody tr td:nth-child(14).blue {
+  background-color: #addef2;
+}
+
+.HorseMarkInfo_table tbody tr td:nth-child(14).gray {
+  background-color: #f2f2f2;
+}
+
+.JyusyoRaceWinhorse_table thead tr th {
+  white-space: nowrap;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.JyusyoRaceWinhorse_table tbody tr td {
+  text-align: center;
+  border: 1px solid #9f9f9f;
+  padding-left: 5px;
+  padding-right: 5px;
+  min-width: 10px;
+  white-space: nowrap;
+}
+
+.JyusyoRaceWinhorse_table tbody tr td:first-child {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.JyusyoRaceWinhorse_table tbody tr td:nth-child(2) {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.JyusyoRaceWinhorse_table tbody tr td:nth-child(3) {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.JyusyoRaceWinhorse_table tbody tr td:nth-child(4) {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.JyusyoRaceWinhorse_table tbody tr td:nth-child(6) {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.JyusyoRaceWinhorse_table tbody tr td:nth-child(11) {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.JyusyoRaceWinhorse_table tbody tr td:nth-child(18) {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.JyusyoRaceWinhorse_table tbody tr td:nth-child(19) {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.JyusyoRaceWinhorse_table tbody tr td:nth-child(21) {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.JyusyoRaceWinhorse_table tbody tr td:nth-child(22) {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+div.DataRoomAnnotation {
+  margin-bottom: 30px;
+}
+
+div.DataRoomAnnotation p.DataRoomAnnotationItem {
+  margin-left: 20px;
+}
+
+ul.ul_with_next {
+  display: block;
+}
+
+ul.ul_with_next li {
+  display: inline-block;
+}
+
+ul.ul_with_next li:nth-child(2) {
+  margin-left: 120px;
+}
+
+.next {
+  margin-left: 10px;
+}
+
+.prev {
+  flex: 1 1 100%;
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.horse_info_table tbody tr td:nth-child(5) {
+  width: 10%;
+}
+
+.horse_info_table tbody tr td:last-child {
+  width: 15%;
+}
+
+.grades table thead tr th.semiwide {
+  width: 55px;
+}
+
+.gradescount table thead tr th.semiwide {
+  width: 55px;
+}
+
+table {
+  font-size: 14px;
+  padding-top: 0.5px;
+  padding-bottom: 0.5px;
+}
+
+.gradescount table thead tr th.saikoutime {
+  width: 95px;
+}
+
+.databasesearch_table.RaceHorseList thead tr th {
+  font-size: 14px;
+}
+
+.databasesearch_table.RaceHorseList tbody tr td {
+  font-size: 14px;
+}
+
+table {
+  line-height: 1.7;
+}
+
+table tr td.input_cell_all {
+  width: 15%;
+}
+
+.odd_title.mini {
+  font-size: 18px;
+}
+
+/*# sourceMappingURL=DataRoom_2.css.map */
+
+ul.DRListsContainer {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: horizontal;
+  -webkit-box-direction: normal;
+  -ms-flex-flow: row wrap;
+  flex-flow: row wrap;
+  -webkit-box-pack: start;
+  -ms-flex-pack: start;
+  justify-content: flex-start;
+  -webkit-box-align: start;
+  -ms-flex-align: start;
+  align-items: flex-start;
+  padding-bottom: 50px;
+  width: 100%;
+}
+
+ul.DRListsContainer li.DRListsItem {
+  -webkit-box-flex: 1;
+  -ms-flex: 1;
+  flex: 1;
+}
+
+ul.DRListsContainer li.DRListsItem.TrainerList {
+  margin-right: 40px;
+}
+
+ul.DRListsContainer li.DRListsItem.RiderList {
+  margin-right: 40px;
+}
+
+.databasesearch_table.RiderList {
+  border: none;
+}
+
+.databasesearch_table.RiderList thead tr th:first-child {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.databasesearch_table.RiderList tbody tr td {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+  border: 1px solid #9f9f9f;
+  width: 7.5%;
+}
+
+.databasesearch_table.RiderList tbody tr td:first-child {
+  background: #f0f0f0;
+  text-align: center;
+  width: 3%;
+}
+
+.databasesearch_table.RiderList tbody tr td:nth-child(2) {
+  margin-right: 10px;
+  width: 15%;
+}
+
+.databasesearch_table.RiderList tbody tr td:nth-child(3) {
+  width: 5%;
+}
+
+.databasesearch_table.TrainerList {
+  border: none;
+}
+
+.databasesearch_table.TrainerList thead tr th:first-child {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.databasesearch_table.TrainerList tbody tr td {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+  border: 1px solid #9f9f9f;
+  width: 7.5%;
+}
+
+.databasesearch_table.TrainerList tbody tr td:first-child {
+  background: #f0f0f0;
+  text-align: center;
+  width: 3%;
+}
+
+.databasesearch_table.TrainerList tbody tr td:nth-child(2) {
+  margin-right: 10px;
+  width: 15%;
+}
+
+.databasesearch_table.TrainerList tbody tr td:nth-child(3) {
+  width: 5%;
+}
+
+ul.MarkList {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: horizontal;
+  -webkit-box-direction: normal;
+  -ms-flex-flow: row wrap;
+  flex-flow: row wrap;
+  -webkit-box-pack: start;
+  -ms-flex-pack: start;
+  justify-content: flex-start;
+  -webkit-box-align: start;
+  -ms-flex-align: start;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+ul.MarkList li.MarkItem.img {
+  background: #f2f2f2;
+  -webkit-box-flex: 3;
+  -ms-flex: 3;
+  flex: 3;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  -webkit-box-pack: center;
+  -ms-flex-pack: center;
+  justify-content: center;
+  margin-right: 55px;
+}
+
+ul.MarkList li.MarkItem.img.mini {
+  -webkit-box-flex: 1.5;
+  -ms-flex: 1.5;
+  flex: 1.5;
+}
+
+ul.MarkList li.MarkItem.img.mini:first-child {
+  margin-right: 0;
+}
+
+ul.MarkList li.MarkItem.table {
+  -webkit-box-flex: 5;
+  -ms-flex: 5;
+  flex: 5;
+}
+
+ul.MarkList li.MarkItem.notification {
+  flex: 10;
+  display: inline-block;
+  vertical-align: bottom;
+  margin-top: auto;
+  margin-bottom: 10px;
+}
+
+ul.MarkList li.MarkItem img.MarkImg {
+  width: 112px;
+  margin: 5px 0;
+}
+
+ul.MarkList li.MarkItem img.MarkImg.T {
+  width: 88px;
+  margin: 5px 0;
+}
+
+.trainerinfo tbody tr td {
+  text-align: left;
+  border: 1px solid #9f9f9f;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.trainerinfo tbody tr td:first-child {
+  width: 90px;
+  margin-right: 10%;
+}
+
+.trainerinfo tbody tr td:nth-child(2) {
+  width: 185px;
+  background: white;
+}
+
+.databasesearch_header.TrainerMark {
+  -webkit-box-orient: horizontal;
+  -webkit-box-direction: normal;
+  -ms-flex-flow: row nowrap;
+  flex-flow: row nowrap;
+  -webkit-box-pack: justify;
+  -ms-flex-pack: justify;
+  justify-content: space-between;
+  -webkit-box-align: end;
+  -ms-flex-align: end;
+  align-items: flex-end;
+  margin: 20px 0 5px;
+  border-bottom: 2px solid #949494;
+  width: 100%;
+}
+
+.databasesearch_header.TrainerMark span {
+  font-weight: bold;
+  color: red;
+}
+
+.databasesearch_table.TrainerMark thead tr th {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.databasesearch_table.TrainerMark thead tr th:first-child {
+  width: 56px;
+}
+
+.databasesearch_table.TrainerMark thead tr th:nth-child(2) {
+  width: 170px;
+}
+
+.databasesearch_table.TrainerMark thead tr th:nth-child(3) {
+  width: 55px;
+}
+
+.databasesearch_table.TrainerMark thead tr th:nth-child(4) {
+  width: 35px;
+}
+
+
+
+.databasesearch_table.TrainerMark tbody tr td {
+  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+  border: 1px solid #9f9f9f;
+}
+
+.databasesearch_table.TrainerMark tbody tr td:first-child {
+  background: #f0f0f0;
+  text-align: center;
+}
+
+.databasesearch_table.TrainerMark tbody tr td:nth-child(4) {
+  text-align: right;
+}
+
+.grades table {
+  border: 1px solid #9f9f9f;
+}
+
+.grades table tbody tr td {
+  border: 1px solid #9f9f9f;
+  text-align: right;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.grades table tbody tr td.aligncenter {
+  text-align: center;
+}
+
+.grades.RiderMark table thead tr th {
+  width: 60px;
+}
+
+.grades.RiderMark table thead tr th.wide {
+  width: 120px;
+}
+
+.grades.RiderMark table tbody tr td {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.grades.RiderMark table tbody tr td.yeartotal {
+  background: #f2f2f2;
+}
+
+.grades.RiderLeading {
+  width: auto;
+}
+
+.grades.RiderLeading table {
+  width: auto;
+}
+
+.grades.RiderLeading table thead tr th {
+  width: 5%;
+}
+
+.grades.RiderLeading table thead tr th.wide {
+  width: 13.5%;
+}
+
+.grades.RiderLeading table thead tr th.semiwide {
+  width: 10%;
+}
+
+.grades.RiderLeading table tbody tr td:first-child {
+  background: #f0f0f0;
+}
+
+.grades.RiderLeading table tbody tr td:nth-child(2) {
+  text-align: left;
+  width: 12.5%;
+}
+
+.grades.RiderLeading table tbody tr td:nth-child(3) {
+  text-align: left;
+  width: 7.5%;
+}
+
+article.raceCard {
+  margin-bottom: 60px;
+}
+
+article.raceCard.fixed {
+  margin-bottom: auto;
+}
+
+/*# sourceMappingURL=DataRoom_2.css.map */
+
+
+.grades.TrainerMark {
+  width: 680px;
+}
+
+.grades.TrainerMark table {
+  width: 680px;
+}
+
+.grades.TrainerMark table thead tr th {
+  width: 60px;
+}
+
+.grades.TrainerMark table thead tr th.semiwide {
+  width: 65px;
+}
+
+.grades.RiderMark table thead tr th.semiwide {
+  width: 65px;
+}
+
+.grades.TrainerMark table thead tr th.wide {
+  width: 120px;
+}
+
+.databasesearch_table thead tr th {
+  border: 1px solid #9f9f9f;
+}
+
+.HorseMarkInfo_table thead tr th {
+  border: 1px solid #9f9f9f;
+}
+
+.JyusyoRaceWinhorse_table thead tr th {
+  border: 1px solid #9f9f9f;
+}
+
+.horse_info_table thead tr th {
+  border: 1px solid #9f9f9f;
+}
+
+.pedigree table thead tr th {
+  border: 1px solid #9f9f9f;
+}
+
+/*
+.JyusyoRaceWinhorse_table tbody tr td p {
+  white-space: nowrap;
+  font-weight: bold;
+  color: #1a74bc;
+}
+*/
+
+.JyusyoRaceWinhorse_table tbody tr td p.nolink {
+  font-weight: bold;
+  color: #333;
+}
+
+.JyusyoRaceWinhorse_table tbody tr td p {
+  white-space: nowrap;
+  font-weight: bold;
+  color: #1a74bc;
+}
+
+.HorseMarkInfo_table tbody tr td p.text-overflow.nolink {
+  color: #333;
+}
+
+.HorseMarkInfo_table tbody tr td p.text-overflow {
+  text-overflow: clip;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 15.1em;
+  font-weight: bold;
+  color: #1a74bc;
+}
+
+.horse_info_table tbody tr td p.nolink {
+  font-weight: bold;
+  color: #333;
+}
+
+.trainerinfo tbody tr td p.nolink {
+  margin-top: 3px;
+  font-weight: bold;
+  color: #333;
+}
