@@ -6,8 +6,10 @@ SQLiteへの接続および
 """
 
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 
-from scripts.models import Horse, Race
+from scripts.models import Horse, PastRace, Race
 
 
 DB_PATH = "database/keiba.db"
@@ -25,6 +27,27 @@ def get_connection() -> sqlite3.Connection:
     return sqlite3.connect(DB_PATH)
 
 
+@contextmanager
+def _connection() -> Iterator[sqlite3.Connection]:
+    """トランザクション完了後に必ずSQLite接続を閉じる。"""
+
+    conn = get_connection()
+
+    try:
+
+        yield conn
+        conn.commit()
+
+    except Exception:
+
+        conn.rollback()
+        raise
+
+    finally:
+
+        conn.close()
+
+
 # ==========================================================
 # Table Create
 # ==========================================================
@@ -34,7 +57,7 @@ def create_tables() -> None:
     SQLiteテーブル作成。
     """
 
-    with get_connection() as conn:
+    with _connection() as conn:
 
         cursor = conn.cursor()
 
@@ -81,6 +104,8 @@ def create_tables() -> None:
 
                 horse_name TEXT,
 
+                horse_detail_url TEXT,
+
                 jockey TEXT,
                 trainer TEXT,
 
@@ -92,11 +117,58 @@ def create_tables() -> None:
             """
         )
 
-        conn.commit()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS past_races (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                horse_id INTEGER,
+
+                race_date TEXT,
+                place TEXT,
+
+                race_name TEXT,
+                race_class TEXT,
+
+                distance INTEGER,
+                track TEXT,
+
+                weather TEXT,
+                track_condition TEXT,
+
+                finish INTEGER,
+                margin REAL,
+                time TEXT,
+
+                weight REAL,
+                weight_diff REAL,
+
+                jockey TEXT,
+
+                popularity INTEGER,
+                odds REAL
+            )
+            """
+        )
 
         _migrate_race_table(cursor)
+        _migrate_horse_table(cursor)
+        _migrate_past_races_table(cursor)
 
-        conn.commit()
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_horses_race_id
+            ON horses (race_id)
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_past_races_horse_date
+            ON past_races (horse_id, race_date DESC)
+            """
+        )
 
 
 def _migrate_race_table(
@@ -106,24 +178,89 @@ def _migrate_race_table(
     racesテーブルのマイグレーション。
     """
 
-    cursor.execute(
-        "PRAGMA table_info(races)"
+    _add_missing_columns(
+        cursor,
+        "races",
+        {
+
+            "start_time": "TEXT",
+
+            "track_condition": "TEXT",
+
+            "horse_count": "INTEGER",
+
+            "deba_table_url": "TEXT",
+        },
     )
+
+
+def _migrate_horse_table(
+    cursor: sqlite3.Cursor,
+) -> None:
+    """horses テーブルを現在のスキーマへ移行する。"""
+
+    _add_missing_columns(
+        cursor,
+        "horses",
+        {
+            "horse_detail_url": "TEXT",
+        },
+    )
+
+
+def _migrate_past_races_table(
+    cursor: sqlite3.Cursor,
+) -> None:
+    """past_races テーブルを現在のスキーマへ移行する。"""
+
+    _add_missing_columns(
+        cursor,
+        "past_races",
+        {
+            "horse_id": "INTEGER",
+            "race_date": "TEXT",
+            "place": "TEXT",
+            "race_name": "TEXT",
+            "race_class": "TEXT",
+            "distance": "INTEGER",
+            "track": "TEXT",
+            "weather": "TEXT",
+            "track_condition": "TEXT",
+            "finish": "INTEGER",
+            "margin": "REAL",
+            "time": "TEXT",
+            "weight": "REAL",
+            "weight_diff": "REAL",
+            "jockey": "TEXT",
+            "popularity": "INTEGER",
+            "odds": "REAL",
+        },
+    )
+
+
+def _add_missing_columns(
+    cursor: sqlite3.Cursor,
+    table_name: str,
+    required_columns: dict[str, str],
+) -> None:
+    """SQLite テーブルに不足している列を追加する。"""
+
+    allowed_tables = {"races", "horses", "past_races"}
+    allowed_types = {"INTEGER", "REAL", "TEXT"}
+
+    if table_name not in allowed_tables:
+
+        raise ValueError(f"Unsupported migration table: {table_name}")
+
+    if not set(required_columns.values()).issubset(allowed_types):
+
+        raise ValueError("Unsupported migration column type")
+
+    cursor.execute(f"PRAGMA table_info({table_name})")
 
     columns = {
         row[1]
         for row in cursor.fetchall()
-    }
-
-    required_columns = {
-
-        "start_time": "TEXT",
-
-        "track_condition": "TEXT",
-
-        "horse_count": "INTEGER",
-
-        "deba_table_url": "TEXT",
     }
 
     for name, dtype in required_columns.items():
@@ -131,10 +268,7 @@ def _migrate_race_table(
         if name not in columns:
 
             cursor.execute(
-                f"""
-                ALTER TABLE races
-                ADD COLUMN {name} {dtype}
-                """
+                f"ALTER TABLE {table_name} ADD COLUMN {name} {dtype}"
             )
 
 
@@ -149,7 +283,7 @@ def race_exists(
     同一レース存在確認。
     """
 
-    with get_connection() as conn:
+    with _connection() as conn:
 
         cursor = conn.cursor()
 
@@ -189,13 +323,13 @@ def save_race(
         None: 重複または保存失敗
     """
 
-    if race_exists(race):
-
-        return None
-
     try:
 
-        with get_connection() as conn:
+        if race_exists(race):
+
+            return None
+
+        with _connection() as conn:
 
             cursor = conn.cursor()
 
@@ -271,8 +405,6 @@ def save_race(
 
             race_id = cursor.lastrowid
 
-            conn.commit()
-
             return int(race_id)
 
     except sqlite3.Error as e:
@@ -290,7 +422,7 @@ def horse_exists(
     同一馬情報存在確認。
     """
 
-    with get_connection() as conn:
+    with _connection() as conn:
 
         cursor = conn.cursor()
 
@@ -322,13 +454,13 @@ def save_horse(
         False: 重複または保存失敗
     """
 
-    if horse_exists(horse):
-
-        return False
-
     try:
 
-        with get_connection() as conn:
+        if horse_exists(horse):
+
+            return False
+
+        with _connection() as conn:
 
             cursor = conn.cursor()
 
@@ -343,6 +475,8 @@ def save_horse(
 
                     horse_name,
 
+                    horse_detail_url,
+
                     jockey,
                     trainer,
 
@@ -354,19 +488,7 @@ def save_horse(
                 )
 
                 VALUES (
-
-                    ?,
-
-                    ?, ?,
-
-                    ?,
-
-                    ?, ?,
-
-                    ?, ?,
-
-                    ?
-
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )
                 """,
                 (
@@ -376,6 +498,8 @@ def save_horse(
                     horse.horse_no,
 
                     horse.horse_name,
+
+                    horse.horse_detail_url,
 
                     horse.jockey,
                     horse.trainer,
@@ -387,7 +511,127 @@ def save_horse(
                 ),
             )
 
-            conn.commit()
+            return True
+
+    except sqlite3.Error as e:
+
+        print(f"[DB ERROR] {e}")
+
+        return False
+
+
+def past_race_exists(
+    past_race: PastRace,
+) -> bool:
+    """同じ馬の同一過去走がすでに保存されているか確認する。"""
+
+    with _connection() as conn:
+
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT 1
+            FROM past_races
+            WHERE horse_id = ?
+              AND race_date = ?
+              AND place = ?
+              AND race_name = ?
+            LIMIT 1
+            """,
+            (
+                past_race.horse_id,
+                past_race.race_date,
+                past_race.place,
+                past_race.race_name,
+            ),
+        )
+
+        return cursor.fetchone() is not None
+
+
+def get_horse_id(
+    horse: Horse,
+) -> int | None:
+    """出走馬情報に対応する horses.id を取得する。"""
+
+    with _connection() as conn:
+
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT id
+            FROM horses
+            WHERE race_id = ?
+              AND horse_no = ?
+            LIMIT 1
+            """,
+            (
+                horse.race_id,
+                horse.horse_no,
+            ),
+        )
+
+        result = cursor.fetchone()
+
+        if result is None:
+
+            return None
+
+        return int(result[0])
+
+
+def save_past_race(
+    past_race: PastRace,
+) -> bool:
+    """過去走情報を保存する。重複する過去走は保存しない。"""
+
+    try:
+
+        if past_race_exists(past_race):
+
+            return False
+
+        with _connection() as conn:
+
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                INSERT INTO past_races (
+                    horse_id,
+                    race_date, place,
+                    race_name, race_class,
+                    distance, track,
+                    weather, track_condition,
+                    finish, margin, time,
+                    weight, weight_diff,
+                    jockey,
+                    popularity, odds
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    past_race.horse_id,
+                    past_race.race_date,
+                    past_race.place,
+                    past_race.race_name,
+                    past_race.race_class,
+                    past_race.distance,
+                    past_race.track,
+                    past_race.weather,
+                    past_race.track_condition,
+                    past_race.finish,
+                    past_race.margin,
+                    past_race.time,
+                    past_race.weight,
+                    past_race.weight_diff,
+                    past_race.jockey,
+                    past_race.popularity,
+                    past_race.odds,
+                ),
+            )
 
             return True
 
@@ -395,7 +639,10 @@ def save_horse(
 
         print(f"[DB ERROR] {e}")
 
-        return False# ==========================================================
+        return False
+
+
+# ==========================================================
 # Get
 # ==========================================================
 
@@ -410,7 +657,7 @@ def get_race_id(
         None   : 存在しない場合
     """
 
-    with get_connection() as conn:
+    with _connection() as conn:
 
         cursor = conn.cursor()
 
@@ -451,7 +698,7 @@ def get_all_races() -> list[tuple[int, Race]]:
         ]
     """
 
-    with get_connection() as conn:
+    with _connection() as conn:
 
         cursor = conn.cursor()
 
@@ -535,7 +782,7 @@ def get_horses_by_race(
     指定レースの出走馬一覧を取得する。
     """
 
-    with get_connection() as conn:
+    with _connection() as conn:
 
         cursor = conn.cursor()
 
@@ -549,6 +796,8 @@ def get_horses_by_race(
                 horse_no,
 
                 horse_name,
+
+                horse_detail_url,
 
                 jockey,
                 trainer,
@@ -585,14 +834,68 @@ def get_horses_by_race(
 
                     horse_name=row[3],
 
-                    jockey=row[4],
-                    trainer=row[5],
+                    horse_detail_url=row[4] or "",
 
-                    odds=row[6],
-                    popularity=row[7],
+                    jockey=row[5],
+                    trainer=row[6],
 
-                    weight=row[8],
+                    odds=row[7],
+                    popularity=row[8],
+
+                    weight=row[9],
                 )
             )
 
         return horses
+
+
+def get_past_races(
+    horse_id: int,
+) -> list[PastRace]:
+    """指定した馬の過去走を新しいレース順に取得する。"""
+
+    with _connection() as conn:
+
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT
+                horse_id,
+                race_date, place,
+                race_name, race_class,
+                distance, track,
+                weather, track_condition,
+                finish, margin, time,
+                weight, weight_diff,
+                jockey,
+                popularity, odds
+            FROM past_races
+            WHERE horse_id = ?
+            ORDER BY race_date DESC, rowid DESC
+            """,
+            (horse_id,),
+        )
+
+        return [
+            PastRace(
+                horse_id=row[0],
+                race_date=row[1],
+                place=row[2],
+                race_name=row[3],
+                race_class=row[4],
+                distance=row[5],
+                track=row[6],
+                weather=row[7],
+                track_condition=row[8],
+                finish=row[9],
+                margin=row[10],
+                time=row[11],
+                weight=row[12],
+                weight_diff=row[13],
+                jockey=row[14],
+                popularity=row[15],
+                odds=row[16],
+            )
+            for row in cursor.fetchall()
+        ]
