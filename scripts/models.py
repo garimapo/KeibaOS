@@ -111,6 +111,12 @@ class PastRace:
     popularity: int
     odds: float
 
+    # 通過順位（例: "2-2-2-1"）。未取得時は空文字。
+    passing_order: str = ""
+
+    # 4コーナー通過順位。未取得時は0。
+    fourth_corner_position: int = 0
+
 
 # ==========================
 # AI予想

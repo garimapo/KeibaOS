@@ -35,6 +35,7 @@ class PastRaceParser:
         "jockey": ("騎手",),
         "popularity": ("人気",),
         "odds": ("オッズ", "単勝"),
+        "passing_order": ("通過順位", "通過順", "コーナー順位"),
     }
 
     _FALLBACK_COLUMNS = (
@@ -149,6 +150,7 @@ class PastRaceParser:
 
         weight, inline_weight_diff = self._parse_weight(value("weight"))
         weight_diff_text = value("weight_diff")
+        passing_order = value("passing_order")
 
         return PastRace(
             horse_id=horse_id,
@@ -172,6 +174,8 @@ class PastRaceParser:
             jockey=value("jockey"),
             popularity=self._to_int(value("popularity")),
             odds=self._to_float(value("odds")),
+            passing_order=passing_order,
+            fourth_corner_position=self._fourth_corner_position(passing_order),
         )
 
     def _field_name(self, header: str) -> str | None:
@@ -277,6 +281,24 @@ class PastRaceParser:
             float(weight_match.group(1)),
             float(diff_match.group(1)) if diff_match else 0.0,
         )
+
+    @classmethod
+    def _fourth_corner_position(cls, passing_order: str) -> int:
+        """区切り付き通過順位から4角位置を安全に取得する。"""
+
+        normalized = cls._normalize(passing_order)
+        sequence = re.search(
+            r"(\d+)\s*[-－ー→>/／]\s*(\d+)\s*[-－ー→>/／]\s*(\d+)"
+            r"(?:\s*[-－ー→>/／]\s*(\d+))?",
+            normalized,
+        )
+
+        if sequence is not None:
+            return int(sequence.group(4) or sequence.group(3))
+
+        positions = re.findall(r"\d+", normalized)
+
+        return int(positions[-1]) if 1 <= len(positions) <= 4 else 0
 
     @classmethod
     def _to_margin(cls, value: str) -> float:

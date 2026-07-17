@@ -88,6 +88,8 @@ class AbilityEngineTest(unittest.TestCase):
                 "jockey": str,
                 "popularity": int,
                 "odds": float,
+                "passing_order": str,
+                "fourth_corner_position": int,
             },
         )
 

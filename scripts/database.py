@@ -147,7 +147,10 @@ def create_tables() -> None:
                 jockey TEXT,
 
                 popularity INTEGER,
-                odds REAL
+                odds REAL,
+
+                passing_order TEXT,
+                fourth_corner_position INTEGER
             )
             """
         )
@@ -234,6 +237,8 @@ def _migrate_past_races_table(
             "jockey": "TEXT",
             "popularity": "INTEGER",
             "odds": "REAL",
+            "passing_order": "TEXT",
+            "fourth_corner_position": "INTEGER",
         },
     )
 
@@ -608,9 +613,10 @@ def save_past_race(
                     finish, margin, time,
                     weight, weight_diff,
                     jockey,
-                    popularity, odds
+                    popularity, odds,
+                    passing_order, fourth_corner_position
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     past_race.horse_id,
@@ -630,6 +636,8 @@ def save_past_race(
                     past_race.jockey,
                     past_race.popularity,
                     past_race.odds,
+                    past_race.passing_order,
+                    past_race.fourth_corner_position,
                 ),
             )
 
@@ -869,7 +877,8 @@ def get_past_races(
                 finish, margin, time,
                 weight, weight_diff,
                 jockey,
-                popularity, odds
+                popularity, odds,
+                passing_order, fourth_corner_position
             FROM past_races
             WHERE horse_id = ?
             ORDER BY race_date DESC, rowid DESC
@@ -896,6 +905,8 @@ def get_past_races(
                 jockey=row[14],
                 popularity=row[15],
                 odds=row[16],
+                passing_order=row[17] or "",
+                fourth_corner_position=row[18] or 0,
             )
             for row in cursor.fetchall()
         ]
