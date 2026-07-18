@@ -138,6 +138,9 @@ class Prediction:
 
     comment: str
 
+    # 総合評価の対象馬。旧形式のPrediction生成コードとの互換性のため既定値を持つ。
+    horse_id: int = 0
+
 
 # ==========================
 # 購入情報
