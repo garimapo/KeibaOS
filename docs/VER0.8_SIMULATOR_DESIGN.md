@@ -195,6 +195,7 @@ class SimulationResult:
 class BetTypeSummary:
     bet_type: str
     bet_count: int
+    settled_bet_count: int
     hit_bet_count: int
     investment: int
     payout: int
@@ -202,6 +203,8 @@ class BetTypeSummary:
     roi: float | None
     bet_hit_rate: float | None
 ```
+
+`bet_count` は生成した全買い目数、`settled_bet_count` は正常精算された買い目数、`hit_bet_count` は精算済み買い目のうち winning となった点数とする。`bet_hit_rate` の分母は `settled_bet_count` とする。
 
 ### SimulationSummary
 
