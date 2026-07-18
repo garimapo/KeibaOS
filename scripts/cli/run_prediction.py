@@ -32,6 +32,7 @@ class DatabaseRaceInputProvider:
     def load(self, race_id: int) -> RacePredictionInput:
         """DBに保存済みのレース・出走馬・過去走を入力形式へ変換する。"""
 
+        database.create_tables()
         race = next(
             (race for stored_id, race in database.get_all_races() if stored_id == race_id),
             None,
@@ -44,7 +45,7 @@ class DatabaseRaceInputProvider:
         odds_by_horse = {}
         horses = database.get_horses_by_race(race_id)
         for horse in horses:
-            horse_id = database.get_horse_id(race_id, horse.horse_name)
+            horse_id = database.get_horse_id(horse)
             if horse_id is None:
                 raise ValueError(f"horse id was not found: {horse.horse_name}")
             horse_past_races[horse_id] = database.get_past_races(horse_id)

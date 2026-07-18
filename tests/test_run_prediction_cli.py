@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import logging
 import unittest
+from unittest.mock import patch
 
-from scripts.models import Prediction
-from scripts.cli.run_prediction import run
+from scripts.models import Horse, Prediction, Race
+from scripts.cli.run_prediction import DatabaseRaceInputProvider, run
 from scripts.prediction.ability_engine import AbilityEvaluation
 from scripts.prediction.bet_generator import BetRecommendation
 from scripts.prediction.bet_strategy import BetPlan
@@ -99,6 +100,24 @@ class RunPredictionCliTest(unittest.TestCase):
 
         self.assertEqual(status, 1)
         self.assertIn("段階=value", self.messages.messages[0])
+
+    def test_database_provider_uses_horse_model_for_database_lookup(self) -> None:
+        race = Race(
+            "2026-07-18", "JRA", "東京", 1, "テスト", "12:00", 1600, "芝", "晴", "良", 1, ""
+        )
+        horse = Horse(1, 1, 1, "テスト馬", "", "騎手", "調教師", 2.0, 1, 500.0)
+        with (
+            patch("scripts.cli.run_prediction.database.create_tables"),
+            patch("scripts.cli.run_prediction.database.get_all_races", return_value=[(1, race)]),
+            patch("scripts.cli.run_prediction.database.get_horses_by_race", return_value=[horse]),
+            patch("scripts.cli.run_prediction.database.get_horse_id", return_value=10) as get_horse_id,
+            patch("scripts.cli.run_prediction.database.get_past_races", return_value=[]),
+        ):
+            race_input = DatabaseRaceInputProvider().load(1)
+
+        get_horse_id.assert_called_once_with(horse)
+        self.assertEqual(race_input.horse_past_races, {10: []})
+        self.assertEqual(race_input.odds_by_horse, {10: 2.0})
 
 
 if __name__ == "__main__":
