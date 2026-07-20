@@ -35,6 +35,7 @@ from .normalization import (
     parse_positive_int,
     resolve_selection,
 )
+from .result_provider import DefaultRaceResultProvider
 
 __all__ = (
     "SimulationProviderError",
@@ -64,4 +65,5 @@ __all__ = (
     "normalize_payout_status",
     "resolve_selection",
     "expected_selections",
+    "DefaultRaceResultProvider",
 )
