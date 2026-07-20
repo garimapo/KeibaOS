@@ -37,6 +37,7 @@ from .normalization import (
 )
 from .result_provider import DefaultRaceResultProvider
 from .odds_provider import DefaultOddsSnapshotProvider
+from .payout_provider import DefaultPayoutProvider
 
 __all__ = (
     "SimulationProviderError",
@@ -68,4 +69,5 @@ __all__ = (
     "expected_selections",
     "DefaultRaceResultProvider",
     "DefaultOddsSnapshotProvider",
+    "DefaultPayoutProvider",
 )

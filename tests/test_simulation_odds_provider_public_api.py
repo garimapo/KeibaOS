@@ -17,8 +17,8 @@ class OddsProviderPublicApiTest(unittest.TestCase):
         self.assertIs(DefaultOddsSnapshotProvider, providers.DefaultOddsSnapshotProvider)
     def test_default_odds_provider_is_in_all(self) -> None:
         self.assertIn("DefaultOddsSnapshotProvider", providers.__all__)
-    def test_all_contains_29_symbols(self) -> None:
-        self.assertEqual(len(providers.__all__), 29)
+    def test_all_contains_30_symbols(self) -> None:
+        self.assertEqual(len(providers.__all__), 30)
     def test_default_odds_provider_matches_odds_provider_object(self) -> None:
         self.assertIs(providers.DefaultOddsSnapshotProvider, odds_provider.DefaultOddsSnapshotProvider)
     def test_protocol_and_default_odds_provider_are_distinct(self) -> None:

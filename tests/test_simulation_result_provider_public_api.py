@@ -15,8 +15,8 @@ class ResultProviderPublicApiTest(unittest.TestCase):
     def test_default_provider_is_in_all(self) -> None:
         self.assertIn("DefaultRaceResultProvider", providers.__all__)
 
-    def test_all_contains_29_symbols(self) -> None:
-        self.assertEqual(len(providers.__all__), 29)
+    def test_all_contains_30_symbols(self) -> None:
+        self.assertEqual(len(providers.__all__), 30)
 
     def test_default_provider_matches_result_provider_object(self) -> None:
         self.assertIs(providers.DefaultRaceResultProvider, result_provider.DefaultRaceResultProvider)

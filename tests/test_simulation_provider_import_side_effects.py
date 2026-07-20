@@ -17,6 +17,7 @@ MODULES = (
     "scripts.simulation.providers.interfaces",
     "scripts.simulation.providers.result_provider",
     "scripts.simulation.providers.odds_provider",
+    "scripts.simulation.providers.payout_provider",
 )
 
 CHILD_SCRIPT = """
@@ -95,6 +96,9 @@ class ProviderImportSideEffectsTest(unittest.TestCase):
 
     def test_odds_provider_import_subprocess_succeeds(self) -> None:
         self._assert_clean_import((MODULES[6],))
+
+    def test_payout_provider_import_subprocess_succeeds(self) -> None:
+        self._assert_clean_import((MODULES[7],))
 
     def test_imports_write_no_stdout_or_stderr(self) -> None:
         self._assert_clean_import()
