@@ -15,7 +15,7 @@ REQUIRED_NAMES = (
     "OddsSnapshotProvider", "PayoutProvider", "parse_positive_int", "parse_finish_position",
     "parse_decimal_odds", "parse_payout_per_100", "normalize_result_status",
     "normalize_result_entry_status", "normalize_payout_status", "resolve_selection",
-    "expected_selections", "DefaultRaceResultProvider",
+    "expected_selections", "DefaultRaceResultProvider", "DefaultOddsSnapshotProvider",
 )
 
 
@@ -61,6 +61,10 @@ class ProviderPublicApiTest(unittest.TestCase):
     def test_default_race_result_provider_is_public(self) -> None:
         from scripts.simulation.providers.result_provider import DefaultRaceResultProvider
         self.assertIs(providers.DefaultRaceResultProvider, DefaultRaceResultProvider)
+
+    def test_default_odds_snapshot_provider_is_public(self) -> None:
+        from scripts.simulation.providers.odds_provider import DefaultOddsSnapshotProvider
+        self.assertIs(providers.DefaultOddsSnapshotProvider, DefaultOddsSnapshotProvider)
 
     def test_normalization_functions_are_public(self) -> None:
         self.assertIs(providers.parse_positive_int, normalization.parse_positive_int)
