@@ -59,9 +59,9 @@ class SimulationModelTest(unittest.TestCase):
             SimulationBet(1, "s", "単勝", [1], 100, 1, datetime(2026, 1, 1))
         with self.assertRaisesRegex(ValueError, "multiple of 100"):
             SimulationBet(1, "s", "単勝", [1], 50, 1, NOW)
-        with self.assertRaisesRegex(ValueError, "exactly one"):
+        with self.assertRaisesRegex(ValueError, "requires 1 unique"):
             SimulationBet(1, "s", "単勝", [1, 2], 100, 1, NOW)
-        with self.assertRaisesRegex(ValueError, "duplicate"):
+        with self.assertRaisesRegex(ValueError, "requires 1 unique"):
             SimulationBet(1, "s", "単勝", [1, 1], 100, 1, NOW)
 
     def test_settlement_money_and_status_invariants(self) -> None:

@@ -16,6 +16,7 @@ from scripts.models import PastRace
 from scripts.prediction.bet_strategy import StrategyConfig
 from scripts.prediction.prediction_pipeline import RacePredictionInput
 from scripts.prediction.track_engine import RaceTrackConditions
+from scripts.simulation.repositories.interfaces import normalize_selection, validate_bet_type
 
 
 WIN_BET_TYPE = "単勝"
@@ -327,16 +328,14 @@ class SimulationBet:
         _positive(self.race_id, "race_id")
         if not self.strategy_id:
             raise ValueError("strategy_id must not be empty")
-        if self.bet_type != WIN_BET_TYPE:
-            raise ValueError(f"unsupported executable bet_type: {self.bet_type}")
-        selected = _selection(self.race_entry_ids, "race_entry_ids")
-        if len(selected) != 1:
-            raise ValueError("単勝 requires exactly one race_entry_id")
+        kind = validate_bet_type(self.bet_type)
+        selected = normalize_selection(self.race_entry_ids, kind)
         if not isinstance(self.stake, int) or isinstance(self.stake, bool) or self.stake <= 0 or self.stake % 100:
             raise ValueError("stake must be a positive multiple of 100")
-        if not isinstance(self.recommendation_rank, int) or self.recommendation_rank < 0:
+        if not isinstance(self.recommendation_rank, int) or isinstance(self.recommendation_rank, bool) or self.recommendation_rank < 0:
             raise ValueError("recommendation_rank must be non-negative")
         _aware(self.placed_at_cutoff, "placed_at_cutoff")
+        object.__setattr__(self, "bet_type", kind)
         object.__setattr__(self, "race_entry_ids", selected)
 
 
