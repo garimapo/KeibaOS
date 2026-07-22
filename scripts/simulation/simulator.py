@@ -5,10 +5,11 @@ Higher-level race settlement and aggregate metrics are introduced separately.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from .models import SimulationBet
-from .repositories.interfaces import PayoutPublication, PayoutRecord, PayoutStatus
+from .repositories.interfaces import PayoutPublication, PayoutRecord, PayoutStatus, validate_bet_type
 
 
 class SimulationBetEvaluationError(ValueError):
@@ -61,6 +62,67 @@ class _EvaluatedSimulationBet:
             raise SimulationBetEvaluationError("unsupported payouts cannot be evaluated")
         if self.hit != (self.payout_status is PayoutStatus.WINNING):
             raise SimulationBetEvaluationError("only a winning payout may be a hit")
+
+
+@dataclass(frozen=True)
+class _EvaluatedSimulationRaceBets:
+    """Private immutable evaluation of all atomic bets for one race and strategy."""
+
+    race_id: int
+    strategy_id: str
+    bets: tuple[SimulationBet, ...]
+    evaluations: tuple[_EvaluatedSimulationBet, ...]
+    investment: int
+    payout: int
+    profit: int
+    hit_bet_count: int
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.race_id, int) or isinstance(self.race_id, bool) or self.race_id <= 0:
+            raise SimulationBetEvaluationError("race_id must be a positive int")
+        if not isinstance(self.strategy_id, str) or not self.strategy_id:
+            raise SimulationBetEvaluationError("strategy_id must be a non-empty str")
+        if not isinstance(self.bets, tuple) or not self.bets:
+            raise SimulationBetEvaluationError("bets must be a non-empty tuple")
+        if not isinstance(self.evaluations, tuple) or len(self.evaluations) != len(self.bets):
+            raise SimulationBetEvaluationError("evaluations must align with bets")
+        if not all(isinstance(bet, SimulationBet) for bet in self.bets):
+            raise SimulationBetEvaluationError("bets must contain SimulationBet values")
+        if not all(isinstance(value, _EvaluatedSimulationBet) for value in self.evaluations):
+            raise SimulationBetEvaluationError("evaluations must contain _EvaluatedSimulationBet values")
+        if any(bet.race_id != self.race_id or bet.strategy_id != self.strategy_id for bet in self.bets):
+            raise SimulationBetEvaluationError("all bets must belong to race_id and strategy_id")
+        if any(value.bet is not bet for bet, value in zip(self.bets, self.evaluations, strict=True)):
+            raise SimulationBetEvaluationError("evaluations must preserve the corresponding bet objects")
+        identities = {(bet.bet_type, bet.race_entry_ids) for bet in self.bets}
+        if len(identities) != len(self.bets):
+            raise SimulationBetEvaluationError("bets must not contain duplicate identities")
+        for value, name, positive in (
+            (self.investment, "investment", True),
+            (self.payout, "payout", False),
+            (self.profit, "profit", False),
+            (self.hit_bet_count, "hit_bet_count", False),
+        ):
+            if not isinstance(value, int) or isinstance(value, bool):
+                raise SimulationBetEvaluationError(f"{name} must be an int")
+            if positive and value <= 0:
+                raise SimulationBetEvaluationError(f"{name} must be positive")
+            if not positive and name != "profit" and value < 0:
+                raise SimulationBetEvaluationError(f"{name} must be non-negative")
+        if self.investment != sum(bet.stake for bet in self.bets):
+            raise SimulationBetEvaluationError("investment must equal the sum of bet stakes")
+        if self.investment != sum(value.investment_amount for value in self.evaluations):
+            raise SimulationBetEvaluationError("investment must equal the sum of evaluation investments")
+        if self.payout != sum(value.payout_amount for value in self.evaluations):
+            raise SimulationBetEvaluationError("payout must equal the sum of evaluation payouts")
+        if self.profit != sum(value.profit for value in self.evaluations):
+            raise SimulationBetEvaluationError("profit must equal the sum of evaluation profits")
+        if self.profit != self.payout - self.investment:
+            raise SimulationBetEvaluationError("profit must equal payout minus investment")
+        if self.hit_bet_count != sum(value.hit for value in self.evaluations):
+            raise SimulationBetEvaluationError("hit_bet_count must equal the number of hit evaluations")
+        if not 0 <= self.hit_bet_count <= len(self.bets):
+            raise SimulationBetEvaluationError("hit_bet_count must be within the bet count")
 
 
 def _calculate_payout_amount(stake: int, payout_per_100: int) -> int:
@@ -131,3 +193,66 @@ def _evaluate_simulation_bet(
         raise
     except (TypeError, ValueError, KeyError, AttributeError, ArithmeticError) as exc:
         raise SimulationBetEvaluationError("invalid single-bet settlement input") from exc
+
+
+def _evaluate_simulation_race_bets(
+    race_id: int,
+    strategy_id: str,
+    bets: Sequence[SimulationBet],
+    publications_by_bet_type: Mapping[str, PayoutPublication],
+) -> _EvaluatedSimulationRaceBets:
+    """Evaluate all atomic bets for exactly one race and one strategy without I/O."""
+    try:
+        if not isinstance(race_id, int) or isinstance(race_id, bool) or race_id <= 0:
+            raise SimulationBetEvaluationError("race_id must be a positive int")
+        if not isinstance(strategy_id, str) or not strategy_id:
+            raise SimulationBetEvaluationError("strategy_id must be a non-empty str")
+        if not isinstance(bets, Sequence) or isinstance(bets, (str, bytes, bytearray)):
+            raise SimulationBetEvaluationError("bets must be a Sequence")
+        ordered_bets = tuple(bets)
+        if not ordered_bets:
+            raise SimulationBetEvaluationError("bets must not be empty")
+        if not all(isinstance(bet, SimulationBet) for bet in ordered_bets):
+            raise SimulationBetEvaluationError("bets must contain SimulationBet values")
+        if any(bet.race_id != race_id for bet in ordered_bets):
+            raise SimulationBetEvaluationError("all bets must match race_id")
+        if any(bet.strategy_id != strategy_id for bet in ordered_bets):
+            raise SimulationBetEvaluationError("all bets must match strategy_id")
+        if len({(bet.bet_type, bet.race_entry_ids) for bet in ordered_bets}) != len(ordered_bets):
+            raise SimulationBetEvaluationError("bets must not contain duplicate identities")
+        if not isinstance(publications_by_bet_type, Mapping):
+            raise SimulationBetEvaluationError("publications_by_bet_type must be a Mapping")
+        publications = dict(publications_by_bet_type)
+        for key, publication in publications.items():
+            kind = validate_bet_type(key)
+            if not isinstance(publication, PayoutPublication):
+                raise SimulationBetEvaluationError("mapping values must be PayoutPublication")
+            if publication.bet_type != kind:
+                raise SimulationBetEvaluationError("publication bet_type must match its mapping key")
+            if publication.race_id != race_id:
+                raise SimulationBetEvaluationError("publication race_id must match race_id")
+        expected_types = {bet.bet_type for bet in ordered_bets}
+        if set(publications) != expected_types:
+            raise SimulationBetEvaluationError("publication mapping keys must exactly match bet types")
+        evaluations = tuple(
+            _evaluate_simulation_bet(bet, publications[bet.bet_type])
+            for bet in ordered_bets
+        )
+        investment = sum(value.investment_amount for value in evaluations)
+        payout = sum(value.payout_amount for value in evaluations)
+        profit = sum(value.profit for value in evaluations)
+        hit_bet_count = sum(value.hit for value in evaluations)
+        return _EvaluatedSimulationRaceBets(
+            race_id=race_id,
+            strategy_id=strategy_id,
+            bets=ordered_bets,
+            evaluations=evaluations,
+            investment=investment,
+            payout=payout,
+            profit=profit,
+            hit_bet_count=hit_bet_count,
+        )
+    except SimulationBetEvaluationError:
+        raise
+    except (TypeError, ValueError, KeyError, AttributeError, ArithmeticError) as exc:
+        raise SimulationBetEvaluationError("invalid race-bet settlement input") from exc
