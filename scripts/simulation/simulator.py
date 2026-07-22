@@ -7,8 +7,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 
-from .models import SimulationBet
+from .models import SettlementStatus, SimulationBet, SimulationResult
 from .repositories.interfaces import PayoutPublication, PayoutRecord, PayoutStatus, validate_bet_type
 
 
@@ -256,3 +257,63 @@ def _evaluate_simulation_race_bets(
         raise
     except (TypeError, ValueError, KeyError, AttributeError, ArithmeticError) as exc:
         raise SimulationBetEvaluationError("invalid race-bet settlement input") from exc
+
+
+def _build_settled_simulation_result(
+    evaluation: _EvaluatedSimulationRaceBets,
+    settled_at: datetime,
+) -> SimulationResult:
+    """Convert one successful internal race evaluation into a SETTLED result."""
+    try:
+        if not isinstance(evaluation, _EvaluatedSimulationRaceBets):
+            raise SimulationBetEvaluationError("evaluation must be _EvaluatedSimulationRaceBets")
+        if not isinstance(settled_at, datetime) or settled_at.tzinfo is None or settled_at.utcoffset() is None:
+            raise SimulationBetEvaluationError("settled_at must be a timezone-aware datetime")
+        if any(settled_at < bet.placed_at_cutoff for bet in evaluation.bets):
+            raise SimulationBetEvaluationError("settled_at must not precede a bet placed_at_cutoff")
+        return SimulationResult(
+            race_id=evaluation.race_id,
+            strategy_id=evaluation.strategy_id,
+            bets=evaluation.bets,
+            settlement_status=SettlementStatus.SETTLED,
+            exclusion_reason=None,
+            planned_investment=evaluation.investment,
+            settled_investment=evaluation.investment,
+            payout=evaluation.payout,
+            profit=evaluation.profit,
+            hit_bet_count=evaluation.hit_bet_count,
+            settled_at=settled_at,
+        )
+    except SimulationBetEvaluationError:
+        raise
+    except (TypeError, ValueError, KeyError, AttributeError, ArithmeticError) as exc:
+        raise SimulationBetEvaluationError("invalid settled-result conversion input") from exc
+
+
+def _build_no_bet_simulation_result(
+    race_id: int,
+    strategy_id: str,
+) -> SimulationResult:
+    """Build an empty NO_BET result without evaluating bets or consulting data sources."""
+    try:
+        if not isinstance(race_id, int) or isinstance(race_id, bool) or race_id <= 0:
+            raise SimulationBetEvaluationError("race_id must be a positive int")
+        if not isinstance(strategy_id, str) or not strategy_id:
+            raise SimulationBetEvaluationError("strategy_id must be a non-empty str")
+        return SimulationResult(
+            race_id=race_id,
+            strategy_id=strategy_id,
+            bets=(),
+            settlement_status=SettlementStatus.NO_BET,
+            exclusion_reason=None,
+            planned_investment=0,
+            settled_investment=None,
+            payout=None,
+            profit=None,
+            hit_bet_count=0,
+            settled_at=None,
+        )
+    except SimulationBetEvaluationError:
+        raise
+    except (TypeError, ValueError, KeyError, AttributeError, ArithmeticError) as exc:
+        raise SimulationBetEvaluationError("invalid no-bet result input") from exc
