@@ -317,3 +317,57 @@ def _build_no_bet_simulation_result(
         raise
     except (TypeError, ValueError, KeyError, AttributeError, ArithmeticError) as exc:
         raise SimulationBetEvaluationError("invalid no-bet result input") from exc
+
+
+def _build_non_settled_simulation_result(
+    *,
+    race_id: int,
+    strategy_id: str,
+    bets: Sequence[SimulationBet],
+    settlement_status: SettlementStatus,
+    exclusion_reason: str,
+) -> SimulationResult:
+    """Build a non-settled result without evaluating bets or external data."""
+    try:
+        if not isinstance(race_id, int) or isinstance(race_id, bool) or race_id <= 0:
+            raise SimulationBetEvaluationError("race_id must be a positive int")
+        if not isinstance(strategy_id, str) or not strategy_id:
+            raise SimulationBetEvaluationError("strategy_id must be a non-empty str")
+        if not isinstance(bets, Sequence) or isinstance(bets, (str, bytes, bytearray)):
+            raise SimulationBetEvaluationError("bets must be a Sequence")
+        ordered_bets = tuple(bets)
+        if not all(isinstance(bet, SimulationBet) for bet in ordered_bets):
+            raise SimulationBetEvaluationError("bets must contain SimulationBet values")
+        if any(bet.race_id != race_id or bet.strategy_id != strategy_id for bet in ordered_bets):
+            raise SimulationBetEvaluationError("bets must belong to race_id and strategy_id")
+        if len({(bet.bet_type, bet.race_entry_ids) for bet in ordered_bets}) != len(ordered_bets):
+            raise SimulationBetEvaluationError("bets must not contain duplicate identities")
+        allowed_statuses = {
+            SettlementStatus.UNSETTLED,
+            SettlementStatus.VOID,
+            SettlementStatus.ERROR,
+            SettlementStatus.UNSUPPORTED,
+        }
+        if not isinstance(settlement_status, SettlementStatus) or settlement_status not in allowed_statuses:
+            raise SimulationBetEvaluationError("settlement_status must be a supported non-settled status")
+        if settlement_status is not SettlementStatus.ERROR and not ordered_bets:
+            raise SimulationBetEvaluationError("non-ERROR non-settled results require at least one bet")
+        if not isinstance(exclusion_reason, str) or not exclusion_reason.strip():
+            raise SimulationBetEvaluationError("exclusion_reason must be a non-empty str")
+        return SimulationResult(
+            race_id=race_id,
+            strategy_id=strategy_id,
+            bets=ordered_bets,
+            settlement_status=settlement_status,
+            exclusion_reason=exclusion_reason,
+            planned_investment=sum(bet.stake for bet in ordered_bets),
+            settled_investment=None,
+            payout=None,
+            profit=None,
+            hit_bet_count=0,
+            settled_at=None,
+        )
+    except SimulationBetEvaluationError:
+        raise
+    except (TypeError, ValueError, KeyError, AttributeError, ArithmeticError) as exc:
+        raise SimulationBetEvaluationError("invalid non-settled result input") from exc
