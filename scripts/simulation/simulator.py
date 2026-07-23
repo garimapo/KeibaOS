@@ -9,14 +9,59 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from typing import Protocol
 
-from .models import BetTypeSummary, SettlementStatus, SimulationBet, SimulationResult, SimulationSummary
+from .models import (
+    BetTypeSummary,
+    SettlementStatus,
+    SimulationBet,
+    SimulationRaceInput,
+    SimulationResult,
+    SimulationSummary,
+    StrategyIdentity,
+)
 from .providers.models import CompletenessStatus
 from .repositories.interfaces import PayoutPublication, PayoutRecord, PayoutStatus, RaceResultStatus, validate_bet_type
 
 
 class SimulationBetEvaluationError(ValueError):
     """Raised when a single-bet settlement input cannot be safely evaluated."""
+
+
+class RaceSimulationExecutor(Protocol):
+    """The injected, pure boundary that produces one race's final result."""
+
+    def __call__(self, *, race_input: SimulationRaceInput) -> SimulationResult:
+        ...
+
+
+class Simulator:
+    """Immutable execution boundary for one strategy's future multi-race run."""
+
+    __slots__ = ("_strategy_identity", "_race_executor")
+
+    def __init__(
+        self,
+        *,
+        strategy_identity: StrategyIdentity,
+        race_executor: RaceSimulationExecutor,
+    ) -> None:
+        if not isinstance(strategy_identity, StrategyIdentity):
+            raise SimulationBetEvaluationError("strategy_identity must be a StrategyIdentity")
+        if not callable(race_executor):
+            raise SimulationBetEvaluationError("race_executor must be callable")
+        self._strategy_identity = strategy_identity
+        self._race_executor = race_executor
+
+    @property
+    def strategy_identity(self) -> StrategyIdentity:
+        """Return the exact immutable identity provided to the constructor."""
+        return self._strategy_identity
+
+    @property
+    def race_executor(self) -> RaceSimulationExecutor:
+        """Return the unwrapped executor retained for the future run boundary."""
+        return self._race_executor
 
 
 @dataclass(frozen=True)

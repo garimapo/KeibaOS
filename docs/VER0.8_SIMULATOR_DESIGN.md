@@ -304,6 +304,34 @@ class SimulationReport:
 
 ## Simulatorの入出力と既存パイプライン連携
 
+### 実行境界（第4C-2b1）
+
+`Simulator` は一つの `StrategyIdentity` と、一レースを最終 `SimulationResult` に変換する注入済みexecutorを保持する。現段階ではexecutorを実行せず、`run()`も提供しない。これにより、後続の複数レース実行はProvider・Repository・外部I/Oを`Simulator`へ直接持ち込まずに接続できる。
+
+```python
+class RaceSimulationExecutor(Protocol):
+    def __call__(
+        self,
+        *,
+        race_input: SimulationRaceInput,
+    ) -> SimulationResult:
+        ...
+
+
+class Simulator:
+    def __init__(
+        self,
+        *,
+        strategy_identity: StrategyIdentity,
+        race_executor: RaceSimulationExecutor,
+    ) -> None:
+        ...
+```
+
+constructorは`StrategyIdentity`を再生成・分解・補正せず、同一のimmutable objectを保持する。`race_executor`はcallableであることだけをFail Closedで検証し、signature検査・試験実行・wrapper化を行わない。後続の`run()`はexecutorを各`SimulationRaceInput`に一回だけ呼び、保持した`strategy_id`、`strategy_name`、`strategy_config_hash`を`_build_simulation_summary()`へ明示的に渡す。外部取得・保存・CLI出力はさらに上位層の責務とする。
+
+以下の`run()`を含む完全形は後続フェーズの目標アーキテクチャである。第4C-2b1時点では上記constructorとexecutor境界だけを実装し、`run()`はまだ提供しない。
+
 ```python
 class Simulator:
     def run(
