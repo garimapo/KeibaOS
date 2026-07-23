@@ -36,7 +36,7 @@ class RaceSimulationExecutor(Protocol):
 
 
 class Simulator:
-    """Immutable execution boundary for one strategy's future multi-race run."""
+    """Immutable execution boundary for one strategy's multi-race run."""
 
     __slots__ = ("_strategy_identity", "_race_executor")
 
@@ -62,6 +62,32 @@ class Simulator:
     def race_executor(self) -> RaceSimulationExecutor:
         """Return the unwrapped executor retained for the future run boundary."""
         return self._race_executor
+
+    def run(
+        self,
+        *,
+        race_inputs: Sequence[SimulationRaceInput],
+    ) -> SimulationSummary:
+        """Execute every validated race once, then delegate all aggregation."""
+        if not isinstance(race_inputs, Sequence) or isinstance(race_inputs, (str, bytes, bytearray)):
+            raise SimulationBetEvaluationError("race_inputs must be a Sequence")
+        ordered_inputs = tuple(race_inputs)
+        if not all(isinstance(race_input, SimulationRaceInput) for race_input in ordered_inputs):
+            raise SimulationBetEvaluationError("race_inputs must contain SimulationRaceInput values")
+        race_ids = tuple(race_input.race_id for race_input in ordered_inputs)
+        if len(set(race_ids)) != len(race_ids):
+            raise SimulationBetEvaluationError("race_inputs must not contain duplicate race_id values")
+
+        results = tuple(
+            self._race_executor(race_input=race_input)
+            for race_input in ordered_inputs
+        )
+        return _build_simulation_summary(
+            strategy_id=self._strategy_identity.strategy_id,
+            strategy_name=self._strategy_identity.strategy_name,
+            strategy_config_hash=self._strategy_identity.strategy_config_hash,
+            results=results,
+        )
 
 
 @dataclass(frozen=True)
