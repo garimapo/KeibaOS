@@ -28,6 +28,22 @@ def bet(strategy_id: str) -> SimulationBet:
     return SimulationBet(1, strategy_id, "単勝", [1], 100, 1, NOW)
 
 
+def settled_by_bet_type(item: SimulationBet, *, payout: int = 220, hit_bet_count: int = 1) -> dict[str, BetTypeSummary]:
+    return {
+        item.bet_type: BetTypeSummary(
+            item.bet_type, 1, 1, hit_bet_count, item.stake, payout,
+            payout - item.stake, Decimal(payout), Decimal(hit_bet_count * 100),
+        )
+    }
+
+
+def non_settled_by_bet_type(*items: SimulationBet) -> dict[str, BetTypeSummary]:
+    return {
+        bet_type: BetTypeSummary(bet_type, sum(item.bet_type == bet_type for item in items), 0, 0, 0, 0, 0, None, None)
+        for bet_type in {item.bet_type for item in items}
+    }
+
+
 def summary(strategy_id: str, *, status: SettlementStatus = SettlementStatus.SETTLED) -> SimulationSummary:
     settled = int(status is SettlementStatus.SETTLED)
     error = int(status is SettlementStatus.ERROR)
@@ -66,16 +82,16 @@ class SimulationModelTest(unittest.TestCase):
 
     def test_settlement_money_and_status_invariants(self) -> None:
         item = bet("s")
-        settled = SimulationResult(1, "s", [item], SettlementStatus.SETTLED, None, 100, 100, 220, 120, 1, NOW)
+        settled = SimulationResult(1, "s", [item], SettlementStatus.SETTLED, None, 100, 100, 220, 120, 1, NOW, settled_by_bet_type(item))
         self.assertEqual(settled.profit, 120)
         for status in (SettlementStatus.UNSETTLED, SettlementStatus.VOID, SettlementStatus.ERROR, SettlementStatus.UNSUPPORTED):
             reason = "reason"
-            result = SimulationResult(1, "s", [item], status, reason, 100)
+            result = SimulationResult(1, "s", [item], status, reason, 100, by_bet_type=non_settled_by_bet_type(item))
             self.assertIsNone(result.payout)
         with self.assertRaisesRegex(ValueError, "settled_investment"):
-            SimulationResult(1, "s", [item], SettlementStatus.SETTLED, None, 100, 50, 220, 170, 1, NOW)
+            SimulationResult(1, "s", [item], SettlementStatus.SETTLED, None, 100, 50, 220, 170, 1, NOW, settled_by_bet_type(item))
         with self.assertRaisesRegex(ValueError, "non-SETTLED"):
-            SimulationResult(1, "s", [item], SettlementStatus.UNSETTLED, "reason", 100, payout=0)
+            SimulationResult(1, "s", [item], SettlementStatus.UNSETTLED, "reason", 100, payout=0, by_bet_type=non_settled_by_bet_type(item))
 
     def test_refund_is_not_winning_and_payout_table_prevents_duplicates(self) -> None:
         table = PayoutTable(1, "単勝", True, NOW, NOW, "JRA", [PayoutEntry([1], 220)], [RefundEntry([2], 100, "cancelled")])
@@ -88,7 +104,8 @@ class SimulationModelTest(unittest.TestCase):
         self.assertFalse(hasattr(context, "completed_at"))
         item = identity()
         metadata = SimulationRunMetadata("run", "dataset", NOW, NOW + timedelta(seconds=1), "commit")
-        result = SimulationResult(1, item.strategy_id, [bet(item.strategy_id)], SettlementStatus.SETTLED, None, 100, 100, 220, 120, 1, NOW)
+        race_bet = bet(item.strategy_id)
+        result = SimulationResult(1, item.strategy_id, [race_bet], SettlementStatus.SETTLED, None, 100, 100, 220, 120, 1, NOW, settled_by_bet_type(race_bet))
         report = SimulationReport(metadata, [item], [result], {item.strategy_id: summary(item.strategy_id)}, True)
         self.assertTrue(report.official_roi_valid)
         error = SimulationResult(2, item.strategy_id, [], SettlementStatus.ERROR, "future", 0)
@@ -148,18 +165,19 @@ class SimulationModelTest(unittest.TestCase):
         item = bet("s")
         for invalid in (Decimal("100"), 100.0, "100", True):
             with self.assertRaises(TypeError):
-                SimulationResult(1, "s", [item], SettlementStatus.SETTLED, None, 100, invalid, 220, 120, 1, NOW)
+                SimulationResult(1, "s", [item], SettlementStatus.SETTLED, None, 100, invalid, 220, 120, 1, NOW, settled_by_bet_type(item))
         with self.assertRaises(TypeError):
-            SimulationResult(1, "s", [item], SettlementStatus.SETTLED, None, 100, 100, 220, 120, True, NOW)
+            SimulationResult(1, "s", [item], SettlementStatus.SETTLED, None, 100, 100, 220, 120, True, NOW, settled_by_bet_type(item))
         with self.assertRaises((TypeError, ValueError)):
-            SimulationResult(1, "s", [item], SettlementStatus.SETTLED, None, 100, 100, -1, -101, 1, NOW)
+            SimulationResult(1, "s", [item], SettlementStatus.SETTLED, None, 100, 100, -1, -101, 1, NOW, settled_by_bet_type(item))
         with self.assertRaises(ValueError):
-            SimulationResult(1, "s", [item], SettlementStatus.SETTLED, None, 100, 100, 220, 120, 1, NOW - timedelta(seconds=1))
+            SimulationResult(1, "s", [item], SettlementStatus.SETTLED, None, 100, 100, 220, 120, 1, NOW - timedelta(seconds=1), settled_by_bet_type(item))
 
     def test_report_and_strategy_config_are_json_compatible(self) -> None:
         item = identity()
         metadata = SimulationRunMetadata("run", "dataset", NOW, NOW, "commit")
-        result = SimulationResult(1, item.strategy_id, [bet(item.strategy_id)], SettlementStatus.SETTLED, None, 100, 100, 220, 120, 1, NOW)
+        race_bet = bet(item.strategy_id)
+        result = SimulationResult(1, item.strategy_id, [race_bet], SettlementStatus.SETTLED, None, 100, 100, 220, 120, 1, NOW, settled_by_bet_type(race_bet))
         report = SimulationReport(metadata, [item], [result], {item.strategy_id: summary(item.strategy_id)}, True)
         encoded = to_json_compatible(report)
         self.assertEqual(encoded["strategy_identities"][0]["strategy_config"]["allowed_bet_types"], sorted(encoded["strategy_identities"][0]["strategy_config"]["allowed_bet_types"]))

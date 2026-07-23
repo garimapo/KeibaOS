@@ -9,7 +9,7 @@ import subprocess
 import sys
 import unittest
 
-from scripts.simulation.models import SettlementStatus, SimulationBet, SimulationResult
+from scripts.simulation.models import BetTypeSummary, SettlementStatus, SimulationBet, SimulationResult
 from scripts.simulation.repositories.interfaces import normalize_selection
 
 
@@ -122,18 +122,21 @@ class SimulationBetMultiTypeTests(unittest.TestCase):
         first = make_bet("馬連", (1, 2), stake=100, rank=1)
         second = make_bet("馬連", (2, 1), stake=200, rank=2)
         with self.assertRaisesRegex(ValueError, "duplicate selections"):
-            SimulationResult(1, "strategy-a", (first, second), SettlementStatus.UNSETTLED, "pending", 300)
+            SimulationResult(1, "strategy-a", (first, second), SettlementStatus.UNSETTLED, "pending", 300, by_bet_type={"馬連": BetTypeSummary("馬連", 2, 0, 0, 0, 0, 0, None, None)})
 
     def test_simulation_result_allows_quinella_and_wide_for_same_pair(self) -> None:
         quinella = make_bet("馬連", (1, 2))
         wide = make_bet("ワイド", (2, 1))
-        result = SimulationResult(1, "strategy-a", (quinella, wide), SettlementStatus.UNSETTLED, "pending", 200)
+        result = SimulationResult(1, "strategy-a", (quinella, wide), SettlementStatus.UNSETTLED, "pending", 200, by_bet_type={
+            "馬連": BetTypeSummary("馬連", 1, 0, 0, 0, 0, 0, None, None),
+            "ワイド": BetTypeSummary("ワイド", 1, 0, 0, 0, 0, 0, None, None),
+        })
         self.assertEqual(len(result.bets), 2)
 
     def test_simulation_result_allows_different_selections_for_same_bet_type(self) -> None:
         first = make_bet("馬連", (1, 2))
         second = make_bet("馬連", (1, 3))
-        result = SimulationResult(1, "strategy-a", (first, second), SettlementStatus.UNSETTLED, "pending", 200)
+        result = SimulationResult(1, "strategy-a", (first, second), SettlementStatus.UNSETTLED, "pending", 200, by_bet_type={"馬連": BetTypeSummary("馬連", 2, 0, 0, 0, 0, 0, None, None)})
         self.assertEqual(tuple(item.race_entry_ids for item in result.bets), ((1, 2), (1, 3)))
 
     def test_does_not_store_selection_key_odds_or_payout(self) -> None:

@@ -8,8 +8,9 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 
-from .models import SettlementStatus, SimulationBet, SimulationResult
+from .models import BetTypeSummary, SettlementStatus, SimulationBet, SimulationResult
 from .providers.models import CompletenessStatus
 from .repositories.interfaces import PayoutPublication, PayoutRecord, PayoutStatus, RaceResultStatus, validate_bet_type
 
@@ -292,6 +293,7 @@ def _build_settled_simulation_result(
             raise SimulationBetEvaluationError("settled_at must be a timezone-aware datetime")
         if any(settled_at < bet.placed_at_cutoff for bet in evaluation.bets):
             raise SimulationBetEvaluationError("settled_at must not precede a bet placed_at_cutoff")
+        by_bet_type = _build_settled_bet_type_summaries(evaluation.evaluations)
         return SimulationResult(
             race_id=evaluation.race_id,
             strategy_id=evaluation.strategy_id,
@@ -304,6 +306,7 @@ def _build_settled_simulation_result(
             profit=evaluation.profit,
             hit_bet_count=evaluation.hit_bet_count,
             settled_at=settled_at,
+            by_bet_type=by_bet_type,
         )
     except SimulationBetEvaluationError:
         raise
@@ -333,6 +336,7 @@ def _build_no_bet_simulation_result(
             profit=None,
             hit_bet_count=0,
             settled_at=None,
+            by_bet_type={},
         )
     except SimulationBetEvaluationError:
         raise
@@ -375,6 +379,7 @@ def _build_non_settled_simulation_result(
             raise SimulationBetEvaluationError("non-ERROR non-settled results require at least one bet")
         if not isinstance(exclusion_reason, str) or not exclusion_reason.strip():
             raise SimulationBetEvaluationError("exclusion_reason must be a non-empty str")
+        by_bet_type = _build_non_settled_bet_type_summaries(ordered_bets)
         return SimulationResult(
             race_id=race_id,
             strategy_id=strategy_id,
@@ -387,11 +392,62 @@ def _build_non_settled_simulation_result(
             profit=None,
             hit_bet_count=0,
             settled_at=None,
+            by_bet_type=by_bet_type,
         )
     except SimulationBetEvaluationError:
         raise
     except (TypeError, ValueError, KeyError, AttributeError, ArithmeticError) as exc:
         raise SimulationBetEvaluationError("invalid non-settled result input") from exc
+
+
+def _build_settled_bet_type_summaries(
+    evaluations: Sequence[_EvaluatedSimulationBet],
+) -> Mapping[str, BetTypeSummary]:
+    """Aggregate already-evaluated atomic bets once per supported bet type."""
+    grouped: dict[str, list[_EvaluatedSimulationBet]] = {}
+    for evaluation in evaluations:
+        grouped.setdefault(evaluation.bet.bet_type, []).append(evaluation)
+    summaries: dict[str, BetTypeSummary] = {}
+    for bet_type in sorted(grouped):
+        values = grouped[bet_type]
+        investment = sum(value.investment_amount for value in values)
+        payout = sum(value.payout_amount for value in values)
+        hit_bet_count = sum(value.hit for value in values)
+        summaries[bet_type] = BetTypeSummary(
+            bet_type=bet_type,
+            bet_count=len(values),
+            settled_bet_count=len(values),
+            hit_bet_count=hit_bet_count,
+            investment=investment,
+            payout=payout,
+            profit=payout - investment,
+            roi=Decimal(payout) * Decimal("100") / Decimal(investment),
+            bet_hit_rate=Decimal(hit_bet_count) * Decimal("100") / Decimal(len(values)),
+        )
+    return summaries
+
+
+def _build_non_settled_bet_type_summaries(
+    bets: Sequence[SimulationBet],
+) -> Mapping[str, BetTypeSummary]:
+    """Represent planned, non-settled bets without attributing settlement money."""
+    counts: dict[str, int] = {}
+    for bet in bets:
+        counts[bet.bet_type] = counts.get(bet.bet_type, 0) + 1
+    return {
+        bet_type: BetTypeSummary(
+            bet_type=bet_type,
+            bet_count=count,
+            settled_bet_count=0,
+            hit_bet_count=0,
+            investment=0,
+            payout=0,
+            profit=0,
+            roi=None,
+            bet_hit_rate=None,
+        )
+        for bet_type, count in sorted(counts.items())
+    }
 
 
 def _decide_non_settled_status(

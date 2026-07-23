@@ -354,6 +354,7 @@ class SimulationResult:
     profit: int | None = None
     hit_bet_count: int = 0
     settled_at: datetime | None = None
+    by_bet_type: Mapping[str, BetTypeSummary] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         _positive(self.race_id, "race_id")
@@ -406,7 +407,45 @@ class SimulationResult:
             raise ValueError("non-SETTLED results require hit_bet_count=0")
         if len({(bet.bet_type, bet.race_entry_ids) for bet in bets}) != len(bets):
             raise ValueError("bets must not contain duplicate selections")
+        summaries = _normalize_result_bet_type_summaries(self.by_bet_type)
+        bet_types = {bet.bet_type for bet in bets}
+        if self.settlement_status is SettlementStatus.SETTLED:
+            if not summaries or set(summaries) != bet_types:
+                raise ValueError("SETTLED by_bet_type keys must exactly match bet types")
+            if (sum(item.bet_count for item in summaries.values()) != len(bets)
+                    or sum(item.settled_bet_count for item in summaries.values()) != len(bets)
+                    or sum(item.hit_bet_count for item in summaries.values()) != self.hit_bet_count
+                    or sum(item.investment for item in summaries.values()) != self.settled_investment
+                    or sum(item.payout for item in summaries.values()) != self.payout
+                    or sum(item.profit for item in summaries.values()) != self.profit):
+                raise ValueError("SETTLED by_bet_type totals must match SimulationResult")
+            for bet_type, item in summaries.items():
+                matching_bets = tuple(bet for bet in bets if bet.bet_type == bet_type)
+                if (item.bet_count != len(matching_bets)
+                        or item.settled_bet_count != item.bet_count
+                        or item.investment != sum(bet.stake for bet in matching_bets)):
+                    raise ValueError("SETTLED by_bet_type entries must match bets and stakes")
+        elif self.settlement_status is SettlementStatus.NO_BET:
+            if summaries:
+                raise ValueError("NO_BET requires an empty by_bet_type mapping")
+        elif not bets and self.settlement_status is not SettlementStatus.ERROR:
+            raise ValueError("non-ERROR non-SETTLED results require at least one bet")
+        elif bets:
+            if not summaries or set(summaries) != bet_types:
+                raise ValueError("non-SETTLED by_bet_type keys must exactly match bet types")
+            for bet_type, item in summaries.items():
+                matching_bets = tuple(bet for bet in bets if bet.bet_type == bet_type)
+                if (item.bet_count != len(matching_bets)
+                        or item.settled_bet_count != 0
+                        or item.hit_bet_count != 0
+                        or any(value != 0 for value in (item.investment, item.payout, item.profit))
+                        or item.roi is not None
+                        or item.bet_hit_rate is not None):
+                    raise ValueError("non-SETTLED by_bet_type entries must be zero-money un-settled summaries")
+        elif summaries:
+            raise ValueError("empty non-SETTLED results require an empty by_bet_type mapping")
         object.__setattr__(self, "bets", bets)
+        object.__setattr__(self, "by_bet_type", summaries)
 
 
 @dataclass(frozen=True)
@@ -442,6 +481,26 @@ class BetTypeSummary:
         expected_hit_rate = None if self.settled_bet_count == 0 else Decimal(self.hit_bet_count) * Decimal("100") / Decimal(self.settled_bet_count)
         if self.roi != expected_roi or self.bet_hit_rate != expected_hit_rate:
             raise ValueError("BetTypeSummary rates must match their denominators")
+
+
+def _normalize_result_bet_type_summaries(value: object) -> Mapping[str, BetTypeSummary]:
+    """Copy, validate, and canonically order a result-level bet-type mapping."""
+    if not isinstance(value, Mapping):
+        raise TypeError("by_bet_type must be a Mapping")
+    normalized: dict[str, BetTypeSummary] = {}
+    for key, summary in value.items():
+        if not isinstance(key, str) or not key:
+            raise TypeError("by_bet_type keys must be non-empty bet_type strings")
+        try:
+            bet_type = validate_bet_type(key)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("by_bet_type keys must be supported bet types") from exc
+        if not isinstance(summary, BetTypeSummary):
+            raise TypeError("by_bet_type values must be BetTypeSummary")
+        if summary.bet_type != bet_type:
+            raise ValueError("by_bet_type keys must match BetTypeSummary.bet_type")
+        normalized[bet_type] = summary
+    return _freeze_mapping({key: normalized[key] for key in sorted(normalized)})
 
 
 @dataclass(frozen=True)

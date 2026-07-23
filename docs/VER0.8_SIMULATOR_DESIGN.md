@@ -176,6 +176,7 @@ class SimulationResult:
     profit: int | None
     hit_bet_count: int
     settled_at: datetime | None
+    by_bet_type: Mapping[str, BetTypeSummary]
 ```
 
 - `planned_investment` は生成済み買い目の合計であり、全状態で監査可能とする。`NO_BET` は必ず0。
@@ -185,10 +186,14 @@ class SimulationResult:
 - `UNSETTLED` は必要な結果または払戻表が未取得・不完全であることを表す。
 - 複数券種を購入し、1券種でも必要な払戻表が不完全なら、初期方針ではレース全体を `UNSETTLED` としてROI集計から除外する。部分精算は行わない。
 - `VOID` と `ERROR` は原因を `exclusion_reason` に必ず記録する。
+- `by_bet_type` は `BetTypeSummary` を券種キーで保持する不変Mappingであり、原子評価の払戻status・照合明細・odds等は保持しない。
+- `SETTLED` では `by_bet_type` が購入券種集合と完全一致し、各券種の生成数・精算数・投資額と全体の `bets`／`planned_investment` に一致する。券種別の的中数・投資額・払戻額・収支の合計も、結果全体の値と一致する。
+- `NO_BET` の `by_bet_type` は空とする。購入がある `UNSETTLED`、`VOID`、`ERROR`、`UNSUPPORTED` は購入券種ごとの件数を保持するが、券種別の精算数・的中数・投資額・払戻額・収支はすべて0、率は `None` とする。購入がない `ERROR` は空Mappingを許可し、空の `UNSETTLED`、`VOID`、`UNSUPPORTED` は許可しない。
+- `SimulationSummary` は各 `SimulationResult.by_bet_type` を再集計できる。`SimulationResult` 自身は集計済みの券種別値だけを保持し、原子評価の詳細を再構築しない。
 
 ### BetTypeSummary
 
-券種別成績を表す正式な主要モデル。
+券種別成績を表す正式な主要モデル。`SimulationResult` と `SimulationSummary` の双方で再利用する。
 
 ```python
 @dataclass(frozen=True)
@@ -200,11 +205,13 @@ class BetTypeSummary:
     investment: int
     payout: int
     profit: int
-    roi: float | None
-    bet_hit_rate: float | None
+    roi: Decimal | None
+    bet_hit_rate: Decimal | None
 ```
 
 `bet_count` は生成した全買い目数、`settled_bet_count` は正常精算された買い目数、`hit_bet_count` は精算済み買い目のうち winning となった点数とする。`bet_hit_rate` の分母は `settled_bet_count` とする。
+
+初期対応券種は `単勝`、`馬連`、`ワイド`、`3連複` とし、各 `SimulationBet` は1つの券種・1つの正規化済み選択組合せを表す原子的な買い目とする。
 
 ### SimulationSummary
 
