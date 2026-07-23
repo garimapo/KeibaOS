@@ -705,7 +705,7 @@ def _build_simulation_result_for_race(
     strategy_id: str,
     bets: Sequence[SimulationBet],
     publications_by_bet_type: Mapping[str, PayoutPublication],
-    settled_at: datetime,
+    settled_at: datetime | None,
     completeness_statuses: Sequence[CompletenessStatus],
     race_result_status: RaceResultStatus | None,
     payout_statuses: Sequence[PayoutStatus],
@@ -717,12 +717,6 @@ def _build_simulation_result_for_race(
     if isinstance(bets, Sequence) and not isinstance(bets, (str, bytes, bytearray)) and not bets:
         return _build_no_bet_simulation_result(race_id, strategy_id)
 
-    evaluation = _evaluate_simulation_race_bets(
-        race_id,
-        strategy_id,
-        bets,
-        publications_by_bet_type,
-    )
     decision = _decide_non_settled_status(
         completeness_statuses=completeness_statuses,
         race_result_status=race_result_status,
@@ -731,12 +725,20 @@ def _build_simulation_result_for_race(
         missing_race_result=missing_race_result,
         error_reason=error_reason,
     )
-    if decision is None:
-        return _build_settled_simulation_result(evaluation, settled_at)
-    return _build_non_settled_simulation_result(
-        race_id=race_id,
-        strategy_id=strategy_id,
-        bets=evaluation.bets,
-        settlement_status=decision.settlement_status,
-        exclusion_reason=decision.exclusion_reason,
+    if decision is not None:
+        return _build_non_settled_simulation_result(
+            race_id=race_id,
+            strategy_id=strategy_id,
+            bets=bets,
+            settlement_status=decision.settlement_status,
+            exclusion_reason=decision.exclusion_reason,
+        )
+    if not isinstance(settled_at, datetime) or settled_at.tzinfo is None or settled_at.utcoffset() is None:
+        raise SimulationBetEvaluationError("settled_at must be a timezone-aware datetime for SETTLED results")
+    evaluation = _evaluate_simulation_race_bets(
+        race_id,
+        strategy_id,
+        bets,
+        publications_by_bet_type,
     )
+    return _build_settled_simulation_result(evaluation, settled_at)

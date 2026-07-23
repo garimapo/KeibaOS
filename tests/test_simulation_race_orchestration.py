@@ -94,6 +94,10 @@ class RaceOrchestrationTests(unittest.TestCase):
     def test_no_bet_has_no_bets(self) -> None:
         self.assertEqual(self.invoke(bets=(), publications_by_bet_type={}).bets, ())
 
+    def test_no_bet_accepts_none_settled_at(self) -> None:
+        result = self.invoke(bets=(), publications_by_bet_type={}, settled_at=None)
+        self.assertIsNone(result.settled_at)
+
     def test_error_decision_builds_error_result(self) -> None:
         self.assertEqual(self.invoke(error_reason="provider_error").settlement_status, SettlementStatus.ERROR)
 
@@ -143,26 +147,27 @@ class RaceOrchestrationTests(unittest.TestCase):
         self.assert_non_settled_dispatch(SettlementStatus.UNSETTLED, "unsettled")
 
     def assert_non_settled_dispatch(self, status: SettlementStatus, reason: str) -> None:
-        evaluation, marker = self.evaluation(), object()
-        with patch.object(simulator, "_evaluate_simulation_race_bets", return_value=evaluation), patch.object(simulator, "_decide_non_settled_status", return_value=self.decision(status, reason)), patch.object(simulator, "_build_non_settled_simulation_result", return_value=marker) as non_settled, patch.object(simulator, "_build_settled_simulation_result") as settled, patch.object(simulator, "_build_no_bet_simulation_result") as no_bet:
-            self.assertIs(self.invoke(), marker)
-        non_settled.assert_called_once_with(race_id=1, strategy_id="strategy-a", bets=evaluation.bets, settlement_status=status, exclusion_reason=reason)
+        marker = object()
+        bets = (make_bet(),)
+        with patch.object(simulator, "_evaluate_simulation_race_bets") as evaluate, patch.object(simulator, "_decide_non_settled_status", return_value=self.decision(status, reason)), patch.object(simulator, "_build_non_settled_simulation_result", return_value=marker) as non_settled, patch.object(simulator, "_build_settled_simulation_result") as settled, patch.object(simulator, "_build_no_bet_simulation_result") as no_bet:
+            self.assertIs(self.invoke(bets=bets), marker)
+        non_settled.assert_called_once_with(race_id=1, strategy_id="strategy-a", bets=bets, settlement_status=status, exclusion_reason=reason)
+        evaluate.assert_not_called()
         settled.assert_not_called(); no_bet.assert_not_called()
 
-    def test_evaluation_precedes_decision(self) -> None:
+    def test_decision_precedes_evaluation_for_settled_result(self) -> None:
         events: list[str] = []
         evaluation = self.evaluation()
-        with patch.object(simulator, "_evaluate_simulation_race_bets", side_effect=lambda *args: events.append("evaluate") or evaluation), patch.object(simulator, "_decide_non_settled_status", side_effect=lambda **kwargs: events.append("decision")), patch.object(simulator, "_build_settled_simulation_result", side_effect=lambda *args: events.append("settled") or object()):
+        with patch.object(simulator, "_decide_non_settled_status", side_effect=lambda **kwargs: events.append("decision")), patch.object(simulator, "_evaluate_simulation_race_bets", side_effect=lambda *args: events.append("evaluate") or evaluation), patch.object(simulator, "_build_settled_simulation_result", side_effect=lambda *args: events.append("settled") or object()):
             self.invoke()
-        self.assertEqual(events, ["evaluate", "decision", "settled"])
+        self.assertEqual(events, ["decision", "evaluate", "settled"])
 
-    def test_evaluation_precedes_non_settled_builder(self) -> None:
+    def test_non_settled_decision_precedes_non_settled_builder_without_evaluation(self) -> None:
         events: list[str] = []
-        evaluation = self.evaluation()
         decision = self.decision(SettlementStatus.UNSETTLED, "missing")
-        with patch.object(simulator, "_evaluate_simulation_race_bets", side_effect=lambda *args: events.append("evaluate") or evaluation), patch.object(simulator, "_decide_non_settled_status", side_effect=lambda **kwargs: events.append("decision") or decision), patch.object(simulator, "_build_non_settled_simulation_result", side_effect=lambda **kwargs: events.append("non_settled") or object()):
+        with patch.object(simulator, "_evaluate_simulation_race_bets", side_effect=lambda *args: events.append("evaluate")), patch.object(simulator, "_decide_non_settled_status", side_effect=lambda **kwargs: events.append("decision") or decision), patch.object(simulator, "_build_non_settled_simulation_result", side_effect=lambda **kwargs: events.append("non_settled") or object()):
             self.invoke()
-        self.assertEqual(events, ["evaluate", "decision", "non_settled"])
+        self.assertEqual(events, ["decision", "non_settled"])
 
     def test_no_bet_skips_decision(self) -> None:
         with patch.object(simulator, "_decide_non_settled_status") as decide:
@@ -185,6 +190,30 @@ class RaceOrchestrationTests(unittest.TestCase):
         with patch.object(simulator, "_evaluate_simulation_race_bets", return_value=evaluation), patch.object(simulator, "_decide_non_settled_status", return_value=None), patch.object(simulator, "_build_settled_simulation_result", return_value=object()) as settled:
             self.invoke(settled_at=settled_at)
         settled.assert_called_once_with(evaluation, settled_at)
+
+    def test_settled_none_time_is_rejected_before_evaluation(self) -> None:
+        with patch.object(simulator, "_evaluate_simulation_race_bets") as evaluate:
+            with self.assertRaises(SimulationBetEvaluationError):
+                self.invoke(settled_at=None)
+        evaluate.assert_not_called()
+
+    def test_non_settled_accepts_none_time_without_evaluation(self) -> None:
+        decision = self.decision(SettlementStatus.UNSETTLED, "missing")
+        with patch.object(simulator, "_evaluate_simulation_race_bets") as evaluate, patch.object(simulator, "_decide_non_settled_status", return_value=decision):
+            result = self.invoke(settled_at=None)
+        self.assertEqual(result.settlement_status, SettlementStatus.UNSETTLED)
+        evaluate.assert_not_called()
+
+    def test_missing_publication_becomes_unsettled_without_evaluation(self) -> None:
+        with patch.object(simulator, "_evaluate_simulation_race_bets") as evaluate:
+            result = self.invoke(
+                publications_by_bet_type={},
+                settled_at=None,
+                missing_payout_bet_types=("単勝",),
+            )
+        self.assertEqual(result.settlement_status, SettlementStatus.UNSETTLED)
+        self.assertEqual(result.exclusion_reason, "missing_payout_publication")
+        evaluate.assert_not_called()
 
     def test_decision_receives_completeness_statuses(self) -> None:
         statuses = (CompletenessStatus.INCOMPLETE,)
@@ -313,12 +342,13 @@ class RaceOrchestrationTests(unittest.TestCase):
         calls = {node.func.id for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)}
         self.assertTrue({"_evaluate_simulation_race_bets", "_decide_non_settled_status", "_build_settled_simulation_result", "_build_non_settled_simulation_result", "_build_no_bet_simulation_result"} >= (calls & {name for name in calls if name.startswith("_")}))
 
-    def test_non_settled_builder_receives_evaluation_bets(self) -> None:
-        evaluation = self.evaluation()
+    def test_non_settled_builder_receives_original_bets(self) -> None:
+        bets = (make_bet(),)
         decision = self.decision(SettlementStatus.UNSETTLED, "missing")
-        with patch.object(simulator, "_evaluate_simulation_race_bets", return_value=evaluation), patch.object(simulator, "_decide_non_settled_status", return_value=decision), patch.object(simulator, "_build_non_settled_simulation_result", return_value=object()) as builder:
-            self.invoke()
-        self.assertIs(builder.call_args.kwargs["bets"], evaluation.bets)
+        with patch.object(simulator, "_evaluate_simulation_race_bets") as evaluate, patch.object(simulator, "_decide_non_settled_status", return_value=decision), patch.object(simulator, "_build_non_settled_simulation_result", return_value=object()) as builder:
+            self.invoke(bets=bets)
+        self.assertIs(builder.call_args.kwargs["bets"], bets)
+        evaluate.assert_not_called()
 
     def test_non_settled_builder_receives_decision_identity(self) -> None:
         decision = self.decision(SettlementStatus.ERROR, "exact_reason")
@@ -331,12 +361,12 @@ class RaceOrchestrationTests(unittest.TestCase):
         result = self.invoke(bets=(), publications_by_bet_type={}, completeness_statuses="invalid")
         self.assertEqual(result.settlement_status, SettlementStatus.NO_BET)
 
-    def test_non_empty_bets_require_evaluation_before_decision(self) -> None:
+    def test_non_empty_settled_bets_require_decision_before_evaluation(self) -> None:
         events: list[str] = []
         evaluation = self.evaluation()
-        with patch.object(simulator, "_evaluate_simulation_race_bets", side_effect=lambda *args: events.append("evaluate") or evaluation), patch.object(simulator, "_decide_non_settled_status", side_effect=lambda **kwargs: events.append("decision")), patch.object(simulator, "_build_settled_simulation_result", side_effect=lambda *args: events.append("settled") or object()):
+        with patch.object(simulator, "_decide_non_settled_status", side_effect=lambda **kwargs: events.append("decision")), patch.object(simulator, "_evaluate_simulation_race_bets", side_effect=lambda *args: events.append("evaluate") or evaluation), patch.object(simulator, "_build_settled_simulation_result", side_effect=lambda *args: events.append("settled") or object()):
             self.invoke()
-        self.assertEqual(events, ["evaluate", "decision", "settled"])
+        self.assertEqual(events, ["decision", "evaluate", "settled"])
 
 
 if __name__ == "__main__":
