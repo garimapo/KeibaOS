@@ -481,13 +481,18 @@ class SingleBetEvaluationTests(unittest.TestCase):
         self.assertNotIn("_evaluate_simulation_bet", simulation_package.__all__)
         self.assertFalse(hasattr(simulation_package, "_evaluate_simulation_bet"))
 
-    def test_module_does_not_define_full_simulation_or_roi_components(self) -> None:
-        source = Path(inspect.getsourcefile(_evaluate_simulation_bet)).read_text(encoding="utf-8")
+    def test_single_bet_evaluation_does_not_handle_drawdown(self) -> None:
+        source = inspect.getsource(_evaluate_simulation_bet)
         tree = ast.parse(source)
-        class_names = {node.name for node in tree.body if isinstance(node, ast.ClassDef)}
-        self.assertNotIn("Simulator", class_names)
-        self.assertNotIn("SimulationSummary", class_names)
-        self.assertNotIn("ROI", source)
+        names = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
+        calls = {
+            node.func.id
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        }
+        self.assertNotIn("maximum_drawdown", names)
+        self.assertNotIn("SimulationSummary", names)
+        self.assertNotIn("_build_simulation_summary", calls)
         self.assertNotIn("drawdown", source.lower())
 
     def test_helper_does_not_expand_box_or_formation_candidates(self) -> None:

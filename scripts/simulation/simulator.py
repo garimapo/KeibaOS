@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
-from .models import BetTypeSummary, SettlementStatus, SimulationBet, SimulationResult
+from .models import BetTypeSummary, SettlementStatus, SimulationBet, SimulationResult, SimulationSummary
 from .providers.models import CompletenessStatus
 from .repositories.interfaces import PayoutPublication, PayoutRecord, PayoutStatus, RaceResultStatus, validate_bet_type
 
@@ -448,6 +448,126 @@ def _build_non_settled_bet_type_summaries(
         )
         for bet_type, count in sorted(counts.items())
     }
+
+
+def _build_simulation_summary(
+    *,
+    strategy_id: str,
+    strategy_name: str,
+    strategy_config_hash: str,
+    results: Sequence[SimulationResult],
+) -> SimulationSummary:
+    """Build one strategy summary from already-validated, per-race results."""
+    try:
+        if not isinstance(strategy_id, str) or not strategy_id.strip():
+            raise SimulationBetEvaluationError("strategy_id must be a non-empty str")
+        if not isinstance(strategy_name, str) or not strategy_name.strip():
+            raise SimulationBetEvaluationError("strategy_name must be a non-empty str")
+        if (not isinstance(strategy_config_hash, str)
+                or len(strategy_config_hash) != 64
+                or any(character not in "0123456789abcdef" for character in strategy_config_hash)):
+            raise SimulationBetEvaluationError("strategy_config_hash must be a lowercase SHA-256 digest")
+        if not isinstance(results, Sequence) or isinstance(results, (str, bytes, bytearray)):
+            raise SimulationBetEvaluationError("results must be a Sequence")
+        ordered_results = tuple(results)
+        if not all(isinstance(result, SimulationResult) for result in ordered_results):
+            raise SimulationBetEvaluationError("results must contain SimulationResult values")
+        if any(result.strategy_id != strategy_id for result in ordered_results):
+            raise SimulationBetEvaluationError("all results must match strategy_id")
+        race_ids = tuple(result.race_id for result in ordered_results)
+        if len(set(race_ids)) != len(race_ids):
+            raise SimulationBetEvaluationError("results must not contain duplicate race_id values")
+        if not all(isinstance(result.settlement_status, SettlementStatus) for result in ordered_results):
+            raise SimulationBetEvaluationError("results must use SettlementStatus values")
+
+        summaries = _aggregate_bet_type_summaries(ordered_results)
+        settled_results = tuple(
+            result for result in ordered_results if result.settlement_status is SettlementStatus.SETTLED
+        )
+        settled_purchase_results = tuple(result for result in settled_results if result.bets)
+        investment = sum(result.settled_investment for result in settled_results)
+        payout = sum(result.payout for result in settled_results)
+        profit = sum(result.profit for result in settled_results)
+        settled_bet_count = sum(item.settled_bet_count for item in summaries.values())
+        hit_bet_count = sum(item.hit_bet_count for item in summaries.values())
+        hit_race_count = sum(result.hit_bet_count > 0 for result in settled_purchase_results)
+        return SimulationSummary(
+            strategy_id=strategy_id,
+            strategy_name=strategy_name,
+            strategy_config_hash=strategy_config_hash,
+            race_count=len(ordered_results),
+            settled_race_count=len(settled_results),
+            unsettled_race_count=sum(result.settlement_status is SettlementStatus.UNSETTLED for result in ordered_results),
+            no_bet_race_count=sum(result.settlement_status is SettlementStatus.NO_BET for result in ordered_results),
+            void_race_count=sum(result.settlement_status is SettlementStatus.VOID for result in ordered_results),
+            error_race_count=sum(result.settlement_status is SettlementStatus.ERROR for result in ordered_results),
+            unsupported_race_count=sum(result.settlement_status is SettlementStatus.UNSUPPORTED for result in ordered_results),
+            bet_count=sum(len(result.bets) for result in ordered_results),
+            settled_bet_count=settled_bet_count,
+            settled_purchase_race_count=len(settled_purchase_results),
+            hit_bet_count=hit_bet_count,
+            hit_race_count=hit_race_count,
+            investment=investment,
+            payout=payout,
+            profit=profit,
+            roi=None if investment == 0 else Decimal(payout) * Decimal("100") / Decimal(investment),
+            bet_hit_rate=None if settled_bet_count == 0 else Decimal(hit_bet_count) * Decimal("100") / Decimal(settled_bet_count),
+            race_hit_rate=(
+                None if not settled_purchase_results
+                else Decimal(hit_race_count) * Decimal("100") / Decimal(len(settled_purchase_results))
+            ),
+            maximum_drawdown=_maximum_drawdown(settled_results),
+            by_bet_type=summaries,
+        )
+    except SimulationBetEvaluationError:
+        raise
+    except (TypeError, ValueError, KeyError, AttributeError, ArithmeticError) as exc:
+        raise SimulationBetEvaluationError("invalid simulation-summary input") from exc
+
+
+def _aggregate_bet_type_summaries(
+    results: Sequence[SimulationResult],
+) -> Mapping[str, BetTypeSummary]:
+    """Aggregate validated result-level bet-type summaries in canonical key order."""
+    grouped: dict[str, list[BetTypeSummary]] = {}
+    for result in results:
+        for bet_type, summary in result.by_bet_type.items():
+            grouped.setdefault(bet_type, []).append(summary)
+    summaries: dict[str, BetTypeSummary] = {}
+    for bet_type in sorted(grouped):
+        values = grouped[bet_type]
+        investment = sum(value.investment for value in values)
+        payout = sum(value.payout for value in values)
+        settled_bet_count = sum(value.settled_bet_count for value in values)
+        hit_bet_count = sum(value.hit_bet_count for value in values)
+        summaries[bet_type] = BetTypeSummary(
+            bet_type=bet_type,
+            bet_count=sum(value.bet_count for value in values),
+            settled_bet_count=settled_bet_count,
+            hit_bet_count=hit_bet_count,
+            investment=investment,
+            payout=payout,
+            profit=payout - investment,
+            roi=None if investment == 0 else Decimal(payout) * Decimal("100") / Decimal(investment),
+            bet_hit_rate=(
+                None if settled_bet_count == 0
+                else Decimal(hit_bet_count) * Decimal("100") / Decimal(settled_bet_count)
+            ),
+        )
+    return summaries
+
+
+def _maximum_drawdown(results: Sequence[SimulationResult]) -> int:
+    """Compute drawdown over SETTLED results ordered by settlement time and race id."""
+    ordered = sorted(results, key=lambda result: (result.settled_at, result.race_id))
+    cumulative_profit = 0
+    peak = 0
+    maximum = 0
+    for result in ordered:
+        cumulative_profit += result.profit
+        peak = max(peak, cumulative_profit)
+        maximum = max(maximum, peak - cumulative_profit)
+    return maximum
 
 
 def _decide_non_settled_status(

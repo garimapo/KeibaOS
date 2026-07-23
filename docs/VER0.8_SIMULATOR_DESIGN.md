@@ -230,19 +230,39 @@ class SimulationSummary:
     void_race_count: int
     error_race_count: int
     unsupported_race_count: int
-    purchased_race_count: int
     bet_count: int
+    settled_bet_count: int
+    settled_purchase_race_count: int
     hit_bet_count: int
     hit_race_count: int
     investment: int
     payout: int
     profit: int
-    roi: float | None
-    bet_hit_rate: float | None
-    race_hit_rate: float | None
+    roi: Decimal | None
+    bet_hit_rate: Decimal | None
+    race_hit_rate: Decimal | None
     by_bet_type: Mapping[str, BetTypeSummary]
     maximum_drawdown: int
 ```
+
+`SimulationSummary` は、strategy identityを明示入力として受け取る純粋な `_build_simulation_summary()` が `SimulationResult` 列から構築する。
+
+```python
+def _build_simulation_summary(
+    *,
+    strategy_id: str,
+    strategy_name: str,
+    strategy_config_hash: str,
+    results: Sequence[SimulationResult],
+) -> SimulationSummary:
+    ...
+```
+
+`target_race_count` は実モデルの `race_count` に対応し、全statusの結果数とする。`settled_purchase_race_count` は `SETTLED` かつ買い目を持つレース数、`bet_count` は全statusの `bets` 件数、`settled_bet_count`・金額・ROI・的中率は `SETTLED` のみを集計対象とする。
+
+率はすべて `Decimal | None` で、ROIは `payout / investment × 100`、券種別的中率は `hit_bet_count / settled_bet_count × 100`、レース的中率は `hit_race_count / settled_purchase_race_count × 100` とする。分母が0なら `None` とし、floatへ変換しない。
+
+最大ドローダウンは `SETTLED` 結果だけを新しい列へ抽出して `(settled_at, race_id)` 昇順で並べ、初期peakを0として累積収支の最大下落幅を計算する。NO_BETと非精算statusは含めず、入力列をin-placeで並べ替えない。`by_bet_type` は各結果の同名Mappingを券種ごとに再集計し、全体の件数・金額・収支と一致しなければならない。原子評価の照合明細はSummaryへ保持しない。
 
 ### SimulationRunContext、SimulationRunMetadata と SimulationReport
 
