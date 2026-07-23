@@ -449,11 +449,19 @@ class SingleBetEvaluationTests(unittest.TestCase):
         source = Path(inspect.getsourcefile(_evaluate_simulation_bet)).read_text(encoding="utf-8")
         self.assertNotIn("class SimulationValidationError", source)
 
-    def test_module_has_no_database_or_provider_dependency(self) -> None:
-        source = Path(inspect.getsourcefile(_evaluate_simulation_bet)).read_text(encoding="utf-8")
-        self.assertNotIn("sqlite3", source)
-        self.assertNotIn("providers", source)
-        self.assertNotIn("repositories.sqlite", source)
+    def test_single_bet_helper_does_not_call_provider_repository_database_or_network(self) -> None:
+        """The evaluator is pure even when its module imports formal Enum types."""
+        signature = inspect.signature(_evaluate_simulation_bet)
+        self.assertEqual(tuple(signature.parameters), ("bet", "publication"))
+
+        source = inspect.getsource(_evaluate_simulation_bet)
+        self.assertNotIn("providers.", source)
+        self.assertNotIn("repositories.", source)
+        self.assertNotIn("sqlite", source.lower())
+        self.assertNotIn("requests", source)
+        self.assertNotIn("urllib", source)
+        self.assertNotIn("datetime.now", source)
+        self.assertNotIn("datetime.utcnow", source)
 
     def test_helper_does_not_call_providers(self) -> None:
         source = inspect.getsource(_evaluate_simulation_bet)

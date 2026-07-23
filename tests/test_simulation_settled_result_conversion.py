@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 import inspect
-from pathlib import Path
 from unittest.mock import patch
 import unittest
 
@@ -161,15 +160,19 @@ class SettledSimulationResultConversionTests(unittest.TestCase):
         self.assertNotIn("datetime.utcnow", source)
         self.assertNotIn("NO_BET", source)
 
-    def test_has_no_provider_repository_database_network_or_metrics_dependency(self) -> None:
-        source = Path(inspect.getsourcefile(_build_settled_simulation_result)).read_text(encoding="utf-8")
-        self.assertNotIn("sqlite3", source)
-        self.assertNotIn("providers", source)
-        self.assertNotIn("repositories.sqlite", source)
-        self.assertNotIn("requests", source)
-        helper_source = inspect.getsource(_build_settled_simulation_result).lower()
-        self.assertNotIn("roi", helper_source)
-        self.assertNotIn("drawdown", helper_source)
+    def test_settled_builder_does_not_call_provider_or_repository(self) -> None:
+        signature = inspect.signature(_build_settled_simulation_result)
+        self.assertEqual(tuple(signature.parameters), ("evaluation", "settled_at"))
+        helper_source = inspect.getsource(_build_settled_simulation_result)
+        self.assertNotIn("PayoutPublication", helper_source)
+        self.assertNotIn("Provider", helper_source)
+        self.assertNotIn("Repository", helper_source)
+        self.assertNotIn("_evaluate_simulation_bet", helper_source)
+        self.assertNotIn("_evaluate_simulation_race_bets", helper_source)
+        self.assertNotIn("sqlite", helper_source.lower())
+        self.assertNotIn("requests", helper_source)
+        self.assertNotIn("roi", helper_source.lower())
+        self.assertNotIn("drawdown", helper_source.lower())
 
     def test_internal_helper_is_not_exported_from_package_root(self) -> None:
         self.assertNotIn("_build_settled_simulation_result", simulation_package.__all__)

@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 import inspect
-from pathlib import Path
 from unittest.mock import patch
 import unittest
 
@@ -236,12 +235,22 @@ class SimulationRaceBetEvaluationTests(unittest.TestCase):
         self.assertEqual(items, [items[0]])
         self.assertEqual(mapping, {"単勝": mapping["単勝"]})
 
-    def test_has_no_provider_repository_database_or_network_dependency(self) -> None:
-        source = Path(inspect.getsourcefile(_evaluate_simulation_race_bets)).read_text(encoding="utf-8")
-        self.assertNotIn("sqlite3", source)
-        self.assertNotIn("providers", source)
-        self.assertNotIn("repositories.sqlite", source)
+    def test_race_bet_helper_does_not_call_provider_repository_database_or_network(self) -> None:
+        """The race evaluator is pure even when its module imports formal Enum types."""
+        signature = inspect.signature(_evaluate_simulation_race_bets)
+        self.assertEqual(
+            tuple(signature.parameters),
+            ("race_id", "strategy_id", "bets", "publications_by_bet_type"),
+        )
+
+        source = inspect.getsource(_evaluate_simulation_race_bets)
+        self.assertNotIn("providers.", source)
+        self.assertNotIn("repositories.", source)
+        self.assertNotIn("sqlite", source.lower())
         self.assertNotIn("requests", source)
+        self.assertNotIn("urllib", source)
+        self.assertNotIn("datetime.now", source)
+        self.assertNotIn("datetime.utcnow", source)
 
     def test_does_not_create_simulation_result_or_calculate_roi_or_drawdown(self) -> None:
         source = inspect.getsource(_evaluate_simulation_race_bets)

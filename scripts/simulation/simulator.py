@@ -10,11 +10,32 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from .models import SettlementStatus, SimulationBet, SimulationResult
-from .repositories.interfaces import PayoutPublication, PayoutRecord, PayoutStatus, validate_bet_type
+from .providers.models import CompletenessStatus
+from .repositories.interfaces import PayoutPublication, PayoutRecord, PayoutStatus, RaceResultStatus, validate_bet_type
 
 
 class SimulationBetEvaluationError(ValueError):
     """Raised when a single-bet settlement input cannot be safely evaluated."""
+
+
+@dataclass(frozen=True)
+class _NonSettledStatusDecision:
+    """Private immutable status and reason selected from non-settlement facts."""
+
+    settlement_status: SettlementStatus
+    exclusion_reason: str
+
+    def __post_init__(self) -> None:
+        allowed_statuses = {
+            SettlementStatus.UNSETTLED,
+            SettlementStatus.VOID,
+            SettlementStatus.ERROR,
+            SettlementStatus.UNSUPPORTED,
+        }
+        if not isinstance(self.settlement_status, SettlementStatus) or self.settlement_status not in allowed_statuses:
+            raise SimulationBetEvaluationError("settlement_status must be a supported non-settled status")
+        if not isinstance(self.exclusion_reason, str) or not self.exclusion_reason.strip():
+            raise SimulationBetEvaluationError("exclusion_reason must be a non-empty str")
 
 
 @dataclass(frozen=True)
@@ -371,3 +392,61 @@ def _build_non_settled_simulation_result(
         raise
     except (TypeError, ValueError, KeyError, AttributeError, ArithmeticError) as exc:
         raise SimulationBetEvaluationError("invalid non-settled result input") from exc
+
+
+def _decide_non_settled_status(
+    *,
+    completeness_statuses: Sequence[CompletenessStatus],
+    race_result_status: RaceResultStatus | None,
+    payout_statuses: Sequence[PayoutStatus],
+    missing_payout_bet_types: Sequence[str],
+    missing_race_result: bool,
+    error_reason: str | None,
+) -> _NonSettledStatusDecision | None:
+    """Classify already-known non-settlement facts without constructing results."""
+    try:
+        if not isinstance(completeness_statuses, Sequence) or isinstance(completeness_statuses, (str, bytes, bytearray)):
+            raise SimulationBetEvaluationError("completeness_statuses must be a Sequence")
+        normalized_completeness = tuple(completeness_statuses)
+        if not all(isinstance(status, CompletenessStatus) for status in normalized_completeness):
+            raise SimulationBetEvaluationError("completeness_statuses must contain CompletenessStatus values")
+        if race_result_status is not None and not isinstance(race_result_status, RaceResultStatus):
+            raise SimulationBetEvaluationError("race_result_status must be RaceResultStatus or None")
+        if not isinstance(payout_statuses, Sequence) or isinstance(payout_statuses, (str, bytes, bytearray)):
+            raise SimulationBetEvaluationError("payout_statuses must be a Sequence")
+        normalized_payouts = tuple(payout_statuses)
+        if not all(isinstance(status, PayoutStatus) for status in normalized_payouts):
+            raise SimulationBetEvaluationError("payout_statuses must contain PayoutStatus values")
+        if not isinstance(missing_payout_bet_types, Sequence) or isinstance(missing_payout_bet_types, (str, bytes, bytearray)):
+            raise SimulationBetEvaluationError("missing_payout_bet_types must be a Sequence")
+        missing_types = tuple(sorted({validate_bet_type(value) for value in missing_payout_bet_types}))
+        if not isinstance(missing_race_result, bool):
+            raise SimulationBetEvaluationError("missing_race_result must be bool")
+        if error_reason is not None and (not isinstance(error_reason, str) or not error_reason.strip()):
+            raise SimulationBetEvaluationError("error_reason must be a non-empty str or None")
+
+        if error_reason is not None:
+            return _NonSettledStatusDecision(SettlementStatus.ERROR, error_reason)
+        if CompletenessStatus.INVALID in normalized_completeness:
+            return _NonSettledStatusDecision(SettlementStatus.ERROR, "invalid_provider_completeness")
+        if race_result_status is RaceResultStatus.VOID:
+            return _NonSettledStatusDecision(SettlementStatus.VOID, "official_race_void")
+        if CompletenessStatus.UNSUPPORTED in normalized_completeness:
+            return _NonSettledStatusDecision(SettlementStatus.UNSUPPORTED, "unsupported_provider_completeness")
+        if race_result_status is RaceResultStatus.UNSUPPORTED:
+            return _NonSettledStatusDecision(SettlementStatus.UNSUPPORTED, "unsupported_race_result")
+        if PayoutStatus.UNSUPPORTED in normalized_payouts:
+            return _NonSettledStatusDecision(SettlementStatus.UNSUPPORTED, "unsupported_payout_status")
+        if missing_types:
+            return _NonSettledStatusDecision(SettlementStatus.UNSETTLED, "missing_payout_publication")
+        if missing_race_result:
+            return _NonSettledStatusDecision(SettlementStatus.UNSETTLED, "missing_race_result")
+        if CompletenessStatus.INCOMPLETE in normalized_completeness:
+            return _NonSettledStatusDecision(SettlementStatus.UNSETTLED, "incomplete_provider_data")
+        if race_result_status is RaceResultStatus.PARTIAL:
+            return _NonSettledStatusDecision(SettlementStatus.UNSETTLED, "incomplete_race_result")
+        return None
+    except SimulationBetEvaluationError:
+        raise
+    except (TypeError, ValueError, KeyError, AttributeError, ArithmeticError) as exc:
+        raise SimulationBetEvaluationError("invalid non-settled status decision input") from exc
