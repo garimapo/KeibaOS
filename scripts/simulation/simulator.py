@@ -450,3 +450,46 @@ def _decide_non_settled_status(
         raise
     except (TypeError, ValueError, KeyError, AttributeError, ArithmeticError) as exc:
         raise SimulationBetEvaluationError("invalid non-settled status decision input") from exc
+
+
+def _build_simulation_result_for_race(
+    *,
+    race_id: int,
+    strategy_id: str,
+    bets: Sequence[SimulationBet],
+    publications_by_bet_type: Mapping[str, PayoutPublication],
+    settled_at: datetime,
+    completeness_statuses: Sequence[CompletenessStatus],
+    race_result_status: RaceResultStatus | None,
+    payout_statuses: Sequence[PayoutStatus],
+    missing_payout_bet_types: Sequence[str],
+    missing_race_result: bool,
+    error_reason: str | None,
+) -> SimulationResult:
+    """Orchestrate one race into exactly one final ``SimulationResult`` without I/O."""
+    if isinstance(bets, Sequence) and not isinstance(bets, (str, bytes, bytearray)) and not bets:
+        return _build_no_bet_simulation_result(race_id, strategy_id)
+
+    evaluation = _evaluate_simulation_race_bets(
+        race_id,
+        strategy_id,
+        bets,
+        publications_by_bet_type,
+    )
+    decision = _decide_non_settled_status(
+        completeness_statuses=completeness_statuses,
+        race_result_status=race_result_status,
+        payout_statuses=payout_statuses,
+        missing_payout_bet_types=missing_payout_bet_types,
+        missing_race_result=missing_race_result,
+        error_reason=error_reason,
+    )
+    if decision is None:
+        return _build_settled_simulation_result(evaluation, settled_at)
+    return _build_non_settled_simulation_result(
+        race_id=race_id,
+        strategy_id=strategy_id,
+        bets=evaluation.bets,
+        settlement_status=decision.settlement_status,
+        exclusion_reason=decision.exclusion_reason,
+    )
