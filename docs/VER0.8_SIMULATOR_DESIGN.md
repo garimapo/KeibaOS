@@ -88,7 +88,7 @@ scripts/
     __init__.py
     models.py                 # 入力、購入、結果、集計、監査モデル
     simulator.py              # Simulator
-    providers.py              # ResultProvider / PayoutProvider の境界
+    providers/                # RawデータをRepository境界モデルへ変換するProvider契約
     database_providers.py     # SQLite実装（後続）
     validation.py             # 時点・ID・券種のFail Closed検証
     metrics.py                # 集計・最大ドローダウン
@@ -304,9 +304,9 @@ class SimulationReport:
 
 ## Simulatorの入出力と既存パイプライン連携
 
-### 実行境界（第4C-2b1）
+### 実行境界（第4C-2b1 / 2b2）
 
-`Simulator` は一つの `StrategyIdentity` と、一レースを最終 `SimulationResult` に変換する注入済みexecutorを保持する。現段階ではexecutorを実行せず、`run()`も提供しない。これにより、後続の複数レース実行はProvider・Repository・外部I/Oを`Simulator`へ直接持ち込まずに接続できる。
+`Simulator` は一つの `StrategyIdentity` と、一レースを最終 `SimulationResult` に変換する注入済みexecutorを保持する。`run()` は全 `SimulationRaceInput` を実行前に検証した後、入力順のままexecutorを各レースに一回だけ呼び、全結果を `_build_simulation_summary()` へ一回だけ渡す。これにより、Provider・Repository・外部I/Oを `Simulator` へ直接持ち込まない。
 
 ```python
 class RaceSimulationExecutor(Protocol):
@@ -328,117 +328,225 @@ class Simulator:
         ...
 ```
 
-constructorは`StrategyIdentity`を再生成・分解・補正せず、同一のimmutable objectを保持する。`race_executor`はcallableであることだけをFail Closedで検証し、signature検査・試験実行・wrapper化を行わない。後続の`run()`はexecutorを各`SimulationRaceInput`に一回だけ呼び、保持した`strategy_id`、`strategy_name`、`strategy_config_hash`を`_build_simulation_summary()`へ明示的に渡す。外部取得・保存・CLI出力はさらに上位層の責務とする。
+constructorは`StrategyIdentity`を再生成・分解・補正せず、同一のimmutable objectを保持する。`race_executor`はcallableであることだけをFail Closedで検証し、signature検査・試験実行・wrapper化を行わない。`run()`はexecutorを各`SimulationRaceInput`に一回だけ呼び、保持した`strategy_id`、`strategy_name`、`strategy_config_hash`を`_build_simulation_summary()`へ明示的に渡す。外部取得・保存・CLI出力はさらに上位層の責務とする。
 
-以下の`run()`を含む完全形は後続フェーズの目標アーキテクチャである。第4C-2b1時点では上記constructorとexecutor境界だけを実装し、`run()`はまだ提供しない。
+## Provider接続境界（第4C-2c1）
+
+### Simulatorは変更しない
+
+Providerを`Simulator`へ直接注入しない。`Simulator.__init__`、`Simulator.run()`、`RaceSimulationExecutor`、`SimulationRaceInput`、`SimulationResult`、`SimulationSummary`、`models.py`の契約は変更しない。`Simulator`は注入された`RaceSimulationExecutor`だけを認識し、Provider・Repository・SQLite・DB・HTTP・network・retry・logging・現在時刻取得へ依存しない。
+
+### 既存Providerは変換Providerである
+
+既存の`RaceResultProvider`、`OddsSnapshotProvider`、`PayoutProvider`は、Rawモデル、`ProviderContext`、`RaceEntryUniverse`からRepository境界モデルを構築する変換Providerである。取得・DB照会・外部I/Oを行うProviderではない。
+
+```text
+Rawデータ
+  → 変換Provider
+  → PersistedRaceResult / OddsSnapshotBatch / PayoutPublication
+```
+
+これらのProviderへ、DB接続、Repository実装、SQLite、HTTP、network、retry、logging、現在時刻取得を追加しない。Phase 4C-2cの最小接続対象は確定結果と払戻であり、`OddsSnapshotProvider`は予測入力・EVの後続責務としてこのadapterへ追加しない。
+
+### 現行型・Result builderの実装可能性
+
+次表は、Provider接続executorが必要とする情報を現行型が実際に保持するかを示す。存在しないフィールドを補完・推測しない。
+
+| 型 | 実在フィールドと利用可能な情報 | Provider接続上の不足または注意点 |
+| --- | --- | --- |
+| `SimulationRaceInput` | `race_id`、`scheduled_start_at`、`information_cutoff`、`pipeline_input`、`input_snapshot_audit` | 購入内容、購入券種、`strategy_id`を保持しない。`pipeline_input`から`SimulationBet`を復元する契約も存在しない。 |
+| `SimulationBet` | `race_id`、`strategy_id`、`bet_type`、正規化済み`race_entry_ids`、`stake`、`recommendation_rank`、`placed_at_cutoff` | 購入券種の正規情報源になれるが、`SimulationRaceInput`から取得できない。 |
+| `RawRaceResult` | `declared_status`、`finalized_at`、`entries` | `race_id`、監査時刻、sourceを持たない。`ProviderContext`と`RaceEntryUniverse`が必要。 |
+| `RawPayoutPublication` | `bet_type`、`finalized_at`、`entries`、3つの完全性フラグ | 一券種一publicationであり、`race_id`、監査時刻、sourceを持たない。券種ごとの`ProviderContext`と`RaceEntryUniverse`が必要。 |
+| `ProviderContext` | `race_id`、`observed_at`、`source`、`source_url`、`captured_at`、`information_cutoff`、任意の`bet_type` | 結果用と券種ごとの払戻用を区別して保持する必要がある。`information_cutoff`は`SimulationRaceInput.information_cutoff`と照合する。 |
+| `RaceEntryUniverse` | `race_id`、active/excluded/cancelledのentry ID集合、`horse_no_to_race_entry_id` | 結果・払戻の両Providerへ共通に渡せる。`race_id`は入力と一致しなければならない。 |
+| `PersistedRaceResult` | `race_id`、`result_status`、`finalized_at`、`observed_at`、`entries` | COMPLETEなら`finalized_at`が必須。結果確定時刻の正式な取得元になる。 |
+| `PayoutPublication` | `race_id`、`bet_type`、`finalized_at`、`observed_at`、`is_complete`、`entries` | COMPLETEなら`finalized_at`が必須。必要券種ごとの払戻確定時刻の正式な取得元になる。 |
+| `ProviderBuildResult` | `value`と`CompletenessResult` | 結果・払戻を変換した後、値と完全性を一組で保持できる。 |
+| `CompletenessResult` | `status`、件数、missing/unexpected/duplicate keys、reasons | `COMPLETE`、`INCOMPLETE`、`INVALID`、`UNSUPPORTED`をResult builderへ渡す事実になる。 |
+| `_build_simulation_result_for_race(...)` | `race_id`、`strategy_id`、`bets`、`publications_by_bet_type`、`settled_at`、完全性status、結果status、払戻status、欠損券種、結果欠損、`error_reason` | 現在は`bets`、`strategy_id`、必要publication、意味のある`settled_at`の全てを`SimulationRaceInput`だけから構成できない。さらに評価が非精算判定より先行するため、必要払戻の欠損を`UNSETTLED`として返せない。 |
+
+したがって、現行モデルだけで`ProviderBackedRaceSimulationExecutor`を実装することはできない。特に、購入内容と`strategy_id`の供給、Rawデータ一式の原子的な取得、非精算時の`settled_at`引数が不足している。
+
+### Source戻り値bundleとRaceSettlementSource
+
+購入内容とRawデータを別々に取得すると、同一レース・同一時点・同一購入計画であることを保証できない。このため、新規のimmutable bundleを導入する。仮称は`RaceSettlementData`、配置候補は新規の`scripts/simulation/settlement.py`である。既存の変換Provider契約を保つため、`providers/interfaces.py`には追加しない。
 
 ```python
-class Simulator:
-    def run(
+@dataclass(frozen=True)
+class RaceSettlementData:
+    race_id: int
+    bets: tuple[SimulationBet, ...]
+    raw_race_result: RawRaceResult | None
+    race_result_context: ProviderContext | None
+    raw_payout_publications_by_bet_type: Mapping[str, RawPayoutPublication]
+    payout_contexts_by_bet_type: Mapping[str, ProviderContext]
+    universe: RaceEntryUniverse
+```
+
+bundleはtupleと不変Mappingへfreezeし、Repository、DB接続、SQLite実装、外部clientを保持しない。validation責務は次のとおりとする。
+
+- `race_id`、`universe.race_id`、呼出し元`SimulationRaceInput.race_id`が一致する。
+- `bets`の全要素は`SimulationBet`であり、各`race_id`がbundleの`race_id`と一致する。
+- `raw_race_result`と`race_result_context`は両方存在するか両方`None`である。存在時のcontextは対象`race_id`と同じ`information_cutoff`を持つ。
+- 払戻Mappingのkeyは正規化済み券種で、各`RawPayoutPublication.bet_type`と一致する。各券種に対応する`ProviderContext`が存在し、対象`race_id`と同じ`information_cutoff`を持つ。contextの`bet_type`が存在する場合はMapping keyと一致する。
+- 払戻Mappingに存在しない購入券種は欠損として表し、空の偽publicationや推測データで補完しない。
+
+`RaceSettlementSource`の次フェーズ実装候補は以下である。
+
+```python
+class RaceSettlementSource(Protocol):
+    def load_settlement_data(
         self,
-        race_inputs: Sequence[SimulationRaceInput],
-        strategies: Sequence[StrategyIdentity],
-        result_provider: ResultProvider,
+        *,
+        race_input: SimulationRaceInput,
+    ) -> RaceSettlementData:
+        ...
+```
+
+SourceはRaw結果、券種単位のRaw払戻、各ProviderContext、Universe、購入内容を同一レース・同一時点のデータとして供給する取得境界である。DB取得・外部取得の実装を持つことは許容するが、変換Providerへその依存を移さない。
+
+### ProviderBackedRaceSimulationExecutorのAPI
+
+`SimulationRaceInput`には`strategy_id`がないため、NO_BETを含む全Result builder呼出しに必要なidentityをexecutor自身が保持する。composition rootは、`Simulator`とexecutorへ同一の`StrategyIdentity` objectを渡す。
+
+```python
+class ProviderBackedRaceSimulationExecutor:
+    def __init__(
+        self,
+        *,
+        strategy_identity: StrategyIdentity,
+        settlement_source: RaceSettlementSource,
+        race_result_provider: RaceResultProvider,
         payout_provider: PayoutProvider,
-        run_context: SimulationRunContext,
-    ) -> SimulationReport:
+    ) -> None:
         ...
-```
 
-処理は `scheduled_start_at, race_id` 順に行う。
-
-1. `SimulationRaceInput` をFail Closedで検証する。
-2. StrategyIdentityごとに、元のPipelineConfigをコピーし `strategy_config` を当該 `StrategyConfig` に差し替えた新しい `PipelineConfig` を生成する。
-3. 生成したPipelineConfigで `PredictionPipeline` を1回実行する。
-4. パイプラインが内部で生成した `Prediction`、`ValueEvaluation`、`BetRecommendation`、`BetPlan` をそのまま利用する。
-5. `BetPlan` から `SimulationBet` を生成して払戻表と照合する。
-6. 1Strategy・1レースごとの `SimulationResult` を作り、最後にStrategy別の `SimulationSummary` と `SimulationReport` を作る。
-
-現行 `PredictionPipeline` は `BetGenerator` と `BetStrategy` まで内部実行する。Simulatorは候補生成・戦略選定を再実行せず、PipelineResult内の `BetPlan` だけを消費する。これにより通常実行とシミュレーションの購入ロジック乖離を防ぐ。
-
-監査入力だけでは未来情報遮断として不十分である。Pipelineと各Engineは `reference_datetime=information_cutoff` を受け取るか、現在時刻・現在DBを参照しない純粋処理でなければならない。内部DB検索を行う場合は必ず `as-of information_cutoff` 条件を使用する。Strategyごとに新しいPipelineインスタンスを生成するか、完全なステートレス性を保証し、可変オブジェクト・キャッシュをStrategy間で共有しない。この契約は初期実装の必須検証とする。
-
-データセット全体に時点監査情報がない場合は実行を拒否する。個別レースの未来情報検出は `ERROR` 結果として記録する。ERRORが1件でもあるReportは初期方針で `official_roi_valid=False` とする。ERRORを除外して算出する値は診断用ROIとしてのみ表示し、正式ROIと混同しない。
-
-## ResultProvider と PayoutProvider
-
-### ResultProvider
-
-確定着順とレース状態をレース単位で返す。
-
-```python
-class ResultProvider(Protocol):
-    def get_result(self, race_id: int) -> RaceResultTable | None:
-        ...
-```
-
-```python
-@dataclass(frozen=True)
-class RaceResultEntry:
-    horse_no: int
-    race_entry_id: int
-    finish_position: int | None
-    result_status: str
-
-@dataclass(frozen=True)
-class RaceResultTable:
-    race_id: int
-    is_complete: bool
-    finalized_at: datetime | None
-    observed_at: datetime
-    source: str
-    entries: tuple[RaceResultEntry, ...]
-```
-
-`RaceResultTable` はtimezone-awareな `finalized_at` / `observed_at`、完全性、情報源、各 `horse_no` の着順・状態を保持する。Providerは外部 `horse_no` を内部 `race_entry_id` へ変換する責務を持つ。変換できない明細はFail ClosedでERRORとし、別レースの `race_entry_id` を関連付けてはならない。
-
-### PayoutProvider
-
-個別買い目への `Payout | None` では、不的中とデータ未取得を区別できないため採用しない。レース・券種単位の完全な払戻表を返す。
-
-```python
-class PayoutProvider(Protocol):
-    def get_payout_table(
+    def __call__(
         self,
-        race_id: int,
-        bet_type: str,
-    ) -> PayoutTable | None:
+        *,
+        race_input: SimulationRaceInput,
+    ) -> SimulationResult:
         ...
 ```
 
-```python
-@dataclass(frozen=True)
-class PayoutTable:
-    race_id: int
-    bet_type: str
-    is_complete: bool
-    finalized_at: datetime | None
-    observed_at: datetime | None
-    source: str | None
-    winning_combinations: Mapping[tuple[int, ...], PayoutEntry]
-    refund_entries: Mapping[tuple[int, ...], RefundEntry]
+Result builderは追加注入しない。`_build_simulation_result_for_race(...)`は現在の正式な一レース組立境界であり、module-level helperを直接一回だけ呼ぶ。Callable注入は、既存のprivate helperを新たな公開契約へ昇格させ、責務とテスト境界を不必要に広げるため採用しない。
+
+### 購入券種と購入なしの処理
+
+購入対象は`RaceSettlementData.bets`である。`SimulationRaceInput`単独からは取得できない。必要券種は、入力順を保つ最初の出現順で次のように抽出する。
+
+```text
+tuple(dict.fromkeys(bet.bet_type for bet in bets))
 ```
 
-```python
-@dataclass(frozen=True)
-class PayoutEntry:
-    race_entry_ids: tuple[int, ...]
-    payout_per_100: int
-    payout_status: str
+`SimulationBet`は正規化済みの対応券種しか保持できない。Sourceが`SimulationBet`以外、対象外券種、別race、またはexecutorの`strategy_identity.strategy_id`と異なるbetを返した場合はfail-closedで例外を伝播し、Providerを呼ばない。券種の順序はpublication Mappingの意味には影響しないが、Provider呼出しと監査を決定的にするため最初の出現順を維持する。
 
-@dataclass(frozen=True)
-class RefundEntry:
-    race_entry_ids: tuple[int, ...]
-    refund_per_100: int
-    reason: str
+`bets == ()`は購入なしである。ただし、購入内容はSource bundleからしか得られないため、まずSourceを一回呼ぶ。空であると確定した後は結果・払戻Providerを呼ばず、`_build_simulation_result_for_race(...)`へ空betsを一回だけ渡してNO_BETを生成する。Source呼出し自体を省略する契約にはしない。
+
+現行helperはNO_BET分岐で`settled_at`を使わない一方、引数型は非optionalな`datetime`である。意味のない時刻を渡さないため、実装前にhelperの`settled_at`を`datetime | None`へ変更し、SETTLED分岐だけでtimezone-awareな値を必須検証する最小修正が必要である。
+
+### 完全性状態と現行Result builderの制約
+
+executorはSource／Provider例外をResultへ変換せず、そのまま伝播する。partial settlementは常に禁止する。Providerが正常に`ProviderBuildResult`を返した場合の現行Result builderの実際の挙動は次表のとおりである。
+
+| 条件 | Result builderを呼ぶか | 非精算Resultへ変換 | 例外を伝播 | 部分精算 | 現行契約上の結論 |
+| --- | --- | --- | --- | --- | --- |
+| result COMPLETE、必要payout全てCOMPLETE | 呼ぶ | しない | 評価・時刻が正常ならしない | 不可 | SETTLED可能。 |
+| result INCOMPLETE | 条件付きで呼ぶ | 評価成功時のみUNSETTLED | 必要publication欠損・評価不能時はする | 不可 | 非精算判定より評価が先のため、確実には表現不能。 |
+| result INVALID | 条件付きで呼ぶ | 評価成功時のみERROR | 評価不能時はする | 不可 | 同上。 |
+| result UNSUPPORTED | 条件付きで呼ぶ | 評価成功時のみUNSUPPORTED | 評価不能時はする | 不可 | 同上。 |
+| 必要payoutがINCOMPLETE | 条件付きで呼ぶ | 全betが評価可能な場合のみUNSETTLED | 未一致betは評価例外を伝播 | 不可 | 不完全払戻の不的中と欠損を安全に区別できない。 |
+| 必要payoutがINVALID | 条件付きで呼ぶ | 評価成功時のみERROR | 評価不能時はする | 不可 | 同上。 |
+| 必要payoutがUNSUPPORTED | 条件付きで呼ぶ | 評価成功時のみUNSUPPORTED | 購入selectionがunsupported recordに一致すると評価例外を伝播 | 不可 | 同上。 |
+| 必要な払戻publicationがない | 呼ぶと評価前に失敗 | できない | する | 不可 | publication key集合の完全一致を評価helperが要求するため、現行モデルではUNSETTLEDを表現不能。 |
+| 未購入券種だけの払戻がない | 呼ぶ | しない | しない | 不可 | 必要券種集合に含めないため影響しない。 |
+| Source例外 | 呼ばない | しない | する | 不可 | 例外をそのまま伝播。 |
+| Provider例外 | 呼ばない | しない | する | 不可 | 例外をそのまま伝播。 |
+| Result builder例外 | 呼んだ後に返さない | しない | する | 不可 | 例外をそのまま伝播。 |
+
+`_build_simulation_result_for_race(...)`は、空bets以外で`_evaluate_simulation_race_bets(...)`を先に呼び、その後で完全性を判定する。この順序では、欠損publication・不完全publication・一致するunsupported払戻が、非精算statusへ変換される前に評価例外となる。Phase 4C-2c2の前に、同helperを「NO_BET判定 → 非精算status判定 → SETTLED時だけ評価」の順へ最小変更し、`settled_at: datetime | None`をSETTLED時だけ必須とする必要がある。
+
+### `settled_at`の実装可能性
+
+正式な確定時刻は変換後の値から取得する。
+
+- 結果: `PersistedRaceResult.finalized_at`
+- 必要券種の払戻: 各`PayoutPublication.finalized_at`
+
+COMPLETEな`PersistedRaceResult`とCOMPLETEな`PayoutPublication`は、いずれも`finalized_at`を必須とする。したがって、全ての必要情報がCOMPLETEであるSETTLED候補では次を決定できる。
+
+```text
+max(
+    persisted_race_result.finalized_at,
+    required_payout_publication.finalized_at for each required bet type,
+)
 ```
 
-- `winning_combinations` は的中組み合わせ、100円あたり払戻額、同着等の状態を保持する。
-- `refund_entries` は返還対象と返還額を保持する。
-- `is_complete=True` の払戻表に購入組み合わせが存在しない場合だけ、不的中（払戻0円）と判定する。
-- 払戻表が未取得、`is_complete=False`、または結果表が不完全の場合は該当券種を精算不能とする。
-- 複数券種を購入し1券種でも必要データが不完全な場合、初期方針ではレース全体を `UNSETTLED` とし、投資額・払戻額をROIへ混入させない。
-- `observed_at` は取得・監査時刻であり、資金曲線の精算時刻には使用しない。`SETTLED` の `settled_at` は、結果表と全必要払戻表の `finalized_at` の最大値とする。必要な `finalized_at` が取得できない場合、その結果は正式ドローダウンへ含めない。
+一つでも欠ける場合は`settled_at`を決定できない。`datetime.now()`、`observed_at`、`captured_at`、`information_cutoff`で代用しない。欠損時刻の追加先はSourceではなく、既に正式フィールドを持つ変換後の`PersistedRaceResult`／`PayoutPublication`を構築するProvider入力・変換境界である。
+
+### Result builder引数の構成
+
+前提フェーズ後、`_build_simulation_result_for_race(...)`の各引数は次の実在値から構成する。
+
+| Result builder引数 | 構成元 |
+| --- | --- |
+| `race_id` | `race_input.race_id`。bundleの`race_id`およびUniverseの`race_id`と一致を確認する。 |
+| `strategy_id` | executorへ注入された`strategy_identity.strategy_id`。bundleの全betとも一致を確認する。 |
+| `bets` | `RaceSettlementData.bets`。 |
+| `publications_by_bet_type` | 正常に変換できた必要券種の各`ProviderBuildResult[PayoutPublication].value`。欠損券種を偽publicationで補完しない。 |
+| `settled_at` | SETTLED候補でのみ、結果と必要払戻の`finalized_at`の最大値。その他は`None`。 |
+| `completeness_statuses` | 存在する結果・必要払戻の各`ProviderBuildResult.completeness.status`。 |
+| `race_result_status` | 結果が存在する場合は`ProviderBuildResult[PersistedRaceResult].value.result_status`、結果未取得時は`None`。 |
+| `payout_statuses` | 必要券種の各変換済み`PayoutPublication.entries`に含まれる`PayoutRecord.payout_status`。 |
+| `missing_payout_bet_types` | 必要券種のうち、Raw publicationまたは対応contextが存在しない券種。 |
+| `missing_race_result` | `raw_race_result`と`race_result_context`がともに`None`であること。 |
+| `error_reason` | Source／Provider／builder例外は伝播する方針のため、通常経路では常に`None`。 |
+
+この対応表のうち、空または欠損の`publications_by_bet_type`を安全に受け入れるためには、前節で記したResult builderの判定順変更が必要である。
+
+### 1レースの正式処理フロー
+
+購入ありの場合は、次の順序とする。
+
+```text
+race_input受付
+→ RaceSettlementSourceを一回呼ぶ
+→ RaceSettlementDataとrace_input、strategy_identityを検証
+→ betsから必要券種を最初の出現順で決定
+→ RaceResultProviderで結果を一回変換（結果Rawが存在する場合）
+→ 必要券種ごとにPayoutProviderで払戻を一回変換（Rawが存在する場合）
+→ publication Mapping、完全性status、結果status、払戻status、欠損券種を構成
+→ SETTLED候補だけでsettled_atを決定
+→ _build_simulation_result_for_race(...)を一回呼ぶ
+→ SimulationResult返却
+```
+
+購入なしの場合は次の順序とする。
+
+```text
+race_input受付
+→ RaceSettlementSourceを一回呼ぶ
+→ RaceSettlementDataとstrategy_identityを検証
+→ betsが空であることを確認
+→ ResultProviderとPayoutProviderを呼ばない
+→ _build_simulation_result_for_race(...)を一回呼ぶ
+→ NO_BET SimulationResult返却
+```
+
+この購入なしフローには、上記の`settled_at: datetime | None`への最小変更が前提となる。
+
+### 実装可能性の結論
+
+**Phase 4C-2c2の前に追加設計・最小実装変更が必要。**
+
+最小の前提フェーズは次の三点である。
+
+1. 新規`RaceSettlementData`と`RaceSettlementSource`契約を追加し、購入内容とRawデータ一式を原子的に供給する。
+2. `ProviderBackedRaceSimulationExecutor`へ`StrategyIdentity`を注入し、Simulatorと同一objectをcomposition rootで共有する。
+3. `_build_simulation_result_for_race(...)`を、非精算判定を評価より先に行い、`settled_at`をSETTLED時だけ必須にする最小変更を行う。
+
+これらが完了するまで、必要払戻の欠損・不完全・unsupportedを安全な非精算Resultへ一貫して変換できない。Odds、Summary builder、`Simulator.run()`、`models.py`の変更はこの前提フェーズの対象外とする。
 
 ## 集計指標と分母
 
@@ -590,7 +698,7 @@ CREATE INDEX idx_payouts_publication_type ON payouts(publication_id, bet_type);
 
 払戻なし（完全な払戻表に該当組み合わせが存在しない）と、払戻データ未取得・不完全（publicationなしまたは `is_complete=0`）を明確に区別する。
 
-`odds_snapshot_batches` と `payout_publications` は券種単位の親レコードであるため、単勝は完全・馬連は未取得のような状態を表現でき、PayoutProviderの `race_id + bet_type` 境界と一致する。`selection_key` は関連テーブルの昇順 `race_entry_id` 列から決定的に生成し、監査と一意制約に使う。参照整合性は関連テーブルで維持し、selection_keyだけに依存しない。
+`odds_snapshot_batches` と `payout_publications` は券種単位の親レコードであるため、単勝は完全・馬連は未取得のような状態を表現できる。`PayoutPublication` の `race_id + bet_type` 境界は、Provider接続executorが必要な払戻情報を解決する単位と一致する。`selection_key` は関連テーブルの昇順 `race_entry_id` 列から決定的に生成し、監査と一意制約に使う。参照整合性は関連テーブルで維持し、selection_keyだけに依存しない。
 
 `race_result_entries`、`odds_snapshot_selections`、`payout_selections` の `race_entry_id` が対象 `race_id` に属することは、複合外部キーを導入できる場合はDB制約で、できない場合はProviderのFail Closed検証で保証する。別レースの出走行IDを関連付けた場合は登録・精算を拒否する。
 
@@ -658,7 +766,7 @@ CLIは以下を行う。
 
 1. timezone-awareな時点監査モデル、StrategyIdentity、SimulationResult、SimulationReport、Fail Closed検証を実装する。
 2. 結果・払戻・オッズの親子テーブルと一時DBによるマイグレーションテストを追加する。
-3. ResultProvider / PayoutProviderの抽象境界とインメモリFixture実装を追加する。
+3. Rawデータ取得境界（`RaceSettlementSource`）と、既存変換Providerを使うProvider接続executorを追加する。
 4. 単勝のみを対象に、100円購入、完全払戻表による精算、集計、最大ドローダウンを実装する。
 5. 複数StrategyConfigの比較実行、決定的設定ハッシュ、JSON/CSV監査出力を追加する。
 6. CLIとSQLite Providerを追加し、データ不足・未対応券種を明示する。
