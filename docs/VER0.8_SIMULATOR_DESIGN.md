@@ -899,6 +899,13 @@ Repositoryはidentityを生成しない。insert-onlyで同一identityの再保�
 Phase 4C-2d3b0a
 BetStakeAllocator / BetAllocationPlan の入力・出力・順序対応を設計する。
 
+Phase 4C-2d3b0a1
+BetStakeBudget、BetAllocationPlan、BetStakeAllocator、allocation policy設定の
+domain / Protocol契約を追加する。
+
+Phase 4C-2d3b0a2
+最初の具体的BetStakeAllocator policyを設計・実装する。
+
 Phase 4C-2d3b0b
 SimulationBetPlanIdentity、SimulationBetPlanSnapshot、
 RaceEntrySelectionResolver のdomain / Protocol契約を追加する。
@@ -919,7 +926,131 @@ Phase 4C-2d3b4
 PredictionPipeline の最終BetPlanをsnapshotとして保存する上位接続を実装する。
 ```
 
-残る未確定事項はstake allocationの入力、allocationがstrategy設定・run設定・外部資金管理のどこに属するか、ならびに`SimulationRunContext`を現在のSimulator実行経路へどのcomposition rootで供給するかである。これらが確定するまでschema、Repository、Sourceの実装には進まない。
+stake allocationの入力・境界は直後のPhase 4C-2d3b0aで確定する。schema、Repository、Sourceの実装は、同節で定めるbudget、allocation policy設定、run contextのcomposition root供給を後続契約として実装するまで開始しない。
+
+#### BetStakeAllocator／BetAllocationPlan（Phase 4C-2d3b0a）
+
+##### 既存のbudget・stake境界
+
+現行の`BetPlan`は`strategy_name`、順序付き`recommendations`、`candidate_count`だけを持ち、`BetRecommendation`は`rank`、`bet_type`、`horse_ids`、確率・score・expected value関連値だけを持つ。stake、amount、budget、purchase orderは存在しない。`RuleBasedBetStrategy`と`StrategyConfig`も購入対象と`max_bet_count`を決めるだけで、資金配分を持たない。
+
+prediction CLIには`--max-bets`があるが、これは購入点数上限でありbudgetやstakeではない。設定JSON、race単位budget、stake allocation処理は存在しない。旧`models.Bet.amount`はsimulation planや`BetPlan`に接続されない別モデルであり、allocationの入力に使用しない。
+
+##### stake allocation の責務と処理順
+
+stake allocationは`BetStrategy`の後、race entry selection解決と`SimulationBet`構築の前に行う。
+
+```text
+PredictionPipeline
+→ BetGenerator
+→ BetStrategy
+→ 最終 BetPlan
+→ BetStakeAllocator
+→ BetAllocationPlan
+→ RaceEntrySelectionResolver
+→ SimulationBetPlanBuilder
+→ SimulationBetPlanSnapshot
+```
+
+| 層 | 責務 |
+| --- | --- |
+| `BetStrategy` | 最終recommendation集合と順序を確定する。 |
+| `BetStakeAllocator` | 既存recommendationごとのstakeを配分し、budgetを検証する。 |
+| `BetAllocationPlan` | allocation結果をimmutableに表す。 |
+| `RaceEntrySelectionResolver` | horse IDをrace entry IDへ変換する。 |
+| `SimulationBetPlanBuilder` | allocationから`SimulationBet`を構築しsnapshot化する。 |
+| Repository | 完成したsnapshotとplan headerのallocation監査値を保存・復元する。 |
+| `SimulationBetSource` | run・race・strategyに対応する保存済みbetsを供給する。 |
+
+Allocatorはrecommendationの追加、削除、並べ替え、再評価、rank再採番、券種変更、selection変更、race entry解決、`SimulationBet`構築を行わない。budget不足時に下位候補を黙って削除せず、fail-closedで拒否する。候補数削減が必要なpolicyは、Allocatorではなく後続のbudget-aware selection責務として別設計する。
+
+##### budget の正式入力契約
+
+既存型にrace単位budgetはないため、後続契約で次を追加する。
+
+```python
+@dataclass(frozen=True, slots=True)
+class BetStakeBudget:
+    total_amount: int
+```
+
+`total_amount`は非負の非bool `int`かつ100円単位である。budgetはcomposition rootから明示的に渡す不変入力であり、現在時刻、Repository読取時刻、外部口座残高、Allocatorの隠れたmutable stateから取得しない。空planには0円または正の100円単位budgetを許可する。
+
+recommendation件数を`N`とすると、購入候補がある場合の最低必要額は`N × 100円`である。`total_amount < N × 100円`なら、0円stake、100円未満stake、部分allocation、NO_BETへの変換を行わず、allocation不能としてfail-closedにする。
+
+budgetはplan identityの構成要素にしない。同一identityは一つのimmutable snapshotだけを許すため、そのsnapshotに対応するallocationのbudgetは一意である。budgetは`BetAllocationPlan.total_budget`および後続schemaのplan header監査値として保存する。これにより、runをまたぐ同一strategyでも異なるbudgetを明示的に監査でき、actual stakeはsnapshot内の`SimulationBet.stake`から再現できる。
+
+##### allocated recommendation と allocation plan
+
+`BetRecommendation`と`BetPlan`はいずれもfrozen dataclassであり、recommendationsはtupleである。したがって、allocationはrecommendationをdeep copyせず、同じimmutable objectを参照してよい。
+
+```python
+@dataclass(frozen=True, slots=True)
+class AllocatedBetRecommendation:
+    recommendation: BetRecommendation
+    purchase_order: int
+    stake: int
+
+
+@dataclass(frozen=True, slots=True)
+class BetAllocationPlan:
+    identity: SimulationBetPlanIdentity
+    bet_plan: BetPlan
+    allocations: tuple[AllocatedBetRecommendation, ...]
+    total_budget: int
+
+    @property
+    def allocated_amount(self) -> int: ...
+
+    @property
+    def unallocated_amount(self) -> int: ...
+```
+
+`AllocatedBetRecommendation`は正式な`BetRecommendation`、0以上の非bool`purchase_order`、正の非bool100円単位`stake`を持つ。recommendationの内容・rankを変更しない。
+
+`BetAllocationPlan`は`identity`、`bet_plan`、tuple化した`allocations`、非負100円単位の`total_budget`を保持する。`allocated_amount`と`unallocated_amount`はfieldではなくread-only propertyとし、前者を`sum(allocation.stake ...)`、後者を`total_budget - allocated_amount`から算出する。重複した集計fieldによる不整合を避けるためである。両値は100円単位で、`allocated_amount <= total_budget`を必須とする。
+
+allocationは入力`BetPlan`を保持して1対1対応をdomain boundaryでも検証する。次を必須とする。
+
+```text
+len(allocations) == len(bet_plan.recommendations)
+allocations[index].recommendation is bet_plan.recommendations[index]
+allocations[index].purchase_order == index
+```
+
+`BetPlan`と`BetRecommendation`はfrozenであるため、object identityを使うことは可変オブジェクトへの依存ではなく、Allocatorが別のrecommendationを再構築・差し替えしていないことの明示的な保証になる。各allocationの順序・件数・recommendation内容は不変である。
+
+plan内のrecommendation identityは`(bet_type, canonical horse_ids)`とする。`BetRecommendation`の`horse_ids`は`BetGenerator`で組合せを昇順化するが、allocation contractは入力`BetPlan`を再ソートしない。allocation planは重複identityを拒否し、後続Builderがrace entry IDsへ変換後に行う`SimulationBet`側の重複検証も維持する。
+
+空`BetPlan`ではallocationも空とし、`allocated_amount == 0`、`unallocated_amount == total_budget`とする。これは正常なNO_BET候補であり、allocation失敗とは区別する。
+
+##### `BetStakeAllocator` Protocol とpolicy再現性
+
+```python
+class BetStakeAllocator(Protocol):
+    def allocate(
+        self,
+        *,
+        identity: SimulationBetPlanIdentity,
+        bet_plan: BetPlan,
+        budget: BetStakeBudget,
+    ) -> BetAllocationPlan:
+        ...
+```
+
+同一入力・同一policy設定では決定的な結果を返す。DB、Repository、Provider、HTTP/network、logger、現在時刻、odds再取得、Result/Summary builder、Simulator、結果・払戻には依存しない。
+
+allocation policyの名称、version、決定的設定はsimulation再現性に影響するため、具体Allocatorのクラス名だけで表現してはならない。現在の`strategy_config_hash()`は`StrategyConfig`の既存選択設定だけをhash化し、allocation policy・allocation設定を含まない。後続`Phase 4C-2d3b0a1`で、policy識別子・version・決定的設定を正式なstrategy configuration payloadへ追加し、`StrategyIdentity.strategy_config_hash`へ含める。**同じstrategy_config_hashで異なるallocation policyまたは設定を使用することは許可しない。**
+
+budget値はpolicy設定ではなくrunごとの明示入力であるため、strategy config hashには含めない。budgetはallocation planと後続のplan header監査値へ保存する。
+
+固定stake、均等配分、score比例、expected value比例、confidence比例、Kelly系、券種別上限は後続policyの比較対象である。Phase 4C-2d3b0aではいずれも採用しない。
+
+##### Builder と次フェーズの進行判定
+
+`SimulationBetPlanBuilder`は`BetAllocationPlan`からrecommendation、purchase order、stake、plan identityを取得する。stakeを再計算せず、allocationの一部を除外せず、recommendationを再ソートしない。
+
+**Phase 4C-2d3b0a1へ進行可能**である。budget入力、budget不足、未使用budget、空plan、1対1対応、purchase order、allocation Protocol、policy hashの方向を確定した。0a1ではこれらのdomain / Protocol契約とstrategy configuration payloadへのpolicy設定取り込みを実装する。具体allocation algorithmは0a2まで実装しない。
 
 ## 集計指標と分母
 
