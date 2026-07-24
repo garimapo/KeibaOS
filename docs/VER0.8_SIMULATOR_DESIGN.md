@@ -275,10 +275,6 @@ class SimulationRunContext:
     dataset_id: str
     started_at: datetime
     target_commit_id: str
-    stake_per_bet: int
-    supported_bet_types: tuple[str, ...]
-    input_period_start: datetime
-    input_period_end: datetime
 
 @dataclass(frozen=True)
 class SimulationRunMetadata:
@@ -287,8 +283,6 @@ class SimulationRunMetadata:
     started_at: datetime
     completed_at: datetime
     target_commit_id: str
-    stake_per_bet: int
-    supported_bet_types: tuple[str, ...]
 
 @dataclass(frozen=True)
 class SimulationReport:
@@ -300,7 +294,7 @@ class SimulationReport:
     validation_errors: tuple[SimulationValidationError, ...]
 ```
 
-`SimulationRunContext` は入力専用であり、`completed_at` を持たない。Simulatorは実行完了時に `completed_at` を生成して `SimulationRunMetadata` を作る。`SimulationReport` は全Strategy・全レースの明細を保持する。`SimulationSummary` 単体をSimulatorの最終戻り値にしない。さらに `official_roi_valid: bool` と `validation_errors: tuple[SimulationValidationError, ...]` を保持する。
+`SimulationRunContext` は入力専用であり、`run_id`、`dataset_id`、`started_at`、`target_commit_id`を持つ。`completed_at`、stake、対応券種、対象期間は現行正式モデルのフィールドではない。`SimulationRunMetadata` は実行完了後の`completed_at`を追加する。`SimulationReport` は全Strategy・全レースの明細を保持する設計上の出力コンテナである。
 
 ## Simulatorの入出力と既存パイプライン連携
 
@@ -719,6 +713,213 @@ composition root／CLI接続
 ```
 
 `PersistedRaceSimulationExecutor`はdummy Sourceを用いて`Phase 4C-2d1e`で実装・検証できる。一方、実際のRepository-backed Sourceはbetを取得できなければ構成できないため、当初案の2d2より先に2d3を置く。
+
+### Simulation bet plan identity／変換境界（Phase 4C-2d3b0）
+
+#### bet plan は run 単位の immutable snapshot
+
+永続化する単位は独立したbetの集合ではなく、**一つのsimulation run・一つのrace・一つのstrategy・一つのprediction cutoff**に対応する購入計画snapshotである。正式な概念名を`SimulationBetPlanSnapshot`とする。
+
+snapshotはinsert-onlyであり、保存後に置換・上書きしない。同じrace・strategy・prediction cutoffであっても、異なるrunで生成されたplanは別snapshotとして保存する。DB内部のsurrogate primary keyは許容するが、domain上のidentityを置き換えない。
+
+現行の`SimulationRunContext`は次の正式フィールドを持つ。
+
+```python
+@dataclass(frozen=True)
+class SimulationRunContext:
+    run_id: str
+    dataset_id: str
+    started_at: datetime
+    target_commit_id: str
+```
+
+`run_id`、`dataset_id`、`target_commit_id`は非空、`started_at`はtimezone-awareである。bet plan identityへ必須で入るrun情報は`run_id`であり、dataset、commit、開始時刻はrunの来歴として`SimulationRunContext`に保持する。新しいrun ID生成ロジックはこの境界で追加しない。
+
+#### `SimulationBetPlanIdentity`
+
+後続実装で追加するdomain contractは次とする。
+
+```python
+@dataclass(frozen=True, slots=True)
+class SimulationBetPlanIdentity:
+    run_id: str
+    race_id: int
+    strategy_id: str
+    strategy_config_hash: str
+    information_cutoff: datetime
+```
+
+validationは以下を満たす。
+
+- `run_id`と`strategy_id`は非空の`str`。
+- `race_id`は正の非bool `int`。
+- `strategy_config_hash`は既存`StrategyIdentity.strategy_config_hash`と同じ、64文字の小文字SHA-256 digest。
+- `information_cutoff`はtimezone-aware `datetime`。
+- 呼出し側は`StrategyIdentity.strategy_id`と`strategy_config_hash`、`SimulationRaceInput.race_id`と`information_cutoff`からidentityを構成し、推測・補正しない。
+
+後続migrationでは、この五つの複合identityにunique constraintを置く。同一run内で同一race・strategy・設定・cutoffのplanを二つ保存することは許可しない。
+
+#### Source への run identity 供給
+
+既存Protocolの`load_bets()`および`load_settlement_data()`の引数にrun IDを追加しない。Repository-backed Sourceをrun単位で構築し、constructorで固定する。
+
+```python
+class RepositoryBackedSimulationBetSource:
+    def __init__(
+        self,
+        *,
+        run_context: SimulationRunContext,
+        bet_repository: SimulationBetRepository,
+    ) -> None:
+        ...
+```
+
+`run_id`だけではなく`SimulationRunContext`全体をconstructorへ注入する案を採用する。既存の不変・検証済みrun境界を保持し、Sourceがrun IDを再生成せず、将来のdataset/commit監査にも同じobjectを使えるためである。`load_bets(race_input=..., strategy_identity=...)`は、固定された`run_context.run_id`と引数のrace・strategy・cutoffから`SimulationBetPlanIdentity`を一意に構成する。
+
+`PersistedRaceSettlementSource`の具体実装も、同一`run_context`で構築済みの`SimulationBetSource`を合成するか、同じ`run_context`をconstructor注入する。`Simulator.run()`、`RaceSimulationExecutor`、既存Source Protocolのsignatureは変更しない。
+
+#### `SimulationBetPlanSnapshot` と空plan
+
+```python
+@dataclass(frozen=True, slots=True)
+class SimulationBetPlanSnapshot:
+    identity: SimulationBetPlanIdentity
+    bets: tuple[SimulationBet, ...]
+```
+
+snapshotは次を検証する。
+
+- `identity`は`SimulationBetPlanIdentity`。
+- `bets`は防御的にtuple化し、外部の元Sequence変更の影響を受けない。
+- 空tupleを許可する。
+- 各betの`race_id`、`strategy_id`、`placed_at_cutoff`はidentityの`race_id`、`strategy_id`、`information_cutoff`と完全一致する。
+- plan内のbet identity `(bet_type, canonical race_entry_ids)` は重複不可。
+- frozenおよびslotsとし、betの順序そのものをsnapshotの正式なpurchase orderとする。
+
+`bets == ()`は、対象run・race・strategy・cutoffについて購入計画が正式に確定したが、購入betが0件だったことを表す。これはplan未生成、未保存、取得失敗とは異なる。後続schemaはbet子行が0件でもplan headerを保存しなければならない。
+
+#### prediction cutoff、recommendation rank、purchase order
+
+`SimulationBet.placed_at_cutoff`は実時計の購入時刻ではなく、購入判断で使用した情報上限である。snapshotでは必ず次を満たす。
+
+```text
+bet.placed_at_cutoff == snapshot.identity.information_cutoff
+```
+
+これにより、異なるprediction cutoffのplanを区別し、後から生成されたbetの混入を拒否する。保存時刻や`datetime.now()`で代用しない。実際の購入実行時刻が必要になった場合は、別フィールド・別境界として設計する。
+
+`recommendation_rank`は候補評価順位であり、purchase orderではない。正式なpurchase orderは、`BetStrategy`が確定した`BetPlan.recommendations`のtuple順を先頭から列挙した0-based index (`0, 1, 2, ...`) とする。後続schemaではplan子行に`purchase_order INTEGER NOT NULL CHECK(purchase_order >= 0)`を保存し、plan内unique constraintと読取時の`ORDER BY purchase_order ASC`で順序を再現する。surrogate bet IDをtie-breakerに使わない。
+
+同じplan内ではstake、rank、purchase orderが異なっても`(bet_type, canonical race_entry_ids)`が同じbetを拒否する。別plan・別run間では同一identityを許可する。この方針は既存`SimulationResult`と`RuleBasedBetStrategy`の重複排除契約に合わせる。
+
+#### `BetPlan` から snapshot への変換
+
+実在するpredictionモデルは以下である。
+
+```python
+@dataclass(frozen=True)
+class BetPlan:
+    strategy_name: str
+    recommendations: tuple[BetRecommendation, ...]
+    candidate_count: int
+
+@dataclass(frozen=True)
+class BetRecommendation:
+    rank: int
+    bet_type: str
+    horse_ids: tuple[int, ...]
+    estimated_probability: float
+    expected_value: float | None
+    combination_score: float | None
+    prediction_score: float
+```
+
+`BetPlan`にも`BetRecommendation`にもstake、amount、purchase order、race ID、strategy ID、prediction cutoffは存在しない。`StrategyConfig`および`SimulationRunContext`にもstake allocationの正式フィールドはない。したがって、stakeを均等配分・100円固定・既定値から推測することは禁止する。
+
+最終的な純粋変換は`SimulationBetPlanBuilder`を推奨する。BuilderはDB、Repository、Provider、現在時刻、strategy再実行、recommendationの再ソートへ依存せず、plan identity、確定済みstake allocation、race entry selection resolverを受けてsnapshotを返す。stake allocationの正式契約が未確定であるため、`build(...)`の完全signatureはこの時点では確定しない。少なくとも以下の責務を持つ。
+
+```text
+BetPlanのtuple順を保持
+→ 各recommendationのhorse_idsをresolve
+→ 確定済みallocationからstakeを取得
+→ SimulationBetを構築
+→ plan内重複を拒否
+→ SimulationBetPlanSnapshotを返す
+```
+
+`BetStakeAllocator`または`BetAllocationPlan`の設計が、変換実装の前提フェーズとして必要である。allocationはrecommendationごとのstakeを損失なく表し、最終`BetPlan`のtuple順との対応を明示しなければならない。
+
+#### horse IDs から race entry IDs への変換
+
+`BetRecommendation.horse_ids`と`SimulationBet.race_entry_ids`は別境界である。現在のCLI実装では両者が`horses.id`由来に見えるが、Builderが暗黙に同一IDとして扱ってはならない。
+
+```python
+class RaceEntrySelectionResolver(Protocol):
+    def resolve_race_entry_ids(
+        self,
+        *,
+        race_id: int,
+        horse_ids: Sequence[int],
+    ) -> tuple[int, ...]:
+        ...
+```
+
+resolverは指定race内でhorse IDをrace entry IDへ変換し、別race、欠損ID、重複IDを拒否する。Builderはrecommendation由来の順序をそのままresolverへ渡し、券種別canonicalizationは最終的な`SimulationBet` constructorへ一元化する。Repository/DB依存はresolverの具体実装に閉じ込め、純粋Builderへ直接埋め込まない。上位層で変換済み`BetPlan`を生成する案は既存`BetPlan`の型を変える必要があるため、今回の最小方針には採用しない。
+
+#### 将来の Repository API
+
+`SimulationBetRepository`は個別betではなくplan snapshotを保存・取得する。
+
+```python
+class SimulationBetRepository(Protocol):
+    def save_plan(
+        self,
+        *,
+        snapshot: SimulationBetPlanSnapshot,
+    ) -> SimulationBetPlanSnapshot:
+        ...
+
+    def get_plan(
+        self,
+        *,
+        identity: SimulationBetPlanIdentity,
+    ) -> SimulationBetPlanSnapshot | None:
+        ...
+```
+
+Repositoryはidentityを生成しない。insert-onlyで同一identityの再保存を拒否し、空planも保存する。読取時はpurchase orderを維持し、DB行をdomain constructor validationへ通して復元する。Repository読取時刻をprediction cutoffとして使用しない。
+
+#### Phase 4C-2d3b の進行判定と分割
+
+**Phase 4C-2d3b1の前に追加設計が必要**である。identity、run供給、空plan、purchase order、`placed_at_cutoff`不変条件、selection resolver、変換責務は確定したが、recommendationごとのstakeの正式取得元が存在しない。
+
+次の順序とする。
+
+```text
+Phase 4C-2d3b0a
+BetStakeAllocator / BetAllocationPlan の入力・出力・順序対応を設計する。
+
+Phase 4C-2d3b0b
+SimulationBetPlanIdentity、SimulationBetPlanSnapshot、
+RaceEntrySelectionResolver のdomain / Protocol契約を追加する。
+
+Phase 4C-2d3b0c
+確定済みallocationを使う SimulationBetPlanBuilder を実装する。
+
+Phase 4C-2d3b1
+bet plan schema / migration を追加する。
+
+Phase 4C-2d3b2
+SimulationBetRepository と SQLite実装を追加する。
+
+Phase 4C-2d3b3
+Repository-backed SimulationBetSource を実装する。
+
+Phase 4C-2d3b4
+PredictionPipeline の最終BetPlanをsnapshotとして保存する上位接続を実装する。
+```
+
+残る未確定事項はstake allocationの入力、allocationがstrategy設定・run設定・外部資金管理のどこに属するか、ならびに`SimulationRunContext`を現在のSimulator実行経路へどのcomposition rootで供給するかである。これらが確定するまでschema、Repository、Sourceの実装には進まない。
 
 ## 集計指標と分母
 
