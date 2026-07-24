@@ -891,13 +891,25 @@ Repositoryはidentityを生成しない。insert-onlyで同一identityの再保�
 
 #### Phase 4C-2d3b の進行判定と分割
 
-**Phase 4C-2d3b1の前に追加設計が必要**である。identity、run供給、空plan、purchase order、`placed_at_cutoff`不変条件、selection resolver、変換責務は確定したが、recommendationごとのstakeの正式取得元が存在しない。
+**Phase 4C-2d3b1の前に追加設計が必要**である。identity、run供給、空plan、purchase order、`placed_at_cutoff`不変条件、selection resolver、変換責務は設計済みだが、`SimulationBetPlanIdentity` はまだproduction contractとして未実装であり、recommendationごとのstakeの正式取得元も存在しない。
 
 次の順序とする。
 
 ```text
 Phase 4C-2d3b0a
 BetStakeAllocator / BetAllocationPlan の入力・出力・順序対応を設計する。
+
+Phase 4C-2d3b0a0
+stake allocationの前提identity、validation例外、policy configuration hash境界を設計する。
+
+Phase 4C-2d3b0a0a
+SimulationBetPlanIdentity contractを追加する。
+
+Phase 4C-2d3b0a0b
+race非依存allocation value objectのvalidation方針を反映する。
+
+Phase 4C-2d3b0a0c
+allocation policy configurationをStrategyConfig hashへ統合する。
 
 Phase 4C-2d3b0a1
 BetStakeBudget、BetAllocationPlan、BetStakeAllocator、allocation policy設定の
@@ -907,8 +919,7 @@ Phase 4C-2d3b0a2
 最初の具体的BetStakeAllocator policyを設計・実装する。
 
 Phase 4C-2d3b0b
-SimulationBetPlanIdentity、SimulationBetPlanSnapshot、
-RaceEntrySelectionResolver のdomain / Protocol契約を追加する。
+SimulationBetPlanSnapshot、RaceEntrySelectionResolver のdomain / Protocol契約を追加する。
 
 Phase 4C-2d3b0c
 確定済みallocationを使う SimulationBetPlanBuilder を実装する。
@@ -926,9 +937,163 @@ Phase 4C-2d3b4
 PredictionPipeline の最終BetPlanをsnapshotとして保存する上位接続を実装する。
 ```
 
-stake allocationの入力・境界は直後のPhase 4C-2d3b0aで確定する。schema、Repository、Sourceの実装は、同節で定めるbudget、allocation policy設定、run contextのcomposition root供給を後続契約として実装するまで開始しない。
+stake allocationの入力・境界はPhase 4C-2d3b0a0aから0a0cで先にproduction contractへ反映する。schema、Repository、Sourceの実装は、その後のbudget、allocation policy設定、run contextのcomposition root供給を含む0a1以降の契約が完了するまで開始しない。
 
 #### BetStakeAllocator／BetAllocationPlan（Phase 4C-2d3b0a）
+
+##### Phase 4C-2d3b0a0: stake allocation前提契約の整合
+
+Phase 4C-2d3b0a1の実装前確認で、次の三つが未解決だった。
+
+1. `SimulationBetPlanIdentity` は設計書にだけ存在し、production codeには存在しない。
+2. `SimulationValidationError(race_id, input_identifier, reason)` はrace単位の入力・境界エラーであり、race IDを持たないbudgetやpolicy identityへ架空のrace IDを渡せない。
+3. 現在の`StrategyConfig`と`strategy_config_hash()`はallocation policyを含まないため、異なるallocation policyを同じstrategy hashで識別してしまう。
+
+この節は上記を解消するための設計であり、ここで示す新規contract、`StrategyConfig`変更、hash変更、CLI/settings変更はまだ実装しない。
+
+###### 実在するidentity・設定境界
+
+現行production codeで確認した型と経路は次のとおりである。
+
+| 対象 | 実在するfieldまたは処理 | allocation前提としての扱い |
+| --- | --- | --- |
+| `SimulationRunContext` | `run_id: str`、`dataset_id: str`、`started_at: datetime`、`target_commit_id: str` | `run_id`だけをplan identityへコピーする。run context objectそのものは保持しない。 |
+| `StrategyIdentity` | `strategy_id: str`、`strategy_name: str`、`strategy_config: StrategyConfig`、`strategy_config_hash: str` | `strategy_id`と`strategy_config_hash`だけをplan identityへコピーする。 |
+| `SimulationRaceInput` | `race_id: int`、`information_cutoff: datetime`、`scheduled_start_at`、prediction input、audit | `race_id`と`information_cutoff`だけをplan identityへコピーする。 |
+| `StrategyConfig` | `allowed_bet_types`、`max_bet_count`、`selection_style`、`min_combination_score`、`max_candidates`、`sort_condition` | allocation policy fieldは未実装である。 |
+| `strategy_config_payload()` | 上記6 fieldとschema versionをdict化する | set/frozenset等を正規化しているが、allocation設定payloadは未実装である。 |
+| `strategy_config_hash()` | canonical JSON（sorted keys、compact UTF-8）をSHA-256化する | policy設定を含まないため、現時点ではallocation再現性のhashに使用できない。 |
+| `build_strategy_identity()` | `strategy_config_hash()`から`StrategyIdentity`を生成する唯一の現行helper | 0a0cでhash対象を拡張すれば、生成経路を別途増やさずpolicyをidentityへ反映できる。 |
+
+`RuleBasedBetStrategy`は`StrategyConfig`からrecommendation集合と順序を決めるだけで、stakeまたはbudgetを扱わない。prediction CLIは`--bet-types`、`--max-bets`、`--max-candidates`、style、score、sortを`StrategyConfig`へ渡すが、allocation option、settings JSON、race単位budgetの経路は存在しない。
+
+###### `SimulationBetPlanIdentity` の正式API案
+
+`SimulationBetPlanIdentity`はallocationより先に、独立したproduction contractとして追加する。配置候補は **`scripts/simulation/bet_plan_identity.py`** とする。このmoduleは`datetime`以外のsimulation model、Repository、Provider、DB、現在時刻へ依存しない。
+
+```python
+@dataclass(frozen=True, slots=True)
+class SimulationBetPlanIdentity:
+    run_id: str
+    race_id: int
+    strategy_id: str
+    strategy_config_hash: str
+    information_cutoff: datetime
+```
+
+fieldの構成元は固定する。
+
+```text
+run_id               <- SimulationRunContext.run_id
+race_id              <- SimulationRaceInput.race_id
+strategy_id          <- StrategyIdentity.strategy_id
+strategy_config_hash <- StrategyIdentity.strategy_config_hash
+information_cutoff   <- SimulationRaceInput.information_cutoff
+```
+
+このtypeは上記の依存object自体を保持しない。run ID生成、config hash生成、Repository/DBアクセス、現在時刻取得、`SimulationRaceInput`の再validation、strategy validation、race input取得を行わない。composition rootまたは後続Builderが、すでに構築・検証済みの値をコピーして構築する。
+
+validationは以下を正式とする。
+
+- `run_id`と`strategy_id`は空文字・空白のみを拒否する`str`。入力をtrim、case変換、再生成しない。
+- `race_id`は正の非bool`int`。bool、0、負数、その他の型を拒否する。
+- `strategy_config_hash`は64文字の小文字SHA-256 hexadecimal digest。hashは外部から受け取り、このtypeは生成・補正しない。
+- `information_cutoff`はtimezone-aware `datetime`。naive datetime、UTCへの暗黙変換、時刻の丸めを行わない。
+
+このidentityは後続snapshot、allocation plan、Repository keyの共通identityになる。`SimulationRunContext`の`dataset_id`、`started_at`、`target_commit_id`および`StrategyIdentity.strategy_name`はrun/strategy来歴であり、plan identityのfieldへ重複させない。
+
+###### validation例外の正式適用範囲
+
+`SimulationValidationError`は既存の三引数APIを変更しない。race IDを持たないpure value objectへダミーの`race_id`を渡すこと、または`SimulationBetEvaluationError`を一般domain validationへ流用することを禁止する。
+
+| 対象 | race ID | 正式なvalidation例外 | 理由 |
+| --- | ---: | --- | --- |
+| `SimulationRaceInput` | あり | `SimulationValidationError` | 予測時点・監査を含むrace入力境界である。 |
+| `RaceSettlementData` | あり | `SimulationValidationError` | Sourceが供給するrace単位bundleである。 |
+| `PersistedRaceSettlementData` | あり | `SimulationValidationError` | 永続化済み精算情報のrace単位bundleである。 |
+| `SimulationBetPlanIdentity` | fieldとして保持 | `ValueError` | 独立したidentity value objectであり、未構築または不正なrace fieldに対してrace境界エラーを偽装しない。 |
+| `BetStakeBudget` | なし | `ValueError` | race非依存のpure value objectである。 |
+| `AllocationPolicyIdentity` | なし | `ValueError` | race非依存のpolicy identityである。 |
+| `AllocatedBetRecommendation` | なし | `ValueError` | race非依存のallocation明細である。 |
+| `BetAllocationPlan` | identityを保持 | `ValueError` | pure aggregateであり、子valueの不正とaggregate整合性を同じdomain validationとしてFail Closedにする。 |
+
+既存の`StrategyIdentity`、`SimulationRunContext`、`SimulationBet`、Repository境界modelもconstructor validationに`ValueError`を用いる。この既存規約に合わせ、案A（race非依存pure value objectは`ValueError`）を正式採用する。案Bの新しいrace非依存例外contractは不要であり、案Cの`SimulationValidationError`をrace ID optionalへ変更する必要もない。`SimulationBetEvaluationError`は単一bet／race精算のFail Closed評価だけに残す。
+
+従って、0a1での例外方針は次のとおりである。
+
+- `BetStakeBudget`: 非`int`、bool、負数、100円単位違反は`ValueError`。
+- `AllocationPolicyIdentity`: 非`str`、空文字、空白のみは`ValueError`。入力文字列はtrimして受理しない。
+- `AllocatedBetRecommendation`: `BetRecommendation`型不正、`purchase_order`の非負非bool`int`違反、stakeの正の非bool100円単位違反は`ValueError`。
+- `BetAllocationPlan`: identity型、`BetPlan`型、allocation tuple、allocation件数・object identity・purchase order・recommendation identity・budget上限の整合性違反は`ValueError`。子value objectが既に送出する`ValueError`もそのまま伝播する。
+
+exception messageだけで契約を区別しない。field名と不変条件をテストし、例外typeは上表に従う。
+
+###### allocation policy configuration と strategy hash
+
+allocation policyの名前・version・決定的設定をstrategy hashへ含める必要がある。`StrategyConfig`はprediction packageのtypeであり、`scripts/simulation/models.py`が既に`StrategyConfig`をimportしている。そのためprediction側からsimulation側のstake moduleをimportすると循環importになる。policy configuration contractの配置候補は **`scripts/prediction/allocation_policy.py`** とする。後続の`scripts/simulation/stake_allocation.py`はこのprediction側contractをimportしてよいが、逆方向のimportは行わない。
+
+比較した案のうち、`StrategyConfig`へ個別fieldを直接追加する案はconstructorとhash payloadが散在し、外部payloadをhash時だけ合成する案は`StrategyIdentity.strategy_config`とhash対象を乖離させる。したがって、案Bのnested configurationを正式採用する。
+
+```python
+@dataclass(frozen=True, slots=True)
+class AllocationPolicyIdentity:
+    policy_name: str
+    policy_version: str
+    policy_config_hash: str
+
+
+@dataclass(frozen=True, slots=True)
+class AllocationPolicyConfig:
+    identity: AllocationPolicyIdentity
+    parameters: Mapping[str, JsonCompatibleValue]
+```
+
+`AllocationPolicyIdentity`の三fieldはtrimせず、非`str`、空文字、空白のみを拒否する。`policy_config_hash`は`StrategyIdentity.strategy_config_hash`と同じ64文字の小文字SHA-256 hexadecimal digestとする。`JsonCompatibleValue`は後続0a0cで定義する有限のcanonical JSON valueを表すtype aliasであり、`parameters`には文字列keyだけを許す。`AllocationPolicyConfig`はmappingを防御的にcopyしてread-only化し、recursiveにcanonical JSON化した次のpayloadから外部factoryが`policy_config_hash`を算出する。identity constructor自体はhashを生成しない。
+
+```json
+{
+  "policy_name": "...",
+  "policy_version": "...",
+  "parameters": { "...": "..." }
+}
+```
+
+0a0cでは`StrategyConfig`の末尾default fieldとして次を追加する。末尾に置くことで既存の位置引数constructor互換を維持する。
+
+```python
+allocation_policy: AllocationPolicyConfig | None = None
+```
+
+`strategy_config_payload()`は`allocation_policy`を常に含め、`None`または上記のcanonical policy payloadを再帰正規化して出力する。`strategy_config_hash()`と`build_strategy_identity()`は既存の一経路のまま、この拡張payloadをhash化する。これによりpolicy name、policy version、parametersのどれが変わっても`strategy_config_hash`と`strategy_id`が変わる。policy未設定の`None`もcanonicalにhash化するが、後続allocation実行境界は`None`を受理せずFail Closedにする。これにより既存prediction-only callerの`StrategyConfig()`互換を維持しつつ、allocationを伴うrunで未識別policyを許可しない。
+
+raceごとの`BetStakeBudget.total_amount`はcomposition rootから明示的に渡すrun inputであり、policy configurationではない。そのためstrategy hashへ含めない。budgetは`BetAllocationPlan.total_budget`と後続plan header監査値へ保存し、同じstrategy policyでもrace/runごとの配分額を再現可能にする。
+
+###### 修正後の実装順と進行判定
+
+```text
+Phase 4C-2d3b0a0a
+SimulationBetPlanIdentity contractを scripts/simulation/bet_plan_identity.py に追加する。
+
+Phase 4C-2d3b0a0b
+新しい例外classおよびSimulationValidationError API変更は不要である。
+0a0aおよび0a1のconstructor testsで上表のValueError方針を検証する。
+
+Phase 4C-2d3b0a0c
+scripts/prediction/allocation_policy.py のpolicy configuration contract、
+StrategyConfig末尾field、canonical payload/hash、StrategyIdentity回帰testsを追加する。
+
+Phase 4C-2d3b0a1
+scripts/simulation/stake_allocation.py にBetStakeBudget、
+AllocatedBetRecommendation、BetAllocationPlan、BetStakeAllocator Protocolを追加する。
+
+Phase 4C-2d3b0a2
+最初の具体的かつ決定的なallocation policyを設計・実装する。
+
+Phase 4C-2d3b0b
+SimulationBetPlanSnapshot、RaceEntrySelectionResolver、SimulationBetPlanBuilderを追加する。
+```
+
+**Phase 4C-2d3b0a0aへ進行可能**である。identityの完全API、配置、value object例外方針、policy configurationのhash統合方法、依存順を確定した。残る未確定事項は最初に採用する具体allocation algorithmだけであり、0a2まで実装・選定しない。
 
 ##### 既存のbudget・stake境界
 
@@ -1050,7 +1215,7 @@ budget値はpolicy設定ではなくrunごとの明示入力であるため、st
 
 `SimulationBetPlanBuilder`は`BetAllocationPlan`からrecommendation、purchase order、stake、plan identityを取得する。stakeを再計算せず、allocationの一部を除外せず、recommendationを再ソートしない。
 
-**Phase 4C-2d3b0a1へ進行可能**である。budget入力、budget不足、未使用budget、空plan、1対1対応、purchase order、allocation Protocol、policy hashの方向を確定した。0a1ではこれらのdomain / Protocol契約とstrategy configuration payloadへのpolicy設定取り込みを実装する。具体allocation algorithmは0a2まで実装しない。
+**Phase 4C-2d3b0a1へはまだ進行しない**。先に0a0aでidentityを実装し、0a0cでpolicy configurationをstrategy hashへ統合する。両方が完了した後に、budget入力、budget不足、未使用budget、空plan、1対1対応、purchase order、allocation Protocolを0a1で実装する。具体allocation algorithmは0a2まで実装しない。
 
 ## 集計指標と分母
 
