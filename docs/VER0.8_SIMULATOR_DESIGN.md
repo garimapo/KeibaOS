@@ -1028,45 +1028,163 @@ validationは以下を正式とする。
 
 exception messageだけで契約を区別しない。field名と不変条件をテストし、例外typeは上表に従う。
 
-###### allocation policy configuration と strategy hash
+###### allocation policy configuration と strategy hash（Phase 4C-2d3b0a0c）
 
-allocation policyの名前・version・決定的設定をstrategy hashへ含める必要がある。`StrategyConfig`はprediction packageのtypeであり、`scripts/simulation/models.py`が既に`StrategyConfig`をimportしている。そのためprediction側からsimulation側のstake moduleをimportすると循環importになる。policy configuration contractの配置候補は **`scripts/prediction/allocation_policy.py`** とする。後続の`scripts/simulation/stake_allocation.py`はこのprediction側contractをimportしてよいが、逆方向のimportは行わない。
+allocation policyの名前・version・決定的設定をstrategy hashへ含める必要がある。現行の`StrategyConfig`は`@dataclass(frozen=True)`であり、`allowed_bet_types`、`max_bet_count`、`selection_style`、`min_combination_score`、`max_candidates`、`sort_condition`の六fieldを持つ。slotsは使用していない。現在の直接constructor利用は既定値またはkeyword指定であり、現行sourceに位置引数利用はない。
 
-比較した案のうち、`StrategyConfig`へ個別fieldを直接追加する案はconstructorとhash payloadが散在し、外部payloadをhash時だけ合成する案は`StrategyIdentity.strategy_config`とhash対象を乖離させる。したがって、案Bのnested configurationを正式採用する。
+現行`strategy_config_payload()`はschema versionと六fieldをdict化し、`_normalize_json()`がEnum、set/frozenset、tuple/list、`Decimal`、有限floatを正規化する。`strategy_config_hash()`は`sort_keys=True`、`separators=(",", ":")`、`ensure_ascii=False`のUTF-8 JSONをSHA-256化し、`build_strategy_identity()`がこのhashだけを使って既存`StrategyIdentity`を作る。settings JSONは全体設定だけでStrategyConfigを復元せず、config loader・strategy factoryは存在しない。prediction CLIは引数から`StrategyConfig`を直接構築し、`PipelineConfig`は`StrategyConfig()`をdefault factoryとして保持する。
+
+`StrategyConfig`はprediction packageのtypeであり、`scripts/simulation/models.py`が既にこれをimportする。このためprediction側からsimulation側のstake moduleをimportすると循環importになる。allocation policy configuration contractの配置は **`scripts/prediction/allocation_policy.py`** とする。後続の`scripts/simulation/stake_allocation.py`はpredictionの`BetPlan`／`BetRecommendation`とpolicy contractをimportしてよいが、prediction側はsimulation allocation contractをimportしない。
+
+##### 正式APIとidentity/configの分離
+
+`AllocationPolicyConfig`が`AllocationPolicyIdentity`を保持すると、identityの`policy_config_hash`をconfigから作る際にconstructor循環となる。したがって、configは入力値、identityはconfigからの派生値として分離する案を正式採用する。
 
 ```python
+JsonScalar = str | int | bool | None
+JsonValue = JsonScalar | tuple[JsonValue, ...] | Mapping[str, JsonValue]
+
+
+@dataclass(frozen=True, slots=True)
+class AllocationPolicyConfig:
+    policy_name: str
+    policy_version: str
+    parameters: Mapping[str, JsonValue]
+
+
 @dataclass(frozen=True, slots=True)
 class AllocationPolicyIdentity:
     policy_name: str
     policy_version: str
     policy_config_hash: str
-
-
-@dataclass(frozen=True, slots=True)
-class AllocationPolicyConfig:
-    identity: AllocationPolicyIdentity
-    parameters: Mapping[str, JsonCompatibleValue]
 ```
 
-`AllocationPolicyIdentity`の三fieldはtrimせず、非`str`、空文字、空白のみを拒否する。`policy_config_hash`は`StrategyIdentity.strategy_config_hash`と同じ64文字の小文字SHA-256 hexadecimal digestとする。`JsonCompatibleValue`は後続0a0cで定義する有限のcanonical JSON valueを表すtype aliasであり、`parameters`には文字列keyだけを許す。`AllocationPolicyConfig`はmappingを防御的にcopyしてread-only化し、recursiveにcanonical JSON化した次のpayloadから外部factoryが`policy_config_hash`を算出する。identity constructor自体はhashを生成しない。
+`AllocationPolicyConfig`はpolicy name、version、parametersだけを保持する。`AllocationPolicyIdentity`はconfigのcanonical payloadから得た派生値であり、allocator object、callable、budget、BetPlan、recommendation、DB、Repository、現在時刻を保持しない。両typeのintrinsic validationは`ValueError`とし、name/versionは非`str`、空文字、空白のみを拒否してtrimやcase変換をしない。identityの`policy_config_hash`は64文字の小文字SHA-256 hexadecimal digestで、identity自身はhashを生成しない。
+
+##### parametersの正式型、freeze、nested範囲
+
+最初のVer0.8 contractでは、案Bの限定JSON valueを採用する。scalarは`str`、非bool`int`、`bool`、`None`だけとする。nested structureは文字列keyのMappingとsequenceだけを再帰的に許し、内部表現とJSON serialize用表現を明確に分離する。`bool`は`int`より先に判定し、boolを非bool`int`として誤受理しない。
+
+```text
+Mapping[str, input value] -> 文字列keyを固定順で新しいdictへ防御的copyし、MappingProxyType化
+list/tuple input          -> 再帰的にtuple
+scalar                    -> 許可された同一scalar
+```
+
+Mapping keyは`str`だけを受理する。listとdictは入力mutable containerから防御的にcopyするため、生成後の変更はconfigへ影響しない。tupleの順序は意味を持つため保持し、mapping key順は意味を持たないため内部freeze時とcanonical JSON変換時の両方で辞書順にする。循環参照するcontainerは検出して拒否する。`datetime`、`date`、`bytes`、`bytearray`、set/frozenset、任意object、callable、allocator instance、`Decimal`、floatを拒否する。policy固有の数値制約（100円単位、basis points範囲など）は具体policy configまたは具体allocatorへ一度だけ置く。
+
+floatは初期contractで禁止する。Python floatをhash入力にすると、binary表現、入力経路、外部JSON実装による再現性リスクを持つためである。score比率、Kelly係数、最大投資比率、confidence thresholdが必要になった場合は、整数basis pointsまたは明示的なdecimal文字列をpolicy parametersへ入れる。decimal文字列の数値意味・桁数・範囲は具体policyだけが検証し、generic configは文字列を数値へ暗黙変換しない。
+
+固定field dataclass（案A）は具体policyの個別制約に適しており、後続policyが必要なら`AllocationPolicyConfig.parameters`を受け取るfactory内部で使用してよい。しかし共通contract自体をpolicyごとのclassへ固定せず、限定JSON valueによる安全な拡張性を優先する。flat parameter tuple（案C）は初期fixed stakeには十分だが、将来の券種別・nested設定を早期に排除するため採用しない。
+
+##### canonical JSON変換、serialization と policy hash生成境界
+
+`MappingProxyType`はPython標準の`json.dumps()`でJSON objectとして直接serializeできないため、immutable内部表現を直接JSON化してはならない。policy hash生成はconstructorでもcomposition rootでもなく、既存strategy identity生成規約と同型の純粋関数へ置く。次のAPIを`AllocationPolicyConfig`と同じprediction moduleへ追加する。
+
+```python
+def allocation_policy_config_payload(
+    config: AllocationPolicyConfig,
+) -> dict[str, object]:
+    ...
+
+
+def allocation_policy_config_hash(
+    config: AllocationPolicyConfig,
+) -> str:
+    ...
+
+
+def build_allocation_policy_identity(
+    config: AllocationPolicyConfig,
+) -> AllocationPolicyIdentity:
+    ...
+```
+
+加えて、immutable `parameters`を**plain JSON tree**へ変換する純粋関数を置く。
+
+```python
+def canonicalize_allocation_policy_parameters(
+    parameters: Mapping[str, JsonValue],
+) -> dict[str, object]:
+    ...
+```
+
+この関数は、`str`を`str`、非bool`int`を`int`、`bool`を`bool`、`None`を`None`として返す。tupleは順序を保ったJSON listへ、`MappingProxyType`を含むMappingはkeyを辞書順にした通常のdictへ再帰変換する。出力は`dict`、`list`、`str`、`int`、`bool`、`None`だけからなるplain JSON treeである。入力を変更せず、数値変換、`datetime`の文字列化、任意objectへの`str()`、key trim、値の暗黙補正、hash生成を行わない。
+
+payloadは次の四要素を必ず含む。
 
 ```json
 {
+  "schema_version": 1,
   "policy_name": "...",
   "policy_version": "...",
   "parameters": { "...": "..." }
 }
 ```
 
-0a0cでは`StrategyConfig`の末尾default fieldとして次を追加する。末尾に置くことで既存の位置引数constructor互換を維持する。
+policy hashの正式順序は、`AllocationPolicyConfig` → immutable parameters → `canonicalize_allocation_policy_parameters()`によるplain JSON tree → allocation policy payload → `json.dumps()` → UTF-8 encode → SHA-256 → lowercase hexdigestである。payload builderがparameters型・recursive freeze後のJSON可能性を一度だけ検証する。hash functionは次のJSON規則を使う。
+
+```python
+json.dumps(
+    payload,
+    sort_keys=True,
+    separators=(",", ":"),
+    ensure_ascii=False,
+    allow_nan=False,
+)
+```
+
+NaN／Infinityを含む型はgeneric parametersで受理しないためcanonical JSONへ到達しない。policy payloadの`schema_version=1`はこのphaseで固定し、callerが変更できる引数を公開しない。`allocation_policy_config_payload()`、`allocation_policy_config_hash()`、`build_allocation_policy_identity()`だけがconfigからidentityを派生する。`AllocationPolicyConfig` constructorはhashを受け取らず、callerが任意hashをconfigへ注入する経路を作らない。
+
+##### StrategyConfigとstrategy payloadへの統合
+
+案Bのnested configを`StrategyConfig`の**末尾default field**として追加する。
 
 ```python
 allocation_policy: AllocationPolicyConfig | None = None
 ```
 
-`strategy_config_payload()`は`allocation_policy`を常に含め、`None`または上記のcanonical policy payloadを再帰正規化して出力する。`strategy_config_hash()`と`build_strategy_identity()`は既存の一経路のまま、この拡張payloadをhash化する。これによりpolicy name、policy version、parametersのどれが変わっても`strategy_config_hash`と`strategy_id`が変わる。policy未設定の`None`もcanonicalにhash化するが、後続allocation実行境界は`None`を受理せずFail Closedにする。これにより既存prediction-only callerの`StrategyConfig()`互換を維持しつつ、allocationを伴うrunで未識別policyを許可しない。
+末尾かつdefault付きのfield追加は、現行の既定値・keyword指定・将来の位置引数constructor互換を保つ。`None`はlegacy/default allocation policyではなく、**allocation policy未設定でありstake allocation実行不可**を表す。既存prediction-only Pipeline、CLI、settings JSONはallocationを実行しないため`None`をそのまま許容する。後続allocation composition boundaryだけが`None`をFail Closedで拒否する。settings JSONにfieldがない場合も`None`となり、暗黙のallocation policyを導入しない。
 
-raceごとの`BetStakeBudget.total_amount`はcomposition rootから明示的に渡すrun inputであり、policy configurationではない。そのためstrategy hashへ含めない。budgetは`BetAllocationPlan.total_budget`と後続plan header監査値へ保存し、同じstrategy policyでもrace/runごとの配分額を再現可能にする。
+`allocation_policy is None`のとき、`strategy_config_payload()`は新しい`"allocation_policy"` keyを**追加しない**。既存payloadの構造と既存strategy schema versionを完全に保持するため、既存prediction-only `StrategyConfig`の`strategy_config_hash()`は変更しない。`None`は「stake allocation未設定」を表し、default policyを意味しない。
+
+設定済みの場合は次の値を含める。
+
+```python
+{
+    # existing StrategyConfig fields
+    "allocation_policy": {
+        "schema_version": 1,
+        "policy_name": config.allocation_policy.policy_name,
+        "policy_version": config.allocation_policy.policy_version,
+        "policy_config_hash": allocation_policy_config_hash(config.allocation_policy),
+        "parameters": canonical_parameters,
+    },
+}
+```
+
+hashだけではparameters詳細を監査できず、parametersだけではpolicy hashの独立した整合確認ができない。よって設定済みstrategy payloadには**policy hashとcanonical parametersの両方**を含める。`policy_config_hash`はpayload builderがconfigから計算するため、外部入力値との不整合を持ち込まない。nested allocation policy payloadは独自の`schema_version=1`を持つ。このpayloadを既存`strategy_config_hash()`がhash化し、`build_strategy_identity()`は引き続き唯一のidentity生成経路とする。policy name、policy version、parameters値の変更は必ずstrategy hashとstrategy IDを変更し、mapping key順だけの違いは変更しない。
+
+末尾default fieldの追加は**constructor互換性**を保つ。一方、`allocation_policy is None`でkeyを追加しないことは、既存strategy payloadとhashを保つ**hash互換性**である。二つは別の契約として回帰テストで検証する。
+
+raceごとの`BetStakeBudget.total_amount`、run ID、race ID、information cutoffはallocation policy設定ではないためstrategy payload/hashへ含めない。budgetは後続`BetAllocationPlan.total_budget`とplan header監査値へ保存する。
+
+##### validation責務、後続実装範囲、進行判定
+
+| 対象 | 一度だけ置く責務 |
+| --- | --- |
+| `AllocationPolicyConfig` | name/versionとparameters containerのintrinsic validation、defensive freeze |
+| concrete policy | parameterの数値意味・範囲・policy固有制約 |
+| policy payload builder | recursive JSON可能性とcanonical payload構築 |
+| policy hash function | canonical payloadのSHA-256化 |
+| identity builder | configからderived identityを組み立てる |
+| `StrategyConfig` | `AllocationPolicyConfig | None`だけを受理する |
+| `strategy_config_payload()` | `None`なら既存payloadを完全維持し、設定済みならpolicy hash＋canonical parametersを含める |
+| `strategy_config_hash()` | 拡張済みstrategy payloadだけをhash化する |
+
+Phase 4C-2d3b0a0c1のproduction実装対象は、`scripts/prediction/allocation_policy.py`、`scripts/prediction/bet_strategy.py`、および既存`scripts/simulation/models.py`の`strategy_config_payload()`、`strategy_config_hash()`、`build_strategy_identity()`（必要なら同じhash経路の`_normalize_json()`）だけである。`AllocationPolicyConfig`と`AllocationPolicyIdentity`はともにprediction側の`allocation_policy.py`に置き、simulation側はそのidentityをimportするだけで複製しない。`SimulationBet`、`SimulationSummary`、`race_count`、Result/Summary contractなど既存simulation model全体は変更しない。`scripts/simulation/strategy_identity.py`は追加しない。このphaseでは具体allocator、BetStakeBudget、BetAllocationPlan、SimulationBetPlanBuilder、Repository、schema、CLI接続、settings JSON、budget入力を実装しない。
+
+**Phase 4C-2d3b0a0c1へ進行可能**である。parameters型、freeze、float方針、canonical serialization、派生identity、StrategyConfig integration、後方互換性、実装ファイル範囲を確定した。残る未確定事項は最初の具体allocation policyのパラメータ意味と配分algorithmだけであり、0a2まで選定しない。
 
 ###### 修正後の実装順と進行判定
 
