@@ -93,17 +93,31 @@ def provider_context(
     *,
     race_id: int = 101,
     bet_type: str | None = None,
+    observed_at: datetime = CUTOFF,
+    captured_at: datetime | None = None,
     cutoff: datetime = CUTOFF,
 ) -> ProviderContext:
-    return ProviderContext(race_id, CUTOFF, "source", None, CUTOFF, cutoff, bet_type)
+    return ProviderContext(
+        race_id,
+        observed_at,
+        "source",
+        None,
+        observed_at if captured_at is None else captured_at,
+        cutoff,
+        bet_type,
+    )
 
 
-def raw_result() -> RawRaceResult:
-    return RawRaceResult("確定", RESULT_FINALIZED_AT, ())
+def raw_result(*, finalized_at: datetime = RESULT_FINALIZED_AT) -> RawRaceResult:
+    return RawRaceResult("確定", finalized_at, ())
 
 
-def raw_publication(bet_type: str = "単勝") -> RawPayoutPublication:
-    return RawPayoutPublication(bet_type, PAYOUT_FINALIZED_AT, (), True, True, True)
+def raw_publication(
+    bet_type: str = "単勝",
+    *,
+    finalized_at: datetime = PAYOUT_FINALIZED_AT,
+) -> RawPayoutPublication:
+    return RawPayoutPublication(bet_type, finalized_at, (), True, True, True)
 
 
 def bet(identity: StrategyIdentity, *, race_id: int = 101, bet_type: str = "単勝") -> SimulationBet:
@@ -135,40 +149,67 @@ def data(
     )
 
 
-def persisted_result(race_id: int = 101) -> PersistedRaceResult:
+def persisted_result(
+    race_id: int = 101,
+    *,
+    finalized_at: datetime = RESULT_FINALIZED_AT,
+    observed_at: datetime = CUTOFF,
+) -> PersistedRaceResult:
     return PersistedRaceResult(
         race_id,
         RaceResultStatus.COMPLETE,
-        RESULT_FINALIZED_AT,
-        CUTOFF,
+        finalized_at,
+        observed_at,
         "source",
         (PersistedRaceResultEntry(1, 11, 1, RaceResultEntryStatus.CONFIRMED),),
     )
 
 
-def publication(*, race_id: int = 101, bet_type: str = "単勝") -> PayoutPublication:
+def publication(
+    *,
+    race_id: int = 101,
+    bet_type: str = "単勝",
+    finalized_at: datetime = PAYOUT_FINALIZED_AT,
+    observed_at: datetime = CUTOFF,
+) -> PayoutPublication:
     selection = (11, 12) if bet_type == "馬連" else (11,)
     return PayoutPublication(
         race_id,
         bet_type,
-        PAYOUT_FINALIZED_AT,
-        CUTOFF,
+        finalized_at,
+        observed_at,
         True,
         "source",
         (PayoutRecord(selection, 200, PayoutStatus.WINNING),),
     )
 
 
-def complete_result_output(race_id: int = 101) -> ProviderBuildResult[PersistedRaceResult]:
+def complete_result_output(
+    race_id: int = 101,
+    *,
+    finalized_at: datetime = RESULT_FINALIZED_AT,
+    observed_at: datetime = CUTOFF,
+) -> ProviderBuildResult[PersistedRaceResult]:
     return ProviderBuildResult(
-        persisted_result(race_id),
+        persisted_result(race_id, finalized_at=finalized_at, observed_at=observed_at),
         CompletenessResult(CompletenessStatus.COMPLETE, 1, 1),
     )
 
 
-def complete_payout_output(*, race_id: int = 101, bet_type: str = "単勝") -> ProviderBuildResult[PayoutPublication]:
+def complete_payout_output(
+    *,
+    race_id: int = 101,
+    bet_type: str = "単勝",
+    finalized_at: datetime = PAYOUT_FINALIZED_AT,
+    observed_at: datetime = CUTOFF,
+) -> ProviderBuildResult[PayoutPublication]:
     return ProviderBuildResult(
-        publication(race_id=race_id, bet_type=bet_type),
+        publication(
+            race_id=race_id,
+            bet_type=bet_type,
+            finalized_at=finalized_at,
+            observed_at=observed_at,
+        ),
         CompletenessResult(CompletenessStatus.COMPLETE, 1, 1),
     )
 
@@ -369,24 +410,46 @@ class ProviderBackedExecutorTests(unittest.TestCase):
         self.assertEqual(result_provider.calls, [])
         self.assertEqual(payout_provider.calls, [])
 
-    def test_context_cutoff_mismatch_stops_providers_and_builder(self) -> None:
+    def test_settlement_contexts_after_prediction_cutoff_are_accepted(self) -> None:
         identity = strategy_identity_factory()
-        later = CUTOFF + timedelta(minutes=1)
+        observed_at = CUTOFF + timedelta(minutes=1)
+        source_cutoff = CUTOFF + timedelta(minutes=2)
         bundle = RaceSettlementData(
             race_id=101,
             bets=(bet(identity),),
             raw_race_result=raw_result(),
-            race_result_context=provider_context(cutoff=later),
+            race_result_context=provider_context(
+                observed_at=observed_at,
+                captured_at=observed_at,
+                cutoff=source_cutoff,
+            ),
             raw_payout_publications_by_bet_type={"単勝": raw_publication()},
-            payout_contexts_by_bet_type={"単勝": provider_context(bet_type="単勝", cutoff=later)},
+            payout_contexts_by_bet_type={
+                "単勝": provider_context(
+                    bet_type="単勝",
+                    observed_at=observed_at,
+                    captured_at=observed_at,
+                    cutoff=source_cutoff,
+                )
+            },
             universe=universe(),
         )
         executor, _, _, result_provider, payout_provider = self.make(identity=identity, settlement_data=bundle)
-        with patch.object(executor_module, "_build_simulation_result_for_race", side_effect=AssertionError("builder must not run")):
-            with self.assertRaises(SimulationValidationError):
-                executor(race_input=race_input())
-        self.assertEqual(result_provider.calls, [])
-        self.assertEqual(payout_provider.calls, [])
+        executor(race_input=race_input())
+        self.assertEqual(len(result_provider.calls), 1)
+        self.assertEqual(len(payout_provider.calls), 1)
+        self.assertIs(result_provider.calls[0][1], bundle.race_result_context)
+        self.assertIs(payout_provider.calls[0][1], bundle.payout_contexts_by_bet_type["単勝"])
+
+    def test_provider_context_rejects_times_after_its_own_information_cutoff(self) -> None:
+        after_cutoff = CUTOFF + timedelta(minutes=1)
+        for name, values in (
+            ("observed_at", {"observed_at": after_cutoff, "captured_at": CUTOFF}),
+            ("captured_at", {"observed_at": CUTOFF, "captured_at": after_cutoff}),
+        ):
+            with self.subTest(name=name):
+                with self.assertRaises(ValueError):
+                    provider_context(cutoff=CUTOFF, **values)
 
     def test_source_exception_is_propagated_by_identity(self) -> None:
         failure = SimulationValidationError(101, "source", "failure")
@@ -442,21 +505,54 @@ class ProviderBackedExecutorTests(unittest.TestCase):
                 executor(race_input=race_input())
         self.assertEqual(payout_provider.calls, [])
 
-    def test_result_output_after_information_cutoff_stops_payout_and_builder(self) -> None:
-        delayed = PersistedRaceResult(
-            101,
-            RaceResultStatus.COMPLETE,
-            CUTOFF,
-            CUTOFF + timedelta(minutes=1),
-            "source",
-            (PersistedRaceResultEntry(1, 11, 1, RaceResultEntryStatus.CONFIRMED),),
+    def test_provider_outputs_after_prediction_cutoff_are_accepted(self) -> None:
+        result_finalized_at = CUTOFF + timedelta(minutes=30)
+        result_observed_at = CUTOFF + timedelta(minutes=40)
+        payout_finalized_at = CUTOFF + timedelta(minutes=50)
+        payout_observed_at = CUTOFF + timedelta(minutes=60)
+        source_cutoff = CUTOFF + timedelta(minutes=70)
+        identity = strategy_identity_factory()
+        bundle = RaceSettlementData(
+            race_id=101,
+            bets=(bet(identity),),
+            raw_race_result=raw_result(finalized_at=result_finalized_at),
+            race_result_context=provider_context(
+                observed_at=result_observed_at,
+                captured_at=result_observed_at,
+                cutoff=source_cutoff,
+            ),
+            raw_payout_publications_by_bet_type={
+                "単勝": raw_publication(finalized_at=payout_finalized_at)
+            },
+            payout_contexts_by_bet_type={
+                "単勝": provider_context(
+                    bet_type="単勝",
+                    observed_at=payout_observed_at,
+                    captured_at=payout_observed_at,
+                    cutoff=source_cutoff,
+                )
+            },
+            universe=universe(),
         )
-        output = ProviderBuildResult(delayed, CompletenessResult(CompletenessStatus.COMPLETE, 1, 1))
-        executor, _, _, _, payout_provider = self.make(result_output=output)
-        with patch.object(executor_module, "_build_simulation_result_for_race", side_effect=AssertionError("builder must not run")):
-            with self.assertRaises(SimulationValidationError):
-                executor(race_input=race_input())
-        self.assertEqual(payout_provider.calls, [])
+        executor, _, _, result_provider, payout_provider = self.make(
+            identity=identity,
+            settlement_data=bundle,
+            result_output=complete_result_output(
+                finalized_at=result_finalized_at,
+                observed_at=result_observed_at,
+            ),
+            payout_outputs={
+                "単勝": complete_payout_output(
+                    finalized_at=payout_finalized_at,
+                    observed_at=payout_observed_at,
+                )
+            },
+        )
+        actual = executor(race_input=race_input())
+        self.assertEqual(actual.settlement_status, SettlementStatus.SETTLED)
+        self.assertEqual(actual.settled_at, payout_finalized_at)
+        self.assertEqual(len(result_provider.calls), 1)
+        self.assertEqual(len(payout_provider.calls), 1)
 
     def test_incomplete_result_skips_payout_and_calls_builder_once(self) -> None:
         executor, _, _, _, payout_provider = self.make(result_output=incomplete_result_output())

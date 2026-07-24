@@ -202,16 +202,6 @@ class ProviderBackedRaceSimulationExecutor:
             _invalid(race_input.race_id, "settlement_data.race_id must match race_input.race_id")
         if any(bet.strategy_id != self._strategy_identity.strategy_id for bet in settlement_data.bets):
             _invalid(race_input.race_id, "settlement_data bets must match strategy_identity.strategy_id")
-        contexts = tuple(
-            context
-            for context in (
-                settlement_data.race_result_context,
-                *settlement_data.payout_contexts_by_bet_type.values(),
-            )
-            if context is not None
-        )
-        if any(context.information_cutoff != race_input.information_cutoff for context in contexts):
-            _invalid(race_input.race_id, "provider context information_cutoff must match race_input")
 
     @staticmethod
     def _validate_result_provider_output(
@@ -226,8 +216,6 @@ class ProviderBackedRaceSimulationExecutor:
             _invalid(race_input.race_id, "race result value must be PersistedRaceResult")
         if value.value.race_id != race_input.race_id:
             _invalid(race_input.race_id, "persisted race result race_id must match race_input")
-        if value.value.observed_at > race_input.information_cutoff:
-            _invalid(race_input.race_id, "persisted race result observed_at is after information_cutoff")
         return value.value
 
     @staticmethod
@@ -246,8 +234,6 @@ class ProviderBackedRaceSimulationExecutor:
             _invalid(race_input.race_id, "payout publication race_id must match race_input")
         if value.value.bet_type != bet_type:
             _invalid(race_input.race_id, "payout publication bet_type must match requested bet_type")
-        if value.value.observed_at > race_input.information_cutoff:
-            _invalid(race_input.race_id, "payout publication observed_at is after information_cutoff")
         return value.value
 
     @staticmethod
