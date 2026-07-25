@@ -8,6 +8,7 @@ from enum import Enum
 import math
 from typing import Sequence
 
+from scripts.prediction.allocation_policy import AllocationPolicyConfig
 from scripts.prediction.bet_generator import BetRecommendation
 
 
@@ -39,6 +40,14 @@ class StrategyConfig:
     min_combination_score: float = 0.0
     max_candidates: int = 50
     sort_condition: SortCondition = SortCondition.GENERATOR_RANK
+    allocation_policy: AllocationPolicyConfig | None = None
+
+    def __post_init__(self) -> None:
+        if self.allocation_policy is not None and not isinstance(
+            self.allocation_policy,
+            AllocationPolicyConfig,
+        ):
+            raise ValueError("allocation_policy must be an AllocationPolicyConfig or None")
 
 
 @dataclass(frozen=True)

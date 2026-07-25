@@ -13,6 +13,10 @@ from types import MappingProxyType
 from typing import Any, Mapping, Sequence
 
 from scripts.models import PastRace
+from scripts.prediction.allocation_policy import (
+    allocation_policy_config_payload,
+    build_allocation_policy_identity,
+)
 from scripts.prediction.bet_strategy import StrategyConfig
 from scripts.prediction.prediction_pipeline import RacePredictionInput
 from scripts.prediction.track_engine import RaceTrackConditions
@@ -78,7 +82,7 @@ def strategy_config_payload(
     if not isinstance(config, StrategyConfig):
         raise TypeError("config must be a StrategyConfig")
     _positive(schema_version, "schema_version")
-    return {
+    payload: dict[str, object] = {
         "schema_version": schema_version,
         "allowed_bet_types": _normalize_json(config.allowed_bet_types),
         "max_bet_count": config.max_bet_count,
@@ -87,6 +91,17 @@ def strategy_config_payload(
         "max_candidates": config.max_candidates,
         "sort_condition": _normalize_json(config.sort_condition),
     }
+    if config.allocation_policy is not None:
+        policy_payload = allocation_policy_config_payload(config.allocation_policy)
+        policy_identity = build_allocation_policy_identity(config.allocation_policy)
+        payload["allocation_policy"] = {
+            "schema_version": policy_payload["schema_version"],
+            "policy_name": policy_identity.policy_name,
+            "policy_version": policy_identity.policy_version,
+            "policy_config_hash": policy_identity.policy_config_hash,
+            "parameters": policy_payload["parameters"],
+        }
+    return payload
 
 
 def strategy_config_hash(config: StrategyConfig, *, schema_version: int = STRATEGY_CONFIG_SCHEMA_VERSION) -> str:
