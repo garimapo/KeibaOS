@@ -784,17 +784,35 @@ class RepositoryBackedSimulationBetSource:
 @dataclass(frozen=True, slots=True)
 class SimulationBetPlanSnapshot:
     identity: SimulationBetPlanIdentity
+    policy_identity: AllocationPolicyIdentity
+    budget: BetStakeBudget
     bets: tuple[SimulationBet, ...]
 ```
 
 snapshotは次を検証する。
 
 - `identity`は`SimulationBetPlanIdentity`。
+- `policy_identity`は`AllocationPolicyIdentity`。strategy config hashだけからはpolicy name/version/config hashを復元できず、空planでも使用policyの監査が必要なため保持する。
+- `budget`は`BetStakeBudget`。run・raceごとの入力budget、空plan時のbudget、allocated/unallocated amountの監査のため保持する。
 - `bets`は防御的にtuple化し、外部の元Sequence変更の影響を受けない。
+- `str`、`bytes`、`bytearray`をbetsのSequenceとして受理しない。bet object自体はcopy・wrapせずobject identityを保持する。
 - 空tupleを許可する。
 - 各betの`race_id`、`strategy_id`、`placed_at_cutoff`はidentityの`race_id`、`strategy_id`、`information_cutoff`と完全一致する。
 - plan内のbet identity `(bet_type, canonical race_entry_ids)` は重複不可。
+- `sum(bet.stake for bet in bets) <= budget.total_amount`を必須とする。
 - frozenおよびslotsとし、betの順序そのものをsnapshotの正式なpurchase orderとする。
+
+`allocated_amount`と`unallocated_amount`はfieldとして二重保存せず、次のread-only propertyで導出する。これによりallocation監査値とbudgetの不整合を持ち込まない。
+
+```python
+@property
+def allocated_amount(self) -> int:
+    return sum(bet.stake for bet in self.bets)
+
+@property
+def unallocated_amount(self) -> int:
+    return self.budget.total_amount - self.allocated_amount
+```
 
 `bets == ()`は、対象run・race・strategy・cutoffについて購入計画が正式に確定したが、購入betが0件だったことを表す。これはplan未生成、未保存、取得失敗とは異なる。後続schemaはbet子行が0件でもplan headerを保存しなければならない。
 
@@ -836,7 +854,26 @@ class BetRecommendation:
 
 `BetPlan`にも`BetRecommendation`にもstake、amount、purchase order、race ID、strategy ID、prediction cutoffは存在しない。`StrategyConfig`および`SimulationRunContext`にもstake allocationの正式フィールドはない。したがって、stakeを均等配分・100円固定・既定値から推測することは禁止する。
 
-最終的な純粋変換は`SimulationBetPlanBuilder`を推奨する。BuilderはDB、Repository、Provider、現在時刻、strategy再実行、recommendationの再ソートへ依存せず、plan identity、確定済みstake allocation、race entry selection resolverを受けてsnapshotを返す。stake allocationの正式契約が未確定であるため、`build(...)`の完全signatureはこの時点では確定しない。少なくとも以下の責務を持つ。
+最終的な純粋変換は`SimulationBetPlanBuilder`とする。BuilderはDB、Repository、Provider、現在時刻、strategy再実行、recommendationの再ソートへ依存せず、確定済みstake allocationとrace entry selection resolverを受けてsnapshotを返す。完全APIは次とする。
+
+```python
+class SimulationBetPlanBuilder:
+    def __init__(
+        self,
+        *,
+        selection_resolver: RaceEntrySelectionResolver,
+    ) -> None:
+        ...
+
+    def build(
+        self,
+        *,
+        allocation_plan: BetAllocationPlan,
+    ) -> SimulationBetPlanSnapshot:
+        ...
+```
+
+constructorは`resolve_race_entry_ids` attributeがcallableであることだけを明示検証し、不正なら`ValueError`とする。既存Protocolは`runtime_checkable`ではないため、runtime Protocol判定を追加しない。constructorではresolverを呼ばない。`build()`は`BetAllocationPlan`型だけを受け、run/race/strategy/cutoff、budget、policy identityを重複した別引数で受けない。少なくとも以下の責務を持つ。
 
 ```text
 BetPlanのtuple順を保持
@@ -865,6 +902,10 @@ class RaceEntrySelectionResolver(Protocol):
 ```
 
 resolverは指定race内でhorse IDをrace entry IDへ変換し、別race、欠損ID、重複IDを拒否する。Builderはrecommendation由来の順序をそのままresolverへ渡し、券種別canonicalizationは最終的な`SimulationBet` constructorへ一元化する。Repository/DB依存はresolverの具体実装に閉じ込め、純粋Builderへ直接埋め込まない。上位層で変換済み`BetPlan`を生成する案は既存`BetPlan`の型を変える必要があるため、今回の最小方針には採用しない。
+
+現行schemaでは`horses.id`がsimulation persistence上の`race_entry_id`として参照され、`horses.race_id`との整合はmigration triggerで守られる。一方、predictionの`BetRecommendation.horse_ids`はprediction pipelineが受け取る`RacePredictionInput.horse_past_races`のkey（CLIでは`database.get_horse_id()`の戻り値）であり、公開domain contractは両者の意味上の同一性を保証していない。horse IDからrace entry IDをrace ID付きで変換するRepository Protocol、helper、具象Resolverは現時点で存在しない。将来の具象Resolverは値が偶然同じでも暗黙同一視せず、race-scoped mappingをRepository/DB境界で検証しなければならない。
+
+resolverはinput `horse_ids`順に対応するrace entry IDsを返し、無条件sortを行わない。これによりhorse-to-entry対応を監査でき、後段の`SimulationBet` constructorだけが券種別規則に従ってcanonicalizeする。Protocolは例外classを定めない。将来の具象Resolverはpublic入力・解決不能を`ValueError`でfail-closedとし、Repositoryが送出する`RepositoryValidationError`、`RepositoryDataIntegrityError`、`RepositoryConflictError`等はwrapせず伝播する。`SimulationValidationError`は`SimulationRaceInput`の時点監査用であり、このID変換境界には使用しない。新例外は追加しない。
 
 #### 将来の Repository API
 
@@ -921,11 +962,14 @@ Phase 4C-2d3b0a2a
 Phase 4C-2d3b0a2b
 確定済みFixed Stake設計に従い、concrete allocatorと専用テストを実装する。
 
-Phase 4C-2d3b0b
-SimulationBetPlanSnapshot、RaceEntrySelectionResolver のdomain / Protocol契約を追加する。
+Phase 4C-2d3b0b1
+SimulationBetPlanSnapshot contractを追加する。
+
+Phase 4C-2d3b0b2
+RaceEntrySelectionResolver Protocolを追加する。
 
 Phase 4C-2d3b0c
-確定済みallocationを使う SimulationBetPlanBuilder を実装する。
+確定済みallocationを使うSimulationBetPlanBuilderを実装する。
 
 Phase 4C-2d3b1
 bet plan schema / migration を追加する。
@@ -1187,7 +1231,7 @@ raceごとの`BetStakeBudget.total_amount`、run ID、race ID、information cuto
 
 Phase 4C-2d3b0a0c1のproduction実装対象は、`scripts/prediction/allocation_policy.py`、`scripts/prediction/bet_strategy.py`、および既存`scripts/simulation/models.py`の`strategy_config_payload()`、`strategy_config_hash()`、`build_strategy_identity()`（必要なら同じhash経路の`_normalize_json()`）だけである。`AllocationPolicyConfig`と`AllocationPolicyIdentity`はともにprediction側の`allocation_policy.py`に置き、simulation側はそのidentityをimportするだけで複製しない。`SimulationBet`、`SimulationSummary`、`race_count`、Result/Summary contractなど既存simulation model全体は変更しない。`scripts/simulation/strategy_identity.py`は追加しない。このphaseでは具体allocator、BetStakeBudget、BetAllocationPlan、SimulationBetPlanBuilder、Repository、schema、CLI接続、settings JSON、budget入力を実装しない。
 
-**Phase 4C-2d3b0a0c1へ進行可能**である。parameters型、freeze、float方針、canonical serialization、派生identity、StrategyConfig integration、後方互換性、実装ファイル範囲を確定した。残る未確定事項は最初の具体allocation policyのパラメータ意味と配分algorithmだけであり、0a2まで選定しない。
+`Phase 4C-2d3b0a0c1`、`0a1`、`0a2a`、`0a2b`は完了済みである。parameters型、freeze、canonical serialization、派生identity、StrategyConfig integration、allocation contract、Fixed Stake policy実装までを確定した。次の未実装範囲はsnapshot、Resolver、Builder、永続化schemaと接続である。
 
 ###### 修正後の実装順と進行判定
 
@@ -1213,11 +1257,17 @@ Fixed Stake allocation policyの設定、identity、予算、失敗時の契約�
 Phase 4C-2d3b0a2b
 FixedStakeBetAllocatorと専用テストを実装する。
 
-Phase 4C-2d3b0b
-SimulationBetPlanSnapshot、RaceEntrySelectionResolver、SimulationBetPlanBuilderを追加する。
+Phase 4C-2d3b0b1
+SimulationBetPlanSnapshot contractを追加する。
+
+Phase 4C-2d3b0b2
+RaceEntrySelectionResolver Protocolを追加する。
+
+Phase 4C-2d3b0c
+SimulationBetPlanBuilderを実装する。
 ```
 
-**Phase 4C-2d3b0a0aへ進行可能**である。identityの完全API、配置、value object例外方針、policy configurationのhash統合方法、依存順を確定した。残る未確定事項は最初に採用する具体allocation algorithmだけであり、0a2まで実装・選定しない。
+`Phase 4C-2d3b0a0a`から`0a2b`までは完了済みである。identity、policy configurationのhash統合、budget/allocation contract、Fixed Stakeの具体実装を確定した。後続はsnapshot、Resolver、Builderの順に進める。
 
 ##### 既存のbudget・stake境界
 
@@ -1420,6 +1470,116 @@ tests/test_fixed_stake_bet_allocator.py
 ```
 
 production moduleは`stake_allocation`、`bet_plan_identity`、`prediction.allocation_policy`、`prediction.bet_strategy`だけへ依存する。prediction側からsimulation側へのimportは追加しない。今回の設計により`0a2b`は現行contractのまま実装可能であり、残る将来範囲はsnapshot、RaceEntrySelectionResolver、SimulationBetPlanBuilder、永続化schemaとそれらの接続である。
+
+##### Phase 4C-2d3b0b: Simulation bet plan snapshot / resolver / builder boundary
+
+この段階は`SimulationBetPlanSnapshot`、`RaceEntrySelectionResolver`、`SimulationBetPlanBuilder`の**正式設計だけ**を確定する。実装、テスト、schema、migration、Repository、DB、CLIは変更しない。snapshotはprediction domain object（`BetPlan`、`BetRecommendation`、`AllocatedBetRecommendation`、`BetAllocationPlan`）を保持せず、永続化可能なsimulation domainだけを保持する。
+
+###### Snapshot contract と purchase order
+
+完全なsnapshot API、field順、導出propertyは次とする。
+
+```python
+@dataclass(frozen=True, slots=True)
+class SimulationBetPlanSnapshot:
+    identity: SimulationBetPlanIdentity
+    policy_identity: AllocationPolicyIdentity
+    budget: BetStakeBudget
+    bets: tuple[SimulationBet, ...]
+
+    @property
+    def allocated_amount(self) -> int: ...
+
+    @property
+    def unallocated_amount(self) -> int: ...
+```
+
+intrinsic validationは`ValueError`とする。`identity`、`policy_identity`、`budget`は各正式型だけを受理する。betsは防御的にtuple化し、str/bytes/bytearrayを拒否し、各itemが`SimulationBet`であることを確認する。各betはidentityのrace ID、strategy ID、information cutoffと一致し、stake合計はbudget以下でなければならない。同一`(bet.bet_type, bet.race_entry_ids)`はstake、rank、tuple位置が違っても拒否する。`SimulationBet.race_entry_ids`は既に券種別にcanonicalなtupleである。
+
+snapshot tuple順が正式な0-based purchase orderである。`SimulationBet.recommendation_rank`は候補順位でありpurchase orderではない。後続Repository schemaはchild rowへ明示的な`purchase_order`を保存し、復元時に`ORDER BY purchase_order ASC`でtuple順へ戻す。snapshotは空betsを許可し、budget 0または正のbudgetを保持できる。空snapshotは購入計画が確定済みで対象betが0件の意味であり、未生成・未保存・取得失敗を表さない。
+
+`allocated_amount`は`sum(bet.stake for bet in bets)`、`unallocated_amount`は`budget.total_amount - allocated_amount`である。二つをfieldとして保存しない。`policy_identity`はpolicy name/version/config hashと空planでのpolicy監査を、`budget`は入力budgetおよび空planを含むallocated/unallocated監査を損失なく保持する。
+
+###### RaceEntrySelectionResolver contract
+
+```python
+class RaceEntrySelectionResolver(Protocol):
+    def resolve_race_entry_ids(
+        self,
+        *,
+        race_id: int,
+        horse_ids: Sequence[int],
+    ) -> tuple[int, ...]:
+        ...
+```
+
+既存simulation Protocolに合わせ、`runtime_checkable`は付けない。全引数はkeyword-onlyであり、追加public methodは持たない。具象Resolverは正の非bool race IDと、重複のない正のhorse ID sequenceを受け、指定race内の各horse IDを一対一でrace entry IDへ解決する。存在しないhorse、別raceのhorse、重複horse ID、重複race entry ID、解決不能はfail-closedで拒否する。空inputは空tupleとして件数保存するだけで、券種別の空selection可否は`SimulationBet`へ委譲する。入力horse ID順に対応するtupleを返し、無条件sortをしない。
+
+Resolverはbet type/selection頭数、stake allocation、recommendation選択・並べ替え、`SimulationBet`/snapshot/Result/Summary構築、policy identity照合、budget検証を行わない。現行実装にはhorse IDとrace IDからrace entry IDを供給するRepository API、helper、具象Resolverは存在しない。現行DBでは`horses.id`がrace-scoped `race_entry_id`として参照されるが、prediction horse IDと意味上同一である公開保証はない。よって将来のRepository-backed concrete Resolverはrace-scoped mappingを明示的に検証し、ID値の偶然の一致を同一視しない。
+
+Protocolは例外classを定義しない。具象Resolverの直接入力不正・未解決は`ValueError`、Repository由来の`RepositoryValidationError`、`RepositoryDataIntegrityError`、`RepositoryConflictError`は同一objectで伝播する。`SimulationValidationError`はprediction cutoff/audit向けであるためResolverには使用しない。
+
+###### Builder contract と validation 分担
+
+```python
+class SimulationBetPlanBuilder:
+    def __init__(
+        self,
+        *,
+        selection_resolver: RaceEntrySelectionResolver,
+    ) -> None:
+        ...
+
+    def build(
+        self,
+        *,
+        allocation_plan: BetAllocationPlan,
+    ) -> SimulationBetPlanSnapshot:
+        ...
+```
+
+constructorは`selection_resolver.resolve_race_entry_ids`がcallableであることだけを検証し、満たさなければ`ValueError`とする。既存Protocolは`runtime_checkable`ではないため、runtime Protocol判定を追加しない。constructorではresolverを呼ばない。buildは`BetAllocationPlan`型だけを受け、identity、budget、policy identityを別引数として重複受領しない。
+
+Builderはallocation tuple順に、各allocationについてちょうど一度だけ次を行う。
+
+```python
+recommendation = allocation.recommendation
+race_entry_ids = selection_resolver.resolve_race_entry_ids(
+    race_id=allocation_plan.identity.race_id,
+    horse_ids=recommendation.horse_ids,
+)
+bet = SimulationBet(
+    race_id=allocation_plan.identity.race_id,
+    strategy_id=allocation_plan.identity.strategy_id,
+    bet_type=recommendation.bet_type,
+    race_entry_ids=race_entry_ids,
+    stake=allocation.stake,
+    recommendation_rank=recommendation.rank,
+    placed_at_cutoff=allocation_plan.identity.information_cutoff,
+)
+```
+
+最後に`SimulationBetPlanSnapshot(identity=allocation_plan.identity, policy_identity=allocation_plan.policy_identity, budget=allocation_plan.budget, bets=bets)`を構築する。Builderはallocation件数・順序・purchase order・recommendation rank・bet type・stake・plan identity・policy identity・budget・prediction cutoffを維持する。空allocation planではResolverを0回呼び、空snapshotを返す。
+
+`BetRecommendation.bet_type`と`SimulationBet.bet_type`はともに`str`で、現行の対応券種は`単勝`、`馬連`、`ワイド`、`3連複`である。alias、大文字小文字変換、JRA名から内部名へのmappingは実装されていないため、Builderは`bet_type=recommendation.bet_type`として直接渡す。未知値とselection頭数は既存`SimulationBet`がRepository境界の`validate_bet_type()`および`normalize_selection()`を通じて検証する。converterは不要であり、Builderへ推測mappingを直書きしない。
+
+Builderはallocation plan型、resolver outputがtupleであること、resolver output件数が入力horse IDs件数と一致することだけを明示検証する。非tupleはProtocol違反としてfail-closedにする。空outputは入力件数との不一致ならBuilderで拒否し、一致する空inputの場合を含む券種別のselection妥当性は`SimulationBet`に委譲する。別race mappingはBuilderがIDだけから検証できないためResolverの責務である。snapshotのidentity整合、budget上限、bet重複identity、tuple化・空planはSnapshotへ委譲する。Resolver例外、`SimulationBet`例外、Snapshot例外はwrapせず直ちに伝播し、後続allocationを処理せず部分snapshotを返さない。
+
+Builderはstake再計算・budget再配分・recommendation追加/削除/再ソート・rank再採番・policy identity再生成・strategy hash再計算・run/cutoff生成を行わず、DB/Repository/Provider/Result/Summary/payout/race result/current timeにも依存しない。policy identityとidentity.strategy_config_hashの整合を再計算・照合しない。allocation planは既に使用policy identityを固定し、Builderには`AllocationPolicyConfig`もstrategy payloadもないため、同じconfigを`StrategyConfig`とallocatorへ供給するcomposition rootの責務である。
+
+###### 配置、永続化、後続フェーズ
+
+contract配置は次とする。
+
+```text
+scripts/simulation/bet_plan_snapshot.py       # SimulationBetPlanSnapshot
+scripts/simulation/selection_resolver.py      # RaceEntrySelectionResolver Protocol
+scripts/simulation/bet_plan_builder.py        # SimulationBetPlanBuilder
+```
+
+snapshotから後続永続化へ、plan headerとしてrun identity、race ID、strategy ID、strategy config hash、prediction cutoff、allocation policy identity、budgetを、child rowとしてpurchase order、bet type、stake、recommendation rank、race entry selectionを損失なく渡せる。具象ResolverはRepository/DB境界を要するためこの純粋contract phaseでは実装しない。
+
+後続は`Phase 4C-2d3b0b1`でSnapshot contract、`Phase 4C-2d3b0b2`でResolver Protocol、`Phase 4C-2d3b0c`でBuilder実装の順とする。Snapshot API、policy/budget保持、purchase order、validation、Resolver順序・意味分離、bet type直接変換、Builder API・validation分担・例外伝播を確定したため、**Phase 4C-2d3b0b1へ進行可能**である。残る未確定事項はRepository-backed concrete Resolver、schema/migration、snapshot Repository、composition/Pipeline接続である。
 
 ## 集計指標と分母
 
