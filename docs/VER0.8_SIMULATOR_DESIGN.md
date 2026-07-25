@@ -915,8 +915,11 @@ Phase 4C-2d3b0a1
 BetStakeBudget、BetAllocationPlan、BetStakeAllocator、allocation policy設定の
 domain / Protocol契約を追加する。
 
-Phase 4C-2d3b0a2
-最初の具体的BetStakeAllocator policyを設計・実装する。
+Phase 4C-2d3b0a2a
+最初の具体的BetStakeAllocator policyであるFixed Stakeの設計だけを確定する。
+
+Phase 4C-2d3b0a2b
+確定済みFixed Stake設計に従い、concrete allocatorと専用テストを実装する。
 
 Phase 4C-2d3b0b
 SimulationBetPlanSnapshot、RaceEntrySelectionResolver のdomain / Protocol契約を追加する。
@@ -1204,8 +1207,11 @@ Phase 4C-2d3b0a1
 scripts/simulation/stake_allocation.py にBetStakeBudget、
 AllocatedBetRecommendation、BetAllocationPlan、BetStakeAllocator Protocolを追加する。
 
-Phase 4C-2d3b0a2
-最初の具体的かつ決定的なallocation policyを設計・実装する。
+Phase 4C-2d3b0a2a
+Fixed Stake allocation policyの設定、identity、予算、失敗時の契約を設計だけで確定する。
+
+Phase 4C-2d3b0a2b
+FixedStakeBetAllocatorと専用テストを実装する。
 
 Phase 4C-2d3b0b
 SimulationBetPlanSnapshot、RaceEntrySelectionResolver、SimulationBetPlanBuilderを追加する。
@@ -1323,7 +1329,7 @@ class BetStakeAllocator(Protocol):
 
 同一入力・同一policy設定では決定的な結果を返す。DB、Repository、Provider、HTTP/network、logger、現在時刻、odds再取得、Result/Summary builder、Simulator、結果・払戻には依存しない。
 
-allocation policyの名称、version、決定的設定はsimulation再現性に影響するため、具体Allocatorのクラス名だけで表現してはならない。現在の`strategy_config_hash()`は`StrategyConfig`の既存選択設定だけをhash化し、allocation policy・allocation設定を含まない。後続`Phase 4C-2d3b0a1`で、policy識別子・version・決定的設定を正式なstrategy configuration payloadへ追加し、`StrategyIdentity.strategy_config_hash`へ含める。**同じstrategy_config_hashで異なるallocation policyまたは設定を使用することは許可しない。**
+allocation policyの名称、version、決定的設定はsimulation再現性に影響するため、具体Allocatorのクラス名だけで表現してはならない。`Phase 4C-2d3b0a0c1`で、`StrategyConfig.allocation_policy`の`AllocationPolicyConfig`を正式なstrategy configuration payloadへ含め、`strategy_config_hash()`および`StrategyIdentity.strategy_config_hash`へ統合済みである。allocation policyが設定されている場合、同じstrategy_config_hashで異なるallocation policyまたは設定を使用することは許可しない。`allocation_policy is None`はprediction-only設定として保持できるが、allocatorを構成するcomposition rootは具体policy設定を明示的に渡す。
 
 budget値はpolicy設定ではなくrunごとの明示入力であるため、strategy config hashには含めない。budgetはallocation planと後続のplan header監査値へ保存する。
 
@@ -1333,7 +1339,87 @@ budget値はpolicy設定ではなくrunごとの明示入力であるため、st
 
 `SimulationBetPlanBuilder`は`BetAllocationPlan`からrecommendation、purchase order、stake、plan identityを取得する。stakeを再計算せず、allocationの一部を除外せず、recommendationを再ソートしない。
 
-**Phase 4C-2d3b0a1へはまだ進行しない**。先に0a0aでidentityを実装し、0a0cでpolicy configurationをstrategy hashへ統合する。両方が完了した後に、budget入力、budget不足、未使用budget、空plan、1対1対応、purchase order、allocation Protocolを0a1で実装する。具体allocation algorithmは0a2まで実装しない。
+`Phase 4C-2d3b0a0a`、`0a0c1`、`0a1`は完了済みである。budget入力、budget不足、未使用budget、空plan、1対1対応、purchase order、allocation Protocolは既存contractで定義済みであり、次の`0a2a`は最初の具体policyの設計のみを確定する。具体allocation algorithmの実装は`0a2b`まで開始しない。
+
+##### Phase 4C-2d3b0a2a: Fixed stake allocation policy design
+
+この段階はFixed Stake policyの**設計だけ**を確定する。production code、テスト、settings JSON、CLI、Repository、DBを変更しない。次段階で実装する最初の具体policyは、各recommendationに同一の100円単位stakeを割り当てる`FixedStakeBetAllocator`である。
+
+###### Policy configuration と identity
+
+正式なpolicy識別子は次の固定値とする。
+
+```text
+policy_name    = "fixed_stake_per_recommendation"
+policy_version = "1"
+```
+
+設定parameterは`stake_amount`だけとする。`AllocationPolicyConfig.parameters`は正確に`{"stake_amount": int}`の一key mappingでなければならない。`stake_amount`はboolではない`int`、正、かつ100円単位である。0、負数、bool、float、`Decimal`、`None`、文字列、list、tuple、nested mappingを許可しない。欠損key、余分key、空key、非文字列keyも拒否し、coercion、default、trim、丸め、切捨て・切上げは行わない。
+
+```python
+policy_config = AllocationPolicyConfig(
+    policy_name="fixed_stake_per_recommendation",
+    policy_version="1",
+    parameters={"stake_amount": 100},
+)
+policy_identity = build_allocation_policy_identity(policy_config)
+```
+
+`StrategyConfig`自身はallocator constructorへ渡さない。composition rootが`StrategyConfig.allocation_policy`をそのまま`AllocationPolicyConfig`としてallocatorへ渡す。これにより、strategy hashへ統合済みのpolicy設定とallocatorが使う設定を一つの正式configuration境界に揃える。
+
+###### Concrete allocator の契約
+
+次段階の実装候補は以下である。
+
+```python
+class FixedStakeBetAllocator:
+    def __init__(self, *, policy_config: AllocationPolicyConfig) -> None: ...
+
+    def allocate(
+        self,
+        *,
+        identity: SimulationBetPlanIdentity,
+        policy_identity: AllocationPolicyIdentity,
+        bet_plan: BetPlan,
+        budget: BetStakeBudget,
+    ) -> BetAllocationPlan: ...
+```
+
+constructorは`AllocationPolicyConfig`の正確な型、上記policy name/version、正確なparameter mapping、`stake_amount`の全規則を検証する。不正はすべて`ValueError`とし、`AttributeError`等を直接漏らさない。constructorは渡された`policy_config` objectを同一objectとして保持し、そのconfigから`build_allocation_policy_identity()`で導出したexpected identityを保持する。configの再構築、default補完、設定の置換、hashの独自生成は行わない。
+
+`allocate()`は既存`BetStakeAllocator` Protocolのkeyword-only契約を拡張せず、その全入力を検証する。callerの`policy_identity`はconstructorで導出したexpected identityと完全一致しなければならない。name、version、hash、stake由来hash、callerが独自にmintしたidentityのいずれかが異なれば`ValueError`とする。allocatorはidentityを黙って置換しない。`identity`、`policy_identity`、`bet_plan`、`budget`の不正、policy identity不一致、budget不足はいずれも`ValueError`でfail closedする。最終出力は既存`BetAllocationPlan` constructorにも検証させる。
+
+###### Allocation algorithm と budget
+
+`N = len(bet_plan.recommendations)`、`S = policy_config.parameters["stake_amount"]`とする。allocationは入力順で次を構成する。
+
+```python
+allocations = tuple(
+    AllocatedBetRecommendation(
+        recommendation=bet_plan.recommendations[index],
+        purchase_order=index,
+        stake=S,
+    )
+    for index in range(N)
+)
+```
+
+recommendation objectはdeep copyせず同一objectを保持する。順序、rank、selection、recommendation内容を変更せず、sort、filter、deduplicate、再計算を行わない。必要予算は`required = N * S`であり、`budget.total_amount < required`なら`ValueError`とする。部分allocation、stake引下げ、recommendation除外、fallbackは許可しない。
+
+出力は`BetAllocationPlan(identity=identity, policy_identity=policy_identity, bet_plan=bet_plan, allocations=allocations, budget=budget)`として構築する。`budget.total_amount >= required`なら未使用budgetを許可する。allocated amountは`required`、unallocated amountは`budget.total_amount - required`である。空`BetPlan`ではallocationは空tuple、required/allocated amountは0、budget 0を含む全ての正当budgetを許可し、unallocated amountはbudget全額となる。
+
+###### Pure boundary と実装範囲
+
+Fixed Stake policyはpolicy configと`allocate()`の4入力だけから決定的に出力を作る。現在時刻、乱数、mutable state、Provider、Repository、DB、network、odds、race result、payout、Result/Summary builder、Simulator、loggingを参照しない。入力を変更しない。
+
+次段階`Phase 4C-2d3b0a2b`では、次の二ファイルだけを候補として実装・検証する。
+
+```text
+scripts/simulation/fixed_stake_allocator.py
+tests/test_fixed_stake_bet_allocator.py
+```
+
+production moduleは`stake_allocation`、`bet_plan_identity`、`prediction.allocation_policy`、`prediction.bet_strategy`だけへ依存する。prediction側からsimulation側へのimportは追加しない。今回の設計により`0a2b`は現行contractのまま実装可能であり、残る将来範囲はsnapshot、RaceEntrySelectionResolver、SimulationBetPlanBuilder、永続化schemaとそれらの接続である。
 
 ## 集計指標と分母
 
