@@ -49,7 +49,8 @@ The existing facts are:
 * Simulation tables use `scripts.migrations.runner`: `schema_migrations`
   records versions, `PRAGMA foreign_keys = ON` is verified, and each migration
   runs in `BEGIN IMMEDIATE` with commit-or-rollback semantics.  The current
-  registered migration is `v008_simulation_schema`.
+  registered migrations are `v008_simulation_schema` and
+  `v009_simulation_bet_plan_schema`.
 * Existing connection-injected simulation repositories reject caller-owned
   active transactions, enable foreign keys, use `BEGIN IMMEDIATE`, roll back
   every failed write, use `RepositoryConflictError` for immutable conflicts,
@@ -199,10 +200,11 @@ class SimulationBetPlanSnapshotRepository(Protocol):
         ...
 ```
 
-The future concrete SQLite implementation is
-`scripts/simulation/repositories/sqlite_bet_plan_snapshot.py`, receives an
-injected connection, and may implement both protocols.  It exposes neither DB
-IDs nor update/delete/list/async APIs.  `None` is exclusively not-found.
+The concrete SQLite implementation is
+`scripts/simulation/repositories/sqlite_bet_plan_snapshot_repository.py`; it
+receives an injected connection and implements both protocols.  It exposes
+neither DB IDs nor update/delete/list/async APIs.  `None` is exclusively
+not-found.
 
 Saving is insert-only and idempotent: in the write transaction, reconstruct an
 existing snapshot by natural identity and compare full dataclass equality.
@@ -270,37 +272,212 @@ plus hash from `StrategyIdentity`.  A missing snapshot is fail-closed, not
 `()`; only a stored empty snapshot returns empty bets.  No existing Source
 signature gains a run ID.
 
-There is no existing suitable race-entry resolution API.  The future batch
-boundary is:
+### Phase 4C-2d3b1e0: Race-entry source and concrete Resolver design
+
+This subsection supersedes the earlier design-only `load_race_entry_ids()`
+proposal.  It fixes the concrete boundary required before a SQLite source or a
+Resolver implementation is written.
+
+#### Established identities and existing APIs
+
+`BetRecommendation.horse_ids` is produced from the `horse_id` values carried
+by `ValueEvaluation` and `Prediction`; `BetGenerator` preserves those values
+for single-horse recommendations and uses them to form combinations.  The
+normal CLI prediction path constructs `RacePredictionInput` by loading
+`Horse` rows for a race and calling `database.get_horse_id(horse)`.  That
+helper looks up `horses.id` by `(horses.race_id, horses.horse_no)`.  Therefore
+the current concrete origin of prediction `horse_ids` is **`horses.id`**.
+
+`horses.id` is an SQLite `INTEGER PRIMARY KEY AUTOINCREMENT` row identifier,
+not a stable horse-master ID or an externally supplied horse ID.  The legacy
+`horses` table has `race_id`, `frame_no`, `horse_no`, `horse_name`,
+`horse_detail_url`, jockey/trainer, odds, popularity, and weight columns.  It
+has no dedicated external horse-ID column, no horse-master table, and no
+declared foreign key from `horses.race_id` to `races.id`; the existing helper
+and simulation migration enforce the intended race association.  `save_horse`
+and `horse_exists` identify a row by `(race_id, horse_no)`, so a horse entered
+in another race is represented by another `horses` row and another `horses.id`.
+The same generic table and identity model is used for JRA and local data; no
+separate source-specific identity model exists in current code.
+
+The simulation persistence boundary names that same physical value
+`race_entry_id`: v008 result/odds/payout selections and v009
+`simulation_bet_plan_bet_selections.race_entry_id` all reference
+`horses(id)`.  v009 triggers also verify that the selected row's
+`horses.race_id` equals the plan race.  Thus a prediction ID and a persisted
+race-entry ID currently have the same storage value, but they retain distinct
+domain meanings.  The Resolver remains mandatory: it verifies race membership
+and makes that conversion explicit.  It must never implement the unchecked
+identity function `return tuple(horse_ids)`.
+
+There is no existing batch API that resolves prediction horse IDs to entries.
+`database.get_horse_id(Horse)` is a legacy, per-`Horse` lookup by race and
+horse number, and is not a suitable Resolver/Repository contract.  Existing
+odds, payout, and result repositories consume already-resolved `horses.id`
+values; they do not provide this lookup.
+
+#### Adopted source contract
+
+Three forms were compared.  An input-position tuple makes SQL row order part
+of the Source contract; a resolution-record tuple introduces an otherwise
+unused domain model.  The adopted form is a mapping, which makes the
+horse-to-entry association explicit and lets the Resolver reconstruct the
+caller order independently of SQLite row order:
 
 ```python
 class RaceEntrySource(Protocol):
-    def load_race_entry_ids(
+    def load_race_entry_id_map(
         self,
         *,
         race_id: int,
         horse_ids: Sequence[int],
-    ) -> tuple[int, ...] | None:
+    ) -> Mapping[int, int]:
         ...
 ```
 
-It returns input-order IDs only when every supplied horse resolves in that
-race.  `RepositoryBackedRaceEntrySelectionResolver` validates public input and
-the response, rejects duplicate/missing/other-race IDs, and propagates existing
-repository exceptions.  The existing `RaceEntrySelectionResolver` Protocol and
-`SimulationBetPlanBuilder` are not changed: the Builder calls
-`resolve_race_entry_ids()` once for each allocation, so a plan with multiple
-allocations has multiple Resolver calls and an empty plan has none.  A concrete
-Resolver uses `RaceEntrySource` for one batch SQL lookup for that allocation's
-complete selection.  This prevents horse-by-horse N+1 queries; it does not
-promise one query for the entire plan.  A plan-wide batch optimization requires
-an explicit later contract change.  Global mutable caches and implicit
-persistent caches are prohibited.  Concrete Resolver lifetime and any
-per-instance cache policy must be decided before its implementation; no cache
-is assumed by this design.  An unchecked `return tuple(horse_ids)`
-implementation is forbidden.  Current prediction IDs often happen to equal
-`horses.id`, but that incidental equality never replaces the required
-race-membership validation.
+The mapping means `prediction_horse_id -> race_entry_id`.  It contains an entry
+only for each requested horse that belongs to `race_id`; it does not use
+`None`, an empty tuple sentinel, or a synthetic identity.  A missing key is the
+only Source-level representation of both an unknown horse and a horse belonging
+to another race.  This avoids an extra race-existence query and does not expose
+which condition occurred.  The public Resolver converts either case into the
+same `ValueError("race entry selection cannot be resolved")`-class failure.
+
+The Source may return an immutable mapping, but immutability is not required by
+the Protocol: the Resolver treats it as read-only, validates it, and constructs
+its own result tuple.  Mapping was selected because it validates completeness
+and correspondence without trusting `IN (...)` result order.  The input-order
+tuple alternative is rejected because it gives the Source unnecessary ordering
+responsibility.  The record-tuple alternative is rejected because no current
+consumer needs metadata beyond the two IDs.
+
+The concrete Resolver name is fixed as:
+
+```python
+class RepositoryBackedRaceEntrySelectionResolver:
+    def __init__(self, *, race_entry_source: RaceEntrySource) -> None:
+        ...
+
+    def resolve_race_entry_ids(
+        self,
+        *,
+        race_id: int,
+        horse_ids: Sequence[int],
+    ) -> tuple[int, ...]:
+        ...
+```
+
+It structurally satisfies the existing `RaceEntrySelectionResolver` Protocol;
+neither that Protocol nor `SimulationBetPlanBuilder` changes.  The Builder
+calls it once per allocation, and zero times for an empty plan.
+
+#### Validation, error, and order contracts
+
+The Resolver is the public domain boundary.  It accepts ordinary `Sequence`
+inputs such as list or tuple, copies once to a tuple, rejects `str`, `bytes`,
+`bytearray`, `Mapping`, non-Sequences, and generators, and does not mutate the
+caller collection.  `race_id` and every horse ID must be a positive non-`bool`
+`int`; duplicate horse IDs and an empty horse selection are rejected.  Empty
+input is not a meaningful public resolution request.  This is stricter than
+the Protocol type annotation but is compatible with the Builder, whose actual
+allocations derive from non-empty recommendations.
+
+The Source validates enough of the same direct input contract to be safe when
+used without the Resolver: usable SQLite connection, positive non-`bool`
+`race_id`, an ordinary non-empty Sequence of unique positive non-`bool` IDs,
+and parameter binding.  It owns no bet-type/cardinality/canonicalization rules.
+The Resolver owns the public-input validation and validates the Source response:
+it must be a Mapping with exactly the requested keys, no extras, positive
+non-`bool` integer values, and no duplicate race-entry values.  It then returns
+`tuple(mapping[horse_id] for horse_id in requested_horse_ids)`.  It never sorts,
+sets, deduplicates, or canonicalizes.  `SimulationBet` alone canonicalizes the
+race-entry selection for its bet type.
+
+Resolver public input errors and unresolved requested IDs raise `ValueError`.
+Source constructor/direct input or connection-condition errors raise existing
+`RepositoryValidationError`; malformed or contradictory rows/source output
+raise existing `RepositoryDataIntegrityError`; existing repository exceptions
+are propagated unchanged by the Resolver.  Unexpected SQLite operational
+errors are not broadly wrapped.  No new exception type is introduced.
+
+For the current SQL query, duplicate source rows for one requested ID are
+structurally impossible because `horses.id` is an `INTEGER PRIMARY KEY`; the
+Source nevertheless fail-closes with `RepositoryDataIntegrityError` if its
+fetched rows or constructed mapping violate uniqueness or type expectations.
+Duplicate `horse_no` rows are not used as this lookup key and do not alter the
+contract.
+
+#### SQLite source, query, and transaction policy
+
+The concrete source is named `SQLiteRaceEntrySource` and is placed at
+`scripts/simulation/repositories/sqlite_race_entry_source.py`:
+
+```python
+class SQLiteRaceEntrySource:
+    def __init__(self, *, connection: sqlite3.Connection) -> None:
+        ...
+```
+
+It retains the injected `sqlite3.Connection` object, never closes it, creates
+no schema or migrations, changes no row factory or isolation level, and follows
+the existing connection-injected simulation repositories by enabling/verifying
+foreign keys at construction.  It does not use `database/keiba.db` or a fixed
+path.  A read operation neither begins, commits, nor rolls back a transaction;
+an active caller read transaction is allowed, matching existing load behavior.
+
+One Resolver invocation performs one parameter-bound batch query for its whole
+selection, conceptually:
+
+```sql
+SELECT h.id AS prediction_horse_id, h.id AS race_entry_id
+FROM horses AS h
+WHERE h.race_id = ?
+  AND h.id IN (?, ?, ...)
+```
+
+Both selected columns are formally `horses.id` in the current schema; retaining
+both aliases documents the conversion boundary.  SQLite row order is ignored
+while constructing the mapping.  No separate `races` lookup is made: a
+nonexistent race and a missing/wrong-race horse leave requested keys unresolved
+and fail closed at the Resolver.  Current supported bet selections contain at
+most three horses, so SQLite parameter limits do not require chunking.
+
+This baseline prevents horse-by-horse N+1 queries, but it does **not** promise
+one query for an entire plan.  Multiple allocations produce multiple Resolver
+calls and therefore multiple batch queries.  A plan-wide query needs an
+explicit future Protocol/Builder change.  The first implementation has no
+cache: global, module-level, persistent, connection-spanning, and incomplete
+race-only caches are prohibited.  A measured, explicitly scoped per-instance
+or per-race cache can only be designed later.
+
+#### Placement, imports, composition, and next phases
+
+`RaceEntrySource` is a simulation boundary Protocol and belongs in
+`scripts/simulation/race_entry_source.py`, alongside the existing
+`selection_resolver.py` Protocol rather than in legacy repository interfaces.
+`RepositoryBackedRaceEntrySelectionResolver` belongs in
+`scripts/simulation/repository_backed_selection_resolver.py`.  It imports only
+the two Protocol modules.  `SQLiteRaceEntrySource` imports the Source Protocol,
+SQLite, and existing repository errors; it does not import Builder, prediction,
+Pipeline, Snapshot Repository, or the Resolver.  Concrete modules are imported
+directly rather than exported through `scripts.simulation.repositories.__init__`
+if an export would create a cycle, following the Snapshot Repository precedent.
+
+The future composition root is only:
+
+```python
+source = SQLiteRaceEntrySource(connection=connection)
+resolver = RepositoryBackedRaceEntrySelectionResolver(race_entry_source=source)
+builder = SimulationBetPlanBuilder(selection_resolver=resolver)
+```
+
+No composition is implemented in this phase.  The remaining work is deliberately
+split into `Phase 4C-2d3b1e1` (Source Protocol), `1e2` (SQLite Source), `1e3`
+(Repository-backed Resolver), `1f` (PersistedSimulationBetSource adapter), and
+`1g` (Builder/Repository/Executor composition tests).  The identity origin,
+mapping column, complete Source API, missing representation, validation/error
+split, ordering, query, cache, transaction, placement, and import decisions
+are now fixed: **Phase 4C-2d3b1e1 may proceed.**
 
 ### Follow-up phases
 
@@ -308,16 +485,18 @@ race-membership validation.
 Phase 4C-2d3b1b  Snapshot Source and Repository Protocols
 Phase 4C-2d3b1c  v009 SQLite schema and migration tests
 Phase 4C-2d3b1d  SQLite SimulationBetPlanSnapshot Repository
-Phase 4C-2d3b1e  RaceEntrySource and Repository-backed Resolver
+Phase 4C-2d3b1e0 RaceEntrySource and concrete Resolver boundary design
+Phase 4C-2d3b1e1 RaceEntrySource Protocol contract
+Phase 4C-2d3b1e2 SQLite RaceEntrySource implementation
+Phase 4C-2d3b1e3 Repository-backed Resolver implementation
 Phase 4C-2d3b1f  PersistedSimulationBetSource adapter
 Phase 4C-2d3b1g  Builder-to-Repository composition and integration tests
 ```
 
 Migration and repository tests use temporary or `:memory:` databases.
 `database/keiba.db` is never committed, restored, deleted, or used as a test
-fixture.  All current model inputs and boundary decisions are sufficient:
-**Phase 4C-2d3b1b may proceed.**  Concrete SQL, Resolver implementation,
-composition-root wiring, persistence timing, Pipeline, and CLI remain deferred.
+fixture.  Concrete SQL, Resolver implementation, composition-root wiring,
+persistence timing, Pipeline, and CLI remain deferred.
 
 ### SimulationRaceInput
 
@@ -1803,7 +1982,7 @@ class RaceEntrySelectionResolver(Protocol):
         ...
 ```
 
-既存simulation Protocolに合わせ、`runtime_checkable`は付けない。全引数はkeyword-onlyであり、追加public methodは持たない。具象Resolverは正の非bool race IDと、重複のない正のhorse ID sequenceを受け、指定race内の各horse IDを一対一でrace entry IDへ解決する。存在しないhorse、別raceのhorse、重複horse ID、重複race entry ID、解決不能はfail-closedで拒否する。空inputは空tupleとして件数保存するだけで、券種別の空selection可否は`SimulationBet`へ委譲する。入力horse ID順に対応するtupleを返し、無条件sortをしない。
+既存simulation Protocolに合わせ、`runtime_checkable`は付けない。全引数はkeyword-onlyであり、追加public methodは持たない。具象Resolverは正の非bool race IDと、重複のない正のhorse ID sequenceを受け、指定race内の各horse IDを一対一でrace entry IDへ解決する。存在しないhorse、別raceのhorse、重複horse ID、重複race entry ID、解決不能はfail-closedで拒否する。Phase 4C-2d3b1e0で確定した具体境界では、空inputは解決要求として`ValueError`で拒否する。空planはBuilderがResolverを呼ばずに表現する。入力horse ID順に対応するtupleを返し、無条件sortをしない。
 
 Resolverはbet type/selection頭数、stake allocation、recommendation選択・並べ替え、`SimulationBet`/snapshot/Result/Summary構築、policy identity照合、budget検証を行わない。現行実装にはhorse IDとrace IDからrace entry IDを供給するRepository API、helper、具象Resolverは存在しない。現行DBでは`horses.id`がrace-scoped `race_entry_id`として参照されるが、prediction horse IDと意味上同一である公開保証はない。よって将来のRepository-backed concrete Resolverはrace-scoped mappingを明示的に検証し、ID値の偶然の一致を同一視しない。
 
@@ -1853,7 +2032,7 @@ bet = SimulationBet(
 
 `BetRecommendation.bet_type`と`SimulationBet.bet_type`はともに`str`で、現行の対応券種は`単勝`、`馬連`、`ワイド`、`3連複`である。alias、大文字小文字変換、JRA名から内部名へのmappingは実装されていないため、Builderは`bet_type=recommendation.bet_type`として直接渡す。未知値とselection頭数は既存`SimulationBet`がRepository境界の`validate_bet_type()`および`normalize_selection()`を通じて検証する。converterは不要であり、Builderへ推測mappingを直書きしない。
 
-Builderはallocation plan型、resolver outputがtupleであること、resolver output件数が入力horse IDs件数と一致することだけを明示検証する。非tupleはProtocol違反としてfail-closedにする。空outputは入力件数との不一致ならBuilderで拒否し、一致する空inputの場合を含む券種別のselection妥当性は`SimulationBet`に委譲する。別race mappingはBuilderがIDだけから検証できないためResolverの責務である。snapshotのidentity整合、budget上限、bet重複identity、tuple化・空planはSnapshotへ委譲する。Resolver例外、`SimulationBet`例外、Snapshot例外はwrapせず直ちに伝播し、後続allocationを処理せず部分snapshotを返さない。
+Builderはallocation plan型、resolver outputがtupleであること、resolver output件数が入力horse IDs件数と一致することだけを明示検証する。非tupleはProtocol違反としてfail-closedにする。実allocationのhorse IDsは非空であり、具体Resolverも空解決要求を拒否する。券種別のselection妥当性は`SimulationBet`に委譲する。別race mappingはBuilderがIDだけから検証できないためResolverの責務である。snapshotのidentity整合、budget上限、bet重複identity、tuple化・空planはSnapshotへ委譲する。Resolver例外、`SimulationBet`例外、Snapshot例外はwrapせず直ちに伝播し、後続allocationを処理せず部分snapshotを返さない。
 
 Builderはstake再計算・budget再配分・recommendation追加/削除/再ソート・rank再採番・policy identity再生成・strategy hash再計算・run/cutoff生成を行わず、DB/Repository/Provider/Result/Summary/payout/race result/current timeにも依存しない。policy identityとidentity.strategy_config_hashの整合を再計算・照合しない。allocation planは既に使用policy identityを固定し、Builderには`AllocationPolicyConfig`もstrategy payloadもないため、同じconfigを`StrategyConfig`とallocatorへ供給するcomposition rootの責務である。
 
