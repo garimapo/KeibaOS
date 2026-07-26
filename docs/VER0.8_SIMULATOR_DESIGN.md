@@ -29,6 +29,296 @@
 
 すべての日時はtimezone-awareな `datetime` を使用する。DBにはUTC ISO 8601形式で保存し、CLI・レポート表示はAsia/Tokyoを基本とする。
 
+## Phase 4C-2d3b1a: Simulation bet plan persistence boundary
+
+### Scope and existing persistence conventions
+
+The persistence unit is `SimulationBetPlanSnapshot`, not prediction,
+allocation, Resolver, Provider, or configuration objects.  A stored snapshot
+must reconstruct the same identity, policy identity, budget, tuple order, and
+`SimulationBet` values without synthesizing fields.  This section supersedes
+the earlier design-only `SimulationBetRepository` placeholder and its
+`save_plan(...)->SimulationBetPlanSnapshot` signature.
+
+The existing facts are:
+
+* `scripts/database.py` is the legacy helper: `get_connection()` opens
+  `database/keiba.db`; `_connection()` commits on normal exit and rolls back on
+  exception.  `create_tables()` only manages legacy base tables and does not
+  enable foreign keys or own the simulation schema.
+* Simulation tables use `scripts.migrations.runner`: `schema_migrations`
+  records versions, `PRAGMA foreign_keys = ON` is verified, and each migration
+  runs in `BEGIN IMMEDIATE` with commit-or-rollback semantics.  The current
+  registered migration is `v008_simulation_schema`.
+* Existing connection-injected simulation repositories reject caller-owned
+  active transactions, enable foreign keys, use `BEGIN IMMEDIATE`, roll back
+  every failed write, use `RepositoryConflictError` for immutable conflicts,
+  and use `RepositoryDataIntegrityError` for SQLite integrity failures.
+* Existing simulation rows serialize aware timestamps as UTC ISO-8601 text.
+  Repository tests use injected `:memory:` SQLite connections and migrations;
+  they do not use `database/keiba.db`.
+* `horses` is the current race-entry table.  `horses.id` is the persisted
+  `race_entry_id`, while `horses.race_id` scopes it to a race.
+  `database.get_horse_id()` returns that ID for `(race_id, horse_no)`.  There
+  is no separate stable horse-entity table and no existing race-entry lookup
+  Repository API.
+
+### Authoritative v009 schema
+
+The formal tables are `simulation_bet_plans`,
+`simulation_bet_plan_bets`, and `simulation_bet_plan_bet_selections`.
+The new migration is `v009_simulation_bet_plan_schema`, registered after v008.
+It uses `INTEGER PRIMARY KEY`, not `AUTOINCREMENT`, `WITHOUT ROWID`, or a
+domain-visible database ID.
+
+```sql
+CREATE TABLE simulation_bet_plans (
+    id INTEGER PRIMARY KEY,
+    run_id TEXT NOT NULL CHECK (trim(run_id) <> ''),
+    race_id INTEGER NOT NULL REFERENCES races(id),
+    strategy_id TEXT NOT NULL CHECK (trim(strategy_id) <> ''),
+    strategy_config_hash TEXT NOT NULL CHECK (length(strategy_config_hash) = 64),
+    information_cutoff TEXT NOT NULL,
+    allocation_policy_name TEXT NOT NULL CHECK (trim(allocation_policy_name) <> ''),
+    allocation_policy_version TEXT NOT NULL CHECK (trim(allocation_policy_version) <> ''),
+    allocation_policy_config_hash TEXT NOT NULL CHECK (length(allocation_policy_config_hash) = 64),
+    budget_total_amount INTEGER NOT NULL
+        CHECK (budget_total_amount >= 0)
+        CHECK (budget_total_amount % 100 = 0),
+    UNIQUE (run_id, race_id, strategy_id, strategy_config_hash, information_cutoff)
+);
+
+CREATE TABLE simulation_bet_plan_bets (
+    id INTEGER PRIMARY KEY,
+    plan_id INTEGER NOT NULL,
+    purchase_order INTEGER NOT NULL CHECK (purchase_order >= 0),
+    bet_type TEXT NOT NULL,
+    stake INTEGER NOT NULL CHECK (stake > 0) CHECK (stake % 100 = 0),
+    recommendation_rank INTEGER NOT NULL CHECK (recommendation_rank >= 0),
+    UNIQUE (plan_id, purchase_order),
+    FOREIGN KEY (plan_id) REFERENCES simulation_bet_plans(id) ON DELETE CASCADE
+);
+
+CREATE TABLE simulation_bet_plan_bet_selections (
+    bet_id INTEGER NOT NULL,
+    selection_order INTEGER NOT NULL CHECK (selection_order >= 0),
+    race_entry_id INTEGER NOT NULL REFERENCES horses(id),
+    PRIMARY KEY (bet_id, selection_order),
+    UNIQUE (bet_id, race_entry_id),
+    FOREIGN KEY (bet_id) REFERENCES simulation_bet_plan_bets(id) ON DELETE CASCADE
+);
+```
+
+The natural identity is exactly `(run_id, race_id, strategy_id,
+strategy_config_hash, information_cutoff)`.  Policy identity, budget, saved
+time, and surrogate IDs are immutable content, not alternate identity fields.
+The unique constraint is the identity lookup and the final concurrency defence.
+The header maps one-for-one to `SimulationBetPlanIdentity`,
+`AllocationPolicyIdentity`, and `BetStakeBudget`; the bet child maps
+`purchase_order`, `bet_type`, `stake`, and `recommendation_rank`; the selection
+child maps each `race_entry_id` and its zero-based tuple index.
+
+`purchase_order` is the zero-based `snapshot.bets` index, never a rank, row ID,
+selection order, or timestamp.  `selection_order` is the zero-based
+`SimulationBet.race_entry_ids` index.  Repository load orders by these columns
+and verifies that each begins at zero and is contiguous.  Recommendation ranks
+are non-negative and may repeat.
+
+Selections are normalized rows, not JSON.  This permits foreign keys,
+race-entry searching, explicit ordering, and integrity checks without JSON1 or
+malformed-JSON handling.  Current selections are canonicalized by
+`SimulationBet`, but the repository still stores and restores their tuple
+order without sorting.
+
+### Foreign keys, checks, and indexes
+
+The header references `races.id`; selection rows reference `horses.id`; the two
+internal parent-child relationships use `ON DELETE CASCADE` solely to prevent
+orphans if a future maintenance path deletes a plan.  No delete API is added.
+Race and horse source rows retain restrictive SQLite behaviour.  The migration
+also adds insert/update triggers, following the existing odds/payout pattern,
+to prove that a selection's `horses.race_id` equals the plan header's race.
+
+Database checks enforce coarse integer and non-empty-text invariants.  Domain
+constructors remain authoritative for bool rejection, complete hash validation,
+aware datetime validation, supported bet types, selection cardinality,
+canonicalization, duplicate bet identity, budget total, and all snapshot
+invariants.  SQL has no fixed bet-type enumeration, avoiding migration churn
+when a supported type changes.  Hash checks use length 64 only; lowercase hex
+is revalidated by domain constructors.
+
+No redundant first-version indexes are added: natural identity, the bet unique
+constraint, and the selection primary key cover source lookup and ordered child
+reads.  A direct `race_entry_id` lookup index is deferred until a measured query
+requires it.
+
+### Empty plans and serialization
+
+An empty snapshot saves one header and zero bet/selection rows.  It means a
+plan was generated and fixed with no purchases; it is distinct from no header,
+save failure, and load failure.  Loading that header returns an ordinary empty
+`SimulationBetPlanSnapshot`, retaining policy identity and budget.
+
+`information_cutoff` accepts every timezone-aware `datetime`, including a
+non-UTC offset such as `Asia/Tokyo`; only a naive input is rejected.  Save first
+converts the aware value to UTC and stores canonical ISO-8601 TEXT with
+microseconds and `+00:00`, conceptually
+`information_cutoff.astimezone(timezone.utc).isoformat(timespec="microseconds")`.
+Load parses that text, rejects malformed or naive values, and reconstructs a
+UTC-aware `datetime`; it neither substitutes the current time nor converts to a
+local timezone.  `Z` normalizes to `+00:00`.  The original display offset is
+not part of persisted identity, while instant equality is preserved: a saved
+`+09:00` value and its loaded `+00:00` value compare equal when they denote the
+same instant.  Datetime text is never used for semantic sorting.
+Strategy and policy hashes are stored as supplied TEXT and never regenerated,
+trimmed, or case-normalized by the repository.
+
+### Source and repository contracts
+
+Read and write are separate contracts in a new independent module
+`scripts/simulation/bet_plan_snapshot_repository.py`.  They must not be added
+to `repositories/interfaces.py`, because `simulation.models` already imports
+that module and snapshot values depend on simulation models, creating a cycle.
+
+```python
+class SimulationBetPlanSnapshotSource(Protocol):
+    def load_snapshot(
+        self,
+        *,
+        identity: SimulationBetPlanIdentity,
+    ) -> SimulationBetPlanSnapshot | None:
+        ...
+
+
+class SimulationBetPlanSnapshotRepository(Protocol):
+    def save_snapshot(
+        self,
+        *,
+        snapshot: SimulationBetPlanSnapshot,
+    ) -> None:
+        ...
+```
+
+The future concrete SQLite implementation is
+`scripts/simulation/repositories/sqlite_bet_plan_snapshot.py`, receives an
+injected connection, and may implement both protocols.  It exposes neither DB
+IDs nor update/delete/list/async APIs.  `None` is exclusively not-found.
+
+Saving is insert-only and idempotent: in the write transaction, reconstruct an
+existing snapshot by natural identity and compare full dataclass equality.
+Equal content succeeds as a no-op; different policy, budget, count, tuple
+order, type, stake, rank, selection, or cutoff raises existing
+`RepositoryConflictError`.  Silent overwrite, delete-and-reinsert, and partial
+child updates are forbidden.
+
+`RepositoryConflictError` and `RepositoryDataIntegrityError` already exist in
+`scripts/simulation/repositories/errors.py`.  Existing SQLite repositories use
+the former for immutable insert-only content conflicts and the latter for
+SQLite constraint failures and corrupt stored data.  The Snapshot Repository
+reuses both existing classes: caller/key errors use `RepositoryValidationError`;
+stored-data and SQLite constraint corruption use
+`RepositoryDataIntegrityError` with causes retained; unexpected SQLite
+operational errors are not broadly wrapped.  No new snapshot-specific exception
+is introduced.
+
+### Transaction, concurrency, and fail-closed load
+
+Save rejects caller-owned active transactions, enables/verifies foreign keys,
+then performs identity lookup, header insert, all bet inserts, and all selection
+inserts in one `BEGIN IMMEDIATE` transaction.  Empty plans commit only their
+header.  Any validation, conflict, or SQL failure rolls back all rows.  The
+second concurrent writer sees the first committed plan and resolves through the
+same equality decision; a defensive unique race rolls back, rereads, and
+returns no-op only for identical content.
+
+Loading is strictly:
+
+```text
+one header by natural identity
+-> bets ORDER BY purchase_order ASC
+-> selections ORDER BY selection_order ASC
+-> contiguous-order and relation checks
+-> SimulationBet construction
+-> SimulationBetPlanSnapshot construction
+```
+
+The loader rejects multiple headers, orphan bet/selection rows, race-mismatched
+selection, duplicate/gapped/non-zero-start orders, empty bet selections,
+malformed timestamp/hash/policy/budget, invalid type/stake/rank/selection,
+duplicate bet identity, and budget overflow.  It never skips, repairs, fills
+gaps, reorders IDs, coerces stake, invents cutoff/policy data, or turns corrupt
+data into an empty plan.
+
+### SimulationBetSource adapter and race-entry resolver
+
+The later adapter keeps the existing `SimulationBetSource.load_bets()` API:
+
+```python
+class PersistedSimulationBetSource:
+    def __init__(
+        self,
+        *,
+        snapshot_source: SimulationBetPlanSnapshotSource,
+        run_context: SimulationRunContext,
+    ) -> None:
+        ...
+```
+
+It can construct the identity entirely from existing objects: `run_id` from
+`SimulationRunContext`, race/cutoff from `SimulationRaceInput`, and strategy ID
+plus hash from `StrategyIdentity`.  A missing snapshot is fail-closed, not
+`()`; only a stored empty snapshot returns empty bets.  No existing Source
+signature gains a run ID.
+
+There is no existing suitable race-entry resolution API.  The future batch
+boundary is:
+
+```python
+class RaceEntrySource(Protocol):
+    def load_race_entry_ids(
+        self,
+        *,
+        race_id: int,
+        horse_ids: Sequence[int],
+    ) -> tuple[int, ...] | None:
+        ...
+```
+
+It returns input-order IDs only when every supplied horse resolves in that
+race.  `RepositoryBackedRaceEntrySelectionResolver` validates public input and
+the response, rejects duplicate/missing/other-race IDs, and propagates existing
+repository exceptions.  The existing `RaceEntrySelectionResolver` Protocol and
+`SimulationBetPlanBuilder` are not changed: the Builder calls
+`resolve_race_entry_ids()` once for each allocation, so a plan with multiple
+allocations has multiple Resolver calls and an empty plan has none.  A concrete
+Resolver uses `RaceEntrySource` for one batch SQL lookup for that allocation's
+complete selection.  This prevents horse-by-horse N+1 queries; it does not
+promise one query for the entire plan.  A plan-wide batch optimization requires
+an explicit later contract change.  Global mutable caches and implicit
+persistent caches are prohibited.  Concrete Resolver lifetime and any
+per-instance cache policy must be decided before its implementation; no cache
+is assumed by this design.  An unchecked `return tuple(horse_ids)`
+implementation is forbidden.  Current prediction IDs often happen to equal
+`horses.id`, but that incidental equality never replaces the required
+race-membership validation.
+
+### Follow-up phases
+
+```text
+Phase 4C-2d3b1b  Snapshot Source and Repository Protocols
+Phase 4C-2d3b1c  v009 SQLite schema and migration tests
+Phase 4C-2d3b1d  SQLite SimulationBetPlanSnapshot Repository
+Phase 4C-2d3b1e  RaceEntrySource and Repository-backed Resolver
+Phase 4C-2d3b1f  PersistedSimulationBetSource adapter
+Phase 4C-2d3b1g  Builder-to-Repository composition and integration tests
+```
+
+Migration and repository tests use temporary or `:memory:` databases.
+`database/keiba.db` is never committed, restored, deleted, or used as a test
+fixture.  All current model inputs and boundary decisions are sufficient:
+**Phase 4C-2d3b1b may proceed.**  Concrete SQL, Resolver implementation,
+composition-root wiring, persistence timing, Pipeline, and CLI remain deferred.
+
 ### SimulationRaceInput
 
 ```python
