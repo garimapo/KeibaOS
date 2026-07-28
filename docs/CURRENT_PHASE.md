@@ -6,11 +6,11 @@ APPROVED_FOR_CODEX
 
 ## Phase
 
-Phase 4C-2d3b1e3 — Repository-backed RaceEntrySelectionResolver implementation
+Phase 4C-2d3b1f — PersistedSimulationBetSource adapter
 
 ## Base Commit
 
-`c63d428 docs: approve sqlite race entry source`
+`eab9a03 docs: approve repository backed selection resolver`
 
 ## Branch
 
@@ -18,16 +18,15 @@ Phase 4C-2d3b1e3 — Repository-backed RaceEntrySelectionResolver implementation
 
 ## Objective
 
-Implement a concrete `RepositoryBackedRaceEntrySelectionResolver` that structurally satisfies
-the existing `RaceEntrySelectionResolver` Protocol by adapting exactly one existing
-`RaceEntrySource.load_race_entry_id_map()` call for one ordered horse-ID selection. The concrete
-Resolver validates its public input and the Source response, then reconstructs verified race-entry
-IDs in the original horse-ID order.
+Implement a concrete, non-exported `PersistedSimulationBetSource` that structurally satisfies the
+existing `SimulationBetSource` Protocol by loading one immutable
+`SimulationBetPlanSnapshot` through `SimulationBetPlanSnapshotSource` and returning its already
+persisted bet tuple without recomputation or reconstruction.
 
 ## Allowed Files
 
-- `scripts/simulation/repository_backed_selection_resolver.py`
-- `tests/test_repository_backed_selection_resolver.py`
+- `scripts/simulation/persisted_simulation_bet_source.py`
+- `tests/test_persisted_simulation_bet_source.py`
 - `docs/LATEST_CODEX_REPORT.md`
 
 ## Forbidden Files
@@ -35,144 +34,152 @@ IDs in the original horse-ID order.
 - `AGENTS.md`
 - `docs/CURRENT_PHASE.md` after approval and during implementation
 - `docs/VER0.8_SIMULATOR_DESIGN.md`
-- `scripts/simulation/selection_resolver.py`
-- `scripts/simulation/race_entry_source.py`
-- `scripts/simulation/repositories/sqlite_race_entry_source.py`
-- `scripts/simulation/bet_plan_builder.py`
 - `scripts/simulation/bet_source.py`
-- `scripts/simulation/persisted_*`
-- `scripts/simulation/bet_plan_snapshot*`
+- `scripts/simulation/bet_plan_snapshot_repository.py`
+- `scripts/simulation/bet_plan_identity.py`
+- `scripts/simulation/bet_plan_snapshot.py`
+- `scripts/simulation/models.py`
+- `scripts/simulation/repositories/sqlite_bet_plan_snapshot_repository.py`
+- `scripts/simulation/bet_plan_builder.py`
+- `scripts/simulation/repository_backed_selection_resolver.py`
+- `scripts/simulation/persisted_executor.py`
+- `scripts/simulation/persisted_settlement.py`
 - package `__init__.py` files and package-root exports
 - all other production code and tests
-- schema, migrations, Pipeline, CLI, database, and `logs/`
+- schema, migrations, database, Pipeline, CLI, production composition, and `logs/`
 
 ## Proposed Contract
 
-### Concrete class and placement
+### Constructor and dependency choice
 
-Add only `RepositoryBackedRaceEntrySelectionResolver` in
-`scripts/simulation/repository_backed_selection_resolver.py`:
+The constructor uses the existing, fully validated `SimulationRunContext`, not a bare `run_id`.
+The fixed context prevents run-ID regeneration and keeps dataset/commit provenance available for
+future composition. The approved API is:
 
 ```python
-class RepositoryBackedRaceEntrySelectionResolver:
-    def __init__(self, *, race_entry_source: RaceEntrySource) -> None:
-        ...
-
-    def resolve_race_entry_ids(
+class PersistedSimulationBetSource:
+    def __init__(
         self,
         *,
-        race_id: int,
-        horse_ids: Sequence[int],
-    ) -> tuple[int, ...]:
+        run_context: SimulationRunContext,
+        snapshot_source: SimulationBetPlanSnapshotSource,
+    ) -> None:
+        ...
+
+    def load_bets(
+        self,
+        *,
+        race_input: SimulationRaceInput,
+        strategy_identity: StrategyIdentity,
+    ) -> tuple[SimulationBet, ...]:
         ...
 ```
 
-The constructor is keyword-only, retains the injected Source object without wrapping it, and must
-not call the Source, DB, Builder, or other composition code. It verifies only that
-`race_entry_source.load_race_entry_id_map` is callable; any other constructor input raises
-`ValueError`. The Resolver must not use `isinstance(..., RaceEntrySource)`, because the Protocol is
-not runtime-checkable. It structurally implements the existing `RaceEntrySelectionResolver`
-Protocol; neither Protocol changes nor a package export are in scope.
+The constructor is keyword-only, stores the exact injected `run_context` and Snapshot Source,
+does not call the Source, and validates that `run_context` is `SimulationRunContext` and
+`snapshot_source.load_snapshot` is callable. Each constructor violation raises `ValueError`.
+It must not use runtime `isinstance` checks against the non-runtime-checkable Snapshot Source
+Protocol, create a synthetic `race_id=0`, raise `SimulationValidationError`, or trim, normalize,
+or regenerate any run field.
 
-### Public-input boundary
+### Requested snapshot identity
 
-Before calling the Source, the Resolver copies `horse_ids` once to an immutable tuple and validates:
+For a valid `load_bets()` call, construct exactly one new `SimulationBetPlanIdentity` from existing
+values without trimming, normalizing, or recomputing any field:
 
-- `race_id` is a positive, non-`bool` `int`;
-- `horse_ids` is a non-empty ordinary `Sequence`, not `str`, `bytes`, `bytearray`, `Mapping`, a
-  generator, or another non-Sequence;
-- every horse ID is a positive, non-`bool` `int`; and
-- horse IDs are unique.
+| Identity field | Source |
+| --- | --- |
+| `run_id` | `self._run_context.run_id` |
+| `race_id` | `race_input.race_id` |
+| `strategy_id` | `strategy_identity.strategy_id` |
+| `strategy_config_hash` | `strategy_identity.strategy_config_hash` |
+| `information_cutoff` | `race_input.information_cutoff` |
 
-These Resolver-owned public-input failures raise `ValueError`. The caller collection is never
-mutated. The Resolver neither sorts, deduplicates, canonicalizes, nor converts horse IDs into an
-unverified identity mapping.
+The Adapter validates concrete `SimulationRaceInput` and `StrategyIdentity` input before calling
+the Snapshot Source. Each direct-input violation raises `ValueError` and makes zero Source calls.
+For each valid input, it calls
+`snapshot_source.load_snapshot(identity=requested_identity)` exactly once with that identity. It
+does not retain an identity cache, mutate either input, create a run ID, access current time, or
+perform a second lookup.
 
-### Source adaptation and successful result
+### Snapshot-response and exception policy
 
-For each valid Resolver call, invoke exactly once:
+`None` has the existing Snapshot Source meaning of **not found**, not an empty plan. It must fail
+closed as
+`SimulationValidationError(race_input.race_id, "simulation_bet_plan_snapshot", ...)`. The same
+established simulation-boundary exception applies only to an Adapter-detected non-
+`SimulationBetPlanSnapshot` response or a snapshot whose `identity != requested_identity`.
 
-```python
-race_entry_source.load_race_entry_id_map(
-    race_id=race_id,
-    horse_ids=requested_horse_ids,
-)
-```
+Constructor violations (`run_context` not `SimulationRunContext`, or a non-callable Snapshot Source
+method) and direct `load_bets()` input violations (`race_input` not `SimulationRaceInput`, or
+`strategy_identity` not `StrategyIdentity`) raise `ValueError`. They do not call the Snapshot
+Source. The Adapter never uses `"persisted_simulation_bet_source"` as a validation identifier.
 
-`requested_horse_ids` is the copied tuple in caller order. A successful Source result is a mapping
-whose keys are exactly the requested horse IDs and whose values are unique, positive, non-`bool`
-race-entry IDs. The return value is reconstructed only as:
+The equality check covers all five identity fields, including `run_id`, race, strategy ID, strategy
+config hash, and cutoff. It is value equality rather than identity equality; timezone-aware datetime
+equality therefore preserves the persisted identity instant without requiring display-offset equality.
 
-```python
-tuple(mapping[horse_id] for horse_id in requested_horse_ids)
-```
+Exceptions raised by `snapshot_source.load_snapshot()`, including `RepositoryValidationError`,
+`RepositoryDataIntegrityError`, `RepositoryConflictError`, and arbitrary unexpected exceptions,
+propagate unchanged. The Adapter must not catch, wrap, translate, or create a replacement exception
+for a Source failure.
 
-It therefore preserves the caller's horse-ID order and returns a deterministic
-`tuple[int, ...]`, independent of Source mapping iteration order. It does not consult SQLite,
-perform an additional lookup, or infer entries for absent horses.
+### Returned bets and empty plans
 
-### Source-result fail-closed policy
+After type and full identity validation, return `snapshot.bets` directly. Do not call `tuple()`,
+copy, sort, validate individual bets, recalculate policy/budget/stake, rebuild `SimulationBet`, or
+otherwise normalize snapshot content. Direct return preserves the snapshot tuple object, bet order,
+and every contained bet object identity.
 
-The Resolver treats a missing requested horse key as an unresolved selection and raises
-`ValueError`; this covers the partial or empty mapping that `SQLiteRaceEntrySource` intentionally
-returns for a missing ID, a wrong-race ID, or a nonexistent race.
+An existing snapshot with `bets == ()` is the persisted, valid NO_BET plan and returns the same
+empty tuple. It is distinct from a missing snapshot (`None`), which fails closed.
 
-Before reconstruction, it must reject Source responses that are not mappings, have extra keys,
-have keys that do not match the requested IDs, contain non-positive or `bool` IDs, map two
-requested horses to the same race-entry ID, or otherwise cannot construct a complete one-to-one
-tuple. All Resolver-detected Source-response violations raise `ValueError`.
+### Dependency boundaries
 
-The Resolver does not import, catch, wrap, translate, or newly construct repository exceptions.
-`RepositoryValidationError`, `RepositoryDataIntegrityError`, and `RepositoryConflictError` raised
-by the injected Source propagate as the identical exception object. Any other Source exception also
-propagates unchanged.
-
-### Dependency and lifecycle boundaries
-
-- No SQLite query, connection, transaction, cache, mutable global state, current-time access,
-  Provider, Repository construction, Builder call, Pipeline, CLI, network, or production
-  composition is permitted.
-- `SQLiteRaceEntrySource` remains unchanged and owns its batch query and row-level integrity work.
-- The Resolver calls its injected Source once per valid selection. The existing
-  `SimulationBetPlanBuilder` calls the Resolver once per allocation; a multi-allocation plan can
-  therefore make multiple Source calls. Plan-wide batching is explicitly out of scope.
-- Race-entry ID ordering is the resolution order only. `SimulationBet` remains the later boundary
-  that canonicalizes its selected race-entry IDs for bet identity.
+The module may depend only on the two Protocol/domain snapshot modules, `SimulationRunContext`,
+`SimulationRaceInput`, `StrategyIdentity`, `SimulationBet`, `SimulationValidationError`, and
+ordinary Python typing. It must not import a concrete SQLite repository or SQLite, Provider,
+Prediction, Builder, Resolver, Settlement, Simulator, Pipeline, CLI, network, time, cache, schema,
+or migration module. It is not package-root exported and is not a production composition root.
 
 ## Required Tests
 
 The new dedicated test file must cover at least:
 
-- exact keyword-only constructor and Resolver method signatures, structural Protocol conformance,
-  and no constructor-time Source call;
-- positive non-`bool` `race_id`, non-empty ordinary `Sequence`, unique positive non-`bool` horse
-  IDs, invalid collection types, and caller-input immutability;
-- one Source call with the copied ordered horse-ID tuple and no calls for invalid input;
-- return order based on original horse-ID order rather than mapping iteration order;
-- partial and empty Source mappings for missing IDs, wrong-race IDs, and nonexistent races;
-- Source-output mapping type, key-set, value type/range, and duplicate race-entry-ID validation,
-  all as `ValueError` when detected by the Resolver;
-- unchanged object-identity propagation of repository exceptions and arbitrary exceptions produced
-  by the Source;
-- absence of SQLite, cache, Builder, Pipeline, package export, database-path, network, and
-  current-time dependencies.
+- constructor and `SimulationBetSource` signature/type-hint compatibility;
+- full `SimulationRunContext` injection, with no bare-run-ID constructor alternative;
+- invalid `run_context` and non-callable Snapshot Source as `ValueError`, and no constructor-time
+  Snapshot Source call;
+- direct `SimulationRaceInput` and `StrategyIdentity` validation with zero Source calls on invalid
+  inputs and `ValueError` results;
+- construction of each requested identity field from the prescribed object and field;
+- exactly one Snapshot Source call for a valid input, including identity value equality;
+- snapshot type and complete identity validation, including mismatches in each identity field;
+- successful direct return of the original bet tuple, preserving tuple, bet order, and bet object
+  identity;
+- a persisted empty snapshot returning its empty tuple and `None` failing closed distinctly;
+- `SimulationValidationError` for Adapter-detected violations;
+- unchanged object-identity propagation of repository and arbitrary Source exceptions;
+- no policy, budget, stake, or bet recomputation/reconstruction;
+- no DB, SQLite, Builder, Resolver, Settlement, Provider, Pipeline, CLI, network, current-time,
+  cache, package-root export, schema, or migration dependency.
 
 Run after implementation:
 
 ```text
-python -m pytest tests/test_repository_backed_selection_resolver.py -q
-python -m pytest tests/test_race_entry_selection_resolver_contract.py tests/test_race_entry_source_contract.py tests/test_sqlite_race_entry_source.py tests/test_repository_backed_selection_resolver.py -q
+python -m pytest tests/test_persisted_simulation_bet_source.py -q
+python -m pytest tests/test_simulation_bet_source_contract.py tests/test_simulation_bet_plan_snapshot_repository_contract.py tests/test_simulation_bet_plan_snapshot.py tests/test_persisted_simulation_bet_source.py -q
 python -m pytest -q
 git diff --check
 git status --short
 ```
 
-Also search the implementation and dedicated tests for forbidden concrete SQLite, Builder, cache,
-and composition dependencies.
+Also search the implementation and dedicated tests for concrete SQLite, Source-exception wrapping,
+Builder, Resolver, Settlement, cache, and composition dependencies.
 
 ## Stop Condition
 
-Stop and report without implementation if the design requires changing either existing Protocol or
-`SQLiteRaceEntrySource`, if Builder wiring or plan-wide batching becomes necessary, if a schema or
-migration change is required, if tests fail outside scope, or if Git status contains unexpected
-files. Do not stage, commit, or push during this phase.
+Stop and report without implementation if the required fail-closed exception policy requires a new
+exception or a change to existing Protocols/models, if a Snapshot Repository or SQLite change is
+needed, if Builder/Resolver/Executor composition becomes necessary, if tests fail outside scope, or
+if Git status contains unexpected files. Do not stage, commit, or push during this phase.
