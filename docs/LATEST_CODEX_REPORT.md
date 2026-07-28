@@ -2,7 +2,7 @@
 
 ## Status
 
-READY_FOR_REVIEW
+APPROVED_FOR_COMMIT
 
 ## Completed Phase
 
@@ -81,7 +81,15 @@ test that proves each requested Source result is read exactly once on the succes
 
 ## Git and handoff
 
-This report is included in the authorized review-correction commit. `database/keiba.db` and `logs/`
-remain uncommitted and outside the phase scope.
+The implementation review is approved.
 
-Awaiting implementation review and explicit commit approval.
+- Review branch: `review/4c-2d3b1e3-repository-backed-selection-resolver`
+- Implementation review commit: `f5abed1 review: implement repository backed selection resolver`
+- Review correction commit: `926366d fix: align repository backed selection resolver contract`
+- The review branch is pushed to
+  `origin/review/4c-2d3b1e3-repository-backed-selection-resolver`.
+- The two review findings are resolved: the constructor checks only for a callable Source method,
+  and each Source mapping value is read once before the verified tuple is returned.
+- `database/keiba.db` and `logs/` remain uncommitted and outside the phase scope.
+
+Awaiting explicit fast-forward integration approval for `feature/ver0.8-simulator`.
