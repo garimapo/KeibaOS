@@ -2,14 +2,14 @@
 
 ## Status
 
-READY_FOR_REVIEW
+APPROVED_FOR_COMMIT
 
 ## Completed Phase
 
 Phase 4C-2d3b1e2 — SQLite RaceEntrySource implementation
 
 Base commit: `fa51ab8 chore: automate codex phase handoff`
-Branch: `feature/ver0.8-simulator`
+Base branch: `feature/ver0.8-simulator`
 
 ## Changed files
 
@@ -86,11 +86,13 @@ Search checks:
 
 ## Git and handoff
 
-`database/keiba.db` and `logs/` were not operated on. Stage, commit, and push were not performed.
-Expected commit candidates after review:
+The implementation review is approved.
 
-- `scripts/simulation/repositories/sqlite_race_entry_source.py`
-- `tests/test_sqlite_race_entry_source.py`
-- `docs/LATEST_CODEX_REPORT.md`
+- Review branch: `review/4c-2d3b1e2-sqlite-race-entry-source`
+- Review commit: `8a8fd8e review: implement sqlite race entry source`
+- The review branch is pushed to
+  `origin/review/4c-2d3b1e2-sqlite-race-entry-source`.
+- `database/keiba.db` and `logs/` were not included in the review commit and remain uncommitted.
 
-No blockers remain. Review is required before commit approval.
+The current documentation-only approval update is the next review-branch commit. Base-branch
+merge remains outside this step.
