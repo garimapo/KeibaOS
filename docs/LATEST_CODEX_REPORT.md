@@ -4,85 +4,76 @@
 
 READY_FOR_REVIEW
 
-## Phase
+## Activity
 
-Phase 4C-2d3b1e1 — RaceEntrySource Protocol contract
+KeibaOS Codex handoff workflow maintenance
 
-Base commit: `86b87db chore: add codex handoff workflow`
-Branch: `feature/ver0.8-simulator`
+## Updated files
 
-## Changed files
+- `AGENTS.md`
+- `docs/CURRENT_PHASE.md`
+- `docs/LATEST_CODEX_REPORT.md`
 
-- `scripts/simulation/race_entry_source.py` — new Protocol-only read boundary.
-- `tests/test_race_entry_source_contract.py` — dedicated contract tests.
-- `docs/LATEST_CODEX_REPORT.md` — this handoff report.
+## New command-driven workflow
 
-No package-root export was added, avoiding a new package import dependency.
+### Prepare
 
-## Implemented contract
+`PREPARE_PHASE <phase ID>` is documentation and scope preparation only. Codex reads the
+working agreement, simulator design, latest report, and current Git state; researches the
+requested phase; writes a `DRAFT_FOR_REVIEW` phase document and preparation report; then
+stops. It must not change production code or tests, run implementation work, stage, commit,
+or push.
 
-```python
-class RaceEntrySource(Protocol):
-    def load_race_entry_id_map(
-        self,
-        *,
-        race_id: int,
-        horse_ids: Sequence[int],
-    ) -> Mapping[int, int]:
-        ...
+### Review approval
+
+`APPROVE_PHASE` carries either corrections or `NONE`. Codex applies the specified corrections
+to `docs/CURRENT_PHASE.md`, changes status to `APPROVED_FOR_CODEX`, and waits for the separate
+execution command. It does not implement code or tests at this step.
+
+### Execution
+
+`EXECUTE_APPROVED_PHASE` may execute only after verifying that the phase document is
+`APPROVED_FOR_CODEX`, its Phase/Base Commit/Branch match current Git state, and its Allowed
+Files, Forbidden Files, Required Tests, and Stop Condition are complete. Otherwise Codex stops
+without implementation.
+
+## Status vocabulary
+
+Only these statuses are valid for `docs/CURRENT_PHASE.md`:
+
+```text
+WAITING_FOR_PHASE_INSTRUCTION
+DRAFT_FOR_REVIEW
+APPROVED_FOR_CODEX
+READY_FOR_REVIEW
+APPROVED_FOR_COMMIT
 ```
 
-- `RaceEntrySource` is a structural `typing.Protocol`; `runtime_checkable` is not used.
-- Its sole public method is `load_race_entry_id_map`.
-- `race_id` and `horse_ids` are keyword-only and have no defaults, `*args`, or `**kwargs`.
-- Type annotations are `int`, `Sequence[int]`, and `Mapping[int, int]` respectively.
-- The method body is only `...`; there is no concrete behavior, input validation, storage, SQL, SQLite, repository dependency, or new exception class.
-- The mapping is future concrete-source output: requested prediction horse ID as key, and the corresponding entry ID for the specified race as value. This contract deliberately does not equate those domains without resolution.
+## Current reset state
 
-## Tests added
+`docs/CURRENT_PHASE.md` is reset to:
 
-`tests/test_race_entry_source_contract.py` adds 16 test methods covering:
+```text
+Status: WAITING_FOR_PHASE_INSTRUCTION
+Phase: NOT_SET
+Base Commit: b7e142e
+Branch: feature/ver0.8-simulator
+Allowed Files: None
+```
 
-- Protocol structure and no runtime-checkable registration.
-- Sole public method, declaration-only body, exact signature, keyword-only parameters, no defaults, varargs, or async behavior.
-- `typing.get_type_hints` annotation checks.
-- A test-only structural stub with the same signature; no runtime `isinstance` protocol check.
-- AST/source checks that production imports only `typing` and contains no concrete storage, validation, SQL/SQLite, repository, resolver, builder, provider, pipeline, simulator, result/summary, CLI, network, or current-time dependency.
-- No early package-root export and no `target_race_count` addition.
+No next implementation phase is authorized.
+
+## Safety preserved
+
+- Explicit approval remains mandatory before staging, committing, or pushing.
+- `database/keiba.db`, `logs/`, and all contents under `logs/` remain permanently excluded from staging and commits.
+- The permanent bans on `git add .`, `git add -A`, `git commit -a`, clean, reset, restore, stash, amend, rebase, and force push remain in force.
+- The domain invariants including `SimulationSummary.race_count` and no `target_race_count` remain documented in `AGENTS.md`.
 
 ## Verification
 
-| Check | Result |
-| --- | --- |
-| RaceEntrySource dedicated test | `16 passed` |
-| Resolver / Builder / Snapshot / repository regression tests | `159 passed` |
-| Full pytest suite | `2150 passed, 2 skipped` |
-| `git diff --check` | Success |
+No production code or test was changed, so pytest was not rerun. `git diff --check` succeeds.
+The final working tree contains only the three workflow documents plus the pre-existing
+`database/keiba.db` modification and untracked `logs/` directory.
 
-Search checks:
-
-- Tracked-file `git grep` does not include the new untracked Protocol files; worktree `rg` confirms the only production `class RaceEntrySource` and `load_race_entry_id_map` declaration are in `scripts/simulation/race_entry_source.py`.
-- No concrete RaceEntrySource, SQLite query, or repository-backed resolver is present.
-- `target_race_count` appears only in existing negative test assertions; no production field was added.
-
-## Scope deliberately not implemented
-
-- SQLite RaceEntrySource.
-- Repository-backed selection resolver.
-- `PersistedSimulationBetSource`.
-- Builder, snapshot repository, and pipeline integration.
-- Schema or migration changes.
-
-`database/keiba.db` and `logs/` were not operated on. Stage, commit, and push were not performed.
-
-## Working-tree and review handoff
-
-Expected commit candidates after review:
-
-- `scripts/simulation/race_entry_source.py`
-- `tests/test_race_entry_source_contract.py`
-- `docs/LATEST_CODEX_REPORT.md`
-
-`docs/CURRENT_PHASE.md` is already modified by the user to authorize this phase and was not edited by Codex. Its trailing whitespace was subsequently corrected by the user; the final `git diff --check` succeeds. `database/keiba.db` and `logs/` remain outside scope.
-
-Blockers: none.
+Stage, commit, and push were not performed. Review is required before any further action.

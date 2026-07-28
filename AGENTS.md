@@ -1,24 +1,71 @@
 # KeibaOS Codex Working Agreement
 
-## 役割と作業順
+## Roles and work order
 
-- ChatGPTは設計、レビュー、QA、フェーズ管理を担当する。
-- Codexは実装、テスト、差分確認、作業報告を担当する。
-- 作業順は、設計、実装、レビュー、明示的commit承認、push、次フェーズとする。
-- Codexは`docs/CURRENT_PHASE.md`に記載された範囲だけを実施する。
-- 作業後は`docs/LATEST_CODEX_REPORT.md`を更新して停止する。
+- ChatGPT owns design, review, QA, and phase management.
+- Codex owns implementation, tests, diff checks, and work reports.
+- Work proceeds as: design, implementation, review, explicit commit approval, push, then the next phase.
+- The authoritative detailed design is `docs/VER0.8_SIMULATOR_DESIGN.md`.
+- Codex must update `docs/LATEST_CODEX_REPORT.md` before stopping after every authorized activity.
+- Codex must never advance to a subsequent phase on its own initiative.
 
-## 変更範囲と契約
+## Phase workflow commands
 
-- `Allowed Files`以外を変更しない。
-- 設計書と実在contractが衝突した場合は実装を停止して報告する。
-- 既存domain contractを都合よく変更しない。
-- テストを通すためだけのproduction APIを追加しない。
-- 詳細な設計判断の正本は`docs/VER0.8_SIMULATOR_DESIGN.md`とする。
+### `PREPARE_PHASE <phase ID>`
 
-## Git安全ルール
+When the user issues this command, Codex must:
 
-明示的承認がない限り、stage、commit、pushを行わない。常に次を禁止する。
+1. Read this file, `docs/VER0.8_SIMULATOR_DESIGN.md`, and `docs/LATEST_CODEX_REPORT.md`.
+2. Inspect recent Git history, current branch, and working-tree status.
+3. Investigate the requested phase's implementation scope without changing production code or tests.
+4. Draft `docs/CURRENT_PHASE.md` for that phase with status `DRAFT_FOR_REVIEW`.
+5. Write a preparation report to `docs/LATEST_CODEX_REPORT.md`.
+6. Stop for review.
+
+`PREPARE_PHASE` must not implement code, add tests, stage, commit, or push.
+
+### `APPROVE_PHASE`
+
+The user supplies this command followed by either required corrections or `NONE`.
+Codex must apply only those corrections to `docs/CURRENT_PHASE.md`, set its status to
+`APPROVED_FOR_CODEX`, and stop. Production code and tests remain unchanged until a later
+`EXECUTE_APPROVED_PHASE` instruction.
+
+### `EXECUTE_APPROVED_PHASE`
+
+Before implementing, Codex must verify that `docs/CURRENT_PHASE.md`:
+
+- has status `APPROVED_FOR_CODEX`;
+- names a Phase whose Base Commit and Branch match the current Git state;
+- declares Allowed Files and Forbidden Files; and
+- declares Required Tests and Stop Condition.
+
+Only when all checks pass may Codex implement the approved phase, restricted to its Allowed
+Files. Otherwise it must not implement and must report the missing or inconsistent contract.
+
+## Allowed phase statuses
+
+`docs/CURRENT_PHASE.md` may use only these statuses:
+
+```text
+WAITING_FOR_PHASE_INSTRUCTION
+DRAFT_FOR_REVIEW
+APPROVED_FOR_CODEX
+READY_FOR_REVIEW
+APPROVED_FOR_COMMIT
+```
+
+## Scope and contract rules
+
+- Change only files listed in the current phase's Allowed Files.
+- If the design and an existing contract conflict, stop and report; do not make a speculative change.
+- Do not change domain contracts for convenience.
+- Do not add production APIs merely to satisfy tests.
+- Do not infer missing behavior or silently broaden a phase's scope.
+
+## Permanent Git safety rules
+
+Do not stage, commit, or push without explicit user approval. The following commands are prohibited:
 
 ```text
 git add .
@@ -33,7 +80,7 @@ git rebase
 force push
 ```
 
-stageする場合は、承認されたファイルを個別指定する。次をstage・commitしない。
+When approved, stage only individually named files. Never stage or commit:
 
 ```text
 database/keiba.db
@@ -41,42 +88,40 @@ logs/
 logs/配下すべて
 ```
 
-通常の最終dirty状態として、次を許容する。
+The ordinary permitted dirty state is:
 
 ```text
  M database/keiba.db
 ?? logs/
 ```
 
-## KeibaOS固有契約
+## KeibaOS domain invariants
 
-- `SimulationSummary.race_count`を正式fieldとして維持し、`target_race_count`を追加しない。
-- Engine → Predictor → Value → Generator → Strategy → Pipeline → CLIの責務分離を維持する。
-- prediction cutoffとsettlement cutoffを混同せず、prediction時点より後のsettlement時刻を理由に拒否しない。
-- allocationのrecommendation件数・順序・object identityを無断変更しない。
-- recommendation rankとpurchase orderを混同しない。
-- horse IDとrace entry IDを無検証で同一視しない。
-- Repositoryは保存データを自動修復せず、immutable Snapshotをsilent overwriteしない。
+- Keep `SimulationSummary.race_count` as the formal field; never add `target_race_count`.
+- Preserve Engine -> Predictor -> Value -> Generator -> Strategy -> Pipeline -> CLI responsibility boundaries.
+- Do not confuse prediction cutoff with settlement cutoff, or reject settlement data merely because it is later than prediction time.
+- Do not change recommendation count, order, or object identity without explicit design approval.
+- Do not confuse recommendation rank with purchase order.
+- Do not equate horse IDs and race-entry IDs without verification.
+- Repositories must not repair saved data automatically or silently overwrite immutable snapshots.
 
-## テストと確認
+## Verification and stop conditions
 
-作業終了時に必ず実行する。
+At the end of every implementation or workflow-maintenance activity, run:
 
 ```text
 git diff --check
 git status --short
 ```
 
-`docs/CURRENT_PHASE.md`に指定された専用テスト、関連テスト、全pytest、検索確認を実行する。未実行のテストは未実行と明記し、失敗を隠したり成功扱いにしない。
+Run the phase's dedicated, related, full-suite, and search checks exactly as specified. Clearly report anything not run.
 
-## 停止条件
+Stop rather than continuing when:
 
-次の場合は変更を続けず停止して報告する。
-
-- 設計書と実装contractが衝突する。
-- Allowed Files外の変更が必要になる。
-- schema／migration変更が別フェーズとして必要になる。
-- 不明な既存挙動を推測する必要がある。
-- テスト失敗原因が今回の範囲外である。
-- Git statusに想定外ファイルがある。
-- commit承認が必要である。
+- design and implementation contracts conflict;
+- a change outside Allowed Files is needed;
+- schema or migration work belongs to another phase;
+- an existing behavior would need to be guessed;
+- a test fails for an out-of-scope reason;
+- Git status contains an unexpected file; or
+- commit approval is required.
