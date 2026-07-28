@@ -2,7 +2,7 @@
 
 ## Status
 
-READY_FOR_REVIEW
+APPROVED_FOR_COMMIT
 
 ## Completed Phase
 
@@ -75,7 +75,27 @@ export was changed. `target_race_count` was not added.
 
 ## Git and handoff
 
-`git diff --check` will be rerun after this report update. No files were staged, committed, pushed,
-or branch-created. `database/keiba.db` and `logs/` remain outside the phase scope.
+Implementation review was approved with no requested code changes. Review branch
+`review/4c-2d3b1g-repository-backed-persisted-settlement-source` was pushed to origin with review
+commit `63291ee review: implement repository backed persisted settlement source`.
 
-Awaiting implementation review and explicit commit approval.
+The approved contract confirms the following:
+
+- constructor and direct-input violations are `ValueError`;
+- malformed Bet Source responses use `SimulationValidationError(identifier="simulation_bet_source")`;
+- malformed RaceResult responses use `SimulationValidationError(identifier="race_result_repository")`;
+- malformed Payout responses use `SimulationValidationError(identifier="payout_repository")`;
+- each valid input calls the Bet Source once; NO_BET calls both Repositories zero times; non-empty
+  bets call the RaceResult Repository once and the Payout Repository once per distinct required type;
+- required payout types preserve first-occurrence order and use `observed_at_lte=None` with
+  `require_complete=False`;
+- missing (`None`) and incomplete publications are omitted, while only complete publications are
+  stored, without fallback, retry, or re-query;
+- the original bets tuple, bet order, and bet object identities are preserved; and
+- Source, Repository, and bundle exceptions propagate as the same exception objects.
+
+The prohibited-dependency and package-export boundaries, plus the dedicated, related, and full
+pytest results above, remain approved. `database/keiba.db` and `logs/` remain outside the commit.
+
+This approval commit is pending integration of the reviewed branch into
+`feature/ver0.8-simulator`.
