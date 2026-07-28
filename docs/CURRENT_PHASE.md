@@ -6,11 +6,11 @@ APPROVED_FOR_CODEX
 
 ## Phase
 
-Phase 4C-2d3b1e2 — SQLite RaceEntrySource implementation
+Phase 4C-2d3b1e3 — Repository-backed RaceEntrySelectionResolver implementation
 
 ## Base Commit
 
-`fa51ab8`
+`c63d428 docs: approve sqlite race entry source`
 
 ## Branch
 
@@ -18,142 +18,161 @@ Phase 4C-2d3b1e2 — SQLite RaceEntrySource implementation
 
 ## Objective
 
-Implement only the connection-injected `SQLiteRaceEntrySource` concrete read boundary that
-structurally implements the existing `RaceEntrySource` Protocol. It resolves a requested,
-non-empty prediction-horse-ID selection for one race into a mapping of
-`prediction_horse_id -> race_entry_id` using one parameter-bound SQLite batch query.
+Implement a concrete `RepositoryBackedRaceEntrySelectionResolver` that structurally satisfies
+the existing `RaceEntrySelectionResolver` Protocol by adapting exactly one existing
+`RaceEntrySource.load_race_entry_id_map()` call for one ordered horse-ID selection. The concrete
+Resolver validates its public input and the Source response, then reconstructs verified race-entry
+IDs in the original horse-ID order.
 
 ## Allowed Files
 
-- `scripts/simulation/repositories/sqlite_race_entry_source.py`
-- `tests/test_sqlite_race_entry_source.py`
+- `scripts/simulation/repository_backed_selection_resolver.py`
+- `tests/test_repository_backed_selection_resolver.py`
 - `docs/LATEST_CODEX_REPORT.md`
 
 ## Forbidden Files
 
 - `AGENTS.md`
-- `docs/CURRENT_PHASE.md` (not an implementation-time change target)
+- `docs/CURRENT_PHASE.md` after approval and during implementation
 - `docs/VER0.8_SIMULATOR_DESIGN.md`
-- `scripts/simulation/race_entry_source.py`
 - `scripts/simulation/selection_resolver.py`
-- `scripts/simulation/repository_backed_selection_resolver.py`
+- `scripts/simulation/race_entry_source.py`
+- `scripts/simulation/repositories/sqlite_race_entry_source.py`
 - `scripts/simulation/bet_plan_builder.py`
 - `scripts/simulation/bet_source.py`
-- `scripts/simulation/repositories/__init__.py`
+- `scripts/simulation/persisted_*`
+- `scripts/simulation/bet_plan_snapshot*`
+- package `__init__.py` files and package-root exports
 - all other production code and tests
-- schema, migrations, Pipeline, CLI, `database/keiba.db`, and `logs/`
+- schema, migrations, Pipeline, CLI, database, and `logs/`
 
-## Required Contract
+## Proposed Contract
 
 ### Concrete class and placement
 
-Add `SQLiteRaceEntrySource` only in
-`scripts/simulation/repositories/sqlite_race_entry_source.py`:
+Add only `RepositoryBackedRaceEntrySelectionResolver` in
+`scripts/simulation/repository_backed_selection_resolver.py`:
 
 ```python
-class SQLiteRaceEntrySource:
-    def __init__(self, *, connection: sqlite3.Connection) -> None:
+class RepositoryBackedRaceEntrySelectionResolver:
+    def __init__(self, *, race_entry_source: RaceEntrySource) -> None:
         ...
 
-    def load_race_entry_id_map(
+    def resolve_race_entry_ids(
         self,
         *,
         race_id: int,
         horse_ids: Sequence[int],
-    ) -> Mapping[int, int]:
+    ) -> tuple[int, ...]:
         ...
 ```
 
-The constructor is keyword-only, retains the injected connection, and does not close it.
-The module imports the existing `RaceEntrySource` Protocol only for structural/type-contract
-clarity, `sqlite3`, typing, and the existing repository errors. It must not be package-root
-exported if that would alter imports or introduce a cycle.
+The constructor is keyword-only, retains the injected Source object without wrapping it, and must
+not call the Source, DB, Builder, or other composition code. It verifies only that
+`race_entry_source.load_race_entry_id_map` is callable; any other constructor input raises
+`ValueError`. The Resolver must not use `isinstance(..., RaceEntrySource)`, because the Protocol is
+not runtime-checkable. It structurally implements the existing `RaceEntrySelectionResolver`
+Protocol; neither Protocol changes nor a package export are in scope.
 
-### Constructor and connection policy
+### Public-input boundary
 
-- Accept only `sqlite3.Connection`; reject other values with existing
-  `RepositoryValidationError`.
-- Enable and verify `PRAGMA foreign_keys=ON` at construction; an unusable connection or a
-  failure to enable foreign keys raises `RepositoryValidationError` with the source exception
-  retained where applicable.
-- Do not create schema or migrations, open a fixed database path, change row factory or
-  isolation level, close the connection, add cache state, or perform a query in the constructor.
+Before calling the Source, the Resolver copies `horse_ids` once to an immutable tuple and validates:
 
-### Direct Source input validation
+- `race_id` is a positive, non-`bool` `int`;
+- `horse_ids` is a non-empty ordinary `Sequence`, not `str`, `bytes`, `bytearray`, `Mapping`, a
+  generator, or another non-Sequence;
+- every horse ID is a positive, non-`bool` `int`; and
+- horse IDs are unique.
 
-`load_race_entry_id_map` validates enough direct input to be safe without the future Resolver:
+These Resolver-owned public-input failures raise `ValueError`. The caller collection is never
+mutated. The Resolver neither sorts, deduplicates, canonicalizes, nor converts horse IDs into an
+unverified identity mapping.
 
-- `race_id` is a positive non-`bool` `int`.
-- `horse_ids` is an ordinary non-empty `Sequence`, not `str`, `bytes`, `bytearray`, `Mapping`,
-  generator, or non-sequence value.
-- Each horse ID is a positive non-`bool` `int`; duplicates are rejected.
-- Caller input is not mutated and is copied once before query construction.
-- These failures raise existing `RepositoryValidationError`; the source owns no bet-type,
-  cardinality, selection canonicalization, or Resolver response-validation policy.
+### Source adaptation and successful result
 
-### Query and mapping behavior
+For each valid Resolver call, invoke exactly once:
 
-- Execute exactly one parameter-bound batch query per method call:
+```python
+race_entry_source.load_race_entry_id_map(
+    race_id=race_id,
+    horse_ids=requested_horse_ids,
+)
+```
 
-  ```sql
-  SELECT h.id AS prediction_horse_id, h.id AS race_entry_id
-  FROM horses AS h
-  WHERE h.race_id = ?
-    AND h.id IN (?, ?, ...)
-  ```
+`requested_horse_ids` is the copied tuple in caller order. A successful Source result is a mapping
+whose keys are exactly the requested horse IDs and whose values are unique, positive, non-`bool`
+race-entry IDs. The return value is reconstructed only as:
 
-- The aliases remain distinct even though both current columns are `horses.id`, preserving the
-  semantic conversion boundary.
-- Reconstruct the returned mapping in requested horse-ID order without relying on SQLite row order.
-- No separate `races` lookup, horse-by-horse query, chunking, implicit identity completion,
-  extra mapping entry, or cache is allowed.
-- Missing requested IDs, IDs belonging to another race, and a nonexistent race are represented by
-  a partial or empty mapping for the future Resolver; this Source does not raise an exception for
-  those absence conditions.
-- Contradictory, duplicate, or type-invalid fetched rows and invalid constructed mappings fail
-  closed with existing `RepositoryDataIntegrityError`.
-- Unexpected `sqlite3` operational errors are not broadly wrapped.
+```python
+tuple(mapping[horse_id] for horse_id in requested_horse_ids)
+```
 
-### Transaction and dependency boundaries
+It therefore preserves the caller's horse-ID order and returns a deterministic
+`tuple[int, ...]`, independent of Source mapping iteration order. It does not consult SQLite,
+perform an additional lookup, or infer entries for absent horses.
 
-- Reads must not begin, commit, or roll back transactions; an active caller read transaction is
-  allowed.
-- No DB write, Provider, Repository-backed Resolver, Builder, Snapshot Repository, prediction,
-  Pipeline, Simulator, network, current-time, schema, or migration dependency is permitted.
-- No new exception class is added. Existing repository exceptions are used exactly as specified.
+### Source-result fail-closed policy
+
+The Resolver treats a missing requested horse key as an unresolved selection and raises
+`ValueError`; this covers the partial or empty mapping that `SQLiteRaceEntrySource` intentionally
+returns for a missing ID, a wrong-race ID, or a nonexistent race.
+
+Before reconstruction, it must reject Source responses that are not mappings, have extra keys,
+have keys that do not match the requested IDs, contain non-positive or `bool` IDs, map two
+requested horses to the same race-entry ID, or otherwise cannot construct a complete one-to-one
+tuple. All Resolver-detected Source-response violations raise `ValueError`.
+
+The Resolver does not import, catch, wrap, translate, or newly construct repository exceptions.
+`RepositoryValidationError`, `RepositoryDataIntegrityError`, and `RepositoryConflictError` raised
+by the injected Source propagate as the identical exception object. Any other Source exception also
+propagates unchanged.
+
+### Dependency and lifecycle boundaries
+
+- No SQLite query, connection, transaction, cache, mutable global state, current-time access,
+  Provider, Repository construction, Builder call, Pipeline, CLI, network, or production
+  composition is permitted.
+- `SQLiteRaceEntrySource` remains unchanged and owns its batch query and row-level integrity work.
+- The Resolver calls its injected Source once per valid selection. The existing
+  `SimulationBetPlanBuilder` calls the Resolver once per allocation; a multi-allocation plan can
+  therefore make multiple Source calls. Plan-wide batching is explicitly out of scope.
+- Race-entry ID ordering is the resolution order only. `SimulationBet` remains the later boundary
+  that canonicalizes its selected race-entry IDs for bet identity.
 
 ## Required Tests
 
 The new dedicated test file must cover at least:
 
-- keyword-only constructor and exact `load_race_entry_id_map` signature/type hints;
-- connection type and foreign-key validation;
-- positive non-`bool` race ID and horse-ID input validation, non-empty ordinary Sequence rules,
-  duplicate rejection, and caller-input immutability;
-- one parameter-bound batch query for all requested IDs, without a per-horse N+1 query;
-- mapping semantics, arbitrary SQL row order, missing and wrong-race IDs as absent keys, and no
-  extras or identity synthesis;
-- row/mapping integrity failure behavior and unchanged propagation of unexpected SQLite errors;
-- no writes, transaction begin/commit/rollback, schema/migration, fixed database path, cache,
-  package export, Resolver, Builder, Pipeline, or network behavior;
-- `database/keiba.db` is never used by tests; use `:memory:` fixtures only.
+- exact keyword-only constructor and Resolver method signatures, structural Protocol conformance,
+  and no constructor-time Source call;
+- positive non-`bool` `race_id`, non-empty ordinary `Sequence`, unique positive non-`bool` horse
+  IDs, invalid collection types, and caller-input immutability;
+- one Source call with the copied ordered horse-ID tuple and no calls for invalid input;
+- return order based on original horse-ID order rather than mapping iteration order;
+- partial and empty Source mappings for missing IDs, wrong-race IDs, and nonexistent races;
+- Source-output mapping type, key-set, value type/range, and duplicate race-entry-ID validation,
+  all as `ValueError` when detected by the Resolver;
+- unchanged object-identity propagation of repository exceptions and arbitrary exceptions produced
+  by the Source;
+- absence of SQLite, cache, Builder, Pipeline, package export, database-path, network, and
+  current-time dependencies.
 
 Run after implementation:
 
 ```text
-python -m pytest tests/test_sqlite_race_entry_source.py -q
-python -m pytest tests/test_race_entry_source_contract.py tests/test_sqlite_race_entry_source.py -q
-python -m pytest tests/test_sqlite_simulation_bet_plan_snapshot_repository.py tests/test_race_entry_source_contract.py tests/test_sqlite_race_entry_source.py -q
+python -m pytest tests/test_repository_backed_selection_resolver.py -q
+python -m pytest tests/test_race_entry_selection_resolver_contract.py tests/test_race_entry_source_contract.py tests/test_sqlite_race_entry_source.py tests/test_repository_backed_selection_resolver.py -q
 python -m pytest -q
 git diff --check
 git status --short
 ```
 
-Also search the worktree for the concrete class, query count, and forbidden composition imports.
+Also search the implementation and dedicated tests for forbidden concrete SQLite, Builder, cache,
+and composition dependencies.
 
 ## Stop Condition
 
-Stop and report without implementation if the design conflicts with existing SQLite repository
-contracts, the required behavior needs a schema/migration/Resolver/Builder change, concrete
-module placement would require an out-of-scope package export, test failures originate outside
-this scope, or Git status contains unexpected files. Do not stage, commit, or push in this phase.
+Stop and report without implementation if the design requires changing either existing Protocol or
+`SQLiteRaceEntrySource`, if Builder wiring or plan-wide batching becomes necessary, if a schema or
+migration change is required, if tests fail outside scope, or if Git status contains unexpected
+files. Do not stage, commit, or push during this phase.
