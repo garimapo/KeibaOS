@@ -2,7 +2,7 @@
 
 ## Status
 
-READY_FOR_REVIEW
+APPROVED_FOR_COMMIT
 
 ## Prepared Phase
 
@@ -45,9 +45,10 @@ the requested identity before returning `snapshot.bets` directly. This preserves
 its purchase order, and contained `SimulationBet` object identities.
 
 `None` is not an empty plan: it is a missing persisted plan and must fail closed. A stored empty
-snapshot is the only path that returns `()`. Adapter-detected direct-input and response violations
-are proposed to raise the established `SimulationValidationError`; repository and arbitrary
-exceptions emitted by the Snapshot Source propagate unchanged by object identity.
+snapshot is the only path that returns `()`. Constructor and direct-input violations are
+`ValueError`; only adapter-detected Snapshot response violations raise the established
+`SimulationValidationError`. Repository and arbitrary exceptions emitted by the Snapshot Source
+propagate unchanged by object identity.
 
 ## Approved constructor and exception boundaries
 
@@ -131,6 +132,25 @@ exception identity propagation, and dependency/package boundaries.
 | Package-root export search | `0 matches` |
 | `git diff --check` | success |
 
+## Implementation review approval
+
+The implementation review found no code corrections. The reviewed branch is
+`review/4c-2d3b1f-persisted-simulation-bet-source`; review commit
+`a1bc809 review: implement persisted simulation bet source` is pushed to its matching `origin`
+branch.
+
+The approved results are:
+
+- constructor and direct-input violations use `ValueError`;
+- the requested identity uses only the formal five fields;
+- each valid call invokes the Snapshot Source exactly once;
+- only missing, wrong-type, and identity-mismatched Snapshot responses use
+  `SimulationValidationError` with identifier `simulation_bet_plan_snapshot`;
+- the stored empty snapshot is distinct from a missing snapshot;
+- successful loads return the exact `snapshot.bets` tuple object;
+- Source exception objects propagate unchanged; and
+- prohibited dependencies and package-root export remain absent.
+
 ## Deliberately excluded
 
 - Snapshot Repository and SQLite changes.
@@ -142,5 +162,6 @@ exception identity propagation, and dependency/package boundaries.
 
 ## Git and handoff
 
-No files were staged, committed, pushed, or branch-created. `database/keiba.db` and `logs/` remain
-outside the phase scope. Awaiting implementation review and explicit commit approval.
+The review commit has been created and pushed on the review branch. `database/keiba.db` and `logs/`
+remain uncommitted and outside the phase scope. The phase is approved for the subsequent explicit
+commit integration instruction.
