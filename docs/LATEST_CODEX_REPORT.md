@@ -2,166 +2,80 @@
 
 ## Status
 
-APPROVED_FOR_COMMIT
+READY_FOR_REVIEW
 
-## Prepared Phase
+## Completed Phase
 
-Phase 4C-2d3b1f — PersistedSimulationBetSource adapter
+Phase 4C-2d3b1g — Repository-backed persisted settlement source
 
-Base commit: `eab9a03 docs: approve repository backed selection resolver`
-Branch: `feature/ver0.8-simulator`
+Base commit: `cc51822 docs: approve persisted simulation bet source`
 
-## Preparation scope
+## Changed files
 
-This preparation examined the existing `SimulationBetSource` and
-`SimulationBetPlanSnapshotSource` Protocols, `SimulationBetPlanIdentity`,
-`SimulationBetPlanSnapshot`, `SimulationRaceInput`, `StrategyIdentity`,
-`SimulationRunContext`, the SQLite Snapshot Repository read semantics, and the authoritative
-design. No production code or tests were changed.
+- `scripts/simulation/repository_backed_persisted_settlement_source.py`
+- `tests/test_repository_backed_persisted_settlement_source.py`
+- `docs/LATEST_CODEX_REPORT.md`
 
-The proposed implementation is a new non-exported
-`scripts/simulation/persisted_simulation_bet_source.py` with a dedicated test module at
-`tests/test_persisted_simulation_bet_source.py`.
-
-## Confirmed existing contracts
-
-- `SimulationBetSource.load_bets(*, race_input, strategy_identity)` returns
-  `tuple[SimulationBet, ...]` and has no run argument.
-- `SimulationBetPlanSnapshotSource.load_snapshot(*, identity)` returns either a
-  `SimulationBetPlanSnapshot` or `None`; `None` is exclusively not found.
-- A stored empty `SimulationBetPlanSnapshot` is a valid, distinct persisted plan whose `bets` is
-  the ordinary empty tuple.
-- `SimulationBetPlanIdentity` has exactly `run_id`, `race_id`, `strategy_id`,
-  `strategy_config_hash`, and timezone-aware `information_cutoff`.
-- Existing snapshot construction guarantees its immutable `bets` tuple, policy identity, budget,
-  and bet/identity invariants. The Adapter must not recalculate or reconstruct them.
-
-## Proposed identity and response behavior
-
-For every valid load, the Adapter will create exactly one identity from the fixed run, the supplied
-race input, and the supplied strategy identity, then call the Snapshot Source exactly once. It will
-verify that the returned object is `SimulationBetPlanSnapshot` and that its complete identity equals
-the requested identity before returning `snapshot.bets` directly. This preserves the tuple object,
-its purchase order, and contained `SimulationBet` object identities.
-
-`None` is not an empty plan: it is a missing persisted plan and must fail closed. A stored empty
-snapshot is the only path that returns `()`. Constructor and direct-input violations are
-`ValueError`; only adapter-detected Snapshot response violations raise the established
-`SimulationValidationError`. Repository and arbitrary exceptions emitted by the Snapshot Source
-propagate unchanged by object identity.
-
-## Approved constructor and exception boundaries
-
-The initial `run_id: str` sketch is not adopted. The approved constructor uses the existing
-`SimulationRunContext` object directly:
-
-```python
-PersistedSimulationBetSource(
-    *,
-    run_context: SimulationRunContext,
-    snapshot_source: SimulationBetPlanSnapshotSource,
-)
-```
-
-Only `run_context.run_id` participates in the requested plan identity. `dataset_id`, `started_at`,
-`target_commit_id`, strategy name, policy identity, budget, current time, and repository metadata
-do not participate. The constructor retains the exact context and Source objects, makes no Source
-call, and raises `ValueError` for a non-`SimulationRunContext` or non-callable `load_snapshot`.
-
-Invalid `race_input` or `strategy_identity` also raises `ValueError` before a Source call. Adapter-
-detected missing, wrong-type, or identity-mismatched snapshot responses raise
-`SimulationValidationError(race_input.race_id, "simulation_bet_plan_snapshot", ...)`. Source-
-emitted repository and arbitrary exceptions continue to propagate unchanged by object identity.
-
-## Resolved pre-implementation contract correction
-
-`EXECUTE_APPROVED_PHASE` verification found that `docs/CURRENT_PHASE.md` still contains the
-superseded exception wording in its Snapshot-response section: it names
-`"persisted_simulation_bet_source"` and describes `SimulationValidationError` for constructor and
-direct-input failures. The approved execution instruction instead requires `ValueError` for those
-inputs and the exact Snapshot-response identifier `"simulation_bet_plan_snapshot"`.
-
-Because `docs/CURRENT_PHASE.md` was explicitly forbidden during implementation, no production code
-or test was changed while the inconsistency was present. This correction updates the phase contract
-to the approved split: constructor and direct-input violations are `ValueError`; only missing,
-wrong-type, and identity-mismatched Snapshot responses raise
-`SimulationValidationError(..., "simulation_bet_plan_snapshot", ...)`.
-
-The approved contract and `docs/CURRENT_PHASE.md` are now aligned. The blocker was resolved before
-implementation; production code and tests remained untouched until the approved execution began.
+`docs/CURRENT_PHASE.md` was not changed during implementation.
 
 ## Implementation
 
-Added `scripts/simulation/persisted_simulation_bet_source.py` with the non-exported concrete
-`PersistedSimulationBetSource`. Its keyword-only constructor retains the exact injected
-`SimulationRunContext` and Snapshot Source, checks only the concrete run-context type and a
-callable `load_snapshot` method, and never invokes the Source.
+Added the non-exported concrete `RepositoryBackedPersistedRaceSettlementSource`. Its keyword-only
+constructor retains the original Bet Source, RaceResult Repository, and Payout Repository objects;
+it verifies only their required methods are callable and invokes none of them in the constructor.
+Constructor and direct-input violations are `ValueError`.
 
-For each valid `load_bets()` call, the adapter creates one `SimulationBetPlanIdentity` from:
+For each valid load, the Source calls `SimulationBetSource.load_bets()` exactly once with the
+original `SimulationRaceInput` and `StrategyIdentity` objects. It accepts only an exact tuple of
+`SimulationBet` objects whose race and strategy IDs match the request and whose
+`(bet_type, race_entry_ids)` identities are unique. A malformed Bet Source response fails before
+Repository access as `SimulationValidationError` with identifier `simulation_bet_source`.
 
-- `run_id`: `run_context.run_id`;
-- `race_id`: `race_input.race_id`;
-- `strategy_id`: `strategy_identity.strategy_id`;
-- `strategy_config_hash`: `strategy_identity.strategy_config_hash`; and
-- `information_cutoff`: `race_input.information_cutoff`.
+The empty tuple is a valid NO_BET plan: it produces one `PersistedRaceSettlementData` with no
+race result and no payout mapping after exactly one Bet Source call and zero Repository calls.
 
-It calls `load_snapshot(identity=...)` exactly once, validates the returned Snapshot type and full
-identity, then returns `snapshot.bets` itself without copying, rebuilding, sorting, or
-revalidating it. A stored empty snapshot is the valid NO_BET path and returns its same empty tuple.
-`None` is a missing persisted plan and fails closed.
+For non-empty bets, the Source calls the RaceResult Repository once. `None` is retained as a
+missing-result fact; wrong response type or race is rejected with identifier
+`race_result_repository`. It derives distinct purchase types in first-occurrence order, then calls
+the Payout Repository exactly once for each type with `observed_at_lte=None` and
+`require_complete=False`.
 
-Constructor and direct-input violations are `ValueError`. Adapter-detected missing, wrong-type,
-and identity-mismatched Snapshot responses are `SimulationValidationError` with the required race
-ID and `simulation_bet_plan_snapshot` identifier. Snapshot-Source repository exceptions and
-arbitrary exceptions are not caught, so their original objects propagate unchanged.
+`None` and incomplete Payout publications are both omitted from the resulting mapping. A complete,
+matching Payout publication alone is included. No complete-only fallback, retry, second lookup, or
+placeholder is used. Invalid Payout response type, race, or bet type is rejected with identifier
+`payout_repository`.
 
-Added `tests/test_persisted_simulation_bet_source.py` to cover signatures and hints, injection
-identity, zero-call invalid paths, identity construction, one-call valid loading, direct tuple and
-bet-object identity return, empty versus missing snapshots, response validation metadata, Source
-exception identity propagation, and dependency/package boundaries.
+The final bundle is constructed once from the original bet tuple, validated result, and complete
+publications. Source, Repository, and bundle-constructor exceptions are not caught, wrapped, or
+translated, so the original exception object propagates.
 
-## Verification
+## Tests
+
+The new dedicated suite covers formal signatures and hints, dependency retention, constructor and
+direct-input validation, Bet Source validation before Repository calls, NO_BET, RaceResult and
+Payout response validation, first-occurrence Payout calls, incomplete/missing/complete Payout
+handling, exact exception identity propagation, bundle exception propagation, and prohibited
+dependency/package boundaries.
 
 | Check | Result |
 | --- | --- |
-| Dedicated persisted adapter tests | `20 passed, 18 subtests passed` |
-| Related Source, Snapshot Protocol/domain, identity, run-context, and validation tests | `151 passed, 49 subtests passed` |
-| Full pytest suite | `2237 passed, 2 skipped, 641 subtests passed` |
-| Forbidden production dependency / wrapping search | `0 matches` |
-| Runtime Snapshot Source Protocol check search | `0 matches` |
+| Dedicated settlement Source tests | `16 passed, 21 subtests passed` |
+| Persisted settlement, bet Source, Repository, executor, and dedicated regressions | `160 passed, 92 subtests passed` |
+| Full pytest suite | `2253 passed, 2 skipped, 662 subtests passed` |
+| Forbidden dependency / wrapping / fallback search | `0 matches` |
+| Runtime Protocol check search | `0 matches` |
+| Repository exception import search | `0 matches` |
 | Package-root export search | `0 matches` |
-| `git diff --check` | success |
 
-## Implementation review approval
+## Excluded scope
 
-The implementation review found no code corrections. The reviewed branch is
-`review/4c-2d3b1f-persisted-simulation-bet-source`; review commit
-`a1bc809 review: implement persisted simulation bet source` is pushed to its matching `origin`
-branch.
-
-The approved results are:
-
-- constructor and direct-input violations use `ValueError`;
-- the requested identity uses only the formal five fields;
-- each valid call invokes the Snapshot Source exactly once;
-- only missing, wrong-type, and identity-mismatched Snapshot responses use
-  `SimulationValidationError` with identifier `simulation_bet_plan_snapshot`;
-- the stored empty snapshot is distinct from a missing snapshot;
-- successful loads return the exact `snapshot.bets` tuple object;
-- Source exception objects propagate unchanged; and
-- prohibited dependencies and package-root export remain absent.
-
-## Deliberately excluded
-
-- Snapshot Repository and SQLite changes.
-- Schema and migration changes.
-- BetPlan Builder and RaceEntry Resolver wiring.
-- Persisted executor and settlement changes.
-- Provider, Pipeline, Simulator, CLI, cache, package-root export, production composition, and
-  integration tests.
+No Protocol, model, bundle, SQLite Repository, schema, migration, executor, Provider, raw Source,
+Builder, Resolver, Simulator, Pipeline, CLI, composition, cache, retry, logging, or package-root
+export was changed. `target_race_count` was not added.
 
 ## Git and handoff
 
-The review commit has been created and pushed on the review branch. `database/keiba.db` and `logs/`
-remain uncommitted and outside the phase scope. The phase is approved for the subsequent explicit
-commit integration instruction.
+`git diff --check` will be rerun after this report update. No files were staged, committed, pushed,
+or branch-created. `database/keiba.db` and `logs/` remain outside the phase scope.
+
+Awaiting implementation review and explicit commit approval.

@@ -6,11 +6,11 @@ APPROVED_FOR_CODEX
 
 ## Phase
 
-Phase 4C-2d3b1f — PersistedSimulationBetSource adapter
+Phase 4C-2d3b1g — Repository-backed persisted settlement source
 
 ## Base Commit
 
-`eab9a03 docs: approve repository backed selection resolver`
+`cc51822 docs: approve persisted simulation bet source`
 
 ## Branch
 
@@ -18,168 +18,224 @@ Phase 4C-2d3b1f — PersistedSimulationBetSource adapter
 
 ## Objective
 
-Implement a concrete, non-exported `PersistedSimulationBetSource` that structurally satisfies the
-existing `SimulationBetSource` Protocol by loading one immutable
-`SimulationBetPlanSnapshot` through `SimulationBetPlanSnapshotSource` and returning its already
-persisted bet tuple without recomputation or reconstruction.
+Implement the concrete `RepositoryBackedPersistedRaceSettlementSource` at
+`scripts/simulation/repository_backed_persisted_settlement_source.py`. It structurally implements
+the existing `PersistedRaceSettlementSource` by composing the existing `SimulationBetSource`,
+`RaceResultRepository`, and `PayoutRepository` into one validated
+`PersistedRaceSettlementData` value.
 
 ## Allowed Files
 
-- `scripts/simulation/persisted_simulation_bet_source.py`
-- `tests/test_persisted_simulation_bet_source.py`
+- `scripts/simulation/repository_backed_persisted_settlement_source.py`
+- `tests/test_repository_backed_persisted_settlement_source.py`
 - `docs/LATEST_CODEX_REPORT.md`
 
-## Forbidden Files
+`docs/CURRENT_PHASE.md` is not an implementation change target.
 
-- `AGENTS.md`
-- `docs/CURRENT_PHASE.md` after approval and during implementation
-- `docs/VER0.8_SIMULATOR_DESIGN.md`
-- `scripts/simulation/bet_source.py`
-- `scripts/simulation/bet_plan_snapshot_repository.py`
-- `scripts/simulation/bet_plan_identity.py`
-- `scripts/simulation/bet_plan_snapshot.py`
-- `scripts/simulation/models.py`
-- `scripts/simulation/repositories/sqlite_bet_plan_snapshot_repository.py`
-- `scripts/simulation/bet_plan_builder.py`
-- `scripts/simulation/repository_backed_selection_resolver.py`
-- `scripts/simulation/persisted_executor.py`
+## Forbidden Files and Scope
+
+- `AGENTS.md`, `docs/CURRENT_PHASE.md`, and `docs/VER0.8_SIMULATOR_DESIGN.md`
 - `scripts/simulation/persisted_settlement.py`
-- package `__init__.py` files and package-root exports
+- `scripts/simulation/persisted_simulation_bet_source.py`
+- `scripts/simulation/persisted_executor.py`
+- `scripts/simulation/bet_source.py`
+- `scripts/simulation/repositories/interfaces.py`
+- concrete SQLite repositories, schema, migrations, database, and `logs/`
+- Provider, raw Source, Builder, Resolver, Simulator, Pipeline, CLI, production composition,
+  integration tests, package-root export, cache, retry, and logging
 - all other production code and tests
-- schema, migrations, database, Pipeline, CLI, production composition, and `logs/`
 
-## Proposed Contract
-
-### Constructor and dependency choice
-
-The constructor uses the existing, fully validated `SimulationRunContext`, not a bare `run_id`.
-The fixed context prevents run-ID regeneration and keeps dataset/commit provenance available for
-future composition. The approved API is:
+## Formal API
 
 ```python
-class PersistedSimulationBetSource:
+class RepositoryBackedPersistedRaceSettlementSource:
     def __init__(
         self,
         *,
-        run_context: SimulationRunContext,
-        snapshot_source: SimulationBetPlanSnapshotSource,
+        bet_source: SimulationBetSource,
+        race_result_repository: RaceResultRepository,
+        payout_repository: PayoutRepository,
     ) -> None:
         ...
 
-    def load_bets(
+    def load_settlement_data(
         self,
         *,
         race_input: SimulationRaceInput,
         strategy_identity: StrategyIdentity,
-    ) -> tuple[SimulationBet, ...]:
+    ) -> PersistedRaceSettlementData:
         ...
 ```
 
-The constructor is keyword-only, stores the exact injected `run_context` and Snapshot Source,
-does not call the Source, and validates that `run_context` is `SimulationRunContext` and
-`snapshot_source.load_snapshot` is callable. Each constructor violation raises `ValueError`.
-It must not use runtime `isinstance` checks against the non-runtime-checkable Snapshot Source
-Protocol, create a synthetic `race_id=0`, raise `SimulationValidationError`, or trim, normalize,
-or regenerate any run field.
+## Constructor and direct-input validation
 
-### Requested snapshot identity
+The keyword-only constructor validates only that the following dependency methods are callable:
 
-For a valid `load_bets()` call, construct exactly one new `SimulationBetPlanIdentity` from existing
-values without trimming, normalizing, or recomputing any field:
+- `bet_source.load_bets`
+- `race_result_repository.get_race_result`
+- `payout_repository.get_latest_payout_publication`
 
-| Identity field | Source |
-| --- | --- |
-| `run_id` | `self._run_context.run_id` |
-| `race_id` | `race_input.race_id` |
-| `strategy_id` | `strategy_identity.strategy_id` |
-| `strategy_config_hash` | `strategy_identity.strategy_config_hash` |
-| `information_cutoff` | `race_input.information_cutoff` |
+Each constructor violation raises `ValueError`. Do not runtime-check the non-runtime-checkable
+Protocols, inspect signatures, invoke test calls, wrap/copy dependencies, retain a Repository
+exception class in the production module, or call a dependency in the constructor. Retain each
+injected object by identity.
 
-The Adapter validates concrete `SimulationRaceInput` and `StrategyIdentity` input before calling
-the Snapshot Source. Each direct-input violation raises `ValueError` and makes zero Source calls.
-For each valid input, it calls
-`snapshot_source.load_snapshot(identity=requested_identity)` exactly once with that identity. It
-does not retain an identity cache, mutate either input, create a run ID, access current time, or
-perform a second lookup.
+`load_settlement_data()` accepts only concrete `SimulationRaceInput` and `StrategyIdentity`.
+Each direct-input violation raises `ValueError` and makes zero Bet Source, RaceResult Repository,
+and Payout Repository calls.
 
-### Snapshot-response and exception policy
+## Formal processing flow
 
-`None` has the existing Snapshot Source meaning of **not found**, not an empty plan. It must fail
-closed as
-`SimulationValidationError(race_input.race_id, "simulation_bet_plan_snapshot", ...)`. The same
-established simulation-boundary exception applies only to an Adapter-detected non-
-`SimulationBetPlanSnapshot` response or a snapshot whose `identity != requested_identity`.
+1. Call the Bet Source exactly once for valid direct inputs:
 
-Constructor violations (`run_context` not `SimulationRunContext`, or a non-callable Snapshot Source
-method) and direct `load_bets()` input violations (`race_input` not `SimulationRaceInput`, or
-`strategy_identity` not `StrategyIdentity`) raise `ValueError`. They do not call the Snapshot
-Source. The Adapter never uses `"persisted_simulation_bet_source"` as a validation identifier.
+   ```python
+   bets = bet_source.load_bets(
+       race_input=race_input,
+       strategy_identity=strategy_identity,
+   )
+   ```
 
-The equality check covers all five identity fields, including `run_id`, race, strategy ID, strategy
-config hash, and cutoff. It is value equality rather than identity equality; timezone-aware datetime
-equality therefore preserves the persisted identity instant without requiring display-offset equality.
+   Pass the original `race_input` and `strategy_identity` objects. Do not catch, wrap, retry, or
+   translate a Bet Source exception.
+2. Before any Repository call, validate that `bets` is exactly a `tuple`; every item is a
+   `SimulationBet`; every bet has the requested race and strategy IDs; and every
+   `(bet_type, race_entry_ids)` identity is unique. A violation raises:
 
-Exceptions raised by `snapshot_source.load_snapshot()`, including `RepositoryValidationError`,
-`RepositoryDataIntegrityError`, `RepositoryConflictError`, and arbitrary unexpected exceptions,
-propagate unchanged. The Adapter must not catch, wrap, translate, or create a replacement exception
-for a Source failure.
+   ```python
+   SimulationValidationError(
+       race_input.race_id,
+       "simulation_bet_source",
+       reason,
+   )
+   ```
 
-### Returned bets and empty plans
+   Do not rebuild the tuple or bets, sort, alter stake/rank/selection/cutoff, or make a Repository
+   call after a malformed Bet Source response.
+3. If `bets == ()`, return the normal NO_BET bundle:
 
-After type and full identity validation, return `snapshot.bets` directly. Do not call `tuple()`,
-copy, sort, validate individual bets, recalculate policy/budget/stake, rebuild `SimulationBet`, or
-otherwise normalize snapshot content. Direct return preserves the snapshot tuple object, bet order,
-and every contained bet object identity.
+   ```python
+   PersistedRaceSettlementData(
+       race_id=race_input.race_id,
+       bets=bets,
+       race_result=None,
+       payout_publications_by_bet_type={},
+   )
+   ```
 
-An existing snapshot with `bets == ()` is the persisted, valid NO_BET plan and returns the same
-empty tuple. It is distinct from a missing snapshot (`None`), which fails closed.
+   This path makes exactly one Bet Source call and zero Repository calls.
+4. For non-empty bets, call
+   `race_result_repository.get_race_result(race_input.race_id)` exactly once. `None` is valid and
+   means an absent persisted result. A non-`None` response must be `PersistedRaceResult` with the
+   requested race ID, otherwise raise:
 
-### Dependency boundaries
+   ```python
+   SimulationValidationError(
+       race_input.race_id,
+       "race_result_repository",
+       reason,
+   )
+   ```
 
-The module may depend only on the two Protocol/domain snapshot modules, `SimulationRunContext`,
-`SimulationRaceInput`, `StrategyIdentity`, `SimulationBet`, `SimulationValidationError`, and
-ordinary Python typing. It must not import a concrete SQLite repository or SQLite, Provider,
-Prediction, Builder, Resolver, Settlement, Simulator, Pipeline, CLI, network, time, cache, schema,
-or migration module. It is not package-root exported and is not a production composition root.
+   Repository exceptions propagate as their original exception object.
+5. Derive required bet types in first-occurrence order only:
+
+   ```python
+   required_bet_types = tuple(dict.fromkeys(bet.bet_type for bet in bets))
+   ```
+
+   Do not sort, recreate bets, request unpurchased types, or alter the order.
+6. For each distinct required type, call the Payout Repository exactly once:
+
+   ```python
+   publication = payout_repository.get_latest_payout_publication(
+       race_id=race_input.race_id,
+       bet_type=bet_type,
+       observed_at_lte=None,
+       require_complete=False,
+   )
+   ```
+
+   Prediction cutoff must not be supplied as `observed_at_lte`; settlement data is not bounded by
+   the prediction timeline. Do not use `require_complete=True` or make a second fallback lookup.
+7. For a non-`None` Payout response, require `PayoutPublication`, the requested race ID, and the
+   requested bet type. A violation raises:
+
+   ```python
+   SimulationValidationError(
+       race_input.race_id,
+       "payout_repository",
+       reason,
+   )
+   ```
+
+   A `None` response is an absent payout fact. An incomplete response (`is_complete is False`) is
+   also omitted from the mapping; do not retain it, re-query a complete publication, create a
+   placeholder, or convert it to `None` through a fallback. Only a complete response is stored in
+   the mapping under its requested bet type.
+8. After all response checks, construct exactly one bundle:
+
+   ```python
+   PersistedRaceSettlementData(
+       race_id=race_input.race_id,
+       bets=bets,
+       race_result=race_result,
+       payout_publications_by_bet_type=publications,
+   )
+   ```
+
+   Preserve the Bet Source tuple and contained bet object identities. Do not catch, wrap, or
+   translate an exception raised by the bundle constructor.
+
+## Exception and dependency policy
+
+- Constructor and direct-input violations: `ValueError`.
+- Malformed Bet Source response: `SimulationValidationError` identifier `simulation_bet_source`.
+- Malformed RaceResult response: `SimulationValidationError` identifier `race_result_repository`.
+- Malformed Payout response: `SimulationValidationError` identifier `payout_repository`.
+- Existing bundle validation errors and all dependency exceptions propagate unchanged by object
+  identity.
+- Do not add DB/SQLite, SQL, raw conversion, Provider, time, cache, retry, logging, Executor,
+  Simulator, Builder, Resolver, Pipeline, CLI, network, package-root export, or
+  `target_race_count` dependencies.
 
 ## Required Tests
 
-The new dedicated test file must cover at least:
+Create a dedicated test module covering at least:
 
-- constructor and `SimulationBetSource` signature/type-hint compatibility;
-- full `SimulationRunContext` injection, with no bare-run-ID constructor alternative;
-- invalid `run_context` and non-callable Snapshot Source as `ValueError`, and no constructor-time
-  Snapshot Source call;
-- direct `SimulationRaceInput` and `StrategyIdentity` validation with zero Source calls on invalid
-  inputs and `ValueError` results;
-- construction of each requested identity field from the prescribed object and field;
-- exactly one Snapshot Source call for a valid input, including identity value equality;
-- snapshot type and complete identity validation, including mismatches in each identity field;
-- successful direct return of the original bet tuple, preserving tuple, bet order, and bet object
-  identity;
-- a persisted empty snapshot returning its empty tuple and `None` failing closed distinctly;
-- `SimulationValidationError` for Adapter-detected violations;
-- unchanged object-identity propagation of repository and arbitrary Source exceptions;
-- no policy, budget, stake, or bet recomputation/reconstruction;
-- no DB, SQLite, Builder, Resolver, Settlement, Provider, Pipeline, CLI, network, current-time,
-  cache, package-root export, schema, or migration dependency.
+- constructor and `PersistedRaceSettlementSource` signature/type-hint compatibility;
+- callable-only constructor validation, no runtime Protocol checks, no constructor calls, and
+  dependency identity retention;
+- invalid direct inputs with zero calls to all dependencies;
+- one Bet Source call with original argument objects and dependency exception identity propagation;
+- malformed Bet Source tuple/type/race/strategy/duplicate identity cases, each with zero
+  Repository calls and the `simulation_bet_source` identifier;
+- normal NO_BET bundle with zero Repository calls;
+- non-empty one RaceResult lookup and one Payout lookup per distinct type;
+- first-occurrence type order, no unpurchased type, and no bet reconstruction/sort;
+- RaceResult normal `None`, malformed type, and wrong-race cases;
+- Payout normal `None`, malformed type, wrong race/type, exact keyword arguments, and exception
+  identity propagation;
+- complete-only mapping behavior, incomplete omission, no fallback, and no re-query;
+- exact bundle construction, tuple/bet identity preservation, and unchanged bundle exceptions;
+- absence of prohibited dependencies, package export, and `target_race_count`.
 
 Run after implementation:
 
 ```text
-python -m pytest tests/test_persisted_simulation_bet_source.py -q
-python -m pytest tests/test_simulation_bet_source_contract.py tests/test_simulation_bet_plan_snapshot_repository_contract.py tests/test_simulation_bet_plan_snapshot.py tests/test_persisted_simulation_bet_source.py -q
+python -m pytest tests/test_repository_backed_persisted_settlement_source.py -q
+python -m pytest tests/test_persisted_settlement_contract.py tests/test_persisted_simulation_bet_source.py tests/test_simulation_repositories.py tests/test_persisted_race_simulation_executor.py tests/test_repository_backed_persisted_settlement_source.py -q
 python -m pytest -q
 git diff --check
 git status --short
 ```
 
-Also search the implementation and dedicated tests for concrete SQLite, Source-exception wrapping,
-Builder, Resolver, Settlement, cache, and composition dependencies.
+Also search the implementation and dedicated tests for runtime Protocol checks, concrete SQLite,
+Provider, raw conversion, cache/retry, exception wrapping, fallback Payout lookup, package-root
+export, and `target_race_count`.
 
 ## Stop Condition
 
-Stop and report without implementation if the required fail-closed exception policy requires a new
-exception or a change to existing Protocols/models, if a Snapshot Repository or SQLite change is
-needed, if Builder/Resolver/Executor composition becomes necessary, if tests fail outside scope, or
-if Git status contains unexpected files. Do not stage, commit, or push during this phase.
+Stop and report if implementation requires a change to a Protocol, model, bundle contract, SQLite
+repository, schema, migration, executor, or composition boundary; if a required error policy cannot
+be implemented within the allowed files; if an out-of-scope test fails; or if Git contains
+unexpected files. Do not stage, commit, push, create a review branch, or begin a subsequent phase.
