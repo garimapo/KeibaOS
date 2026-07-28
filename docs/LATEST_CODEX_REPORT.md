@@ -2,100 +2,112 @@
 
 ## Status
 
-APPROVED_FOR_COMMIT
+READY_FOR_REVIEW
 
 ## Completed Phase
 
-Phase 4C-2d3b1g — Repository-backed persisted settlement source
+Phase 4C-2d3b1h — Persisted simulation composition and integration
 
-Base commit: `cc51822 docs: approve persisted simulation bet source`
+Base commit: `46d1d74 docs: approve repository backed persisted settlement source`
 
-## Changed files
+## Changed Files
 
-- `scripts/simulation/repository_backed_persisted_settlement_source.py`
-- `tests/test_repository_backed_persisted_settlement_source.py`
+- `tests/test_persisted_simulation_integration.py` (new)
 - `docs/LATEST_CODEX_REPORT.md`
 
+No production file, existing test, schema, migration, Protocol, model, Repository, Executor,
+Simulator, Pipeline, CLI, composition factory, or package-root export was changed.
 `docs/CURRENT_PHASE.md` was not changed during implementation.
 
-## Implementation
+## Integration Fixture
 
-Added the non-exported concrete `RepositoryBackedPersistedRaceSettlementSource`. Its keyword-only
-constructor retains the original Bet Source, RaceResult Repository, and Payout Repository objects;
-it verifies only their required methods are callable and invokes none of them in the constructor.
-Constructor and direct-input violations are `ValueError`.
+Each test creates and closes its own `sqlite3.connect(":memory:")` connection. It creates only the
+approved parent `races` and `horses` schema, seeds fixed race/horse IDs, commits, invokes the
+registered `apply_migrations(connection)` exactly once with no active transaction, then constructs
+the existing SQLite components over that same connection. The migration audit timestamp is neither
+patched nor asserted.
 
-For each valid load, the Source calls `SimulationBetSource.load_bets()` exactly once with the
-original `SimulationRaceInput` and `StrategyIdentity` objects. It accepts only an exact tuple of
-`SimulationBet` objects whose race and strategy IDs match the request and whose
-`(bet_type, race_entry_ids)` identities are unique. A malformed Bet Source response fails before
-Repository access as `SimulationValidationError` with identifier `simulation_bet_source`.
+All simulation-domain times are fixed and timezone-aware. The fixture keeps run start, prediction
+cutoff, scheduled start, result/payout finalized times, and repository observed times distinct.
+It does not use `datetime.now()`, `date.today()`, a real DB, a copied user DB, external I/O, or a
+mock/fake core Repository.
 
-The empty tuple is a valid NO_BET plan: it produces one `PersistedRaceSettlementData` with no
-race result and no payout mapping after exactly one Bet Source call and zero Repository calls.
+## Real Component Composition
 
-For non-empty bets, the Source calls the RaceResult Repository once. `None` is retained as a
-missing-result fact; wrong response type or race is rejected with identifier
-`race_result_repository`. It derives distinct purchase types in first-occurrence order, then calls
-the Payout Repository exactly once for each type with `observed_at_lte=None` and
-`require_complete=False`.
+The test composes the approved existing path directly:
 
-`None` and incomplete Payout publications are both omitted from the resulting mapping. A complete,
-matching Payout publication alone is included. No complete-only fallback, retry, second lookup, or
-placeholder is used. Invalid Payout response type, race, or bet type is rejected with identifier
-`payout_repository`.
+```text
+FixedStakeBetAllocator
+→ SQLiteRaceEntrySource
+→ RepositoryBackedRaceEntrySelectionResolver
+→ SimulationBetPlanBuilder
+→ SQLiteSimulationBetPlanSnapshotRepository
+→ PersistedSimulationBetSource
+→ RepositoryBackedPersistedRaceSettlementSource
+→ PersistedRaceSimulationExecutor
+→ Simulator.run()
+→ SimulationSummary
+```
 
-The final bundle is constructed once from the original bet tuple, validated result, and complete
-publications. Source, Repository, and bundle-constructor exceptions are not caught, wrapped, or
-translated, so the original exception object propagates.
+Each plan identity uses only the run context run ID, race input race ID and information cutoff, and
+strategy identity strategy ID/config hash. Fixed-stake allocation uses the approved policy
+`fixed_stake_per_recommendation` version `1` with a 100-yen stake. Prediction horse IDs are passed
+through the real SQLite Source and concrete Resolver before snapshot construction.
 
-## Tests
+Every snapshot, including the NO_BET case, follows the formal `BetPlan → Allocator → Builder →
+save_snapshot()` path. The test immediately reloads it and verifies equality by value: identity,
+policy identity, budget, bet count/order/type/stake/rank/selection, and cutoff. It intentionally
+does not assert object identity across a SQLite round trip.
 
-The new dedicated suite covers formal signatures and hints, dependency retention, constructor and
-direct-input validation, Bet Source validation before Repository calls, NO_BET, RaceResult and
-Payout response validation, first-occurrence Payout calls, incomplete/missing/complete Payout
-handling, exact exception identity propagation, bundle exception propagation, and prohibited
-dependency/package boundaries.
+## Covered Outcomes
+
+One four-race `Simulator.run()` proves the full persisted path:
+
+| Race | Persisted facts | Result |
+| --- | --- | --- |
+| 101 | Saved one-bet plan, complete result, complete winning payout of 300 per 100 | `SETTLED`, investment 100, payout 300, profit 200, one hit |
+| 102 | Saved one-bet plan, complete result, complete payout table without the purchased selection | `SETTLED`, investment 100, payout 0, profit -100, no hit |
+| 103 | Saved empty plan header | `NO_BET` without result/payout data |
+| 104 | Saved one-bet plan, complete result, latest payout publication incomplete | `UNSETTLED` with `missing_payout_publication` |
+
+The incomplete Race 104 publication has no complete fallback and receives no re-query. The
+repository-backed settlement Source omits it from the mapping; the existing executor produces the
+UNSETTLED result.
+
+The resulting summary confirms `race_count=4`, settled/no-bet/unsettled counts `2/1/1`, three
+planned bets, two settled bets, one hit bet/race, investment 200, payout 300, profit 100,
+`Decimal("150")` ROI, `Decimal("50")` bet/race hit rates, and maximum drawdown 100 using the
+existing `(settled_at, race_id)` order. The used bet type summary confirms its count, settled
+count, hit count, investment, payout, profit, ROI, and hit rate.
+
+The suite also covers a saved non-empty snapshot with no RaceResult, yielding `UNSETTLED` with
+`missing_race_result`, retained planned investment, and unset settled amounts. Finally, it confirms
+that valid differences in run ID, race ID, information cutoff, or StrategyIdentity fail closed as
+`SimulationValidationError(input_identifier="simulation_bet_plan_snapshot")`, rather than
+silently becoming NO_BET.
+
+## Verification
 
 | Check | Result |
 | --- | --- |
-| Dedicated settlement Source tests | `16 passed, 21 subtests passed` |
-| Persisted settlement, bet Source, Repository, executor, and dedicated regressions | `160 passed, 92 subtests passed` |
-| Full pytest suite | `2253 passed, 2 skipped, 662 subtests passed` |
-| Forbidden dependency / wrapping / fallback search | `0 matches` |
-| Runtime Protocol check search | `0 matches` |
-| Repository exception import search | `0 matches` |
-| Package-root export search | `0 matches` |
+| Dedicated integration test | `3 passed, 4 subtests passed` |
+| Related component, SQLite Repository, migration, executor, Simulator, and Summary regressions | `507 passed, 228 subtests passed` |
+| Full pytest suite | `2256 passed, 2 skipped, 666 subtests passed` |
+| Forbidden-pattern search in new integration test | `0 matches` |
+| `git diff --check` | passed |
 
-## Excluded scope
+The related command covered FixedStakeBetAllocator/BetAllocationPlan, Builder, SQLiteRaceEntrySource,
+the concrete Resolver, SQLite Snapshot Repository, Persisted Bet Source, repository-backed
+settlement Source, Persisted Executor, Simulator/Summary, SQLite RaceResult/Payout repositories,
+and migration runner tests.
 
-No Protocol, model, bundle, SQLite Repository, schema, migration, executor, Provider, raw Source,
-Builder, Resolver, Simulator, Pipeline, CLI, composition, cache, retry, logging, or package-root
-export was changed. `target_race_count` was not added.
+## Excluded Scope
 
-## Git and handoff
+No production composition API, factory, wrapper, cache, retry, logging, Provider, network,
+Pipeline, CLI, settings JSON, schema/migration change, package-root export, or
+`target_race_count` was added. `database/keiba.db` and `logs/` remain outside this phase.
 
-Implementation review was approved with no requested code changes. Review branch
-`review/4c-2d3b1g-repository-backed-persisted-settlement-source` was pushed to origin with review
-commit `63291ee review: implement repository backed persisted settlement source`.
+## Git and Handoff
 
-The approved contract confirms the following:
-
-- constructor and direct-input violations are `ValueError`;
-- malformed Bet Source responses use `SimulationValidationError(identifier="simulation_bet_source")`;
-- malformed RaceResult responses use `SimulationValidationError(identifier="race_result_repository")`;
-- malformed Payout responses use `SimulationValidationError(identifier="payout_repository")`;
-- each valid input calls the Bet Source once; NO_BET calls both Repositories zero times; non-empty
-  bets call the RaceResult Repository once and the Payout Repository once per distinct required type;
-- required payout types preserve first-occurrence order and use `observed_at_lte=None` with
-  `require_complete=False`;
-- missing (`None`) and incomplete publications are omitted, while only complete publications are
-  stored, without fallback, retry, or re-query;
-- the original bets tuple, bet order, and bet object identities are preserved; and
-- Source, Repository, and bundle exceptions propagate as the same exception objects.
-
-The prohibited-dependency and package-export boundaries, plus the dedicated, related, and full
-pytest results above, remain approved. `database/keiba.db` and `logs/` remain outside the commit.
-
-This approval commit is pending integration of the reviewed branch into
-`feature/ver0.8-simulator`.
+No file is staged, committed, pushed, or placed on a review branch. The phase is ready for review
+and explicit commit approval.
