@@ -4,76 +4,93 @@
 
 READY_FOR_REVIEW
 
-## Activity
+## Completed Phase
 
-KeibaOS Codex handoff workflow maintenance
+Phase 4C-2d3b1e2 — SQLite RaceEntrySource implementation
 
-## Updated files
+Base commit: `fa51ab8 chore: automate codex phase handoff`
+Branch: `feature/ver0.8-simulator`
 
-- `AGENTS.md`
-- `docs/CURRENT_PHASE.md`
+## Changed files
+
+- `scripts/simulation/repositories/sqlite_race_entry_source.py`
+- `tests/test_sqlite_race_entry_source.py`
 - `docs/LATEST_CODEX_REPORT.md`
 
-## New command-driven workflow
+`docs/CURRENT_PHASE.md` remains `APPROVED_FOR_CODEX` intentionally: the approved phase marks it
+as excluded from implementation-time changes.
 
-### Prepare
+## Implementation
 
-`PREPARE_PHASE <phase ID>` is documentation and scope preparation only. Codex reads the
-working agreement, simulator design, latest report, and current Git state; researches the
-requested phase; writes a `DRAFT_FOR_REVIEW` phase document and preparation report; then
-stops. It must not change production code or tests, run implementation work, stage, commit,
-or push.
+`SQLiteRaceEntrySource` is a slotted, connection-injected concrete implementation of the
+existing `RaceEntrySource` method signature. Its constructor accepts only `sqlite3.Connection`,
+retains the exact connection object, enables and verifies foreign keys, and raises existing
+`RepositoryValidationError` for invalid or unusable connections.
 
-### Review approval
+For each valid request, `load_race_entry_id_map()`:
 
-`APPROVE_PHASE` carries either corrections or `NONE`. Codex applies the specified corrections
-to `docs/CURRENT_PHASE.md`, changes status to `APPROVED_FOR_CODEX`, and waits for the separate
-execution command. It does not implement code or tests at this step.
+- validates a positive non-`bool` race ID and a non-empty ordinary `Sequence` of unique, positive
+  non-`bool` horse IDs, raising `RepositoryValidationError` for direct-input errors;
+- copies the caller sequence without mutation;
+- executes one parameter-bound batch `SELECT` against `horses` constrained by `race_id` and the
+  requested IDs;
+- reconstructs `prediction_horse_id -> race_entry_id` in requested-ID order, independent of SQL
+  row order;
+- returns partial or empty mappings for missing IDs, wrong-race IDs, and nonexistent races;
+- fail-closes contradictory, duplicate, malformed, or schema-inconsistent rows with existing
+  `RepositoryDataIntegrityError`; and
+- propagates unexpected SQLite operational failures unchanged.
 
-### Execution
+The Source does not issue an identity mapping without the race-scoped lookup. It performs no
+separate race lookup, horse-by-horse N+1 query, write, transaction management, connection close
+or reconfiguration, cache, schema/migration action, package-root export, Resolver, Builder,
+adapter, Pipeline, CLI, network, or current-time work.
 
-`EXECUTE_APPROVED_PHASE` may execute only after verifying that the phase document is
-`APPROVED_FOR_CODEX`, its Phase/Base Commit/Branch match current Git state, and its Allowed
-Files, Forbidden Files, Required Tests, and Stop Condition are complete. Otherwise Codex stops
-without implementation.
+## Tests
 
-## Status vocabulary
+The new dedicated suite verifies constructor/foreign-key behavior, exact Protocol signature and
+type hints, direct-input validation, input immutability, requested-order mapping, partial/empty
+absence mappings, one batch query, active transaction preservation, no writes/close, malformed
+row handling, schema integrity handling, duplicate/extra mapping rejection, unexpected SQLite
+error propagation, dependency boundaries, no cache, no package export, and no
+`target_race_count`.
 
-Only these statuses are valid for `docs/CURRENT_PHASE.md`:
-
-```text
-WAITING_FOR_PHASE_INSTRUCTION
-DRAFT_FOR_REVIEW
-APPROVED_FOR_CODEX
-READY_FOR_REVIEW
-APPROVED_FOR_COMMIT
-```
-
-## Current reset state
-
-`docs/CURRENT_PHASE.md` is reset to:
-
-```text
-Status: WAITING_FOR_PHASE_INSTRUCTION
-Phase: NOT_SET
-Base Commit: b7e142e
-Branch: feature/ver0.8-simulator
-Allowed Files: None
-```
-
-No next implementation phase is authorized.
-
-## Safety preserved
-
-- Explicit approval remains mandatory before staging, committing, or pushing.
-- `database/keiba.db`, `logs/`, and all contents under `logs/` remain permanently excluded from staging and commits.
-- The permanent bans on `git add .`, `git add -A`, `git commit -a`, clean, reset, restore, stash, amend, rebase, and force push remain in force.
-- The domain invariants including `SimulationSummary.race_count` and no `target_race_count` remain documented in `AGENTS.md`.
+One fixture defect was found and corrected during testing: its initial in-memory row insertion
+left a write transaction open, which prevented SQLite from enabling foreign keys. Committing the
+fixture setup restored the intended constructor contract; production behavior was unchanged.
 
 ## Verification
 
-No production code or test was changed, so pytest was not rerun. `git diff --check` succeeds.
-The final working tree contains only the three workflow documents plus the pre-existing
-`database/keiba.db` modification and untracked `logs/` directory.
+| Check | Result |
+| --- | --- |
+| SQLiteRaceEntrySource dedicated tests | `32 passed, 18 subtests passed` |
+| RaceEntrySource Protocol + dedicated tests | `48 passed, 18 subtests passed` |
+| Snapshot SQLite repository + Source regressions | `72 passed, 55 subtests passed` |
+| Full pytest suite | `2182 passed, 2 skipped, 592 subtests passed` |
 
-Stage, commit, and push were not performed. Review is required before any further action.
+Search checks:
+
+- Tracked `git grep` does not yet list the new untracked concrete Source; worktree `rg` confirms
+  exactly one `SQLiteRaceEntrySource` definition and one `FROM horses AS h` query in the new
+  production module.
+- The new production module has no `sqlite3.connect`, Resolver, Builder, adapter, transaction,
+  connection-close, cache, or `target_race_count` reference.
+
+## Scope deliberately not implemented
+
+- Repository-backed `RaceEntrySelectionResolver`.
+- Builder connection.
+- `PersistedSimulationBetSource`.
+- Schema or migration changes.
+- Pipeline, CLI, package-root export, and composition wiring.
+
+## Git and handoff
+
+`database/keiba.db` and `logs/` were not operated on. Stage, commit, and push were not performed.
+Expected commit candidates after review:
+
+- `scripts/simulation/repositories/sqlite_race_entry_source.py`
+- `tests/test_sqlite_race_entry_source.py`
+- `docs/LATEST_CODEX_REPORT.md`
+
+No blockers remain. Review is required before commit approval.
