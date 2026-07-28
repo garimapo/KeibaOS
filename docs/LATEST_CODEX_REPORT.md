@@ -2,7 +2,7 @@
 
 ## Status
 
-READY_FOR_REVIEW
+APPROVED_FOR_COMMIT
 
 ## Completed Phase
 
@@ -109,5 +109,28 @@ Pipeline, CLI, settings JSON, schema/migration change, package-root export, or
 
 ## Git and Handoff
 
-No file is staged, committed, pushed, or placed on a review branch. The phase is ready for review
-and explicit commit approval.
+Review branch `review/4c-2d3b1h-persisted-simulation-integration` was pushed to origin with
+review commit `eb01cfb review: add persisted simulation integration tests`. GitHub implementation
+review approved the change with no requested code correction.
+
+The approved outcome confirms that production remains unchanged, direct composition inside the
+integration test is the adopted approach, and only `:memory:` SQLite is used. The real path reaches
+`SimulationSummary` through FixedStakeBetAllocator, SQLiteRaceEntrySource,
+RepositoryBackedRaceEntrySelectionResolver, SimulationBetPlanBuilder,
+SQLiteSimulationBetPlanSnapshotRepository, PersistedSimulationBetSource,
+RepositoryBackedPersistedRaceSettlementSource, PersistedRaceSimulationExecutor, and
+`Simulator.run()`.
+
+Approval covers the saved NO_BET snapshot path, settled winning and losing paths, incomplete Payout
+to `missing_payout_publication` UNSETTLED, missing RaceResult to `missing_race_result` UNSETTLED,
+and natural identity mismatch fail-closed as
+`SimulationValidationError(input_identifier="simulation_bet_plan_snapshot")`. The approved
+four-race summary values are: `race_count=4`, `settled_race_count=2`,
+`no_bet_race_count=1`, `unsettled_race_count=1`, `void_race_count=0`, `error_race_count=0`,
+`unsupported_race_count=0`, `settled_purchase_race_count=2`, `bet_count=3`,
+`settled_bet_count=2`, `hit_bet_count=1`, `hit_race_count=1`, investment 200, payout 300,
+profit 100, `Decimal("150")` ROI, `Decimal("50")` bet/race hit rates, and maximum drawdown 100.
+
+The dedicated, related, full-suite, forbidden-pattern, and `git diff --check` results above remain
+approved. `database/keiba.db` and `logs/` remain outside the commit. The review commit and its
+approval are ready for fast-forward integration into `feature/ver0.8-simulator`.
