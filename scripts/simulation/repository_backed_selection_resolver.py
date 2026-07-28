@@ -15,7 +15,7 @@ class RepositoryBackedRaceEntrySelectionResolver:
 
     def __init__(self, *, race_entry_source: RaceEntrySource) -> None:
         source_method = getattr(race_entry_source, "load_race_entry_id_map", None)
-        if isinstance(race_entry_source, type) or not callable(source_method):
+        if not callable(source_method):
             raise ValueError("race_entry_source must provide a callable load_race_entry_id_map method")
         self._race_entry_source = race_entry_source
 
@@ -30,8 +30,7 @@ class RepositoryBackedRaceEntrySelectionResolver:
             race_id=race_id,
             horse_ids=requested_horse_ids,
         )
-        self._validate_mapping(mapping=mapping, requested_horse_ids=requested_horse_ids)
-        return tuple(mapping[horse_id] for horse_id in requested_horse_ids)
+        return self._validate_mapping(mapping=mapping, requested_horse_ids=requested_horse_ids)
 
     @classmethod
     def _validate_request(cls, *, race_id: object, horse_ids: object) -> tuple[int, ...]:
@@ -57,7 +56,7 @@ class RepositoryBackedRaceEntrySelectionResolver:
         *,
         mapping: object,
         requested_horse_ids: tuple[int, ...],
-    ) -> None:
+    ) -> tuple[int, ...]:
         if not isinstance(mapping, Mapping):
             raise ValueError("race_entry_source must return a Mapping")
 
@@ -74,6 +73,7 @@ class RepositoryBackedRaceEntrySelectionResolver:
             raise ValueError("race_entry_source returned invalid race entry IDs")
         if len(set(race_entry_ids)) != len(race_entry_ids):
             raise ValueError("race_entry_source returned duplicate race entry IDs")
+        return race_entry_ids
 
     @staticmethod
     def _is_positive_int(value: object) -> bool:

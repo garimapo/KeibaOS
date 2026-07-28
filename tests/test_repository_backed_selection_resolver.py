@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+from collections.abc import Mapping as AbstractMapping
 import inspect
 from typing import Mapping, Sequence, get_type_hints
 import unittest
@@ -46,6 +47,35 @@ class NonCallableMethodSource:
     load_race_entry_id_map = 1
 
 
+class StaticMethodSource:
+    calls: list[tuple[int, Sequence[int]]] = []
+
+    @staticmethod
+    def load_race_entry_id_map(
+        *,
+        race_id: int,
+        horse_ids: Sequence[int],
+    ) -> Mapping[int, int]:
+        StaticMethodSource.calls.append((race_id, horse_ids))
+        return {horse_id: horse_id + 100 for horse_id in horse_ids}
+
+
+class ValueAccessCountingMapping(AbstractMapping[int, int]):
+    def __init__(self, values: Mapping[int, int]) -> None:
+        self._values = dict(values)
+        self.value_accesses: list[int] = []
+
+    def __getitem__(self, horse_id: int) -> int:
+        self.value_accesses.append(horse_id)
+        return self._values[horse_id]
+
+    def __iter__(self):
+        return iter(self._values)
+
+    def __len__(self) -> int:
+        return len(self._values)
+
+
 class RepositoryBackedRaceEntrySelectionResolverTests(unittest.TestCase):
     def test_constructor_is_keyword_only(self) -> None:
         signature = inspect.signature(RepositoryBackedRaceEntrySelectionResolver)
@@ -76,9 +106,14 @@ class RepositoryBackedRaceEntrySelectionResolverTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             RepositoryBackedRaceEntrySelectionResolver(race_entry_source=NonCallableMethodSource())
 
-    def test_constructor_rejects_source_class(self) -> None:
-        with self.assertRaises(ValueError):
-            RepositoryBackedRaceEntrySelectionResolver(race_entry_source=RecordingSource)
+    def test_constructor_accepts_class_with_static_callable_source_method(self) -> None:
+        StaticMethodSource.calls = []
+        resolver = RepositoryBackedRaceEntrySelectionResolver(race_entry_source=StaticMethodSource)
+
+        resolved = resolver.resolve_race_entry_ids(race_id=10, horse_ids=(3, 1))
+
+        self.assertEqual(resolved, (103, 101))
+        self.assertEqual(StaticMethodSource.calls, [(10, (3, 1))])
 
     def test_constructor_does_not_call_source(self) -> None:
         source = RecordingSource({1: 101})
@@ -120,6 +155,17 @@ class RepositoryBackedRaceEntrySelectionResolverTests(unittest.TestCase):
         resolved = resolver.resolve_race_entry_ids(race_id=10, horse_ids=(9, 3, 7))
 
         self.assertEqual(resolved, (109, 103, 107))
+
+    def test_reads_each_mapping_value_once_for_a_successful_result(self) -> None:
+        mapping = ValueAccessCountingMapping({3: 103, 1: 101, 2: 102})
+        source = RecordingSource(mapping)
+        resolver = RepositoryBackedRaceEntrySelectionResolver(race_entry_source=source)
+
+        resolved = resolver.resolve_race_entry_ids(race_id=10, horse_ids=(3, 1, 2))
+
+        self.assertEqual(resolved, (103, 101, 102))
+        self.assertEqual(mapping.value_accesses, [3, 1, 2])
+        self.assertEqual(len(source.calls), 1)
 
     def test_does_not_sort_requested_horse_ids(self) -> None:
         source = RecordingSource({3: 203, 1: 201})
