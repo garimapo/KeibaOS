@@ -2,7 +2,7 @@
 
 ## Status
 
-READY_FOR_REVIEW
+APPROVED_FOR_COMMIT
 
 ## Phase
 
@@ -159,5 +159,26 @@ Forbidden-pattern search of the newly added test diff: no matches
 git diff --check: success
 ```
 
-`database/keiba.db` and `logs/` remain out of scope. No file has been staged, committed, pushed,
-or placed on a review branch. Phase 4C-2d3b1i3 is not started.
+## GitHub Implementation Review Approval
+
+GitHub implementation review is complete. Review commit `9d43c08 review: integrate prediction
+with persisted simulation` was confirmed and is committed and pushed on
+`review/4c-2d3b1i2-prediction-persisted-integration`. The review confirms that no production code
+changed and that the existing manual integration coverage was preserved.
+
+The review approves use of the real `PredictionPipeline` and every production component in its
+`PipelineConfig`: Ability, Pace, Jockey, Track, Predictor, Value, Generator, and RuleBased
+strategy. No Pipeline subclass, patch, fake, second Pipeline execution, manual
+`BetPlan`/`BetRecommendation`/Snapshot construction, or direct Snapshot Repository save is used;
+Snapshot creation goes only through `PersistedSimulationBetPlanService.build_and_save()`.
+
+Scenario A is approved as one WIN bet with stake 100, a Repository round trip, SETTLED result,
+payout 300, profit 200, and ROI 300%. Scenario B is approved with
+`allowed_bet_types=frozenset()`, non-zero budget 500, a formal empty Snapshot, allocated amount 0,
+unallocated amount 500, no stored result or payout, normal NO_BET, and planned investment 0. The
+formal five-field Snapshot identity, in-memory SQLite-only isolation, and decision not to duplicate
+failure integration coverage are approved.
+
+`database/keiba.db` and `logs/` remain out of scope. Phase 4C-2d3b1i3 is not started. The current
+state is `APPROVED_FOR_COMMIT`: GitHub implementation review approved, review commit `9d43c08`
+committed and pushed, and base-branch integration pending.
