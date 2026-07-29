@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 import sqlite3
@@ -14,7 +15,12 @@ from scripts.prediction.allocation_policy import (
 )
 from scripts.prediction.ability_engine import AbilityEngine
 from scripts.prediction.bet_generator import BetGenerator, BetRecommendation
-from scripts.prediction.bet_strategy import BetPlan, RuleBasedBetStrategy, StrategyConfig
+from scripts.prediction.bet_strategy import (
+    BetPlan,
+    BetStrategy,
+    RuleBasedBetStrategy,
+    StrategyConfig,
+)
 from scripts.prediction.jockey_engine import JockeyEngine
 from scripts.prediction.pace_engine import PaceEngine
 from scripts.prediction.prediction_pipeline import (
@@ -40,6 +46,9 @@ from scripts.simulation.models import (
 from scripts.simulation.persisted_executor import PersistedRaceSimulationExecutor
 from scripts.simulation.persisted_bet_plan_service import PersistedSimulationBetPlanService
 from scripts.simulation.persisted_simulation_bet_source import PersistedSimulationBetSource
+from scripts.simulation.persisted_simulation_run_service import (
+    PersistedSimulationRunService,
+)
 from scripts.simulation.repositories.interfaces import (
     PayoutPublication,
     PayoutRecord,
@@ -73,6 +82,27 @@ WIN = "\u5358\u52dd"
 RUN_STARTED_AT = datetime(2026, 8, 1, 8, 0, tzinfo=UTC)
 INFORMATION_CUTOFF = datetime(2026, 8, 1, 9, 0, tzinfo=UTC)
 REFERENCE_DATE = date(2026, 8, 1)
+
+
+class EmptyPlanForHorseBetStrategy(BetStrategy):
+    """Use the real Pipeline while selecting no purchase for one fixture horse."""
+
+    def __init__(self, *, empty_horse_id: int) -> None:
+        self._empty_horse_id = empty_horse_id
+        self._delegate = RuleBasedBetStrategy()
+
+    def create_plan(
+        self,
+        recommendations: Sequence[BetRecommendation],
+        config: StrategyConfig,
+    ) -> BetPlan:
+        if any(self._empty_horse_id in recommendation.horse_ids for recommendation in recommendations):
+            return BetPlan(
+                strategy_name=self.__class__.__name__,
+                recommendations=(),
+                candidate_count=0,
+            )
+        return self._delegate.create_plan(recommendations, config)
 
 
 class PersistedSimulationIntegrationTests(unittest.TestCase):
@@ -304,6 +334,7 @@ class PersistedSimulationIntegrationTests(unittest.TestCase):
         self,
         *,
         strategy_config: StrategyConfig,
+        bet_strategy: BetStrategy | None = None,
     ) -> PredictionPipeline:
         return PredictionPipeline(
             PipelineConfig(
@@ -314,7 +345,7 @@ class PersistedSimulationIntegrationTests(unittest.TestCase):
                 predictor=Predictor(),
                 value_engine=ValueEngine(),
                 bet_generator=BetGenerator(),
-                bet_strategy=RuleBasedBetStrategy(),
+                bet_strategy=RuleBasedBetStrategy() if bet_strategy is None else bet_strategy,
                 strategy_config=strategy_config,
             ),
         )
@@ -625,6 +656,112 @@ class PersistedSimulationIntegrationTests(unittest.TestCase):
                 summary.by_bet_type,
             ),
             (1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, None, None, None, 0, {}),
+        )
+
+    def test_run_service_persists_mixed_three_race_run_before_simulation(self) -> None:
+        race_a = self.race_input(
+            101,
+            scheduled_start_at=datetime(2026, 8, 1, 11, 0, tzinfo=UTC),
+        )
+        race_b = self.race_input(
+            102,
+            scheduled_start_at=datetime(2026, 8, 1, 10, 0, tzinfo=UTC),
+        )
+        race_c = self.race_input(
+            103,
+            scheduled_start_at=datetime(2026, 8, 1, 12, 0, tzinfo=UTC),
+        )
+        pipeline = self.real_pipeline(
+            strategy_config=self.strategy_identity.strategy_config,
+            bet_strategy=EmptyPlanForHorseBetStrategy(
+                empty_horse_id=self.horse_id_for(race_b.race_id),
+            ),
+        )
+        bet_plan_service = self.persisted_bet_plan_service(
+            strategy_identity=self.strategy_identity,
+            pipeline=pipeline,
+        )
+        simulator, _executor = self.simulator()
+        run_service = PersistedSimulationRunService(
+            bet_plan_service=bet_plan_service,
+            simulator=simulator,
+        )
+        budgets = {
+            race_a.race_id: BetStakeBudget(total_amount=100),
+            race_b.race_id: BetStakeBudget(total_amount=500),
+            race_c.race_id: BetStakeBudget(total_amount=100),
+        }
+        self.save_complete_race_result(
+            race_a.race_id,
+            finalized_at=datetime(2026, 8, 1, 13, 0, tzinfo=UTC),
+        )
+        self.save_payout(
+            race_a.race_id,
+            is_complete=True,
+            finalized_at=datetime(2026, 8, 1, 13, 10, tzinfo=UTC),
+            entries=(
+                PayoutRecord(
+                    (self.horse_id_for(race_a.race_id),),
+                    300,
+                    PayoutStatus.WINNING,
+                ),
+            ),
+        )
+
+        summary = run_service.run(
+            race_inputs=(race_c, race_a, race_b),
+            budgets_by_race_id=budgets,
+        )
+
+        snapshots = tuple(
+            self.snapshot_repository.load_snapshot(identity=self.plan_identity(race_input))
+            for race_input in (race_a, race_b, race_c)
+        )
+        self.assertTrue(all(snapshot is not None for snapshot in snapshots))
+        self.assertEqual(tuple(len(snapshot.bets) for snapshot in snapshots), (1, 0, 1))
+        self.assertEqual(snapshots[1].budget, budgets[race_b.race_id])
+        self.assertEqual(
+            (
+                snapshots[1].budget.total_amount,
+                snapshots[1].allocated_amount,
+                snapshots[1].unallocated_amount,
+            ),
+            (500, 0, 500),
+        )
+        self.assertEqual(
+            (
+                summary.race_count,
+                summary.settled_race_count,
+                summary.no_bet_race_count,
+                summary.unsettled_race_count,
+                summary.settled_purchase_race_count,
+                summary.bet_count,
+                summary.settled_bet_count,
+                summary.hit_bet_count,
+                summary.hit_race_count,
+                summary.investment,
+                summary.payout,
+                summary.profit,
+                summary.roi,
+                summary.bet_hit_rate,
+                summary.race_hit_rate,
+                summary.maximum_drawdown,
+            ),
+            (3, 1, 1, 1, 1, 2, 1, 1, 1, 100, 300, 200, Decimal("300"), Decimal("100"), Decimal("100"), 0),
+        )
+        by_type = summary.by_bet_type[WIN]
+        self.assertEqual(
+            (
+                by_type.bet_count,
+                by_type.settled_bet_count,
+                by_type.hit_bet_count,
+                by_type.investment,
+                by_type.payout,
+                by_type.profit,
+                by_type.roi,
+                by_type.bet_hit_rate,
+            ),
+            (2, 1, 1, 100, 300, 200, Decimal("300"), Decimal("100")),
         )
 
     def test_multi_race_saved_plan_round_trip_to_summary(self) -> None:

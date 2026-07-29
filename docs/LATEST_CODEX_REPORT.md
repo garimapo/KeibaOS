@@ -2,173 +2,88 @@
 
 ## Status
 
-APPROVED_FOR_COMMIT
+READY_FOR_REVIEW
 
 ## Current Phase
 
-Phase 4C-2d3b1i3a — Persisted simulation identity accessors
+Phase 4C-2d3b1i3b - Multi-race persisted simulation run orchestration
 
-Base commit: `74d2443 docs: approve prediction persisted integration`
+Base commit: `0d2d8cd docs: approve persisted simulation identity accessors`
 
-## Phase Split and Approval
+## Implementation
 
-Phase 4C-2d3b1i2 is formally complete. Its real Pipeline-to-persisted-simulation integration
-remains the verified single-race write/read path.
+Added `scripts/simulation/persisted_simulation_run_service.py` with
+`PersistedSimulationRunService`. Its keyword-only constructor retains exact
+`PersistedSimulationBetPlanService` and `Simulator` objects. Constructor and every `run()` verify
+the exact persisted concrete chain and the three public-API object-identity relationships before
+Planning begins.
 
-The original Phase 4C-2d3b1i3 was split into:
+`run()` validates all Sequence race inputs, all Mapping budgets, duplicate race IDs, positive
+non-bool budget keys, budget value types, and exact race-ID/budget-key equality before any Snapshot
+save. It snapshots input collections without mutation, fixes execution order to
+`(scheduled_start_at, race_id)`, calls `build_and_save()` once for every ordered race with the exact
+race and budget objects, then calls `Simulator.run()` once with the exact ordered tuple. The returned
+`SimulationSummary` is returned unchanged.
 
-```text
-Phase 4C-2d3b1i3a — Persisted simulation identity accessors
-Phase 4C-2d3b1i3b — Multi-race persisted simulation run orchestration
-```
+Empty runs make zero Planning calls and execute `Simulator.run()` once. Planning failure preserves
+already-saved immutable Snapshots, stops later Planning and simulation, and propagates the exact
+exception object. Simulator failure likewise propagates unchanged after all Snapshots are saved; no
+retry, rollback, deletion, compensation, fallback, Snapshot reload, or Snapshot/Summary validation
+duplication was added. Backend write/read object and connection coherence remain Phase 4C-2d3b1i4
+composition-root responsibilities.
 
-Phase 4C-2d3b1i3a is `APPROVED_FOR_COMMIT`. It is a narrow, behavior-preserving prerequisite that
-adds public readonly accessors only. Phase 4C-2d3b1i3b remains unstarted.
+## Tests
 
-## Identity Coherence Reassessment
+Added `tests/test_persisted_simulation_run_service.py` using exact production planning, settlement,
+executor, and Simulator components with existing structural collaborators supplied as recording
+fixtures. It covers API/slots, zero constructor work, validation before side effects, official order,
+exact forwarding, empty runs, Planning failure, Simulator failure, and run-time composition
+revalidation.
 
-The prior blocker was correctly identified but incomplete: exposing only
-`PersistedSimulationBetPlanService.run_context` and `.strategy_identity` is insufficient to prove
-the complete persisted simulation path before planning. The future traversal is:
+Extended `tests/test_persisted_simulation_integration.py` with one in-memory SQLite mixed three-race
+scenario. Caller order is deliberately unsorted; the service saves all Snapshots in official order.
+It verifies a SETTLED win, a non-zero-budget empty NO_BET Snapshot, and a non-empty UNSETTLED race.
+All Snapshots are created through one `PersistedSimulationRunService.run()` call; no manual Snapshot,
+allocation-plan, direct builder, or direct repository save is used by the new scenario.
 
-```text
-PersistedSimulationBetPlanService
-  → run_context / strategy_identity
-Simulator
-  → strategy_identity / race_executor
-PersistedRaceSimulationExecutor
-  → strategy_identity / settlement_source
-RepositoryBackedPersistedRaceSettlementSource
-  → bet_source
-PersistedSimulationBetSource
-  → run_context
-```
-
-Already-public accessors are `Simulator.strategy_identity`, `Simulator.race_executor`,
-`PersistedRaceSimulationExecutor.strategy_identity`, and
-`PersistedRaceSimulationExecutor.settlement_source`.
-
-The approved additions are four readonly properties in three production modules:
+Mixed summary result:
 
 ```text
-PersistedSimulationBetPlanService.run_context -> SimulationRunContext
-PersistedSimulationBetPlanService.strategy_identity -> StrategyIdentity
-PersistedSimulationBetSource.run_context -> SimulationRunContext
-RepositoryBackedPersistedRaceSettlementSource.bet_source -> SimulationBetSource
+race_count = 3
+settled_race_count = 1
+no_bet_race_count = 1
+unsettled_race_count = 1
+settled_purchase_race_count = 1
+bet_count = 2
+settled_bet_count = 1
+hit_bet_count = 1
+hit_race_count = 1
+investment = 100
+payout = 300
+profit = 200
+roi = Decimal("300")
+bet_hit_rate = Decimal("100")
+race_hit_rate = Decimal("100")
+maximum_drawdown = 0
 ```
 
-Every property returns the exact injected object, without copy, re-creation, collaborator calls,
-SQLite, time, setter, validation, or runtime-behavior changes. `snapshot_source`, race-result
-Repository, and payout Repository accessors are not added.
-
-The blocker is therefore resolvable by 1i3a. Once it completes, 1i3b can prevalidate through public
-APIs only:
-
-```python
-executor = simulator.race_executor
-settlement_source = executor.settlement_source
-bet_source = settlement_source.bet_source
-
-bet_plan_service.strategy_identity is simulator.strategy_identity
-simulator.strategy_identity is executor.strategy_identity
-bet_plan_service.run_context is bet_source.run_context
-```
-
-Object identity, not matching values, is the proposed formal coherence contract. Private attributes,
-strategy ID/hash/run-ID-only comparison, identity/context regeneration, and
-`BetPlan.strategy_name` comparison remain forbidden.
-
-## 1i3a Scope and Tests
-
-Allowed production files are the three accessor modules. Tests extend only:
+## Verification
 
 ```text
-tests/test_persisted_bet_plan_service.py
-tests/test_persisted_simulation_bet_source.py
-tests/test_repository_backed_persisted_settlement_source.py
-```
-
-Each new accessor test verifies property/type-hint contract, exact object identity on repeated
-reads, zero collaborator calls while read, absence of setter/`AttributeError` on assignment, and
-existing constructor/runtime behavior. No new test file is proposed.
-
-No changes are approved for Simulator, executor, models, Protocol definitions, schema, migration,
-SQLite repositories, Prediction Pipeline, CLI, `main.py`, package exports, `database/keiba.db`, or
-`logs/`. `Any`, `cast`, `type: ignore`, runtime Protocol checks, copy/reconstruction, and behavior
-changes are prohibited.
-
-## Preserved 1i3b Design Draft
-
-The later orchestration design is retained, not discarded:
-
-```text
-service: PersistedSimulationRunService
-module: scripts/simulation/persisted_simulation_run_service.py
-budget: budgets_by_race_id
-input: prevalidate all races and all budgets before side effects
-order: (scheduled_start_at, race_id)
-execution: complete all Planning before one Simulator.run()
-return: SimulationSummary
-failure: no run-level rollback, retry, fallback, or delete compensation
-persistence: successful immutable Snapshots remain; idempotent equal save/no-op, conflict fail-closed
-exceptions: collaborator exception objects propagate unchanged
-coverage: mixed SETTLED / NO_BET / UNSETTLED
-scope: no schema, migration, or CLI
-```
-
-The adopted budget candidate remains an exact `Mapping[int, BetStakeBudget]`; common budget and a
-budget-source Protocol are not selected. The run service will preserve exact input/budget objects,
-not mutate caller collections, accept empty input only with an empty map, and leave settlement,
-ROI, and drawdown to existing Executor/Summary behavior.
-
-## Implementation, Verification, and Review Approval
-
-The approved three production modules now expose only the four public readonly accessors:
-
-```text
-PersistedSimulationBetPlanService.run_context
-PersistedSimulationBetPlanService.strategy_identity
-PersistedSimulationBetSource.run_context
-RepositoryBackedPersistedRaceSettlementSource.bet_source
-```
-
-Each accessor returns the exact constructor-injected object on repeated reads. The extended existing
-test files verify the property descriptor and return type hints, identity preservation, no setter and
-`AttributeError` on assignment, and zero collaborator calls while each property is read. Existing
-constructor behavior, `__slots__`, and runtime methods remain unchanged; no other accessor was added.
-
-Verification completed with the bundled Python runtime:
-
-```text
-Dedicated accessors: 57 passed, 74 subtests passed
-Related persisted executor / Simulator: 135 passed, 12 subtests passed
-Full suite: 2283 passed, 2 skipped, 701 subtests passed
-Forbidden-dependency search in changed production and test code: no matches
+Dedicated service test: 7 passed, 9 subtests passed
+Integration test: 6 passed, 4 subtests passed
+Related contracts: 200 passed, 95 subtests passed
+Full suite: 2291 passed, 2 skipped, 710 subtests passed
+Forbidden-pattern search in new production/test diffs: no matches
 git diff --check: success
 ```
 
-GitHub implementation review approved review commit `fbf8afa review: add persisted simulation identity
-accessors`; it is committed and pushed on
-`review/4c-2d3b1i3a-identity-accessors`. The production diff is limited to the four readonly
-properties listed above. Review found no production or test correction required.
+`tests/test_persisted_executor.py` does not exist; the related verification used the existing
+`tests/test_persisted_race_simulation_executor.py` instead. Existing production modules, manual
+integration coverage, and 1i2 real-Pipeline scenarios are unchanged. No migration, schema, CLI,
+package-root export, or `target_race_count` change was made.
 
-The properties return their exact constructor-injected objects without copy or re-creation; they
-have no setter and make no collaborator call. `__slots__`, constructor signatures, runtime methods,
-validation, and exception behavior are unchanged. No migration, schema, Protocol, SQLite Repository,
-or package-root export changed.
+Phase 4C-2d3b1i4 and later phases remain unstarted. `database/keiba.db` and `logs/` are outside
+scope. No file has been staged, committed, pushed, or placed on a review branch for this phase.
 
-This permits Phase 4C-2d3b1i3b to prevalidate the full traversal through public APIs only:
-
-```python
-executor = simulator.race_executor
-settlement_source = executor.settlement_source
-bet_source = settlement_source.bet_source
-
-bet_plan_service.strategy_identity is simulator.strategy_identity
-simulator.strategy_identity is executor.strategy_identity
-bet_plan_service.run_context is bet_source.run_context
-```
-
-Private-attribute access is no longer needed for that coherence validation. Phase 4C-2d3b1i3b and
-1i4 onward remain unstarted; base-branch integration is pending. `database/keiba.db` and `logs/`
-remain outside scope.
+blocker: none
