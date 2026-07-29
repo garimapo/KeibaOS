@@ -52,6 +52,12 @@ source, verifies both `ast.Import` and `ast.ImportFrom`, and rejects SQLite impo
 runtime Protocol decoration, `typing.Any`, `typing.cast`, type-ignore comments, concrete SQLite
 Repository imports, and package-root export. The production module was not changed.
 
+The final typing regression check closes a module-qualified detection gap: direct `import typing`
+and aliased `import typing as t` are now inspected for `typing.Any`, `typing.cast`, `t.Any`, and
+`t.cast` AST attributes. Small direct, aliased, and clean sample trees verify the helper itself;
+the existing `from typing import Any` / `cast` checks remain in place. Production code was not
+changed.
+
 Repository-stage propagation coverage now explicitly verifies object-identity propagation with no
 retry for `RepositoryValidationError`, `RepositoryConflictError`, and
 `RepositoryDataIntegrityError`; all preceding collaborators are called once and Repository is
@@ -61,20 +67,20 @@ called exactly once.
 
 ```text
 Dedicated: python -m pytest tests/test_persisted_bet_plan_service.py -q
-17 passed, 33 subtests passed
+18 passed, 35 subtests passed
 
 Related: PredictionPipeline, simulation models, allocation policy, fixed allocator,
 stake-allocation contract, Builder, Snapshot, Snapshot Repository protocol,
 persisted integration, and service tests
-280 passed, 129 subtests passed
+281 passed, 131 subtests passed
 
 Full: python -m pytest -q
-2277 passed, 2 skipped, 699 subtests passed
+2278 passed, 2 skipped, 701 subtests passed
 
 Forbidden-dependency / runtime-Protocol / package-export search: no prohibited production match
 git diff --check: success
 ```
 
-`database/keiba.db` and `logs/` remain out of scope and were not changed by this phase. The
-review branch contains the initial implementation commit; this correction is ready for its own
-review commit and push. Phase 4C-2d3b1i2 has not been started.
+`database/keiba.db` and `logs/` remain out of scope and were not changed by this phase. The latest
+correction is committed and pushed on the review branch; GitHub review remains pending. Phase
+4C-2d3b1i2 has not been started.

@@ -63,6 +63,31 @@ RACE_ID = 501
 RACE_ENTRY_ID = 7001
 
 
+def _typing_module_aliases(tree: ast.AST) -> set[str]:
+    return {
+        alias.asname or alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Import)
+        for alias in node.names
+        if alias.name == "typing"
+    }
+
+
+def _uses_forbidden_typing_attribute(
+    tree: ast.AST,
+    *,
+    names: set[str],
+) -> bool:
+    aliases = _typing_module_aliases(tree)
+    return any(
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and node.value.id in aliases
+        and node.attr in names
+        for node in ast.walk(tree)
+    )
+
+
 class RecordingPipeline(PredictionPipeline):
     """Concrete Pipeline subclass used to isolate the service boundary."""
 
@@ -756,6 +781,12 @@ class PersistedSimulationBetPlanServiceTests(unittest.TestCase):
         )
         self.assertNotIn("Any", imported_names)
         self.assertNotIn("cast", imported_names)
+        self.assertFalse(
+            _uses_forbidden_typing_attribute(tree, names={"Any"}),
+        )
+        self.assertFalse(
+            _uses_forbidden_typing_attribute(tree, names={"cast"}),
+        )
         self.assertNotIn("sqlite", source.lower())
         self.assertNotIn("# type: ignore", source)
         self.assertNotIn("runtime_checkable", source)
@@ -775,3 +806,30 @@ class PersistedSimulationBetPlanServiceTests(unittest.TestCase):
         )
         package_source = inspect.getsource(simulation_package)
         self.assertNotIn("PersistedSimulationBetPlanService", package_source)
+
+    def test_typing_module_attribute_helper_detects_direct_and_aliased_imports(self) -> None:
+        direct_tree = ast.parse(
+            """
+import typing
+value: typing.Any = typing.cast(object, 1)
+""",
+        )
+        aliased_tree = ast.parse(
+            """
+import typing as t
+value: t.Any = t.cast(object, 1)
+""",
+        )
+        clean_tree = ast.parse(
+            """
+from typing import Protocol
+class Example(Protocol):
+    pass
+""",
+        )
+
+        for tree in (direct_tree, aliased_tree):
+            with self.subTest(tree=tree):
+                self.assertTrue(_uses_forbidden_typing_attribute(tree, names={"Any"}))
+                self.assertTrue(_uses_forbidden_typing_attribute(tree, names={"cast"}))
+        self.assertFalse(_uses_forbidden_typing_attribute(clean_tree, names={"Any", "cast"}))
