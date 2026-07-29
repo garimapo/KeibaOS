@@ -2,141 +2,92 @@
 
 ## Status
 
-APPROVED_FOR_COMMIT
+READY_FOR_REVIEW
 
 ## Current Phase
 
-Phase 4C-2d3b1i4 — SQLite persisted simulation composition root
+Phase 4C-2d3b1i5a — SQLite persisted simulation application runner
 
-Base commit: `8b86654 docs: approve persisted simulation run orchestration`
+Base commit: `dfeb34d docs: approve SQLite persisted simulation composition root`
 
-Base branch: `feature/ver0.8-simulator`
-
-Review branch: `review/4c-2d3b1i4-sqlite-composition-root`
+Branch: `feature/ver0.8-simulator`
 
 ## Implementation
 
-Added `scripts/simulation/sqlite_persisted_simulation_composition.py` with the sole public
-factory:
+Added `scripts/simulation/sqlite_persisted_simulation_application.py` with the sole public API:
 
 ```python
-build_sqlite_persisted_simulation_run_service(
+run_sqlite_persisted_simulation(
     *,
-    connection: sqlite3.Connection,
+    database_path: str | Path,
     run_context: SimulationRunContext,
     strategy_identity: StrategyIdentity,
     prediction_pipeline: PredictionPipeline,
-) -> PersistedSimulationRunService
+    race_inputs: Sequence[SimulationRaceInput],
+    budgets_by_race_id: Mapping[int, BetStakeBudget],
+) -> SimulationSummary
 ```
 
-The factory is caller-connection-owned: it neither opens, closes, commits, rolls back, begins a
-transaction, knows a DB path, applies migrations, nor duplicates schema readiness. It first
-validates the connection, exact run context/strategy identity/pipeline/PipelineConfig, exact
-Pipeline StrategyConfig identity, the required allocation policy, and exact allocation-policy type.
+The runner validates the database path, exact production object types, and input container types
+before any SQLite side effect. It preserves the original database-path text after validation, takes
+one tuple/dict snapshot of caller collections without copying their race-input or budget objects,
+then delegates detailed race/budget validation to the existing run service.
 
-The composition uses one exact Snapshot Repository for the planning writer and persisted bet reader,
-and supplies one exact connection to Snapshot, race-entry, race-result, and payout adapters. It
-constructs the existing resolver, plan builder, fixed-stake allocator, planning service, bet source,
-settlement source, executor, Simulator, and final run service without copying or regenerating
-identity/configuration objects.
-
-Construction remains construction-only: no Pipeline, allocation, builder, Snapshot persistence/load,
-settlement lookup, Simulator, or service run occurs. Direct validation failures are `ValueError` with
-zero SQLite statements; component constructor failures remain unwrapped, with no retry, fallback,
-cleanup, rollback, or connection lifecycle intervention.
+After pre-open validation it opens exactly one `sqlite3.connect()` connection, calls
+`apply_migrations(connection)` once, calls the Phase 4C-2d3b1i4 composition factory once, calls
+the returned service once, returns that exact Summary, and closes the runner-owned connection in a
+`try/finally`. It adds no `except`, retry, fallback, transaction handling, manual component
+construction, Snapshot handling, or metric calculation. Connect, migration, composition, and run
+exceptions remain unwrapped.
 
 ## Test Coverage
 
-Added `tests/test_sqlite_persisted_simulation_composition.py`. It covers the factory API/type hints,
-invalid direct inputs and subclasses, PipelineConfig/StrategyConfig identity, allocation-policy
-requirements and fixed-stake failures, exact private wiring inspection, single connection and shared
-Snapshot Repository, construction-only behavior, and forbidden production lifecycle/runtime patterns.
+Added `tests/test_sqlite_persisted_simulation_application.py`.
 
-The in-memory end-to-end scenario uses a single caller connection, real `PredictionPipeline`, real
-fixed-stake allocator, real resolver and SQLite repositories. It seeds parent race/horse data and
-applies migrations in test setup only; it then saves a Snapshot solely through
-`PersistedSimulationRunService.run()`. A complete one-race result plus single-win payout of 300
-returns a SETTLED Summary:
-
-```text
-race_count = 1
-settled_race_count = 1
-no_bet_race_count = 0
-unsettled_race_count = 0
-settled_purchase_race_count = 1
-bet_count = 1
-settled_bet_count = 1
-hit_bet_count = 1
-hit_race_count = 1
-investment = 100
-payout = 300
-profit = 200
-roi = Decimal("300")
-bet_hit_rate = Decimal("100")
-race_hit_rate = Decimal("100")
-maximum_drawdown = 0
-```
-
-The test confirms race-entry resolution, Snapshot writer-to-reader round trip, internal result and
-payout reads, a 100 budget with one bet, and a usable caller connection with no active transaction
-after the run. Private inspection is used only in this composition test.
+- API/type-hint and AST checks prove the production module has only the formal function, one
+  connect/migration/factory/run/close call site, a `try/finally`, and no `except` handler.
+- Pre-open tests cover all required invalid path, exact production object, and container inputs,
+  proving no SQLite file is created.
+- The pending-migration test starts with only parent `races`/`horses`, lets the runner apply v008/v009,
+  and verifies an empty Summary plus migration registry and tables after reopening the DB.
+- The file-backed real-component integration persists a 100-yen WIN plan, reads complete result and
+  payout 300, and returns the required settled Summary: investment 100, payout 300, profit 200,
+  ROI 300, hit rates 100, and maximum drawdown 0. It also verifies caller collection non-mutation,
+  persisted Snapshot/budget/bet/entry data, migration versions, and database usability.
+- The migration failure fixture is the approved unknown future version `999/future_migration`.
+  `apply_migrations()` fails before composition/run; the runner does not wrap the error and the file
+  is reconnectable afterward.
+- The run-failure fixture uses duplicate `race_id`; migrations and composition complete, the existing
+  run-service validation fails without wrapping, no Snapshot is saved, and the file is reconnectable.
 
 ## Verification
 
-These are Codex local results, not GitHub CI results.
+These are Codex local results, not GitHub CI results. The bundled Codex Python runtime was used
+because `python` is not present on PATH.
 
 ```text
-専用: 8 passed, 30 subtests passed
-関連: 304 passed, 253 subtests passed
-全体: 2304 passed, 2 skipped, 782 subtests passed
-禁止パターン検索: 該当なし
-git diff --check: 成功
+Dedicated: 8 passed, 49 subtests passed
+Related: 334 passed, 312 subtests passed
+Full suite: 2312 passed, 2 skipped, 831 subtests passed
+Production forbidden-pattern search: 0 matches
+New-test forbidden-pattern search: 0 matches
+git diff --check: success
 ```
 
-The related executor test was `tests/test_persisted_race_simulation_executor.py`. Existing
-production/tests, `docs/CURRENT_PHASE.md`, migrations, schema, `scripts/database.py`, `main.py`,
-CLI, and package-root exports are unchanged.
+The requested `tests/test_migration_runner.py` does not exist; the related suite used the existing
+`tests/test_simulation_migrations.py` instead.
 
-Production change candidate:
+Only these new implementation files were added:
 
 ```text
-scripts/simulation/sqlite_persisted_simulation_composition.py
+scripts/simulation/sqlite_persisted_simulation_application.py
+tests/test_sqlite_persisted_simulation_application.py
 ```
 
-Test change candidate:
+Existing production/tests, the 1i4 composition root, migrations, schema, `scripts/database.py`,
+`main.py`, CLI, and package-root exports are unchanged. Phase 4C-2d3b1i5b/1i5c remain unstarted.
+`database/keiba.db` and `logs/` are outside scope.
 
-```text
-tests/test_sqlite_persisted_simulation_composition.py
-```
-
-## GitHub Review Approval
-
-GitHub上の実装レビューは完了し、review commit
-`32f9785 review: add SQLite persisted simulation composition root` を確認済みです。review
-branchはoriginへcommit・push済みであり、production implementationとtest coverageは承認されました。
-production correction・test correctionは不要で、blockerはありません。base branch integrationは未実施です。
-
-承認済みのproduction契約は、`build_sqlite_persisted_simulation_run_service`がkeyword-onlyの
-4引数を受け、caller-ownedの`sqlite3.Connection`を使うことです。direct input validation、exact
-`PipelineConfig`、Pipelineの`StrategyConfig`へのexact object identity、required exact
-`AllocationPolicyConfig`を検証します。unsupported fixed-stake policyはallocatorへ委譲します。
-Snapshot Repositoryは1個だけを構築し、writerとreaderが同一objectを共有します。すべてのSQLite
-adapterは同一connection object、構成要素は同一`SimulationRunContext`と同一`StrategyIdentity`を
-共有します。factoryはconstruction-onlyで、migration/schema、connection open/close/commit/rollbackを
-担わず、component constructor例外をwrapせず、exactな`PersistedSimulationRunService`を返します。
-
-承認済みtest coverageは、正式module/factory API/type hints、factory以外のfunction/classなし、connection
-subclass許可、run context・strategy identity・pipeline subclass拒否、invalid `PipelineConfig`、equal-value
-別`StrategyConfig`拒否、allocation policyのNone/不正型拒否、unsupported policy name/version/parameter、
-direct validation failure時のSQL statement 0、single connectionとshared Snapshot Repositoryのprivate
-wiring、construction時のPRAGMAのみ、lifecycle/migration/runtime禁止パターン、in-memory SQLite end-to-end、
-Snapshot writer-to-reader round trip、race-entry解決、Result/Payout読込み、100円投資・300円払戻のSETTLED
-Summary、run後のconnection利用可能、transactionなしです。
-
-上記の検証結果はCodexローカル実行結果であり、GitHub CIによる独立実行結果ではありません。
-
-Phase 4C-2d3b1i5以降は未着手です。DB path、connection lifecycle、migration readiness、CLIは1i5の責務です。
-migration、schema、`scripts/database.py`、`main.py`、CLI、package-rootは変更していません。
-`database/keiba.db`と`logs/`は対象外です。
+No file has been staged, committed, pushed, or placed on a review branch for Phase 4C-2d3b1i5a.
 
 blocker: none

@@ -6,11 +6,11 @@ APPROVED_FOR_CODEX
 
 ## Phase
 
-Phase 4C-2d3b1i4 — SQLite persisted simulation composition root
+Phase 4C-2d3b1i5a — SQLite persisted simulation application runner
 
 ## Base Commit
 
-`8b86654 docs: approve persisted simulation run orchestration`
+`dfeb34d docs: approve SQLite persisted simulation composition root`
 
 ## Branch
 
@@ -18,186 +18,203 @@ Phase 4C-2d3b1i4 — SQLite persisted simulation composition root
 
 ## Objective
 
-Build one caller-owned `sqlite3.Connection` into the exact persisted simulation production chain:
+Add the application boundary that owns a database path and one SQLite connection lifecycle:
 
 ```text
-PredictionPipeline
--> PersistedSimulationBetPlanService
--> SQLite snapshot write/read
--> SQLite result/payout read
--> PersistedRaceSimulationExecutor
--> Simulator
--> PersistedSimulationRunService
+database path
+-> sqlite3.connect()
+-> apply_migrations()
+-> build_sqlite_persisted_simulation_run_service()
+-> PersistedSimulationRunService.run()
+-> connection.close()
+-> SimulationSummary
 ```
 
-The composition root guarantees backend coherence: one exact Snapshot Repository object for writer
-and reader, and one exact connection object for Snapshot, race-entry, result, and payout adapters.
+The caller supplies the run context, identity, pipeline, race inputs, and budgets. This phase does
+not add CLI, request/config-file parsing, DB-backed race selection, or Summary rendering.
 
 ## Allowed Files
 
 ```text
-scripts/simulation/sqlite_persisted_simulation_composition.py
-tests/test_sqlite_persisted_simulation_composition.py
+scripts/simulation/sqlite_persisted_simulation_application.py
+tests/test_sqlite_persisted_simulation_application.py
 docs/LATEST_CODEX_REPORT.md
 ```
 
-`docs/CURRENT_PHASE.md` is an approved contract, not an implementation target.
+`docs/CURRENT_PHASE.md` is approved contract documentation and is not an implementation target.
 
 ## Formal Production API
 
-New module: `scripts/simulation/sqlite_persisted_simulation_composition.py`
+New module: `scripts/simulation/sqlite_persisted_simulation_application.py`
 
 ```python
 from __future__ import annotations
 
-import sqlite3
+from collections.abc import Mapping, Sequence
+from pathlib import Path
 
 from scripts.prediction.prediction_pipeline import PredictionPipeline
-from scripts.simulation.models import SimulationRunContext, StrategyIdentity
-from scripts.simulation.persisted_simulation_run_service import (
-    PersistedSimulationRunService,
+from scripts.simulation.models import (
+    SimulationRaceInput,
+    SimulationRunContext,
+    SimulationSummary,
+    StrategyIdentity,
 )
+from scripts.simulation.stake_allocation import BetStakeBudget
 
 
-def build_sqlite_persisted_simulation_run_service(
+def run_sqlite_persisted_simulation(
     *,
-    connection: sqlite3.Connection,
+    database_path: str | Path,
     run_context: SimulationRunContext,
     strategy_identity: StrategyIdentity,
     prediction_pipeline: PredictionPipeline,
-) -> PersistedSimulationRunService:
+    race_inputs: Sequence[SimulationRaceInput],
+    budgets_by_race_id: Mapping[int, BetStakeBudget],
+) -> SimulationSummary:
     ...
 ```
 
-Return only the exact constructed `PersistedSimulationRunService`. Do not add a class, component
-bundle, connection wrapper, context manager, close/run method, CLI adapter, or package-root export.
+The module contains no class, dataclass, request bundle, connection wrapper, custom repository,
+CLI parser, JSON loader, or package-root export.
 
-## Direct Validation
+## Direct Input Validation
 
-Before component construction or SQLite statements, validate in this order:
+Before opening a connection validate, in order:
 
-1. `isinstance(connection, sqlite3.Connection)`; otherwise
-   `ValueError("connection must be sqlite3.Connection")`. Connection subclasses are valid.
-2. `type(run_context) is SimulationRunContext`; otherwise
+1. `database_path` is `str` or `pathlib.Path`; validate `str(database_path)` as non-empty,
+   non-whitespace, and NUL-free. Reject `None`, bytes, bytearray, int, bool, arbitrary objects,
+   empty, whitespace-only, and NUL paths as
+   `ValueError("database_path must be a non-empty path")`.
+2. `type(run_context) is SimulationRunContext`, otherwise
    `ValueError("run_context must be a SimulationRunContext")`.
-3. `type(strategy_identity) is StrategyIdentity`; otherwise
+3. `type(strategy_identity) is StrategyIdentity`, otherwise
    `ValueError("strategy_identity must be a StrategyIdentity")`.
-4. `type(prediction_pipeline) is PredictionPipeline`; otherwise
+4. `type(prediction_pipeline) is PredictionPipeline`, otherwise
    `ValueError("prediction_pipeline must be a PredictionPipeline")`.
-5. `type(prediction_pipeline.config) is PipelineConfig`; otherwise
-   `ValueError("prediction_pipeline.config must be a PipelineConfig")`.
-6. Require exact identity:
-   `prediction_pipeline.config.strategy_config is strategy_identity.strategy_config`; otherwise
-   `ValueError("prediction_pipeline.config.strategy_config must be strategy_identity.strategy_config")`.
-7. Require `strategy_identity.strategy_config.allocation_policy`. `None` raises
-   `ValueError("strategy_identity.strategy_config.allocation_policy is required")`. Require exact
-   `AllocationPolicyConfig` type, otherwise `ValueError("allocation_policy must be an AllocationPolicyConfig")`.
+5. `race_inputs` is a `collections.abc.Sequence`, otherwise
+   `ValueError("race_inputs must be a Sequence")`; reject str, bytes, bytearray, mappings,
+   generators, and other non-Sequence values.
+6. `budgets_by_race_id` is a `collections.abc.Mapping`, otherwise
+   `ValueError("budgets_by_race_id must be a Mapping")`.
 
-Never copy or regenerate the run context, identity, strategy config, PipelineConfig, or allocation
-policy. Delegate policy-detail validation and unsupported-policy failures to
-`FixedStakeBetAllocator` unchanged.
-
-## Required Construction and Object Coherence
-
-After validation, construct exactly once and wire in this order:
+After container validation, but still before open, take caller-safe snapshots:
 
 ```python
-snapshot_repository = SQLiteSimulationBetPlanSnapshotRepository(connection=connection)
-race_entry_source = SQLiteRaceEntrySource(connection=connection)
-selection_resolver = RepositoryBackedRaceEntrySelectionResolver(
-    race_entry_source=race_entry_source,
-)
-plan_builder = SimulationBetPlanBuilder(selection_resolver=selection_resolver)
-allocator = FixedStakeBetAllocator(policy_config=policy_config)
-bet_plan_service = PersistedSimulationBetPlanService(
-    run_context=run_context,
-    strategy_identity=strategy_identity,
-    prediction_pipeline=prediction_pipeline,
-    allocator=allocator,
-    plan_builder=plan_builder,
-    snapshot_repository=snapshot_repository,
-)
-bet_source = PersistedSimulationBetSource(
-    run_context=run_context,
-    snapshot_source=snapshot_repository,
-)
-race_result_repository = SQLiteRaceResultRepository(connection=connection)
-payout_repository = SQLitePayoutRepository(connection=connection)
-settlement_source = RepositoryBackedPersistedRaceSettlementSource(
-    bet_source=bet_source,
-    race_result_repository=race_result_repository,
-    payout_repository=payout_repository,
-)
-executor = PersistedRaceSimulationExecutor(
-    strategy_identity=strategy_identity,
-    settlement_source=settlement_source,
-)
-simulator = Simulator(strategy_identity=strategy_identity, race_executor=executor)
-return PersistedSimulationRunService(
-    bet_plan_service=bet_plan_service,
-    simulator=simulator,
-)
+race_input_values = tuple(race_inputs)
+budget_values = dict(budgets_by_race_id)
 ```
 
-Planning and Simulator receive the same `StrategyIdentity` object; planning and bet reader receive
-the same `SimulationRunContext` object; writer and reader receive the same Snapshot Repository
-object; every SQLite adapter receives the same exact connection. Do not create another connection
-or Snapshot Repository. Leave final persisted-chain identity validation to the returned run-service
-constructor.
+Do not mutate caller collections. Delegate race-input type, duplicate race ID, budget key/value,
+positive-budget key set, and budget coverage validation unchanged to
+`PersistedSimulationRunService.run()`. Direct validation failure is `ValueError` with zero open,
+migration, composition, or run calls.
 
-## Caller-Owned Connection and Construction-Only Semantics
+## Connection Lifecycle and Migration Readiness
 
-The caller creates, prepares, commits/rolls back, and closes the connection. The factory must not
-open/close/commit/rollback a connection, begin a transaction, know a DB path, apply migrations, or
-duplicate schema-readiness validation. Missing schema fails closed only when an existing adapter is
-actually used.
+After pre-open validation, own exactly one connection:
 
-Allowed constructor work is existing SQLite adapter constructor validation, including its existing
-foreign-key PRAGMA check. The factory must not call Pipeline, allocator, builder, Snapshot save/load,
-result/payout lookup, executor, Simulator, or run service. It must not use current time, network,
-logging, print, retry, fallback, cleanup, or compensation.
+```python
+connection = sqlite3.connect(database_path_value)
+```
 
-Direct validation failures construct no component and issue no SQLite statement. Existing component
-constructor exceptions propagate as the same object, without wrapping, retry, fallback, rollback, or
-connection lifecycle intervention.
+Close it exactly once with `finally` or `contextlib.closing` on success and every post-open failure.
+Do not use `scripts.database.get_connection`, `scripts.database.DB_PATH`, a global/caller reusable
+connection, another connection, or hard-coded `database/keiba.db`. Do not wrap connect errors.
+
+After open and before component construction, call exactly once:
+
+```python
+apply_migrations(connection)
+```
+
+This phase establishes simulation migration readiness only. Do not call `create_tables`, modify
+migration registration/schema SQL, add legacy migration logic, inspect parent race/horse schema, or
+duplicate migration-runner logic. Migration errors propagate unchanged; the connection still closes.
+The runner itself never begins, commits, or rolls back transactions.
+
+## Composition and Run
+
+After migration succeeds, call the Phase 4C-2d3b1i4 factory once with the one connection and exact
+run-context, identity, and pipeline objects. Then call its returned service once:
+
+```python
+summary = service.run(
+    race_inputs=race_input_values,
+    budgets_by_race_id=budget_values,
+)
+return summary
+```
+
+Return the exact Summary. Do not copy/rebuild/inspect it, construct individual collaborators,
+reload snapshots, query settlement, calculate metrics, retry, fallback, resume, compensate, update,
+or delete.
+
+## Failure Semantics
+
+- Invalid direct input: `ValueError`; zero open/migration/factory/run calls.
+- Connect failure: propagate the original exception; no retry/fallback.
+- Migration, factory, or run failure: propagate the same exception object; no Summary; close the
+  owned connection once.
+- No wrapping/translation, retry, fallback, rollback, compensation, or extra transaction handling.
+
+## Allowed and Forbidden Runtime Operations
+
+Allowed production operations are only `sqlite3.connect`, `apply_migrations`, the Phase 4C-2d3b1i4
+factory, `PersistedSimulationRunService.run`, and connection close. Do not use current time, UUID or
+run/dataset/git ID generation, network, logging, print, argparse, JSON/config-file reading, race DB
+queries to create inputs, or package-root exports.
 
 ## Required Tests
 
-Add `tests/test_sqlite_persisted_simulation_composition.py` covering:
+Add `tests/test_sqlite_persisted_simulation_application.py` covering:
 
-- API import/name, keyword-only signature/type hints, and absence of new class/bundle;
-- all direct validation cases, with a trace callback proving zero statements for pure validation;
-- one exact connection / one exact Snapshot Repository wiring proof (test-only private inspection);
-- construction-only behavior: no save/load/lookups/Pipeline work, no transaction start, and caller
-  connection remains usable/open;
-- source checks excluding lifecycle, migration, path, clock, network, logging, print, and export
-  patterns; and
-- one in-memory end-to-end route using real `PredictionPipeline`, fixed stake 100, migrations only
-  in test setup, complete race result plus win payout 300, and a settled one-race Summary with
-  investment 100, payout 300, profit 200, ROI 300, maximum drawdown 0. Verify entry resolution,
-  Snapshot writer/reader round trip, result/payout internal reads, and caller connection usability.
+- sole module/function API, exact keyword-only six-argument signature/type hints, return type, and
+  no class/request bundle/package export;
+- all invalid direct values before open, including exact production types and invalid containers,
+  proving zero temporary-file/SQLite side effects;
+- caller list/tuple/mapping non-mutation, tuple/dict snapshot forwarding, exact race-input/budget
+  object identity, and delegation of detailed collection validation to the run service;
+- file-backed end-to-end execution: setup creates parent race/horse schema, applies migrations,
+  inserts fixture/result/complete WIN payout 300, commits and closes; the runner reapplies migrations
+  idempotently and returns the one-race settled Summary with investment 100, payout 300, profit 200,
+  ROI 300, and maximum drawdown 0;
+- fresh-connection verification of persisted Snapshot, budget 100, one bet, race-entry resolution,
+  migration versions v008/v009, and database usability;
+- failure-close tests using a real SQLite file and the existing migration runner, without mocks or
+  patches. For migration failure, the fixture creates `schema_migrations`, records unknown future
+  version `999` named `future_migration` with `2026-08-05T00:00:00+00:00`, commits, and closes
+  before the runner opens the file. Confirm that `apply_migrations()` raises its unknown-future-
+  version error without wrapping, composition and run do not occur, the runner-owned connection
+  closes, and the same file can be opened again. For run failure, use a normally migrated database
+  and one representative existing run-service validation failure (for example duplicate `race_id`,
+  missing/extra budget key, or invalid budget value). Confirm migration and composition succeed,
+  run fails without wrapping, the runner-owned connection closes, and the same file is reusable; and
+- source checks banning `get_connection`, `DB_PATH`, `database/keiba.db`, `create_tables`, clocks,
+  UUID, network, logging, print, argparse, JSON, file open, broad except, runtime Protocol checks,
+  `Any`, `cast`, `type: ignore`, and package-root export. The intentional `sqlite3.connect`,
+  `apply_migrations`, close, and `finally`/closing are allowed.
 
-Run the dedicated test, relevant contracts, full `pytest`, forbidden-pattern search,
-`git diff --check`, and `git status --short`. Record exact outcomes.
+Run the dedicated test, relevant application/composition/run-service/persisted-integration tests,
+the full suite, required source searches, `git diff --check`, and `git status --short`.
 
-## Forbidden Files and Patterns
+## Forbidden Files and Future Scope
 
-Do not modify existing production components, repositories, models, Protocols, prediction modules,
-migrations, schema, `scripts/database.py`, `main.py`, CLI, README, or package `__init__` files.
-Never add `target_race_count`.
+Do not modify existing production/tests, the 1i4 composition root, migrations, schema,
+`scripts/database.py`, `main.py`, CLI, models, Protocols, repositories, prediction code, or package
+`__init__` files. Never add `target_race_count`. Never stage/commit `database/keiba.db`, `logs/`, or
+its contents.
 
-Forbidden production patterns include `Any`, `cast`, `type: ignore`, runtime Protocol checks, broad
-`except`, `sqlite3.connect`, `get_connection`, `DB_PATH`, `database/keiba.db`, migrations, current
-time, network, requests, logging, print, argparse, JSON output, package-root export, or connection
-lifecycle calls. New tests may use only `sqlite3.connect(":memory:")` and `apply_migrations` for
-test setup; they may not patch the factory or component constructors.
+Future phases are separate:
 
-Never stage or commit `database/keiba.db`, `logs/`, or its contents.
+```text
+Phase 4C-2d3b1i5b — persisted simulation request/config loading
+Phase 4C-2d3b1i5c — persisted simulation CLI and summary output
+```
 
 ## Stop Condition
 
-After implementation and all required verification, update `docs/LATEST_CODEX_REPORT.md` to
-`READY_FOR_REVIEW` and stop. Do not stage, commit, push, create a review branch, start Phase
-4C-2d3b1i5, or introduce DB-path/CLI ownership.
+After implementation and verification, set the report to `READY_FOR_REVIEW` and stop. Do not stage,
+commit, push, create a review branch, start 1i5b/1i5c, or introduce CLI/request-loading behavior.
 
 blocker: none
