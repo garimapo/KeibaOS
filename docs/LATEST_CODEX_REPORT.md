@@ -2,141 +2,83 @@
 
 ## Status
 
-APPROVED_FOR_COMMIT
+READY_FOR_REVIEW
 
 ## Current Phase
 
-Phase 4C-2d3b1i5a — SQLite persisted simulation application runner
+Phase 4C-2d3b1i5b1 — Persisted simulation request document loader
 
-Base commit: `dfeb34d docs: approve SQLite persisted simulation composition root`
+Base commit: `c5933aa docs: approve SQLite persisted simulation application runner`
 
-Base branch: `feature/ver0.8-simulator`
-
-Review branch: `review/4c-2d3b1i5a-sqlite-application-runner`
+Branch: `feature/ver0.8-simulator`
 
 ## Implementation
 
-Added `scripts/simulation/sqlite_persisted_simulation_application.py` with the sole public API:
+Implemented `scripts/simulation/persisted_simulation_request_document.py` with only the approved
+public frozen `PersistedSimulationRequestDocument` dataclass and keyword-only
+`load_persisted_simulation_request_document()` loader.
 
-```python
-run_sqlite_persisted_simulation(
-    *,
-    database_path: str | Path,
-    run_context: SimulationRunContext,
-    strategy_identity: StrategyIdentity,
-    prediction_pipeline: PredictionPipeline,
-    race_inputs: Sequence[SimulationRaceInput],
-    budgets_by_race_id: Mapping[int, BetStakeBudget],
-) -> SimulationSummary
-```
+The loader validates a non-empty `str`/`Path` request path before reading, uses UTF-8 only, and
+preserves file `OSError` objects unchanged. It translates invalid UTF-8 to
+`ValueError("request file must be UTF-8")` and malformed JSON to
+`ValueError("request file must contain valid JSON")`.
 
-The runner validates the database path, exact production object types, and input container types
-before any SQLite side effect. It preserves the original database-path text after validation, takes
-one tuple/dict snapshot of caller collections without copying their race-input or budget objects,
-then delegates detailed race/budget validation to the existing run service.
+It implements schema version `1`, the exact approved top-level key set, duplicate-key rejection at
+every JSON object level, and non-finite number rejection including `NaN`, `Infinity`, `-Infinity`,
+and `1e999`. A relative `database_path` is anchored exactly to `source_path.parent`; absolute paths
+are retained without resolving, canonicalization, existence checks, or DB work.
 
-After pre-open validation it opens exactly one `sqlite3.connect()` connection, calls
-`apply_migrations(connection)` once, calls the Phase 4C-2d3b1i4 composition factory once, calls
-the returned service once, returns that exact Summary, and closes the runner-owned connection in a
-`try/finally`. It adds no `except`, retry, fallback, transaction handling, manual component
-construction, Snapshot handling, or metric calculation. Connect, migration, composition, and run
-exceptions remain unwrapped.
+Returned JSON content is recursively copied into `MappingProxyType` and tuple values. The frozen
+document performs the same defensive copy on direct construction, so later caller mutation cannot
+change a document. A stored empty races tuple or budgets mapping remains valid.
 
-## Test Coverage
+No `SimulationRunContext`, `StrategyConfig`, `StrategyIdentity`, `PredictionPipeline`,
+`SimulationRaceInput`, `BetStakeBudget`, or `SimulationSummary` is constructed. The loader does not
+open SQLite, run migrations, invoke the 1i5a runner/composition root, read configuration, use time,
+network, logging, or CLI behavior.
 
-Added `tests/test_sqlite_persisted_simulation_application.py`.
+## Tests and Verification
 
-- API/type-hint and AST checks prove all six input hints and the return hint, the sole formal
-  function, one connect/migration/factory/run/close call site, a `try/finally`, and no `except`
-  handler.
-- Pre-open tests cover all required invalid path, exact production object, and container inputs,
-  proving no SQLite file is created.
-- The pending-migration test starts with only parent `races`/`horses`, lets the runner apply v008/v009,
-  and verifies an empty Summary plus migration registry and tables after reopening the DB.
-- The file-backed real-component integration persists a 100-yen WIN plan, reads complete result and
-  payout 300, and returns the required settled Summary: investment 100, payout 300, profit 200,
-  ROI 300, hit rates 100, and maximum drawdown 0. It also verifies caller collection non-mutation,
-  persisted Snapshot/budget/bet/entry data, migration versions, and database usability.
-- The migration failure fixture is the approved unknown future version `999/future_migration`.
-  `apply_migrations()` fails before composition/run; the runner does not wrap the error and the file
-  is reconnectable afterward.
-- The run-failure fixture uses duplicate `race_id`; migrations and composition complete, the existing
-  run-service validation fails without wrapping, no Snapshot is saved, and the file is reconnectable.
+Added `tests/test_persisted_simulation_request_document.py` covering the formal API and field type
+hints, frozen/deep immutable values, relative and absolute database paths, empty payloads, direct
+constructor defensive copying, request/file/UTF-8/JSON failures, duplicate keys, non-finite values,
+strict root/envelope/field validation, independent reloads, package-root non-export, and source/AST
+boundary rules.
 
-## Review Test Contract Correction
-
-The GitHub review approved the production implementation without a production correction. The test
-contract was strengthened on the same review branch.
-
-- All six input annotations are now asserted: `database_path`, `run_context`, `strategy_identity`,
-  `prediction_pipeline`, `race_inputs`, and `budgets_by_race_id`, plus the Summary return type.
-- AST inspection proves the sole `connection.close()` call is inside the exact `Try.finalbody`, not
-  in `Try.body` or function-level execution; there is one `Try` and zero exception handlers.
-- AST execution-order inspection proves `sqlite3.connect` follows every direct validation and the
-  tuple/dict snapshots. The invalid-path test now checks only its required exact `ValueError` cases;
-  the valid-path direct-input/container tests prove pre-open failures do not create a DB file.
-- The normal file-backed route now executes both a list and a tuple race-input collection with
-  distinct run IDs, while preserving both collection order/object identity and the budget mapping.
-  Both runs settle and persist distinct Snapshots.
-- The test no longer uses string concatenation to evade searches. Normal source literals check the
-  allowed boundary fragments, while AST checks reject `Any`, `cast`, `runtime_checkable`, type-ignore
-  directives, and exception handlers without adding forbidden imports or implementation.
-
-## Verification
-
-These are Codex local results, not GitHub CI results. The bundled Codex Python runtime was used
-because `python` is not present on PATH.
+Codex local results:
 
 ```text
-Dedicated: 8 passed, 45 subtests passed
-Related: 56 passed, 140 subtests passed
-Full suite: 2312 passed, 2 skipped, 827 subtests passed
-Production forbidden-pattern AST/source contract: success
-Test forbidden-symbol AST/source contract: success
+Dedicated: 13 passed, 32 subtests passed
+Related: 53 passed, 158 subtests passed
+  tests/test_persisted_simulation_request_document.py
+  tests/test_sqlite_persisted_simulation_application.py
+  tests/test_sqlite_persisted_simulation_composition.py
+  tests/test_persisted_simulation_run_service.py
+  tests/test_simulation_models.py
+Full suite: 2325 passed, 2 skipped, 859 subtests passed
+Forbidden production-pattern search: no matches
+Package-root export check: absent
 git diff --check: success
 ```
 
-The requested `tests/test_migration_runner.py` does not exist; the related suite used the existing
-`tests/test_simulation_migrations.py` instead.
+The bundled workspace Python runtime was used because `python` is not present on the shell PATH.
 
-Only these new implementation files were added:
+## Scope and Git State
+
+Changed files for this phase are limited to:
 
 ```text
-scripts/simulation/sqlite_persisted_simulation_application.py
-tests/test_sqlite_persisted_simulation_application.py
+scripts/simulation/persisted_simulation_request_document.py
+tests/test_persisted_simulation_request_document.py
+docs/LATEST_CODEX_REPORT.md
 ```
 
-The production file has no diff from review commit `21c786e`; only this dedicated test and report are
-changed by the correction. The 1i4 composition root, migrations, schema, `scripts/database.py`,
-`main.py`, CLI, and package-root exports are unchanged. Phase 4C-2d3b1i5b/1i5c remain unstarted.
-`database/keiba.db` and `logs/` are outside scope.
+`docs/CURRENT_PHASE.md` remains the approved contract and was not changed during implementation.
+Existing production code/tests, the 1i5a application runner, composition root, migrations, schema,
+`scripts/database.py`, `main.py`, CLI, package-root exports, `database/keiba.db`, and `logs/` were
+not changed for this implementation.
 
-## GitHub Review Approval
-
-GitHub上の実装レビューは完了し、production review commit
-`21c786e review: add SQLite persisted simulation application runner` とtest correction commit
-`3cd8502 review: strengthen SQLite application runner contracts` を確認済みです。production
-implementationとtest coverageは承認され、production correction・追加test correctionは不要です。
-blockerはなく、base branch integrationは未実施です。
-
-承認済みproduction契約は、`run_sqlite_persisted_simulation`がkeyword-onlyの6引数を受けること、
-database pathのpre-open validation、run context／strategy identity／pipelineのexact type validation、
-race inputs／budgets container validation、tuple／dictによるcaller input snapshotを行うことです。
-`sqlite3.connect`、`apply_migrations`、1i4 composition factory、`service.run`、connection closeはそれぞれ
-exact 1回です。runnerはexact `SimulationSummary`を返し、`try/finally`でconnectionを閉じます。例外wrap、
-retry、fallback、独自commit／rollback、固定DB path、CLI／JSON／現在時刻／設定読込みはありません。
-
-承認済みtest coverageは、正式module/function API、keyword-only 6引数、全6引数とreturn type hints、新class／
-bundleなし、invalid database path、exact production input／subclass拒否、invalid race inputs／budgets
-containers、pre-open failureでのDB file未作成、全validation／snapshot後のconnect AST確認、唯一の
-Try.finalbody内close、except handlerなしを含みます。さらにpending v008／v009 migration、empty Summary、
-file-backed 100円→300円 SETTLED、migration idempotency、list／tuple／mapping非変更、race input／budget
-object identity、異なるrun IDのSnapshot 2件、unknown future migration 999、migration/run failure後のDB
-再接続、duplicate race ID時のSnapshot未保存、禁止source fragment、`Any`／`cast`／
-`runtime_checkable`／type-ignore／exceptのAST確認を承認しました。
-
-Phase 4C-2d3b1i5b／1i5cは未着手です。request／config loadingは1i5bの責務であり、argparse、stdout、
-stderr、exit code、CLI entry pointは1i5cの責務です。migration／schema、`scripts/database.py`、`main.py`、
-CLI、package-rootは変更していません。`database/keiba.db`と`logs/`は対象外です。
+No files were staged, committed, pushed, or placed on a review branch. Phase 4C-2d3b1i5b2 and
+Phase 4C-2d3b1i5c are unstarted.
 
 blocker: none
