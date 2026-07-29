@@ -2,7 +2,7 @@
 
 ## Status
 
-READY_FOR_REVIEW
+APPROVED_FOR_COMMIT
 
 ## Phase
 
@@ -53,7 +53,7 @@ unchanged.
 ```text
 Dedicated:
   python -m pytest tests/test_prediction_input_contracts.py -q
-  3 passed
+  4 passed
 
 Related:
   prediction pipeline, Ability, Pace, Jockey, Track, Value, simulation validation,
@@ -61,11 +61,11 @@ Related:
   57 passed, 8 subtests passed
 
 Full suite:
-  2259 passed, 2 skipped, 666 subtests passed
+  2260 passed, 2 skipped, 666 subtests passed
 
 Source search:
   typing.Any / typing.cast / # type: ignore / runtime_checkable / scripts.simulation: 0 matches
-  date.today(): 3 existing Engine constructor defaults only; none added by this phase
+  new date.today() calls: 0
 
 git diff --check: success
 ```
@@ -84,11 +84,22 @@ each parameter annotation for Ability, Pace, Jockey, and Track Engine methods. D
 prove that nested `Sequence[PastRace]` and `Mapping[int, Sequence[PastRace]]` are detected, while
 `Sequence[PastRaceInput]` is accepted.
 
-Production code remains unchanged by this correction. Re-verification results are recorded below;
-the review branch remains `READY_FOR_REVIEW` pending its updated review.
+Production code remains unchanged by this correction. Re-verification results are recorded below.
 
 ```text
 Correction dedicated test: 4 passed
 Correction full suite: 2260 passed, 2 skipped, 666 subtests passed
 Correction git diff --check: success
 ```
+
+## Approval
+
+GitHub implementation review is approved. The production implementation required no correction,
+and correction commit `8a03b02` was re-reviewed and approved. The readonly Protocol design is
+approved: prediction has no dependency on simulation; Pipeline and Engine runtime logic is
+unchanged; both mutable `RacePredictionInput` and `ImmutableRacePredictionInput` are accepted by
+the real Pipeline and produce equal `PipelineResult` values without mutating caller collections.
+The recursive nested-concrete-`PastRace` annotation regression test is also approved.
+
+The review branch is pushed to origin. Base-branch integration is pending. Phase 4C-2d3b1i1
+remains unstarted.
