@@ -8,7 +8,7 @@ import math
 import unicodedata
 from typing import Mapping, Sequence
 
-from scripts.models import PastRace
+from scripts.prediction.input_contracts import PastRaceInput, RaceTrackConditionsInput
 
 
 @dataclass(frozen=True)
@@ -57,8 +57,8 @@ class TrackEngine:
 
     def evaluate(
         self,
-        target: RaceTrackConditions,
-        horse_past_races: Mapping[int, Sequence[PastRace]],
+        target: RaceTrackConditionsInput,
+        horse_past_races: Mapping[int, Sequence[PastRaceInput]],
     ) -> dict[int, TrackEvaluation]:
         """対象レースに対する馬ごとの適性評価を返す。"""
 
@@ -70,8 +70,8 @@ class TrackEngine:
     def _evaluate_horse(
         self,
         horse_id: int,
-        target: RaceTrackConditions,
-        past_races: Sequence[PastRace],
+        target: RaceTrackConditionsInput,
+        past_races: Sequence[PastRaceInput],
     ) -> TrackEvaluation:
         """1頭分の有効過去走を集計して適性を評価する。"""
 
@@ -107,7 +107,7 @@ class TrackEngine:
     def _place_score(
         self,
         target_place: str,
-        past_races: Sequence[PastRace],
+        past_races: Sequence[PastRaceInput],
     ) -> float:
         """同一競馬場での基礎成績点を評価する。"""
 
@@ -127,7 +127,7 @@ class TrackEngine:
     def _distance_score(
         self,
         target_distance: int,
-        past_races: Sequence[PastRace],
+        past_races: Sequence[PastRaceInput],
     ) -> float:
         """対象距離に近いレースの基礎成績点を距離差で重み付けする。"""
 
@@ -149,7 +149,7 @@ class TrackEngine:
     def _track_score(
         self,
         target_track: str,
-        past_races: Sequence[PastRace],
+        past_races: Sequence[PastRaceInput],
     ) -> float:
         """同じ芝・ダート等での基礎成績点を評価する。"""
 
@@ -169,7 +169,7 @@ class TrackEngine:
     def _track_condition_score(
         self,
         target_condition: str,
-        past_races: Sequence[PastRace],
+        past_races: Sequence[PastRaceInput],
     ) -> float:
         """同じ馬場状態での基礎成績点を評価する。"""
 
@@ -208,7 +208,7 @@ class TrackEngine:
             + (self._clamp_score(raw_score) - self.NEUTRAL_SCORE) * confidence
         )
 
-    def _is_eligible_race(self, past_race: PastRace) -> bool:
+    def _is_eligible_race(self, past_race: PastRaceInput) -> bool:
         """成績評価可能かつ未来日付でない過去走を対象として扱う。"""
 
         race_date = self._parse_date(past_race.race_date)

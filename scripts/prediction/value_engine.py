@@ -47,7 +47,7 @@ class ValueEngine:
     def evaluate(
         self,
         predictions: Sequence[Prediction],
-        odds_by_horse: Mapping[int, float],
+        odds_by_horse: Mapping[int, object],
     ) -> list[ValueEvaluation]:
         """全馬の推定勝率と単勝の推定期待値を返す。
 

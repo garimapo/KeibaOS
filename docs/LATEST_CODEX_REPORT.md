@@ -2,135 +2,78 @@
 
 ## Status
 
-APPROVED_FOR_COMMIT
+READY_FOR_REVIEW
 
-## Completed Phase
+## Phase
 
-Phase 4C-2d3b1h — Persisted simulation composition and integration
+Phase 4C-2d3b1i0 — Prediction-side immutable input contracts
 
-Base commit: `46d1d74 docs: approve repository backed persisted settlement source`
+Base commit: `d50c27b docs: approve persisted simulation integration`
 
-## Changed Files
+## Result
 
-- `tests/test_persisted_simulation_integration.py` (new)
-- `docs/LATEST_CODEX_REPORT.md`
+Implemented the prediction-owned readonly input-contract boundary after the Phase 4C-2d3b1i
+split. Phase 4C-2d3b1i1 remains untouched.
 
-No production file, existing test, schema, migration, Protocol, model, Repository, Executor,
-Simulator, Pipeline, CLI, composition factory, or package-root export was changed.
-`docs/CURRENT_PHASE.md` was not changed during implementation.
+### Protocols and dependency direction
 
-## Integration Fixture
+Added `scripts/prediction/input_contracts.py` with these `typing.Protocol` contracts:
 
-Each test creates and closes its own `sqlite3.connect(":memory:")` connection. It creates only the
-approved parent `races` and `horses` schema, seeds fixed race/horse IDs, commits, invokes the
-registered `apply_migrations(connection)` exactly once with no active transaction, then constructs
-the existing SQLite components over that same connection. The migration audit timestamp is neither
-patched nor asserted.
+- `PastRaceInput` (19 readonly fields)
+- `RaceTrackConditionsInput` (4 readonly fields)
+- `PredictionPipelineInput` (pipeline input fields)
 
-All simulation-domain times are fixed and timezone-aware. The fixture keeps run start, prediction
-cutoff, scheduled start, result/payout finalized times, and repository observed times distinct.
-It does not use `datetime.now()`, `date.today()`, a real DB, a copied user DB, external I/O, or a
-mock/fake core Repository.
+The module has no import from simulation, no concrete `PastRace`, `RacePredictionInput`, or
+`RaceTrackConditions` import, no runtime Protocol check, and no `@runtime_checkable` marker.
+Prediction continues to have no dependency on simulation.
 
-## Real Component Composition
+### Annotation-only production changes
 
-The test composes the approved existing path directly:
+- `PredictionPipeline.run()` now accepts `PredictionPipelineInput`.
+- Ability, Pace, Jockey, and Track Engine past-race/track input annotations use the readonly
+  Protocols throughout their public and private evaluation methods.
+- `ValueEngine.evaluate()` now accepts `Mapping[int, object]` for odds, matching the existing
+  runtime validation boundary.
+
+No Pipeline stage order, calculation, logging, exception wrapping, result construction, strategy,
+or domain/simulation model changed. Existing Engine `date.today()` constructor defaults were not
+changed or newly introduced.
+
+### Mutable and immutable input verification
+
+The new deterministic test injects `date(2026, 8, 1)` into Ability, Jockey, and Track Engines.
+It runs the same real `PredictionPipeline` directly with a mutable `RacePredictionInput` and the
+equivalent `ImmutableRacePredictionInput`; no restoration to a mutable input occurs. The two
+`PipelineResult` values, predictions, and BetPlans are equal by value, including prediction race
+and horse IDs. The caller's past-race mapping/lists, jockey mapping, and odds mapping remain
+unchanged.
+
+### Verification
 
 ```text
-FixedStakeBetAllocator
-→ SQLiteRaceEntrySource
-→ RepositoryBackedRaceEntrySelectionResolver
-→ SimulationBetPlanBuilder
-→ SQLiteSimulationBetPlanSnapshotRepository
-→ PersistedSimulationBetSource
-→ RepositoryBackedPersistedRaceSettlementSource
-→ PersistedRaceSimulationExecutor
-→ Simulator.run()
-→ SimulationSummary
+Dedicated:
+  python -m pytest tests/test_prediction_input_contracts.py -q
+  3 passed
+
+Related:
+  prediction pipeline, Ability, Pace, Jockey, Track, Value, simulation validation,
+  persisted simulation integration, and input-contract tests
+  57 passed, 8 subtests passed
+
+Full suite:
+  2259 passed, 2 skipped, 666 subtests passed
+
+Source search:
+  typing.Any / typing.cast / # type: ignore / runtime_checkable / scripts.simulation: 0 matches
+  date.today(): 3 existing Engine constructor defaults only; none added by this phase
+
+git diff --check: success
 ```
 
-Each plan identity uses only the run context run ID, race input race ID and information cutoff, and
-strategy identity strategy ID/config hash. Fixed-stake allocation uses the approved policy
-`fixed_stake_per_recommendation` version `1` with a 100-yen stake. Prediction horse IDs are passed
-through the real SQLite Source and concrete Resolver before snapshot construction.
+## Scope and Git state
 
-Every snapshot, including the NO_BET case, follows the formal `BetPlan → Allocator → Builder →
-save_snapshot()` path. The test immediately reloads it and verifies equality by value: identity,
-policy identity, budget, bet count/order/type/stake/rank/selection, and cutoff. It intentionally
-does not assert object identity across a SQLite round trip.
+Changed implementation/test files are limited to the Phase 4C-2d3b1i0 Allowed Files. No staging,
+commit, push, or review branch was created. `database/keiba.db` and `logs/` remain out of scope and
+are not included in this work.
 
-## Covered Outcomes
-
-One four-race `Simulator.run()` proves the full persisted path:
-
-| Race | Persisted facts | Result |
-| --- | --- | --- |
-| 101 | Saved one-bet plan, complete result, complete winning payout of 300 per 100 | `SETTLED`, investment 100, payout 300, profit 200, one hit |
-| 102 | Saved one-bet plan, complete result, complete payout table without the purchased selection | `SETTLED`, investment 100, payout 0, profit -100, no hit |
-| 103 | Saved empty plan header | `NO_BET` without result/payout data |
-| 104 | Saved one-bet plan, complete result, latest payout publication incomplete | `UNSETTLED` with `missing_payout_publication` |
-
-The incomplete Race 104 publication has no complete fallback and receives no re-query. The
-repository-backed settlement Source omits it from the mapping; the existing executor produces the
-UNSETTLED result.
-
-The resulting summary confirms `race_count=4`, settled/no-bet/unsettled counts `2/1/1`, three
-planned bets, two settled bets, one hit bet/race, investment 200, payout 300, profit 100,
-`Decimal("150")` ROI, `Decimal("50")` bet/race hit rates, and maximum drawdown 100 using the
-existing `(settled_at, race_id)` order. The used bet type summary confirms its count, settled
-count, hit count, investment, payout, profit, ROI, and hit rate.
-
-The suite also covers a saved non-empty snapshot with no RaceResult, yielding `UNSETTLED` with
-`missing_race_result`, retained planned investment, and unset settled amounts. Finally, it confirms
-that valid differences in run ID, race ID, information cutoff, or StrategyIdentity fail closed as
-`SimulationValidationError(input_identifier="simulation_bet_plan_snapshot")`, rather than
-silently becoming NO_BET.
-
-## Verification
-
-| Check | Result |
-| --- | --- |
-| Dedicated integration test | `3 passed, 4 subtests passed` |
-| Related component, SQLite Repository, migration, executor, Simulator, and Summary regressions | `507 passed, 228 subtests passed` |
-| Full pytest suite | `2256 passed, 2 skipped, 666 subtests passed` |
-| Forbidden-pattern search in new integration test | `0 matches` |
-| `git diff --check` | passed |
-
-The related command covered FixedStakeBetAllocator/BetAllocationPlan, Builder, SQLiteRaceEntrySource,
-the concrete Resolver, SQLite Snapshot Repository, Persisted Bet Source, repository-backed
-settlement Source, Persisted Executor, Simulator/Summary, SQLite RaceResult/Payout repositories,
-and migration runner tests.
-
-## Excluded Scope
-
-No production composition API, factory, wrapper, cache, retry, logging, Provider, network,
-Pipeline, CLI, settings JSON, schema/migration change, package-root export, or
-`target_race_count` was added. `database/keiba.db` and `logs/` remain outside this phase.
-
-## Git and Handoff
-
-Review branch `review/4c-2d3b1h-persisted-simulation-integration` was pushed to origin with
-review commit `eb01cfb review: add persisted simulation integration tests`. GitHub implementation
-review approved the change with no requested code correction.
-
-The approved outcome confirms that production remains unchanged, direct composition inside the
-integration test is the adopted approach, and only `:memory:` SQLite is used. The real path reaches
-`SimulationSummary` through FixedStakeBetAllocator, SQLiteRaceEntrySource,
-RepositoryBackedRaceEntrySelectionResolver, SimulationBetPlanBuilder,
-SQLiteSimulationBetPlanSnapshotRepository, PersistedSimulationBetSource,
-RepositoryBackedPersistedRaceSettlementSource, PersistedRaceSimulationExecutor, and
-`Simulator.run()`.
-
-Approval covers the saved NO_BET snapshot path, settled winning and losing paths, incomplete Payout
-to `missing_payout_publication` UNSETTLED, missing RaceResult to `missing_race_result` UNSETTLED,
-and natural identity mismatch fail-closed as
-`SimulationValidationError(input_identifier="simulation_bet_plan_snapshot")`. The approved
-four-race summary values are: `race_count=4`, `settled_race_count=2`,
-`no_bet_race_count=1`, `unsettled_race_count=1`, `void_race_count=0`, `error_race_count=0`,
-`unsupported_race_count=0`, `settled_purchase_race_count=2`, `bet_count=3`,
-`settled_bet_count=2`, `hit_bet_count=1`, `hit_race_count=1`, investment 200, payout 300,
-profit 100, `Decimal("150")` ROI, `Decimal("50")` bet/race hit rates, and maximum drawdown 100.
-
-The dedicated, related, full-suite, forbidden-pattern, and `git diff --check` results above remain
-approved. `database/keiba.db` and `logs/` remain outside the commit. The review commit and its
-approval are ready for fast-forward integration into `feature/ver0.8-simulator`.
+Awaiting implementation review and explicit commit approval.

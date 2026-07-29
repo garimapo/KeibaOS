@@ -9,7 +9,7 @@ from statistics import median
 from typing import Sequence
 import unicodedata
 
-from scripts.models import PastRace
+from scripts.prediction.input_contracts import PastRaceInput
 
 
 @dataclass(frozen=True)
@@ -48,7 +48,7 @@ class AbilityEngine:
         self.recency_half_life_days = max(1, recency_half_life_days)
         self.reference_date = reference_date or date.today()
 
-    def evaluate(self, past_races: Sequence[PastRace]) -> AbilityEvaluation:
+    def evaluate(self, past_races: Sequence[PastRaceInput]) -> AbilityEvaluation:
         """過去走の加重平均から能力評価を返す。
 
         空の入力では、指数0.0・レース数0の評価を返す。
@@ -107,7 +107,7 @@ class AbilityEngine:
             latest_race_date=latest_date.isoformat() if latest_date else None,
         )
 
-    def _race_score(self, past_race: PastRace) -> float:
+    def _race_score(self, past_race: PastRaceInput) -> float:
         """1走分の能力評価を各要素の加重平均で算出する。"""
 
         return (
@@ -118,7 +118,7 @@ class AbilityEngine:
         )
 
     @classmethod
-    def _is_eligible_race(cls, past_race: PastRace) -> bool:
+    def _is_eligible_race(cls, past_race: PastRaceInput) -> bool:
         """評価4項目のうち少なくとも1項目が有効なレースか判定する。"""
 
         return any(
@@ -170,7 +170,7 @@ class AbilityEngine:
         return isinstance(race_class, str) and bool(race_class.strip())
 
     @staticmethod
-    def _typical_distance(past_races: Sequence[PastRace]) -> float:
+    def _typical_distance(past_races: Sequence[PastRaceInput]) -> float:
         """有効な過去走距離の中央値を代表距離として返す。"""
 
         distances = [race.distance for race in past_races if race.distance > 0]

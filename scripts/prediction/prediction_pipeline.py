@@ -11,6 +11,7 @@ from scripts.models import PastRace, Prediction
 from scripts.prediction.ability_engine import AbilityEngine, AbilityEvaluation
 from scripts.prediction.bet_generator import BetGenerator, BetRecommendation
 from scripts.prediction.bet_strategy import BetPlan, BetStrategy, RuleBasedBetStrategy, StrategyConfig
+from scripts.prediction.input_contracts import PredictionPipelineInput
 from scripts.prediction.jockey_engine import JockeyEngine, JockeyEvaluation
 from scripts.prediction.pace_engine import PaceEngine, PaceEvaluation
 from scripts.prediction.predictor import HorseEvaluationResults, Predictor
@@ -91,7 +92,7 @@ class PredictionPipeline:
     def __init__(self, config: PipelineConfig | None = None) -> None:
         self.config = config or PipelineConfig()
 
-    def run(self, race_input: RacePredictionInput) -> PipelineResult:
+    def run(self, race_input: PredictionPipelineInput) -> PipelineResult:
         """入力済みの1レースを評価し、購入対象候補まで生成する。"""
 
         horse_past_races = race_input.horse_past_races

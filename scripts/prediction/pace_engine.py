@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from statistics import median
 from typing import Literal, Mapping, Sequence, TypeAlias
 
-from scripts.models import PastRace
+from scripts.prediction.input_contracts import PastRaceInput
 
 
 RunningStyle: TypeAlias = Literal["逃げ", "先行", "差し", "追込"]
@@ -32,7 +32,7 @@ class PaceEngine:
 
     def evaluate(
         self,
-        horse_past_races: Mapping[int, Sequence[PastRace]],
+        horse_past_races: Mapping[int, Sequence[PastRaceInput]],
     ) -> PaceEvaluation:
         """各馬の過去走から脚質を推定し、全体ペースを判定する。
 
@@ -65,7 +65,7 @@ class PaceEngine:
 
     def _estimate_running_style(
         self,
-        past_races: Sequence[PastRace],
+        past_races: Sequence[PastRaceInput],
     ) -> RunningStyle | None:
         """有効な4角位置の中央値から脚質を推定する。"""
 
@@ -115,7 +115,7 @@ class PaceEngine:
         return "平均"
 
     @staticmethod
-    def _fourth_corner_position(past_race: PastRace) -> int:
+    def _fourth_corner_position(past_race: PastRaceInput) -> int:
         """4角位置を優先し、未取得時は通過順位から安全に取得する。"""
 
         if past_race.fourth_corner_position > 0:

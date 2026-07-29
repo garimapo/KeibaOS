@@ -7,7 +7,7 @@ from datetime import date
 import math
 from typing import Sequence
 
-from scripts.models import PastRace
+from scripts.prediction.input_contracts import PastRaceInput
 
 
 @dataclass(frozen=True)
@@ -47,7 +47,7 @@ class JockeyEngine:
     def evaluate(
         self,
         jockey_name: str,
-        past_races: Sequence[PastRace],
+        past_races: Sequence[PastRaceInput],
     ) -> JockeyEvaluation:
         """指定騎手の有効な過去走を集計して評価を返す。
 
@@ -92,7 +92,7 @@ class JockeyEngine:
 
     def _is_eligible_race(
         self,
-        past_race: PastRace,
+        past_race: PastRaceInput,
         jockey_name: str,
     ) -> bool:
         """騎手名・着順・日付が評価に利用できるか判定する。"""
@@ -107,14 +107,14 @@ class JockeyEngine:
 
     @staticmethod
     def _rate(
-        past_races: Sequence[PastRace],
+        past_races: Sequence[PastRaceInput],
         max_finish: int,
     ) -> float:
         """指定着順以内の割合を0.0〜1.0で返す。"""
 
         return sum(race.finish <= max_finish for race in past_races) / len(past_races)
 
-    def _recent_score(self, past_races: Sequence[PastRace]) -> float:
+    def _recent_score(self, past_races: Sequence[PastRaceInput]) -> float:
         """新しい最大5走の着順を重み付き平均して直近成績を算出する。"""
 
         sorted_races = sorted(
