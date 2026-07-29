@@ -2,104 +2,61 @@
 
 ## Status
 
-APPROVED_FOR_COMMIT
+READY_FOR_REVIEW
 
 ## Phase
 
-Phase 4C-2d3b1i0 — Prediction-side immutable input contracts
+Phase 4C-2d3b1i1 — Prediction-to-snapshot persistence service
 
-Base commit: `d50c27b docs: approve persisted simulation integration`
+Base commit: `dafb04d docs: approve prediction immutable input contracts`
 
-## Result
+## Implementation Report
 
-Implemented the prediction-owned readonly input-contract boundary after the Phase 4C-2d3b1i
-split. Phase 4C-2d3b1i1 remains untouched.
+Implemented `PersistedSimulationBetPlanService` in
+`scripts/simulation/persisted_bet_plan_service.py` and added service-unit coverage in
+`tests/test_persisted_bet_plan_service.py`. This occurred after the approved contract correction;
+`docs/CURRENT_PHASE.md` was not changed during implementation.
 
-### Protocols and dependency direction
+The service requires the approved concrete `PredictionPipeline` and
+`SimulationBetPlanBuilder` dependencies, retains every injected object by identity, and accepts
+the allocator and snapshot repository structurally. Constructor and direct input violations fail
+as `ValueError` before collaborators are called.
 
-Added `scripts/prediction/input_contracts.py` with these `typing.Protocol` contracts:
+For each valid call, it revalidates the runtime `PipelineConfig`, verifies strategy-config equality,
+requires `strategy_identity.strategy_config.allocation_policy`, derives one allocation-policy
+identity, constructs the five-field `SimulationBetPlanIdentity`, and then calls Pipeline,
+allocator, Builder, and Repository exactly once in that order. The identity fields are taken only
+from: `run_context.run_id`, `race_input.race_id`, `strategy_identity.strategy_id`,
+`strategy_identity.strategy_config_hash`, and `race_input.information_cutoff`.
 
-- `PastRaceInput` (19 readonly fields)
-- `RaceTrackConditionsInput` (4 readonly fields)
-- `PredictionPipelineInput` (pipeline input fields)
+`StrategyIdentity.strategy_name` is intentionally not compared with
+`PipelineResult.bet_plan.strategy_name`; they are distinct domain concepts. The service validates
+only the approved Pipeline, allocation-plan, and snapshot response boundaries and uses the
+specified `SimulationValidationError` identifiers. Collaborator exceptions are not caught or
+retried, so Pipeline, allocator, Builder, and Repository exception objects propagate unchanged.
 
-The module has no import from simulation, no concrete `PastRace`, `RacePredictionInput`, or
-`RaceTrackConditions` import, no runtime Protocol check, and no `@runtime_checkable` marker.
-Prediction continues to have no dependency on simulation.
+An empty persisted plan follows the full Pipeline → allocator → Builder → Repository path. It saves
+and returns the exact empty Snapshot object while preserving the explicit supplied budget; it is
+not treated as a missing plan.
 
-### Annotation-only production changes
-
-- `PredictionPipeline.run()` now accepts `PredictionPipelineInput`.
-- Ability, Pace, Jockey, and Track Engine past-race/track input annotations use the readonly
-  Protocols throughout their public and private evaluation methods.
-- `ValueEngine.evaluate()` now accepts `Mapping[int, object]` for odds, matching the existing
-  runtime validation boundary.
-
-No Pipeline stage order, calculation, logging, exception wrapping, result construction, strategy,
-or domain/simulation model changed. Existing Engine `date.today()` constructor defaults were not
-changed or newly introduced.
-
-### Mutable and immutable input verification
-
-The new deterministic test injects `date(2026, 8, 1)` into Ability, Jockey, and Track Engines.
-It runs the same real `PredictionPipeline` directly with a mutable `RacePredictionInput` and the
-equivalent `ImmutableRacePredictionInput`; no restoration to a mutable input occurs. The two
-`PipelineResult` values, predictions, and BetPlans are equal by value, including prediction race
-and horse IDs. The caller's past-race mapping/lists, jockey mapping, and odds mapping remain
-unchanged.
-
-### Verification
+## Verification
 
 ```text
-Dedicated:
-  python -m pytest tests/test_prediction_input_contracts.py -q
-  4 passed
+Dedicated: python -m pytest tests/test_persisted_bet_plan_service.py -q
+16 passed, 30 subtests passed
 
-Related:
-  prediction pipeline, Ability, Pace, Jockey, Track, Value, simulation validation,
-  persisted simulation integration, and input-contract tests
-  57 passed, 8 subtests passed
+Related: PredictionPipeline, simulation models, allocation policy, fixed allocator,
+stake-allocation contract, Builder, Snapshot, Snapshot Repository protocol,
+persisted integration, and service tests
+279 passed, 126 subtests passed
 
-Full suite:
-  2260 passed, 2 skipped, 666 subtests passed
+Full: python -m pytest -q
+2276 passed, 2 skipped, 696 subtests passed
 
-Source search:
-  typing.Any / typing.cast / # type: ignore / runtime_checkable / scripts.simulation: 0 matches
-  new date.today() calls: 0
-
+Forbidden-dependency / runtime-Protocol / package-export search: no prohibited production match
 git diff --check: success
 ```
 
-## Scope and Git state
-
-Changed implementation/test files are limited to the Phase 4C-2d3b1i0 Allowed Files.
-`database/keiba.db` and `logs/` remain out of scope and are not included in this work.
-
-## Review correction
-
-GitHub review found no production-code issue. It identified a test weakness: the prior annotation
-regression assertion inspected only top-level hint values and could miss a concrete `PastRace`
-nested inside a generic annotation. The test now uses a recursive `typing.get_args()` helper across
-each parameter annotation for Ability, Pace, Jockey, and Track Engine methods. Dedicated assertions
-prove that nested `Sequence[PastRace]` and `Mapping[int, Sequence[PastRace]]` are detected, while
-`Sequence[PastRaceInput]` is accepted.
-
-Production code remains unchanged by this correction. Re-verification results are recorded below.
-
-```text
-Correction dedicated test: 4 passed
-Correction full suite: 2260 passed, 2 skipped, 666 subtests passed
-Correction git diff --check: success
-```
-
-## Approval
-
-GitHub implementation review is approved. The production implementation required no correction,
-and correction commit `8a03b02` was re-reviewed and approved. The readonly Protocol design is
-approved: prediction has no dependency on simulation; Pipeline and Engine runtime logic is
-unchanged; both mutable `RacePredictionInput` and `ImmutableRacePredictionInput` are accepted by
-the real Pipeline and produce equal `PipelineResult` values without mutating caller collections.
-The recursive nested-concrete-`PastRace` annotation regression test is also approved.
-
-The review branch is pushed to origin. Base-branch integration is pending. Phase 4C-2d3b1i1
-remains unstarted.
+`database/keiba.db` and `logs/` remain out of scope and were not changed by this phase. No file
+has been staged, committed, pushed, or placed on a review branch. Phase 4C-2d3b1i2 has not been
+started and this implementation is ready for review.
