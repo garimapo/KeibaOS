@@ -2,103 +2,162 @@
 
 ## Status
 
-APPROVED_FOR_COMMIT
+READY_FOR_REVIEW
 
 ## Phase
 
-Phase 4C-2d3b1i1 — Prediction-to-snapshot persistence service
+Phase 4C-2d3b1i2 — Prediction-to-persisted-simulation integration
 
-Base commit: `dafb04d docs: approve prediction immutable input contracts`
+Base commit: `3bf1ae4 docs: approve persisted bet plan service`
 
-## Implementation Report
+## Preparation Result
 
-Implemented `PersistedSimulationBetPlanService` in
-`scripts/simulation/persisted_bet_plan_service.py` and added service-unit coverage in
-`tests/test_persisted_bet_plan_service.py`. This occurred after the approved contract correction;
-`docs/CURRENT_PHASE.md` was not changed during implementation.
+Phase 4C-2d3b1i1 is formally complete on `feature/ver0.8-simulator`. Its new
+`PersistedSimulationBetPlanService` is the missing write-side boundary: it creates and persists a
+Snapshot, while the existing persisted simulation integration test currently begins after a manual
+`BetPlan → allocation → Builder → Snapshot Repository save` sequence.
 
-The service requires the approved concrete `PredictionPipeline` and
-`SimulationBetPlanBuilder` dependencies, retains every injected object by identity, and accepts
-the allocator and snapshot repository structurally. Constructor and direct input violations fail
-as `ValueError` before collaborators are called.
+The proposed Phase 4C-2d3b1i2 adds two service-originated paths to the existing
+`tests/test_persisted_simulation_integration.py`. This is preferred to a new test file because the
+existing class already owns the in-memory parent schema, migration invocation, horse seed helpers,
+SQLite repositories, settlement fixtures, and downstream composition. Existing manual Snapshot
+scenarios remain as lower-level regression coverage; none will be removed or replaced.
 
-For each valid call, it revalidates the runtime `PipelineConfig`, verifies strategy-config equality,
-requires `strategy_identity.strategy_config.allocation_policy`, derives one allocation-policy
-identity, constructs the five-field `SimulationBetPlanIdentity`, and then calls Pipeline,
-allocator, Builder, and Repository exactly once in that order. The identity fields are taken only
-from: `run_context.run_id`, `race_input.race_id`, `strategy_identity.strategy_id`,
-`strategy_identity.strategy_config_hash`, and `race_input.information_cutoff`.
+No production change is needed. The integration setup may create the real repositories, resolver,
+settlement data, and `:memory:` SQLite database, but a new Snapshot must be written only through
+`PersistedSimulationBetPlanService.build_and_save()`.
 
-`StrategyIdentity.strategy_name` is intentionally not compared with
-`PipelineResult.bet_plan.strategy_name`; they are distinct domain concepts. The service validates
-only the approved Pipeline, allocation-plan, and snapshot response boundaries and uses the
-specified `SimulationValidationError` identifiers. Collaborator exceptions are not caught or
-retried, so Pipeline, allocator, Builder, and Repository exception objects propagate unchanged.
+## Real Pipeline Feasibility
 
-An empty persisted plan follows the full Pipeline → allocator → Builder → Repository path. It saves
-and returns the exact empty Snapshot object while preserving the explicit supplied budget; it is
-not treated as a missing plan.
+The test will instantiate an exact `PredictionPipeline` with an explicit `PipelineConfig` and
+fixed reference date `2026-08-01`; it will not use a Pipeline subclass, fake, patch, test-double
+strategy, or prebuilt Pipeline result/plan. `AbilityEngine` and `JockeyEngine` receive the fixed
+reference date, eliminating their `date.today()` fallback.
 
-## Review Test Strengthening
+For Scenario A, one seeded entry, empty past races, and odds `2.0` are sufficient. Empty history
+produces neutral engine scores; the single prediction has softmax probability 1; `ValueEngine`
+computes EV 2; `BetGenerator` produces one WIN recommendation; and real
+`RuleBasedBetStrategy` admits it under the default allowed bet types. With fixed stake 100 and
+budget 100, the expected persisted Snapshot has one bet and the final winning payout fixture of
+300 produces one SETTLED result: investment 100, payout 300, profit 200, ROI 300, hit rates 100,
+and maximum drawdown 0.
 
-GitHub review found no production-code correction. The NO_BET contract test now uses an explicit
-`BetStakeBudget(500)`, proving that the exact non-zero budget reaches the allocator, allocation
-plan, and empty Snapshot unchanged. It verifies `Snapshot.bets == ()`, `allocated_amount == 0`,
-and `unallocated_amount == 500`, together with exact Snapshot identity at Repository input and
-service return.
+For Scenario B, a real Pipeline with `StrategyConfig(allowed_bet_types=frozenset(),
+allocation_policy=policy_config)` still evaluates Prediction, Value, and BetGenerator but the real
+strategy returns an empty plan. The service must persist an empty Snapshot with explicit budget
+500, allocated amount 0, and unallocated amount 500. The existing settlement source returns early
+for empty bets, so no result or payout record is needed; executor and Simulator return NO_BET with
+planned investment 0 and a zero-money Summary.
 
-The forbidden-dependency test now reads the complete production module rather than only the class
-source, verifies both `ast.Import` and `ast.ImportFrom`, and rejects SQLite imports, time calls,
-runtime Protocol decoration, `typing.Any`, `typing.cast`, type-ignore comments, concrete SQLite
-Repository imports, and package-root export. The production module was not changed.
+For both scenarios, Pipeline config and `StrategyIdentity` use equal strategy config values.
+`BetPlan.strategy_name` remains the real strategy class name and is not compared to the
+caller-defined strategy identity name. Snapshot identity uses only run ID, race ID, strategy ID,
+strategy-config hash, and information cutoff; it does not use prediction time or scheduled start.
 
-The final typing regression check closes a module-qualified detection gap: direct `import typing`
-and aliased `import typing as t` are now inspected for `typing.Any`, `typing.cast`, `t.Any`, and
-`t.cast` AST attributes. Small direct, aliased, and clean sample trees verify the helper itself;
-the existing `from typing import Any` / `cast` checks remain in place. Production code was not
-changed.
+## Scope and Failure Coverage
 
-Repository-stage propagation coverage now explicitly verifies object-identity propagation with no
-retry for `RepositoryValidationError`, `RepositoryConflictError`, and
-`RepositoryDataIntegrityError`; all preceding collaborators are called once and Repository is
-called exactly once.
+No additional conflict, identity-mismatch, or insufficient-budget integration case is proposed:
+the service and repository tests already exercise those fail-closed boundaries. This phase proves
+only the missing real-Pipeline write path plus its normal non-empty settlement and normal NO_BET
+downstream behavior.
 
-## GitHub Implementation Review Approval
+Implementation candidates are `tests/test_persisted_simulation_integration.py` and this report;
+`docs/CURRENT_PHASE.md` is preparation-only. Production modules, migrations, schema, CLI,
+package exports, `database/keiba.db`, and `logs/` are out of scope. Phase 4C-2d3b1i3 is not
+started.
 
-GitHub production implementation review is complete with no production-code correction. The
-initial implementation commit `57a5a4e` and correction commits `74235c6` and `726f879` were
-reviewed and approved.
+## Verification Plan
 
-The review approves `PersistedSimulationBetPlanService`, the concrete `PredictionPipeline`
-dependency, execution-immediate `StrategyConfig` equality verification, and the intentional lack
-of comparison between `BetPlan.strategy_name` and `StrategyIdentity.strategy_name`. It also
-approves fail-closed missing allocation policy handling, the formal five-field plan identity,
-Pipeline → Allocator → Builder → Repository order with each collaborator called once, malformed
-response boundaries, same-object exception propagation without retry, and the NO_BET non-zero
-budget empty-Snapshot persistence contract.
+```text
+python -m pytest tests/test_persisted_simulation_integration.py -q
+python -m pytest tests/test_persisted_bet_plan_service.py tests/test_prediction_input_contracts.py -q
+python -m pytest -q
+git diff --check
+git status --short
+```
 
-The full-module forbidden-dependency check is approved, including direct and aliased
-`import typing` detection for `Any` and `cast`; no package-root export was added. Phase
-4C-2d3b1i2 remains unstarted.
+```text
+blocker: none
+```
+
+No production code or tests were changed during this preparation. No file was staged, committed,
+pushed, or placed on a review branch.
+
+## Approval Record
+
+The Phase 4C-2d3b1i2 design is approved for Codex implementation with no blocker and no
+production change. The existing `tests/test_persisted_simulation_integration.py` is the sole test
+file to extend; its manual Snapshot cases remain intact, and no new integration-test module is
+permitted.
+
+The approved scenarios use the exact real `PredictionPipeline` and its named production components
+with `REFERENCE_DATE = date(2026, 8, 1)`. The test verifies their exact concrete classes. It must
+not patch or subclass the Pipeline/components, prebuild a Pipeline result or plan, directly invoke
+allocator/Builder/Repository save, or execute the Pipeline twice.
+
+Scenario A uses the same `StrategyConfig` object to construct the Pipeline and strategy identity,
+one entry with odds 2.0, fixed stake and budget 100, and a winning payout of 300. It proves a
+single persisted WIN bet and the approved SETTLED Result/Summary values, including WIN aggregate
+metrics. Scenario B uses the same real path with `allowed_bet_types=frozenset()` and budget 500;
+it persists a valid empty Snapshot retaining the full unallocated budget, stores no settlement
+facts, and proves the normal NO_BET Result/Summary path.
+
+All collaborators use the same run context, strategy identity, race ID, and information cutoff.
+The identity must exclude run start, scheduled start, and prediction time. Existing unit/repository
+coverage remains responsible for conflict, identity-mismatch, and insufficient-budget failures, so
+this phase adds no new failure integration scenario.
+
+`docs/CURRENT_PHASE.md` now records `APPROVED_FOR_CODEX`; it is not an implementation target.
+Only `tests/test_persisted_simulation_integration.py` and this report may change during execution.
+
+## Implementation Result
+
+Production code was not changed. `tests/test_persisted_simulation_integration.py` now contains two
+additional service-originated integration scenarios; all existing manual `BetPlan`, allocation,
+Snapshot, settlement-state, and identity-mismatch scenarios remain intact.
+
+Both scenarios construct exact production `PredictionPipeline` / `PipelineConfig` objects with
+`AbilityEngine`, `PaceEngine`, `JockeyEngine`, `TrackEngine`, `Predictor`, `ValueEngine`,
+`BetGenerator`, and `RuleBasedBetStrategy`. The date-dependent engines use fixed
+`REFERENCE_DATE = date(2026, 8, 1)`. The tests assert the concrete classes and do not use a
+Pipeline/component patch, subclass, fake, prebuilt Pipeline result, or a second Pipeline run.
+
+Scenario A uses one seeded race entry, empty history, odds 2.0, the same `StrategyConfig` source
+for the Pipeline and `StrategyIdentity`, fixed stake/budget 100, and only
+`PersistedSimulationBetPlanService.build_and_save()` for Snapshot creation. The persisted Snapshot
+contains one WIN bet with stake 100 and resolved race-entry ID. A complete first-place result and
+WIN payout 300 then produce a SETTLED result with investment 100, payout 300, profit 200, and one
+hit. The one-race Summary has ROI, bet hit rate, and race hit rate `Decimal("300")`,
+`Decimal("100")`, and `Decimal("100")`, respectively, with maximum drawdown 0; the WIN aggregate
+matches those settled values.
+
+Scenario B uses the same real path with `allowed_bet_types=frozenset()` and budget 500. It saves a
+formal empty Snapshot retaining budget 500, allocated amount 0, and unallocated amount 500. No
+race result or payout is saved. The persisted settlement path returns NO_BET with planned
+investment 0, proving that the Snapshot budget is separate from Result investment; the Summary has
+zero money/counts, `None` rates, zero drawdown, and an empty bet-type mapping.
+
+Both scenarios construct Snapshot identity only from run ID, race ID, strategy ID,
+strategy-config hash, and information cutoff. They use Repository round trips for verification,
+but do not manually construct a recommendation/plan/allocation/Snapshot or directly invoke
+allocator, Builder, or repository save. No additional failure integration case was added; existing
+repository/service/allocator coverage remains authoritative for those boundaries.
 
 ## Verification
 
 ```text
-Dedicated: python -m pytest tests/test_persisted_bet_plan_service.py -q
-18 passed, 35 subtests passed
+Dedicated: tests/test_persisted_simulation_integration.py
+5 passed, 4 subtests passed
 
-Related: PredictionPipeline, simulation models, allocation policy, fixed allocator,
-stake-allocation contract, Builder, Snapshot, Snapshot Repository protocol,
-persisted integration, and service tests
-281 passed, 131 subtests passed
+Related: tests/test_persisted_bet_plan_service.py tests/test_prediction_input_contracts.py
+22 passed, 35 subtests passed
 
 Full: python -m pytest -q
-2278 passed, 2 skipped, 701 subtests passed
+2280 passed, 2 skipped, 701 subtests passed
 
-Forbidden-dependency / runtime-Protocol / package-export search: no prohibited production match
+Forbidden-pattern search of the newly added test diff: no matches
 git diff --check: success
 ```
 
-`database/keiba.db` and `logs/` remain out of scope and were not changed by this phase. GitHub
-implementation review is approved; base branch integration is pending. Phase 4C-2d3b1i2 has not
-been started.
+`database/keiba.db` and `logs/` remain out of scope. No file has been staged, committed, pushed,
+or placed on a review branch. Phase 4C-2d3b1i3 is not started.
