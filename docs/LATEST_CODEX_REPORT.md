@@ -36,9 +36,12 @@ composition-root responsibilities.
 
 Added `tests/test_persisted_simulation_run_service.py` using exact production planning, settlement,
 executor, and Simulator components with existing structural collaborators supplied as recording
-fixtures. It covers API/slots, zero constructor work, validation before side effects, official order,
-exact forwarding, empty runs, Planning failure, Simulator failure, and run-time composition
-revalidation.
+fixtures. GitHub review found no production change requirement, but identified missing unit-contract
+coverage. The corrected suite now covers the concrete class/API annotations, exact top-level
+dependency rejection, all three persisted-chain miswirings, constructor and run-time identity
+miswiring, invalid race-input containers, invalid budget mappings, official ordering, the two-pass
+Planning-then-settlement boundary, empty-run summary values, and multi-race Planning/Simulator
+failure stopping behavior.
 
 Extended `tests/test_persisted_simulation_integration.py` with one in-memory SQLite mixed three-race
 scenario. Caller order is deliberately unsorted; the service saves all Snapshots in official order.
@@ -70,11 +73,11 @@ maximum_drawdown = 0
 ## Verification
 
 ```text
-Dedicated service test: 7 passed, 9 subtests passed
+Dedicated service test: 12 passed, 51 subtests passed
 Integration test: 6 passed, 4 subtests passed
-Related contracts: 200 passed, 95 subtests passed
-Full suite: 2291 passed, 2 skipped, 710 subtests passed
-Forbidden-pattern search in new production/test diffs: no matches
+Related contracts: 205 passed, 137 subtests passed
+Full suite: 2296 passed, 2 skipped, 752 subtests passed
+Forbidden-pattern search in the added test diff: no matches
 git diff --check: success
 ```
 
@@ -84,6 +87,9 @@ integration coverage, and 1i2 real-Pipeline scenarios are unchanged. No migratio
 package-root export, or `target_race_count` change was made.
 
 Phase 4C-2d3b1i4 and later phases remain unstarted. `database/keiba.db` and `logs/` are outside
-scope. No file has been staged, committed, pushed, or placed on a review branch for this phase.
+scope. The initial review commit `ce51eb0 review: add persisted simulation run orchestration` is
+pushed on `review/4c-2d3b1i3b-multi-race-run-service`. This unit-test correction remains
+`READY_FOR_REVIEW`; production code, the integration test, `docs/CURRENT_PHASE.md`, migrations,
+schema, CLI, and package-root exports remain unchanged.
 
 blocker: none
