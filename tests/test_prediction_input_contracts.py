@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 import inspect
-from typing import Mapping, Sequence, get_type_hints
+from typing import Mapping, Sequence, get_args, get_type_hints
 import unittest
 
 from scripts.models import PastRace
@@ -30,6 +30,15 @@ from scripts.simulation.models import ImmutableRacePredictionInput
 
 
 REFERENCE_DATE = date(2026, 8, 1)
+
+
+def _annotation_contains(annotation: object, target: object) -> bool:
+    if annotation is target:
+        return True
+    return any(
+        _annotation_contains(argument, target)
+        for argument in get_args(annotation)
+    )
 
 
 def _past_race(*, horse_id: int, finish: int, jockey: str) -> PastRace:
@@ -107,7 +116,21 @@ class PredictionInputContractsTest(unittest.TestCase):
         for engine in engines:
             for _, method in inspect.getmembers(engine, inspect.isfunction):
                 hints = get_type_hints(method)
-                self.assertNotIn(PastRace, hints.values())
+                for parameter in inspect.signature(method).parameters:
+                    self.assertFalse(
+                        _annotation_contains(hints.get(parameter), PastRace),
+                        f"{engine.__name__}.{method.__name__}.{parameter}",
+                    )
+
+    def test_annotation_contains_detects_nested_concrete_past_race(self) -> None:
+        self.assertTrue(_annotation_contains(Sequence[PastRace], PastRace))
+        self.assertTrue(
+            _annotation_contains(
+                Mapping[int, Sequence[PastRace]],
+                PastRace,
+            )
+        )
+        self.assertFalse(_annotation_contains(Sequence[PastRaceInput], PastRace))
 
     def test_mutable_and_immutable_inputs_produce_equal_results_without_mutation(self) -> None:
         race_input = self._race_input()

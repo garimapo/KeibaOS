@@ -72,8 +72,23 @@ git diff --check: success
 
 ## Scope and Git state
 
-Changed implementation/test files are limited to the Phase 4C-2d3b1i0 Allowed Files. No staging,
-commit, push, or review branch was created. `database/keiba.db` and `logs/` remain out of scope and
-are not included in this work.
+Changed implementation/test files are limited to the Phase 4C-2d3b1i0 Allowed Files.
+`database/keiba.db` and `logs/` remain out of scope and are not included in this work.
 
-Awaiting implementation review and explicit commit approval.
+## Review correction
+
+GitHub review found no production-code issue. It identified a test weakness: the prior annotation
+regression assertion inspected only top-level hint values and could miss a concrete `PastRace`
+nested inside a generic annotation. The test now uses a recursive `typing.get_args()` helper across
+each parameter annotation for Ability, Pace, Jockey, and Track Engine methods. Dedicated assertions
+prove that nested `Sequence[PastRace]` and `Mapping[int, Sequence[PastRace]]` are detected, while
+`Sequence[PastRaceInput]` is accepted.
+
+Production code remains unchanged by this correction. Re-verification results are recorded below;
+the review branch remains `READY_FOR_REVIEW` pending its updated review.
+
+```text
+Correction dedicated test: 4 passed
+Correction full suite: 2260 passed, 2 skipped, 666 subtests passed
+Correction git diff --check: success
+```
