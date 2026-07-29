@@ -24,8 +24,25 @@ class PersistedSimulationRequestDocument:
     budgets_by_race_id: Mapping[str, object]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "source_path", Path(self.source_path))
-        object.__setattr__(self, "database_path", Path(self.database_path))
+        if type(self.schema_version) is not int or self.schema_version != 1:
+            raise ValueError("schema_version must be 1")
+        if not isinstance(self.source_path, Path):
+            raise TypeError("source_path must be a Path")
+        if not isinstance(self.database_path, Path):
+            raise TypeError("database_path must be a Path")
+        for field_name in (
+            "run_context",
+            "strategy",
+            "pipeline",
+            "budgets_by_race_id",
+        ):
+            if not isinstance(getattr(self, field_name), Mapping):
+                raise TypeError(f"{field_name} must be a Mapping")
+        if type(self.races) is not tuple:
+            raise TypeError("races must be a tuple")
+        if not all(isinstance(race, Mapping) for race in self.races):
+            raise TypeError("races must contain Mapping values")
+
         object.__setattr__(self, "run_context", _freeze_value(self.run_context))
         object.__setattr__(self, "strategy", _freeze_value(self.strategy))
         object.__setattr__(self, "pipeline", _freeze_value(self.pipeline))
@@ -62,7 +79,7 @@ def load_persisted_simulation_request_document(
         run_context=request_data["run_context"],
         strategy=request_data["strategy"],
         pipeline=request_data["pipeline"],
-        races=request_data["races"],
+        races=tuple(request_data["races"]),
         budgets_by_race_id=request_data["budgets_by_race_id"],
     )
 
@@ -161,9 +178,18 @@ def _validate_request_root(request_data: object) -> None:
 
 def _freeze_value(value: object) -> object:
     if isinstance(value, Mapping):
-        return MappingProxyType(
-            {key: _freeze_value(nested_value) for key, nested_value in value.items()}
-        )
+        copied: dict[str, object] = {}
+        for key, nested_value in value.items():
+            if not isinstance(key, str):
+                raise TypeError("request document mappings must have string keys")
+            copied[key] = _freeze_value(nested_value)
+        return MappingProxyType(copied)
     if isinstance(value, (list, tuple)):
         return tuple(_freeze_value(nested_value) for nested_value in value)
-    return value
+    if type(value) is float:
+        if not math.isfinite(value):
+            raise ValueError(_NON_FINITE_NUMBER_ERROR)
+        return value
+    if value is None or type(value) in (str, int, bool):
+        return value
+    raise TypeError("request document values must be JSON-compatible")

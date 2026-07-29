@@ -29,8 +29,11 @@ and `1e999`. A relative `database_path` is anchored exactly to `source_path.pare
 are retained without resolving, canonicalization, existence checks, or DB work.
 
 Returned JSON content is recursively copied into `MappingProxyType` and tuple values. The frozen
-document performs the same defensive copy on direct construction, so later caller mutation cannot
-change a document. A stored empty races tuple or budgets mapping remains valid.
+document now validates direct construction before freezing: schema version must be exact integer `1`,
+both paths must be `Path` instances, mapping fields must be `Mapping`, and races must be a tuple of
+Mapping values. Recursive freeze rejects non-string mapping keys, non-finite floats, and non-JSON
+compatible values with the approved exact errors. A stored empty races tuple or budgets mapping
+remains valid.
 
 No `SimulationRunContext`, `StrategyConfig`, `StrategyIdentity`, `PredictionPipeline`,
 `SimulationRaceInput`, `BetStakeBudget`, or `SimulationSummary` is constructed. The loader does not
@@ -45,17 +48,25 @@ constructor defensive copying, request/file/UTF-8/JSON failures, duplicate keys,
 strict root/envelope/field validation, independent reloads, package-root non-export, and source/AST
 boundary rules.
 
+GitHub review identified that the public dataclass invariant needed to be explicit. This correction
+adds direct-constructor tests for schema/path/Mapping/races validation; recursive string-key and
+JSON-compatible value checks; nested mapping/race/budget immutability; `Path("bad\\x00path")` request
+validation; a nested budget duplicate key; root-level `1e999` error priority; the full root/schema/
+database-path matrix; nested reload independence; the loader input type hint; and expanded source/AST
+checks. The loader now converts parsed JSON races from list to tuple before calling the public
+dataclass. No out-of-scope production code was changed.
+
 Codex local results:
 
 ```text
-Dedicated: 13 passed, 32 subtests passed
-Related: 53 passed, 158 subtests passed
+Dedicated: 15 passed, 67 subtests passed
+Related: 55 passed, 193 subtests passed
   tests/test_persisted_simulation_request_document.py
   tests/test_sqlite_persisted_simulation_application.py
   tests/test_sqlite_persisted_simulation_composition.py
   tests/test_persisted_simulation_run_service.py
   tests/test_simulation_models.py
-Full suite: 2325 passed, 2 skipped, 859 subtests passed
+Full suite: 2327 passed, 2 skipped, 894 subtests passed
 Forbidden production-pattern search: no matches
 Package-root export check: absent
 git diff --check: success
@@ -73,12 +84,14 @@ tests/test_persisted_simulation_request_document.py
 docs/LATEST_CODEX_REPORT.md
 ```
 
-`docs/CURRENT_PHASE.md` remains the approved contract and was not changed during implementation.
+`docs/CURRENT_PHASE.md` remains the approved contract and was not changed during this review
+correction.
 Existing production code/tests, the 1i5a application runner, composition root, migrations, schema,
 `scripts/database.py`, `main.py`, CLI, package-root exports, `database/keiba.db`, and `logs/` were
-not changed for this implementation.
+not changed for this correction.
 
-No files were staged, committed, pushed, or placed on a review branch. Phase 4C-2d3b1i5b2 and
-Phase 4C-2d3b1i5c are unstarted.
+Review branch `review/4c-2d3b1i5b1-request-document-loader` contains the initial pushed review
+commit `6716b00`. This report records the requested review correction; Phase 4C-2d3b1i5b2 and Phase
+4C-2d3b1i5c are unstarted.
 
 blocker: none

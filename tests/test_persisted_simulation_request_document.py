@@ -19,9 +19,20 @@ from scripts.simulation.persisted_simulation_request_document import (
 
 
 class PersistedSimulationRequestDocumentContractTests(unittest.TestCase):
-    def _write_request(self, directory: Path, value: object, *, name: str = "request.json") -> Path:
+    def _write_request(
+        self,
+        directory: Path,
+        value: object,
+        *,
+        name: str = "request.json",
+    ) -> Path:
         request_path = directory / name
         request_path.write_text(json.dumps(value), encoding="utf-8")
+        return request_path
+
+    def _write_raw_request(self, directory: Path, text: str, *, name: str) -> Path:
+        request_path = directory / name
+        request_path.write_text(text, encoding="utf-8")
         return request_path
 
     def _valid_request(self, **changes: object) -> dict[str, object]:
@@ -36,6 +47,20 @@ class PersistedSimulationRequestDocumentContractTests(unittest.TestCase):
         }
         value.update(changes)
         return value
+
+    def _direct_document(self, **changes: object) -> PersistedSimulationRequestDocument:
+        value: dict[str, object] = {
+            "schema_version": 1,
+            "source_path": Path("request.json"),
+            "database_path": Path("database.db"),
+            "run_context": {"nested": {"values": [1]}},
+            "strategy": {"name": "strategy"},
+            "pipeline": {"components": ["ability"]},
+            "races": ({"race_id": 1, "entries": [{"horse_id": 2}]},),
+            "budgets_by_race_id": {"1": {"amount": 100}},
+        }
+        value.update(changes)
+        return PersistedSimulationRequestDocument(**value)
 
     def test_public_api_signature_type_hints_and_frozen_field_order(self) -> None:
         self.assertEqual(
@@ -68,12 +93,11 @@ class PersistedSimulationRequestDocumentContractTests(unittest.TestCase):
         signature = inspect.signature(load_persisted_simulation_request_document)
         self.assertEqual(list(signature.parameters), ["request_path"])
         self.assertEqual(signature.parameters["request_path"].kind, inspect.Parameter.KEYWORD_ONLY)
-        self.assertEqual(
-            get_type_hints(load_persisted_simulation_request_document)["return"],
-            PersistedSimulationRequestDocument,
-        )
+        hints = get_type_hints(load_persisted_simulation_request_document)
+        self.assertEqual(hints["request_path"], str | Path)
+        self.assertIs(hints["return"], PersistedSimulationRequestDocument)
 
-    def test_module_has_exactly_one_public_class_and_function_and_no_package_export(self) -> None:
+    def test_module_has_only_approved_public_definitions_and_no_package_export(self) -> None:
         module = inspect.getmodule(PersistedSimulationRequestDocument)
         self.assertIsNotNone(module)
         public_classes = [
@@ -91,7 +115,7 @@ class PersistedSimulationRequestDocumentContractTests(unittest.TestCase):
         self.assertFalse(hasattr(simulation_package, "PersistedSimulationRequestDocument"))
         self.assertFalse(hasattr(simulation_package, "load_persisted_simulation_request_document"))
 
-    def test_valid_document_anchors_relative_path_and_returns_deep_immutable_snapshot(self) -> None:
+    def test_valid_document_anchors_path_and_is_deeply_immutable(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             request_path = self._write_request(Path(temporary_directory), self._valid_request())
             document = load_persisted_simulation_request_document(request_path=request_path)
@@ -108,12 +132,23 @@ class PersistedSimulationRequestDocumentContractTests(unittest.TestCase):
             self.assertIsInstance(document.races[0], MappingProxyType)
             self.assertIsInstance(document.races[0]["entries"], tuple)
             self.assertIsInstance(document.budgets_by_race_id, MappingProxyType)
+
             with self.assertRaises(TypeError):
                 document.run_context["another"] = "value"
+            with self.assertRaises(TypeError):
+                document.run_context["nested"]["labels"] = ()
+            with self.assertRaises(TypeError):
+                document.run_context["nested"]["labels"][0] = "changed"
+            with self.assertRaises(TypeError):
+                document.races[0] = document.races[0]
+            with self.assertRaises(TypeError):
+                document.races[0]["race_id"] = 2
+            with self.assertRaises(TypeError):
+                document.budgets_by_race_id["101"]["amount"] = 200
             with self.assertRaises(FrozenInstanceError):
                 document.database_path = Path("other.db")
 
-    def test_valid_document_preserves_absolute_database_path_and_empty_collections(self) -> None:
+    def test_absolute_path_and_empty_collections_are_preserved(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             directory = Path(temporary_directory)
             absolute_database_path = directory / "simulation.db"
@@ -125,26 +160,16 @@ class PersistedSimulationRequestDocumentContractTests(unittest.TestCase):
                     budgets_by_race_id={},
                 ),
             )
-
             document = load_persisted_simulation_request_document(request_path=request_path)
 
             self.assertEqual(document.database_path, absolute_database_path)
             self.assertEqual(document.races, ())
             self.assertEqual(dict(document.budgets_by_race_id), {})
 
-    def test_direct_constructor_defensively_freezes_nested_mutable_values(self) -> None:
+    def test_direct_constructor_defensively_freezes_valid_json_compatible_values(self) -> None:
         run_context = {"nested": {"values": [1]}}
-        races = [{"race_id": 1, "entries": [{"horse_id": 2}]}]
-        document = PersistedSimulationRequestDocument(
-            schema_version=1,
-            source_path=Path("request.json"),
-            database_path=Path("database.db"),
-            run_context=run_context,
-            strategy={},
-            pipeline={},
-            races=races,
-            budgets_by_race_id={},
-        )
+        races = ({"race_id": 1, "entries": [{"horse_id": 2}]},)
+        document = self._direct_document(run_context=run_context, races=races)
         run_context["nested"]["values"].append(2)
         races[0]["entries"][0]["horse_id"] = 3
 
@@ -153,8 +178,59 @@ class PersistedSimulationRequestDocumentContractTests(unittest.TestCase):
         self.assertIsInstance(document.run_context, MappingProxyType)
         self.assertIsInstance(document.races, tuple)
 
+    def test_direct_constructor_validates_schema_paths_mapping_fields_and_races(self) -> None:
+        for value in (True, 0, 2, "1"):
+            with self.subTest(schema_version=repr(value)):
+                with self.assertRaisesRegex(ValueError, "^schema_version must be 1$"):
+                    self._direct_document(schema_version=value)
+
+        path_cases = (
+            ("source_path", "request.json", "source_path must be a Path"),
+            ("source_path", None, "source_path must be a Path"),
+            ("database_path", "database.db", "database_path must be a Path"),
+            ("database_path", None, "database_path must be a Path"),
+        )
+        for field_name, value, message in path_cases:
+            with self.subTest(field_name=field_name, value=repr(value)):
+                with self.assertRaisesRegex(TypeError, f"^{message}$"):
+                    self._direct_document(**{field_name: value})
+
+        for field_name in ("run_context", "strategy", "pipeline", "budgets_by_race_id"):
+            with self.subTest(field_name=field_name):
+                with self.assertRaisesRegex(TypeError, f"^{field_name} must be a Mapping$"):
+                    self._direct_document(**{field_name: []})
+
+        for value, message in (([], "races must be a tuple"), ({}, "races must be a tuple"), ((1,), "races must contain Mapping values")):
+            with self.subTest(races=repr(value)):
+                with self.assertRaisesRegex(TypeError, f"^{message}$"):
+                    self._direct_document(races=value)
+
+    def test_direct_constructor_rejects_non_json_mapping_keys_and_values(self) -> None:
+        cases = (
+            ({1: "invalid"}, "request document mappings must have string keys", TypeError),
+            ({"nested": {2: "invalid"}}, "request document mappings must have string keys", TypeError),
+            ({"nested": float("inf")}, "request JSON must not contain non-finite numbers", ValueError),
+            ({"nested": float("nan")}, "request JSON must not contain non-finite numbers", ValueError),
+            ({"nested": object()}, "request document values must be JSON-compatible", TypeError),
+        )
+        for run_context, message, exception_type in cases:
+            with self.subTest(run_context=repr(run_context)):
+                with self.assertRaisesRegex(exception_type, f"^{message}$"):
+                    self._direct_document(run_context=run_context)
+
     def test_loader_rejects_invalid_request_paths_before_file_read(self) -> None:
-        invalid_values = (None, b"request.json", bytearray(b"request.json"), 1, True, object(), "", "   ", "bad\x00path")
+        invalid_values = (
+            None,
+            b"request.json",
+            bytearray(b"request.json"),
+            1,
+            True,
+            object(),
+            "",
+            "   ",
+            "bad\x00path",
+            Path("bad\x00path"),
+        )
         for invalid_value in invalid_values:
             with self.subTest(value=repr(invalid_value)):
                 with self.assertRaisesRegex(ValueError, "^request_path must be a non-empty path$"):
@@ -178,8 +254,7 @@ class PersistedSimulationRequestDocumentContractTests(unittest.TestCase):
             directory = Path(temporary_directory)
             for name, text in (("empty.json", ""), ("broken.json", "{"), ("bom.json", "\ufeff{}")):
                 with self.subTest(name=name):
-                    path = directory / name
-                    path.write_text(text, encoding="utf-8")
+                    path = self._write_raw_request(directory, text, name=name)
                     with self.assertRaisesRegex(ValueError, "^request file must contain valid JSON$"):
                         load_persisted_simulation_request_document(request_path=path)
 
@@ -188,29 +263,29 @@ class PersistedSimulationRequestDocumentContractTests(unittest.TestCase):
             '{"schema_version":1,"schema_version":1,"database_path":"x","run_context":{},"strategy":{},"pipeline":{},"races":[],"budgets_by_race_id":{}}',
             '{"schema_version":1,"database_path":"x","run_context":{"x":1,"x":2},"strategy":{},"pipeline":{},"races":[],"budgets_by_race_id":{}}',
             '{"schema_version":1,"database_path":"x","run_context":{},"strategy":{},"pipeline":{},"races":[{"race_id":1,"race_id":2}],"budgets_by_race_id":{}}',
+            '{"schema_version":1,"database_path":"x","run_context":{},"strategy":{},"pipeline":{},"races":[],"budgets_by_race_id":{"101":{"amount":100,"amount":200}}}',
         )
         with tempfile.TemporaryDirectory() as temporary_directory:
             directory = Path(temporary_directory)
             for index, text in enumerate(documents):
                 with self.subTest(index=index):
-                    path = directory / f"duplicate-{index}.json"
-                    path.write_text(text, encoding="utf-8")
+                    path = self._write_raw_request(directory, text, name=f"duplicate-{index}.json")
                     with self.assertRaisesRegex(ValueError, "^request JSON must not contain duplicate object keys$"):
                         load_persisted_simulation_request_document(request_path=path)
 
-    def test_non_finite_json_numbers_are_rejected_at_every_level(self) -> None:
+    def test_non_finite_json_numbers_win_over_root_validation(self) -> None:
         documents = (
             '{"schema_version":1,"database_path":"x","run_context":{"x":NaN},"strategy":{},"pipeline":{},"races":[],"budgets_by_race_id":{}}',
             '{"schema_version":1,"database_path":"x","run_context":{},"strategy":{"x":Infinity},"pipeline":{},"races":[],"budgets_by_race_id":{}}',
             '{"schema_version":1,"database_path":"x","run_context":{},"strategy":{},"pipeline":{"x":-Infinity},"races":[],"budgets_by_race_id":{}}',
             '{"schema_version":1,"database_path":"x","run_context":{},"strategy":{},"pipeline":{},"races":[{"x":1e999}],"budgets_by_race_id":{}}',
+            "1e999",
         )
         with tempfile.TemporaryDirectory() as temporary_directory:
             directory = Path(temporary_directory)
             for index, text in enumerate(documents):
                 with self.subTest(index=index):
-                    path = directory / f"non-finite-{index}.json"
-                    path.write_text(text, encoding="utf-8")
+                    path = self._write_raw_request(directory, text, name=f"non-finite-{index}.json")
                     with self.assertRaisesRegex(ValueError, "^request JSON must not contain non-finite numbers$"):
                         load_persisted_simulation_request_document(request_path=path)
 
@@ -218,13 +293,25 @@ class PersistedSimulationRequestDocumentContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             directory = Path(temporary_directory)
             cases = (
-                (["not-an-object"], "request JSON root must be an object"),
+                (None, "request JSON root must be an object"),
+                ([], "request JSON root must be an object"),
+                ("string", "request JSON root must be an object"),
+                (1, "request JSON root must be an object"),
+                (True, "request JSON root must be an object"),
                 ({}, "request JSON keys must exactly match the request schema"),
                 (self._valid_request(extra=True), "request JSON keys must exactly match the request schema"),
                 (self._valid_request(schema_version=True), "schema_version must be 1"),
+                (self._valid_request(schema_version=0), "schema_version must be 1"),
                 (self._valid_request(schema_version=2), "schema_version must be 1"),
-                (self._valid_request(database_path="  "), "database_path must be a non-empty string"),
+                (self._valid_request(schema_version="1"), "schema_version must be 1"),
+                (self._valid_request(database_path=None), "database_path must be a non-empty string"),
                 (self._valid_request(database_path=1), "database_path must be a non-empty string"),
+                (self._valid_request(database_path=True), "database_path must be a non-empty string"),
+                (self._valid_request(database_path=[]), "database_path must be a non-empty string"),
+                (self._valid_request(database_path={}), "database_path must be a non-empty string"),
+                (self._valid_request(database_path=""), "database_path must be a non-empty string"),
+                (self._valid_request(database_path="   "), "database_path must be a non-empty string"),
+                (self._valid_request(database_path="bad\x00path"), "database_path must be a non-empty string"),
                 (self._valid_request(run_context=[]), "run_context must be an object"),
                 (self._valid_request(strategy=[]), "strategy must be an object"),
                 (self._valid_request(pipeline=[]), "pipeline must be an object"),
@@ -238,20 +325,21 @@ class PersistedSimulationRequestDocumentContractTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, f"^{message}$"):
                         load_persisted_simulation_request_document(request_path=request_path)
 
-    def test_reloads_are_independent_of_later_file_rewrites(self) -> None:
+    def test_reloads_are_independent_at_every_nested_container_level(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             directory = Path(temporary_directory)
             request_path = self._write_request(directory, self._valid_request())
             first_document = load_persisted_simulation_request_document(request_path=request_path)
-            self._write_request(
-                directory,
-                self._valid_request(run_context={"run_id": "run-2"}),
-            )
+            self._write_request(directory, self._valid_request(run_context={"run_id": "run-2", "nested": {"labels": ["c"]}}))
             second_document = load_persisted_simulation_request_document(request_path=request_path)
 
             self.assertEqual(first_document.run_context["run_id"], "run-1")
             self.assertEqual(second_document.run_context["run_id"], "run-2")
-            self.assertIsNot(first_document.run_context, second_document.run_context)
+            self.assertIsNot(first_document.races, second_document.races)
+            self.assertIsNot(first_document.races[0], second_document.races[0])
+            self.assertIsNot(first_document.run_context["nested"], second_document.run_context["nested"])
+            self.assertIsNot(first_document.pipeline["components"], second_document.pipeline["components"])
+            self.assertIsNot(first_document.budgets_by_race_id, second_document.budgets_by_race_id)
 
     def test_source_stays_within_document_loader_boundary(self) -> None:
         module = inspect.getmodule(PersistedSimulationRequestDocument)
@@ -259,6 +347,7 @@ class PersistedSimulationRequestDocumentContractTests(unittest.TestCase):
         source = inspect.getsource(module)
         tree = ast.parse(source)
         self.assertNotIn("# type: ignore", source)
+        self.assertFalse(tree.type_ignores)
         self.assertIn("class PersistedSimulationRequestDocument", source)
         self.assertIn("def load_persisted_simulation_request_document", source)
 
@@ -272,6 +361,8 @@ class PersistedSimulationRequestDocumentContractTests(unittest.TestCase):
             "StrategyIdentity",
             "PredictionPipeline",
             "SimulationRaceInput",
+            "InputSnapshotAudit",
+            "PastRace",
             "BetStakeBudget",
             "SimulationSummary",
             "datetime.now",
@@ -285,6 +376,7 @@ class PersistedSimulationRequestDocumentContractTests(unittest.TestCase):
             "argparse",
             "os.environ",
             "config/settings.json",
+            "main.py",
         )
         self.assertFalse(any(fragment in source for fragment in forbidden_fragments))
 
@@ -295,18 +387,19 @@ class PersistedSimulationRequestDocumentContractTests(unittest.TestCase):
             for alias in node.names
         }
         self.assertFalse({"Any", "cast", "runtime_checkable"} & imported_from_typing)
+        self.assertFalse(
+            any(
+                isinstance(node, ast.Name)
+                and node.id in {"Any", "cast", "runtime_checkable"}
+                for node in ast.walk(tree)
+            )
+        )
         handled_exceptions = [
             ast.unparse(node.type)
             for node in ast.walk(tree)
             if isinstance(node, ast.ExceptHandler) and node.type is not None
         ]
         self.assertEqual(handled_exceptions, ["UnicodeDecodeError", "json.JSONDecodeError"])
-        self.assertFalse(
-            any(
-                isinstance(node, ast.Name) and node.id in {"Exception", "BaseException"}
-                for node in ast.walk(tree)
-            )
-        )
 
 
 if __name__ == "__main__":
