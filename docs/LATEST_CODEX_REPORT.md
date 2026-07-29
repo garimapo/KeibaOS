@@ -2,7 +2,7 @@
 
 ## Status
 
-READY_FOR_REVIEW
+APPROVED_FOR_COMMIT
 
 ## Current Phase
 
@@ -10,7 +10,9 @@ Phase 4C-2d3b1i5a — SQLite persisted simulation application runner
 
 Base commit: `dfeb34d docs: approve SQLite persisted simulation composition root`
 
-Branch: `feature/ver0.8-simulator`
+Base branch: `feature/ver0.8-simulator`
+
+Review branch: `review/4c-2d3b1i5a-sqlite-application-runner`
 
 ## Implementation
 
@@ -109,7 +111,32 @@ changed by the correction. The 1i4 composition root, migrations, schema, `script
 `main.py`, CLI, and package-root exports are unchanged. Phase 4C-2d3b1i5b/1i5c remain unstarted.
 `database/keiba.db` and `logs/` are outside scope.
 
-The production review commit `21c786e` is already on
-`review/4c-2d3b1i5a-sqlite-application-runner`; this correction remains `READY_FOR_REVIEW`.
+## GitHub Review Approval
+
+GitHub上の実装レビューは完了し、production review commit
+`21c786e review: add SQLite persisted simulation application runner` とtest correction commit
+`3cd8502 review: strengthen SQLite application runner contracts` を確認済みです。production
+implementationとtest coverageは承認され、production correction・追加test correctionは不要です。
+blockerはなく、base branch integrationは未実施です。
+
+承認済みproduction契約は、`run_sqlite_persisted_simulation`がkeyword-onlyの6引数を受けること、
+database pathのpre-open validation、run context／strategy identity／pipelineのexact type validation、
+race inputs／budgets container validation、tuple／dictによるcaller input snapshotを行うことです。
+`sqlite3.connect`、`apply_migrations`、1i4 composition factory、`service.run`、connection closeはそれぞれ
+exact 1回です。runnerはexact `SimulationSummary`を返し、`try/finally`でconnectionを閉じます。例外wrap、
+retry、fallback、独自commit／rollback、固定DB path、CLI／JSON／現在時刻／設定読込みはありません。
+
+承認済みtest coverageは、正式module/function API、keyword-only 6引数、全6引数とreturn type hints、新class／
+bundleなし、invalid database path、exact production input／subclass拒否、invalid race inputs／budgets
+containers、pre-open failureでのDB file未作成、全validation／snapshot後のconnect AST確認、唯一の
+Try.finalbody内close、except handlerなしを含みます。さらにpending v008／v009 migration、empty Summary、
+file-backed 100円→300円 SETTLED、migration idempotency、list／tuple／mapping非変更、race input／budget
+object identity、異なるrun IDのSnapshot 2件、unknown future migration 999、migration/run failure後のDB
+再接続、duplicate race ID時のSnapshot未保存、禁止source fragment、`Any`／`cast`／
+`runtime_checkable`／type-ignore／exceptのAST確認を承認しました。
+
+Phase 4C-2d3b1i5b／1i5cは未着手です。request／config loadingは1i5bの責務であり、argparse、stdout、
+stderr、exit code、CLI entry pointは1i5cの責務です。migration／schema、`scripts/database.py`、`main.py`、
+CLI、package-rootは変更していません。`database/keiba.db`と`logs/`は対象外です。
 
 blocker: none
