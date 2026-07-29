@@ -38,6 +38,11 @@ class RepositoryBackedPersistedRaceSettlementSource:
         self._race_result_repository = race_result_repository
         self._payout_repository = payout_repository
 
+    @property
+    def bet_source(self) -> SimulationBetSource:
+        """Return the exact bet source supplied at construction."""
+        return self._bet_source
+
     def load_settlement_data(
         self,
         *,

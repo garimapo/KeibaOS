@@ -195,6 +195,22 @@ class PersistedSimulationBetSourceTests(unittest.TestCase):
         self.assertIs(adapter._run_context, context)
         self.assertIs(adapter._snapshot_source, source)
 
+    def test_run_context_accessor_preserves_identity_and_does_not_call_source(self) -> None:
+        context = run_context()
+        source = RecordingSnapshotSource(None)
+        adapter = PersistedSimulationBetSource(run_context=context, snapshot_source=source)
+
+        descriptor = PersistedSimulationBetSource.run_context
+        self.assertIsInstance(descriptor, property)
+        self.assertIsNotNone(descriptor.fget)
+        self.assertIs(get_type_hints(descriptor.fget)["return"], SimulationRunContext)
+        self.assertIs(adapter.run_context, context)
+        self.assertIs(adapter.run_context, context)
+        self.assertIsNone(descriptor.fset)
+        with self.assertRaises(AttributeError):
+            adapter.run_context = context
+        self.assertEqual(source.calls, [])
+
     def test_constructor_does_not_call_source(self) -> None:
         source = RecordingSnapshotSource(None)
         PersistedSimulationBetSource(run_context=run_context(), snapshot_source=source)

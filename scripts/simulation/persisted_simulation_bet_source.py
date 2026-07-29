@@ -29,6 +29,11 @@ class PersistedSimulationBetSource:
         self._run_context = run_context
         self._snapshot_source = snapshot_source
 
+    @property
+    def run_context(self) -> SimulationRunContext:
+        """Return the exact immutable run context supplied at construction."""
+        return self._run_context
+
     def load_bets(
         self,
         *,

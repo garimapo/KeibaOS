@@ -439,6 +439,29 @@ class PersistedSimulationBetPlanServiceTests(unittest.TestCase):
         self.assertIs(service._snapshot_repository, repository)
         self.assertEqual(self.events, [])
 
+    def test_identity_accessors_preserve_identity_and_do_not_call_collaborators(self) -> None:
+        service, pipeline, allocator, builder, repository = self._service()
+
+        for name, expected_type, expected_value in (
+            ("run_context", SimulationRunContext, self.run_context),
+            ("strategy_identity", StrategyIdentity, self.strategy_identity),
+        ):
+            descriptor = getattr(PersistedSimulationBetPlanService, name)
+            self.assertIsInstance(descriptor, property)
+            self.assertIsNotNone(descriptor.fget)
+            self.assertIs(get_type_hints(descriptor.fget)["return"], expected_type)
+            self.assertIs(getattr(service, name), expected_value)
+            self.assertIs(getattr(service, name), expected_value)
+            self.assertIsNone(descriptor.fset)
+            with self.assertRaises(AttributeError):
+                setattr(service, name, expected_value)
+
+        self.assertEqual(self.events, [])
+        self.assertEqual(pipeline.calls, [])
+        self.assertEqual(allocator.calls, [])
+        self.assertEqual(builder.calls, [])
+        self.assertEqual(repository.calls, [])
+
     def test_constructor_rejects_invalid_concrete_and_structural_dependencies(self) -> None:
         service, pipeline, allocator, builder, repository = self._service()
         invalid_cases = (

@@ -75,6 +75,16 @@ class PersistedSimulationBetPlanService:
         self._plan_builder = plan_builder
         self._snapshot_repository = snapshot_repository
 
+    @property
+    def run_context(self) -> SimulationRunContext:
+        """Return the exact immutable run context supplied at construction."""
+        return self._run_context
+
+    @property
+    def strategy_identity(self) -> StrategyIdentity:
+        """Return the exact immutable strategy identity supplied at construction."""
+        return self._strategy_identity
+
     def build_and_save(
         self,
         *,

@@ -249,6 +249,20 @@ class RepositoryBackedPersistedSettlementSourceTests(unittest.TestCase):
         self.assertIs(source._payout_repository, payout_repository)
         self.assertEqual((bet_source.calls, race_repository.calls, payout_repository.calls), ([], [], []))
 
+    def test_bet_source_accessor_preserves_identity_and_does_not_call_collaborators(self) -> None:
+        source, bet_source, race_repository, payout_repository = self.make()
+
+        descriptor = RepositoryBackedPersistedRaceSettlementSource.bet_source
+        self.assertIsInstance(descriptor, property)
+        self.assertIsNotNone(descriptor.fget)
+        self.assertIs(get_type_hints(descriptor.fget)["return"], SimulationBetSource)
+        self.assertIs(source.bet_source, bet_source)
+        self.assertIs(source.bet_source, bet_source)
+        self.assertIsNone(descriptor.fset)
+        with self.assertRaises(AttributeError):
+            source.bet_source = bet_source
+        self.assertEqual((bet_source.calls, race_repository.calls, payout_repository.calls), ([], [], []))
+
     def test_constructor_rejects_missing_or_non_callable_methods(self) -> None:
         valid_bet = RecordingBetSource(())
         valid_race = RecordingRaceResultRepository(None)
