@@ -2,7 +2,7 @@
 
 ## Status
 
-READY_FOR_REVIEW
+APPROVED_FOR_COMMIT
 
 ## Current Phase
 
@@ -22,7 +22,7 @@ Phase 4C-2d3b1i3a — Persisted simulation identity accessors
 Phase 4C-2d3b1i3b — Multi-race persisted simulation run orchestration
 ```
 
-Phase 4C-2d3b1i3a is `READY_FOR_REVIEW`. It is a narrow, behavior-preserving prerequisite that
+Phase 4C-2d3b1i3a is `APPROVED_FOR_COMMIT`. It is a narrow, behavior-preserving prerequisite that
 adds public readonly accessors only. Phase 4C-2d3b1i3b remains unstarted.
 
 ## Identity Coherence Reassessment
@@ -121,7 +121,7 @@ budget-source Protocol are not selected. The run service will preserve exact inp
 not mutate caller collections, accept empty input only with an empty map, and leave settlement,
 ROI, and drawdown to existing Executor/Summary behavior.
 
-## Implementation and Verification
+## Implementation, Verification, and Review Approval
 
 The approved three production modules now expose only the four public readonly accessors:
 
@@ -147,7 +147,28 @@ Forbidden-dependency search in changed production and test code: no matches
 git diff --check: success
 ```
 
-No models, Protocols, schema, migration, SQLite repository, Pipeline, CLI, package-root export, or
-`target_race_count` were changed. Phase 4C-2d3b1i3b, 1i4, and later work are not started.
-`database/keiba.db` and `logs/` remain outside scope. No file has been staged, committed, pushed,
-or placed on a review branch; this implementation is awaiting review and explicit commit approval.
+GitHub implementation review approved review commit `fbf8afa review: add persisted simulation identity
+accessors`; it is committed and pushed on
+`review/4c-2d3b1i3a-identity-accessors`. The production diff is limited to the four readonly
+properties listed above. Review found no production or test correction required.
+
+The properties return their exact constructor-injected objects without copy or re-creation; they
+have no setter and make no collaborator call. `__slots__`, constructor signatures, runtime methods,
+validation, and exception behavior are unchanged. No migration, schema, Protocol, SQLite Repository,
+or package-root export changed.
+
+This permits Phase 4C-2d3b1i3b to prevalidate the full traversal through public APIs only:
+
+```python
+executor = simulator.race_executor
+settlement_source = executor.settlement_source
+bet_source = settlement_source.bet_source
+
+bet_plan_service.strategy_identity is simulator.strategy_identity
+simulator.strategy_identity is executor.strategy_identity
+bet_plan_service.run_context is bet_source.run_context
+```
+
+Private-attribute access is no longer needed for that coherence validation. Phase 4C-2d3b1i3b and
+1i4 onward remain unstarted; base-branch integration is pending. `database/keiba.db` and `logs/`
+remain outside scope.
