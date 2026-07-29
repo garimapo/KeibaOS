@@ -39,24 +39,42 @@ An empty persisted plan follows the full Pipeline → allocator → Builder → 
 and returns the exact empty Snapshot object while preserving the explicit supplied budget; it is
 not treated as a missing plan.
 
+## Review Test Strengthening
+
+GitHub review found no production-code correction. The NO_BET contract test now uses an explicit
+`BetStakeBudget(500)`, proving that the exact non-zero budget reaches the allocator, allocation
+plan, and empty Snapshot unchanged. It verifies `Snapshot.bets == ()`, `allocated_amount == 0`,
+and `unallocated_amount == 500`, together with exact Snapshot identity at Repository input and
+service return.
+
+The forbidden-dependency test now reads the complete production module rather than only the class
+source, verifies both `ast.Import` and `ast.ImportFrom`, and rejects SQLite imports, time calls,
+runtime Protocol decoration, `typing.Any`, `typing.cast`, type-ignore comments, concrete SQLite
+Repository imports, and package-root export. The production module was not changed.
+
+Repository-stage propagation coverage now explicitly verifies object-identity propagation with no
+retry for `RepositoryValidationError`, `RepositoryConflictError`, and
+`RepositoryDataIntegrityError`; all preceding collaborators are called once and Repository is
+called exactly once.
+
 ## Verification
 
 ```text
 Dedicated: python -m pytest tests/test_persisted_bet_plan_service.py -q
-16 passed, 30 subtests passed
+17 passed, 33 subtests passed
 
 Related: PredictionPipeline, simulation models, allocation policy, fixed allocator,
 stake-allocation contract, Builder, Snapshot, Snapshot Repository protocol,
 persisted integration, and service tests
-279 passed, 126 subtests passed
+280 passed, 129 subtests passed
 
 Full: python -m pytest -q
-2276 passed, 2 skipped, 696 subtests passed
+2277 passed, 2 skipped, 699 subtests passed
 
 Forbidden-dependency / runtime-Protocol / package-export search: no prohibited production match
 git diff --check: success
 ```
 
-`database/keiba.db` and `logs/` remain out of scope and were not changed by this phase. No file
-has been staged, committed, pushed, or placed on a review branch. Phase 4C-2d3b1i2 has not been
-started and this implementation is ready for review.
+`database/keiba.db` and `logs/` remain out of scope and were not changed by this phase. The
+review branch contains the initial implementation commit; this correction is ready for its own
+review commit and push. Phase 4C-2d3b1i2 has not been started.

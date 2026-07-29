@@ -8,6 +8,7 @@ import inspect
 from typing import get_type_hints
 import unittest
 
+import scripts.simulation as simulation_package
 from scripts.models import Prediction
 from scripts.prediction.allocation_policy import (
     AllocationPolicyConfig,
@@ -41,6 +42,11 @@ from scripts.simulation.models import (
 )
 from scripts.simulation.persisted_bet_plan_service import (
     PersistedSimulationBetPlanService,
+)
+from scripts.simulation.repositories.errors import (
+    RepositoryConflictError,
+    RepositoryDataIntegrityError,
+    RepositoryValidationError,
 )
 from scripts.simulation.stake_allocation import (
     AllocatedBetRecommendation,
@@ -642,7 +648,7 @@ class PersistedSimulationBetPlanServiceTests(unittest.TestCase):
     def test_no_bet_still_allocates_builds_and_saves_the_empty_snapshot(self) -> None:
         empty_plan = BetPlan("NoBetPlan", (), 0)
         empty_result = self._pipeline_result(empty_plan)
-        empty_budget = BetStakeBudget(0)
+        empty_budget = BetStakeBudget(500)
         empty_allocation = BetAllocationPlan(
             identity=self.identity,
             policy_identity=self.policy_identity,
@@ -667,7 +673,12 @@ class PersistedSimulationBetPlanServiceTests(unittest.TestCase):
         self.assertIs(returned, empty_snapshot)
         self.assertEqual(self.events, ["pipeline", "allocator", "builder", "repository"])
         self.assertIs(allocator.calls[0]["budget"], empty_budget)
+        self.assertIs(empty_allocation.budget, empty_budget)
         self.assertIs(builder.calls[0], empty_allocation)
+        self.assertIs(empty_snapshot.budget, empty_budget)
+        self.assertEqual(empty_snapshot.bets, ())
+        self.assertEqual(empty_snapshot.allocated_amount, 0)
+        self.assertEqual(empty_snapshot.unallocated_amount, 500)
         self.assertIs(repository.calls[0], empty_snapshot)
 
     def test_collaborator_exceptions_propagate_by_object_identity_without_retry(self) -> None:
@@ -694,22 +705,73 @@ class PersistedSimulationBetPlanServiceTests(unittest.TestCase):
                 }[stage]
                 self.assertEqual(counts, expected)
 
+    def test_repository_exceptions_propagate_by_object_identity_without_retry(self) -> None:
+        errors = (
+            RepositoryValidationError("validation failure"),
+            RepositoryConflictError("conflict failure"),
+            RepositoryDataIntegrityError("integrity failure"),
+        )
+        for error in errors:
+            with self.subTest(error_type=type(error).__name__):
+                self.events.clear()
+                service, pipeline, allocator, builder, repository = self._service(
+                    repository_error=error,
+                )
+                with self.assertRaises(type(error)) as raised:
+                    service.build_and_save(race_input=self.race_input, budget=self.budget)
+                self.assertIs(raised.exception, error)
+                self.assertEqual(
+                    (len(pipeline.calls), len(allocator.calls), len(builder.calls), len(repository.calls)),
+                    (1, 1, 1, 1),
+                )
+                self.assertEqual(self.events, ["pipeline", "allocator", "builder", "repository"])
+
     def test_module_has_no_forbidden_dependencies_or_runtime_protocol_checks(self) -> None:
-        source = inspect.getsource(PersistedSimulationBetPlanService)
+        module = inspect.getmodule(PersistedSimulationBetPlanService)
+        self.assertIsNotNone(module)
+        source = inspect.getsource(module)
         tree = ast.parse(source)
-        imports = {
+        self.assertIn("class PersistedSimulationBetPlanService", source)
+        self.assertIn("from scripts.simulation", source)
+        imported_modules = {
             alias.name
             for node in ast.walk(tree)
             if isinstance(node, ast.Import)
             for alias in node.names
         }
-        self.assertEqual(imports, set())
+        imported_from_modules = {
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module is not None
+        }
+        imported_names = {
+            alias.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom)
+            for alias in node.names
+        }
+        self.assertNotIn("sqlite3", imported_modules)
+        self.assertFalse(
+            any(module_name.startswith("scripts.simulation.repositories.sqlite") for module_name in imported_from_modules),
+        )
+        self.assertNotIn("Any", imported_names)
+        self.assertNotIn("cast", imported_names)
         self.assertNotIn("sqlite", source.lower())
-        self.assertNotIn("datetime.now", source)
-        self.assertNotIn("date.today", source)
+        self.assertNotIn("# type: ignore", source)
         self.assertNotIn("runtime_checkable", source)
+        forbidden_calls = {
+            (node.func.value.id, node.func.attr)
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+        }
+        self.assertNotIn(("datetime", "now"), forbidden_calls)
+        self.assertNotIn(("date", "today"), forbidden_calls)
         self.assertNotIn("isinstance(allocator, BetStakeAllocator)", source)
         self.assertNotIn(
             "isinstance(snapshot_repository, SimulationBetPlanSnapshotRepository)",
             source,
         )
+        package_source = inspect.getsource(simulation_package)
+        self.assertNotIn("PersistedSimulationBetPlanService", package_source)
