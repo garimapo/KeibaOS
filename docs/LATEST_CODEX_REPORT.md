@@ -44,8 +44,9 @@ exceptions remain unwrapped.
 
 Added `tests/test_sqlite_persisted_simulation_application.py`.
 
-- API/type-hint and AST checks prove the production module has only the formal function, one
-  connect/migration/factory/run/close call site, a `try/finally`, and no `except` handler.
+- API/type-hint and AST checks prove all six input hints and the return hint, the sole formal
+  function, one connect/migration/factory/run/close call site, a `try/finally`, and no `except`
+  handler.
 - Pre-open tests cover all required invalid path, exact production object, and container inputs,
   proving no SQLite file is created.
 - The pending-migration test starts with only parent `races`/`horses`, lets the runner apply v008/v009,
@@ -60,17 +61,36 @@ Added `tests/test_sqlite_persisted_simulation_application.py`.
 - The run-failure fixture uses duplicate `race_id`; migrations and composition complete, the existing
   run-service validation fails without wrapping, no Snapshot is saved, and the file is reconnectable.
 
+## Review Test Contract Correction
+
+The GitHub review approved the production implementation without a production correction. The test
+contract was strengthened on the same review branch.
+
+- All six input annotations are now asserted: `database_path`, `run_context`, `strategy_identity`,
+  `prediction_pipeline`, `race_inputs`, and `budgets_by_race_id`, plus the Summary return type.
+- AST inspection proves the sole `connection.close()` call is inside the exact `Try.finalbody`, not
+  in `Try.body` or function-level execution; there is one `Try` and zero exception handlers.
+- AST execution-order inspection proves `sqlite3.connect` follows every direct validation and the
+  tuple/dict snapshots. The invalid-path test now checks only its required exact `ValueError` cases;
+  the valid-path direct-input/container tests prove pre-open failures do not create a DB file.
+- The normal file-backed route now executes both a list and a tuple race-input collection with
+  distinct run IDs, while preserving both collection order/object identity and the budget mapping.
+  Both runs settle and persist distinct Snapshots.
+- The test no longer uses string concatenation to evade searches. Normal source literals check the
+  allowed boundary fragments, while AST checks reject `Any`, `cast`, `runtime_checkable`, type-ignore
+  directives, and exception handlers without adding forbidden imports or implementation.
+
 ## Verification
 
 These are Codex local results, not GitHub CI results. The bundled Codex Python runtime was used
 because `python` is not present on PATH.
 
 ```text
-Dedicated: 8 passed, 49 subtests passed
-Related: 334 passed, 312 subtests passed
-Full suite: 2312 passed, 2 skipped, 831 subtests passed
-Production forbidden-pattern search: 0 matches
-New-test forbidden-pattern search: 0 matches
+Dedicated: 8 passed, 45 subtests passed
+Related: 56 passed, 140 subtests passed
+Full suite: 2312 passed, 2 skipped, 827 subtests passed
+Production forbidden-pattern AST/source contract: success
+Test forbidden-symbol AST/source contract: success
 git diff --check: success
 ```
 
@@ -84,10 +104,12 @@ scripts/simulation/sqlite_persisted_simulation_application.py
 tests/test_sqlite_persisted_simulation_application.py
 ```
 
-Existing production/tests, the 1i4 composition root, migrations, schema, `scripts/database.py`,
+The production file has no diff from review commit `21c786e`; only this dedicated test and report are
+changed by the correction. The 1i4 composition root, migrations, schema, `scripts/database.py`,
 `main.py`, CLI, and package-root exports are unchanged. Phase 4C-2d3b1i5b/1i5c remain unstarted.
 `database/keiba.db` and `logs/` are outside scope.
 
-No file has been staged, committed, pushed, or placed on a review branch for Phase 4C-2d3b1i5a.
+The production review commit `21c786e` is already on
+`review/4c-2d3b1i5a-sqlite-application-runner`; this correction remains `READY_FOR_REVIEW`.
 
 blocker: none

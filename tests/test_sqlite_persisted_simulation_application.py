@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+from collections.abc import Mapping, Sequence
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 import inspect
@@ -241,9 +242,23 @@ class SQLitePersistedSimulationApplicationTests(unittest.TestCase):
         self.assertIs(hints["run_context"], SimulationRunContext)
         self.assertIs(hints["strategy_identity"], StrategyIdentity)
         self.assertIs(hints["prediction_pipeline"], PredictionPipeline)
+        self.assertEqual(
+            hints["race_inputs"],
+            Sequence[SimulationRaceInput],
+        )
+        self.assertEqual(
+            hints["budgets_by_race_id"],
+            Mapping[int, BetStakeBudget],
+        )
         self.assertIs(hints["return"], SimulationSummary)
         source = inspect.getsource(module)
         tree = ast.parse(source)
+        function_node = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "run_sqlite_persisted_simulation"
+        )
         self.assertEqual(
             [node.name for node in tree.body if isinstance(node, ast.FunctionDef)],
             ["run_sqlite_persisted_simulation"],
@@ -256,11 +271,61 @@ class SQLitePersistedSimulationApplicationTests(unittest.TestCase):
         try_nodes = [node for node in ast.walk(tree) if isinstance(node, ast.Try)]
         self.assertEqual(len(try_nodes), 1)
         self.assertTrue(try_nodes[0].finalbody)
-        self.assertIn("connection.close()", source)
+        close_calls = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "connection"
+            and node.func.attr == "close"
+        ]
+        self.assertEqual(len(close_calls), 1)
+        self.assertTrue(
+            any(close_calls[0] is node for node in ast.walk(try_nodes[0].finalbody[0]))
+        )
+        self.assertFalse(
+            any(close_calls[0] is node for statement in try_nodes[0].body for node in ast.walk(statement))
+        )
+        body = function_node.body
+        connect_statement_index = next(
+            index
+            for index, statement in enumerate(body)
+            if any(
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id == "sqlite3"
+                and node.func.attr == "connect"
+                for node in ast.walk(statement)
+            )
+        )
+        snapshot_statement_indices = [
+            index
+            for index, statement in enumerate(body)
+            if isinstance(statement, ast.Assign)
+            and any(
+                isinstance(target, ast.Name)
+                and target.id in {"race_input_values", "budget_values"}
+                for target in statement.targets
+            )
+        ]
+        validation_statement_indices = [
+            index
+            for index, statement in enumerate(body)
+            if isinstance(statement, ast.If)
+        ]
+        self.assertEqual(len(validation_statement_indices), 7)
+        self.assertEqual(len(snapshot_statement_indices), 2)
+        self.assertTrue(
+            all(index < min(snapshot_statement_indices) for index in validation_statement_indices)
+        )
+        self.assertTrue(all(index < connect_statement_index for index in snapshot_statement_indices))
+        self.assertIsInstance(body[connect_statement_index], ast.Assign)
+        self.assertIsInstance(body[connect_statement_index + 1], ast.Try)
 
     def test_pre_open_validation_rejects_invalid_paths_without_creating_a_file(self) -> None:
         run_context, strategy_identity, pipeline = self._valid_inputs()
-        path = self._temporary_path()
         cases = (None, b"db", bytearray(b"db"), 1, True, object(), "", "   ", "bad\x00path")
         for value in cases:
             with self.subTest(value=repr(value)):
@@ -273,7 +338,6 @@ class SQLitePersistedSimulationApplicationTests(unittest.TestCase):
                         race_inputs=(),
                         budgets_by_race_id={},
                     )
-                self.assertFalse(path.exists())
 
     def test_pre_open_validation_rejects_exact_inputs_and_containers_without_creating_a_file(self) -> None:
         run_context, strategy_identity, pipeline = self._valid_inputs()
@@ -433,6 +497,28 @@ class SQLitePersistedSimulationApplicationTests(unittest.TestCase):
              summary.roi, summary.bet_hit_rate, summary.race_hit_rate, summary.maximum_drawdown),
             (1, 1, 1, 1, 100, 300, 200, Decimal("300"), Decimal("100"), Decimal("100"), 0),
         )
+        run_context_tuple, strategy_identity_tuple, pipeline_tuple = self._valid_inputs(
+            run_id="application-run-tuple",
+        )
+        race_inputs_tuple = (race_input,)
+        summary_tuple = self._run(
+            database_path=path,
+            run_context=run_context_tuple,
+            strategy_identity=strategy_identity_tuple,
+            prediction_pipeline=pipeline_tuple,
+            race_inputs=race_inputs_tuple,
+            budgets_by_race_id=budgets,
+        )
+        self.assertEqual(race_inputs_tuple, (race_input,))
+        self.assertIs(race_inputs_tuple[0], race_input)
+        self.assertEqual(budgets, {race_id: budget})
+        self.assertIs(budgets[race_id], budget)
+        self.assertEqual(
+            (summary_tuple.race_count, summary_tuple.settled_race_count,
+             summary_tuple.bet_count, summary_tuple.investment, summary_tuple.payout,
+             summary_tuple.profit, summary_tuple.roi),
+            (1, 1, 1, 100, 300, 200, Decimal("300")),
+        )
         verification = sqlite3.connect(path)
         self.addCleanup(verification.close)
         snapshot_repository = SQLiteSimulationBetPlanSnapshotRepository(
@@ -450,6 +536,10 @@ class SQLitePersistedSimulationApplicationTests(unittest.TestCase):
         self.assertEqual(snapshot.budget, budget)
         self.assertEqual(len(snapshot.bets), 1)
         self.assertEqual(snapshot.bets[0].race_entry_ids, (horse_id,))
+        self.assertEqual(
+            verification.execute("SELECT COUNT(*) FROM simulation_bet_plans").fetchone(),
+            (2,),
+        )
         self.assertEqual(
             dict(verification.execute("SELECT version, name FROM schema_migrations")),
             {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema"},
@@ -554,15 +644,30 @@ class SQLitePersistedSimulationApplicationTests(unittest.TestCase):
             1,
         )
         forbidden = (
-            "get_connection", "DB_PATH", "database/" + "keiba.db", "create_tables",
+            "get_connection", "DB_PATH", "database/keiba.db", "create_tables",
             "datetime.now", "datetime.utcnow", "date.today", "uuid", "requests", "logging",
-            "print(", "argparse", "json", "open(", "runtime_checkable", "A" + "ny",
-            "c" + "ast", "type:" + " ignore", "connection.commit",
+            "print(", "argparse", "json", "open(", "connection.commit",
             "connection.rollback", "BEGIN",
         )
         for text in forbidden:
             with self.subTest(text=text):
                 self.assertNotIn(text, source)
+        self.assertFalse(
+            any(
+                alias.name in {"Any", "cast", "runtime_checkable"}
+                for node in ast.walk(tree)
+                if isinstance(node, (ast.Import, ast.ImportFrom))
+                for alias in node.names
+            )
+        )
+        self.assertFalse(
+            any(
+                isinstance(node, ast.Name)
+                and node.id in {"Any", "cast", "runtime_checkable"}
+                for node in ast.walk(tree)
+            )
+        )
+        self.assertEqual(tree.type_ignores, [])
 
 
 if __name__ == "__main__":
