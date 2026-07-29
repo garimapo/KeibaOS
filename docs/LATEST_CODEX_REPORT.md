@@ -2,7 +2,7 @@
 
 ## Status
 
-READY_FOR_REVIEW
+APPROVED_FOR_COMMIT
 
 ## Current Phase
 
@@ -41,7 +41,13 @@ coverage. The corrected suite now covers the concrete class/API annotations, exa
 dependency rejection, all three persisted-chain miswirings, constructor and run-time identity
 miswiring, invalid race-input containers, invalid budget mappings, official ordering, the two-pass
 Planning-then-settlement boundary, empty-run summary values, and multi-race Planning/Simulator
-failure stopping behavior.
+failure stopping behavior. The approved unit coverage includes class/module/base-class/type-hint
+contracts; exact top-level dependency and subclass rejection; three component-chain miswirings;
+three constructor and three run-time identity mismatches; race-input container and budget
+mapping/key/value/key-set validation; zero side effects on validation failure; caller list/tuple
+preservation; `(scheduled_start_at, race_id)` ordering; exact race/budget forwarding; all Planning
+before settlement; the empty-summary contract; Planning partial persistence/later-race stopping;
+Simulator failure after all Snapshots are saved; and unchanged exception object propagation.
 
 Extended `tests/test_persisted_simulation_integration.py` with one in-memory SQLite mixed three-race
 scenario. Caller order is deliberately unsorted; the service saves all Snapshots in official order.
@@ -86,10 +92,31 @@ git diff --check: success
 integration coverage, and 1i2 real-Pipeline scenarios are unchanged. No migration, schema, CLI,
 package-root export, or `target_race_count` change was made.
 
-Phase 4C-2d3b1i4 and later phases remain unstarted. `database/keiba.db` and `logs/` are outside
-scope. The initial review commit `ce51eb0 review: add persisted simulation run orchestration` is
-pushed on `review/4c-2d3b1i3b-multi-race-run-service`. This unit-test correction remains
-`READY_FOR_REVIEW`; production code, the integration test, `docs/CURRENT_PHASE.md`, migrations,
-schema, CLI, and package-root exports remain unchanged.
+## GitHub Review Approval
+
+GitHub implementation and correction review is approved. Review commit
+`ce51eb0 review: add persisted simulation run orchestration` and correction commit
+`5468e44 review: strengthen persisted run service contracts` were confirmed and pushed on
+`review/4c-2d3b1i3b-multi-race-run-service`. The production implementation is approved with no
+production correction; the unit contract-coverage correction is also approved. There is no blocker,
+and base branch integration is pending.
+
+Approved production contract:
+
+```text
+PersistedSimulationRunService has keyword-only constructor and run APIs, an exact concrete
+persisted component chain, and three object-identity checks in both constructor and run. It
+prevalidates every race_inputs and budget entry, sorts by (scheduled_start_at, race_id), completes
+all Planning before one Simulator.run(), supports empty runs and partial persistence, adds no
+rollback/retry/compensation, propagates exact Planning/Simulator exception objects, and returns the
+exact SimulationSummary.
+```
+
+The mixed SETTLED/NO_BET/UNSETTLED integration coverage is approved. These are Codex local
+verification results, not an independent GitHub CI run.
+
+Phase 4C-2d3b1i4 and later phases remain unstarted. Persistence backend composition remains the
+responsibility of 1i4. `database/keiba.db` and `logs/` are outside scope; no migration, schema,
+CLI, package-root export, production, or test change is included in this approval record.
 
 blocker: none
