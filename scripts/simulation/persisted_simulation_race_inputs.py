@@ -48,12 +48,16 @@ def assemble_persisted_simulation_race_inputs(
 
 
 def _prevalidate_races(races: tuple[Mapping[str, object], ...], budgets: Mapping[int, object]) -> None:
-    race_ids: list[int] = []
+    race_values: list[Mapping[str, object]] = []
     for race in races:
         if not isinstance(race, Mapping):
             raise ValueError("document.races must contain objects")
         if set(race) != _RACE_KEYS:
             raise ValueError("race keys must exactly match the race schema")
+        race_values.append(race)
+
+    race_ids: list[int] = []
+    for race in race_values:
         race_id = race["race_id"]
         if type(race_id) is not int or race_id <= 0:
             raise ValueError("race.race_id must be a positive integer")

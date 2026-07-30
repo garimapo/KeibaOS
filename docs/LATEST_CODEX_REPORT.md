@@ -261,9 +261,42 @@ Forbidden-dependency search: no matches
 git diff --check: success
 ```
 
-The 1i5b1 loader, 1i5b2a application-input assembler, 1i5a runner/composition, existing production and
-tests, migration, schema, `scripts/database.py`, `main.py`, `config/settings.json`, and package root were
-not changed. No file has been staged, committed, pushed, or placed on a review branch. `database/keiba.db`
-and `logs/` remain out of scope. Phase 4C-2d3b1i5c remains unstarted.
+The initial implementation was subsequently committed as `225d7f7` and pushed to
+`review/4c-2d3b1i5b2b-race-inputs` for GitHub review. `database/keiba.db` and `logs/` remain out of
+scope. Phase 4C-2d3b1i5c remains unstarted.
+
+blocker: none
+
+## Phase 4C-2d3b1i5b2b Review Correction
+
+Status remains `READY_FOR_REVIEW`. GitHub review identified that the original pre-scan could validate an
+earlier race ID before it had verified every race schema. `_prevalidate_races()` now uses two passes:
+all items are first confirmed as Mapping values with exact race keys, then all race IDs are validated,
+deduplicated, and compared with the application budget-ID set. The focused failure-order case proves a
+later malformed schema wins over an earlier invalid ID, while an invalid ID is reported once all schemas
+are valid.
+
+The initial dedicated suite had only four methods and did not provide the required matrix coverage. It
+now covers the public surface and package-root non-export, exact type/path linkage, two-race assembly
+with two past-race snapshots, canonical audit ordering, empty/budget-set cases, pre-scan ordering,
+canonical dates, aware/Z datetimes, race/track/entry/audit boundaries, huge integer handling, past-race
+absence/schema/numeric checks, cutoff fail-closed behavior, same-day/future past-race validation,
+determinism, snapshot immutability, and the source/AST contract.
+
+Codex local verification after the correction:
+
+```text
+Dedicated: 11 passed, 137 subtests passed
+Related: 82 passed, 382 subtests passed
+Full suite: 2355 passed, 2 skipped, 1113 subtests passed
+Python: C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe
+Python version: 3.12.13
+git diff --check: success
+```
+
+Only the assembler, its dedicated test, and this report changed in the review clone. `docs/CURRENT_PHASE.md`,
+the 1i5b1 loader, 1i5b2a application assembler, 1i5a runner/composition, existing production/tests,
+migration, schema, `scripts/database.py`, `main.py`, `config/settings.json`, CLI, and package root remain
+unchanged. Phase 4C-2d3b1i5c remains unstarted.
 
 blocker: none
