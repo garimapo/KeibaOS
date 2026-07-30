@@ -1,5 +1,21 @@
 # KeibaOS
 
+## Persisted simulation request CLI
+
+Persisted simulation requests are executed through the approved request application boundary:
+
+```bash
+python -m scripts.cli.run_persisted_simulation <request_path>
+```
+
+`<request_path>` is the request JSON file. A relative `database_path` in that file is anchored to the
+request file's parent directory. A successful run writes one deterministic JSON document to stdout and
+returns exit code `0`. Expected request, validation, or SQLite errors write one deterministic JSON error
+document to stderr and return exit code `1`. Native argparse usage errors return `2`; `--help` exits `0`.
+
+Rates represented by `Decimal` are emitted as fixed-point JSON strings, or `null` where no denominator
+exists. This tool is for research and verification only; it does not guarantee profit or performance.
+
 KeibaOS は、取得済みの競馬レース・出走馬・過去走データをもとに、馬ごとの総合評価、暫定的な単勝期待値、買い目候補を生成する Python プロジェクトです。
 
 > Ver0.7 では予想パイプラインとCLI実行を提供します。確率校正、券種別の実オッズ期待値、資金配分・自動購入は対象外です。

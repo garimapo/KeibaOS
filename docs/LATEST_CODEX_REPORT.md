@@ -2,7 +2,7 @@
 
 ## Status
 
-APPROVED_FOR_COMMIT
+READY_FOR_REVIEW
 
 ## Current Phase
 
@@ -453,6 +453,57 @@ help behavior, and the expected exception boundary. It also approves real tempor
 E2E coverage, snapshot-persistence verification, unchanged `main.py`, no duplicate DB/migration/
 repository responsibility, and the rule that the original workspace must not be modified.
 
-Production implementation remains unstarted. Base-branch integration is pending.
+## Phase 4C-2d3b1i5c Implementation
+
+Status: `READY_FOR_REVIEW`
+
+Base branch: `feature/ver0.8-simulator`
+
+Base commit: `e43a9be docs: approve persisted simulation CLI design`
+
+Implemented the approved thin request application boundary at
+`scripts/simulation/persisted_simulation_request_application.py`. Its only public function runs the
+exact four-stage chain once: immutable request-document loading, application-input assembly, audited
+race-input assembly, and the existing SQLite persisted-simulation runner. It adds no duplicate database,
+migration, composition, repository, validation, sorting, retry, cache, logging, or exception handling.
+Collaborator exceptions therefore retain their original object identity.
+
+Implemented `scripts/cli/run_persisted_simulation.py` with the approved `build_parser()`, `run()`, and
+`main()` public APIs. The parser has exactly one `Path` positional request path. Successful calls produce
+one compact, deterministic, UTF-8 JSON success envelope on stdout and exit `0`; expected OSError,
+RuntimeError, TypeError, ValueError, and sqlite3 errors produce one compact JSON error envelope on stderr
+and exit `1`. Native argparse help and argument errors retain `SystemExit(0)` and `SystemExit(2)`.
+
+The CLI explicitly serializes every current `SimulationSummary` and `BetTypeSummary` field. Decimal rates
+are fixed-point strings or JSON null, and `by_bet_type` is ordered deterministically. No traceback,
+fallback, retry, dynamic dataclass serialization, or extra DB/migration/repository responsibility was
+introduced. `main.py` remains unchanged.
+
+New dedicated coverage verifies formal APIs and AST responsibility boundaries, deterministic serializer
+schema/Decimal behavior, argparse behavior, expected error envelopes, the real empty relative-path
+file-backed SQLite path, and a real settled one-entry win path (100 investment, 300 payout, 200 profit)
+including persisted snapshot verification. No mock, patch, monkeypatch, or subprocess is used.
+
+README now documents the request CLI invocation, request-relative database path rule, stdout/stderr
+contract, exit codes 0/1/2, Decimal string/null policy, and the research-only/no-profit-guarantee notice.
+
+Codex local verification:
+
+```text
+Request application dedicated: 3 passed
+CLI dedicated: 7 passed, 6 subtests passed
+Related: 91 passed, 583 subtests passed
+Full suite: 2371 passed, 2 skipped, 1314 subtests passed
+Python: C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe
+Python version: 3.12.13
+Forbidden-dependency/source search: approved boundary matches only
+git diff --check: success
+```
+
+Only the six approved 1i5c files were changed: the new request application and CLI modules, their new
+dedicated tests, README, and this report. `docs/CURRENT_PHASE.md`, existing production/tests, migration,
+schema, `scripts/database.py`, `main.py`, configuration, package roots, `database/keiba.db`, `logs/`, and
+the original workspace remain untouched. Nothing was staged, committed, pushed, or placed on a new review
+branch. Phase 4C-2d3b1i5c now awaits implementation review.
 
 blocker: none
