@@ -2,7 +2,7 @@
 
 ## Status
 
-READY_FOR_REVIEW
+APPROVED_FOR_COMMIT
 
 ## Current Phase
 
@@ -156,5 +156,48 @@ Full suite: 2344 passed, 2 skipped, 976 subtests passed
 ```
 
 Production remains unchanged.
+
+## GitHub Review Approval
+
+GitHub implementation review is complete. The initial review commit `093dd23`, production correction
+commit `7c982ca`, and test-contract correction commit `ac1b951` were reviewed and approved. Production
+implementation and test coverage are approved; no additional production or test correction is required.
+There is no blocker, and base-branch integration is pending.
+
+Base branch: `feature/ver0.8-simulator`
+
+Review branch: `review/4c-2d3b1i5b2a-application-inputs`
+
+Base commit: `924a1e4`
+
+Approved contract: frozen `PersistedSimulationApplicationInputs`; exact request-document boundary;
+identity-preserved database path; timezone-aware and Z datetime parsing without clock fallback; only the
+supported RuleBased strategy, bet types, enums, fixed-stake policy, canonical date, and canonical budget
+keys; exact immutable domain types; shared StrategyConfig identity; deterministic pipeline assembly;
+sorted defensive budget freeze; and no SQLite, runner, race, audit, CLI, or package-root responsibility.
+
+Approved coverage includes the formal API/type hints, exact public surface and package-root non-export,
+identity and deterministic assembly, direct-constructor exact types, all nested validation matrices,
+canonical-date and huge-integer boundaries, and the source/AST contract. The only exception handlers are
+the two ISO parser-owned `ValueError` handlers; `Exception`, `BaseException`, and `OverflowError` are
+not caught.
+
+Codex local verification results remain:
+
+```text
+Dedicated: 17 passed, 82 subtests passed
+Related: 72 passed, 275 subtests passed
+Full suite: 2344 passed, 2 skipped, 976 subtests passed
+Forbidden-dependency search: no matches
+Package-root export: none
+Exception-handler AST: only the two ISO parser ValueError handlers
+git diff --check: success
+```
+
+Phase 4C-2d3b1i5b2b and Phase 4C-2d3b1i5c remain unstarted. Race, past-race, track, audit, and
+`SimulationRaceInput` assembly belong to 1i5b2b; CLI/output/runner invocation belong to 1i5c. The 1i5b1
+loader and 1i5a runner/composition remain unchanged. Migration, schema, `scripts/database.py`, `main.py`,
+`config/settings.json`, CLI, and package-root remain unchanged. `database/keiba.db` and `logs/` remain
+out of scope.
 
 blocker: none
