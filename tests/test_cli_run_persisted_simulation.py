@@ -181,6 +181,28 @@ def _empty_summary() -> SimulationSummary:
     )
 
 
+def _assert_exact_json_line(test_case: unittest.TestCase, output: str) -> None:
+    test_case.assertEqual(output.count("\n"), 1)
+    test_case.assertTrue(output.endswith("\n"))
+    test_case.assertFalse(output.endswith("\n\n"))
+    test_case.assertEqual(output.splitlines(), [output.rstrip("\n")])
+
+
+def _two_bet_type_summary() -> SimulationSummary:
+    first = BetTypeSummary("ワイド", 1, 1, 0, 100, 0, -100, Decimal("0"), Decimal("0"))
+    second = BetTypeSummary("単勝", 1, 1, 1, 100, 300, 200, Decimal("300"), Decimal("100"))
+    return SimulationSummary(
+        strategy_id="ordered-strategy-id", strategy_name="ordered-strategy-name",
+        strategy_config_hash="c" * 64, race_count=1, settled_race_count=1,
+        unsettled_race_count=0, no_bet_race_count=0, void_race_count=0,
+        error_race_count=0, unsupported_race_count=0, bet_count=2, settled_bet_count=2,
+        settled_purchase_race_count=1, hit_bet_count=1, hit_race_count=1,
+        investment=200, payout=300, profit=100, roi=Decimal("150"),
+        bet_hit_rate=Decimal("50"), race_hit_rate=Decimal("100"), maximum_drawdown=100,
+        by_bet_type={"ワイド": first, "単勝": second},
+    )
+
+
 class PersistedSimulationCliTests(unittest.TestCase):
     def test_public_api_parser_and_source_boundary(self) -> None:
         parser = build_parser()
@@ -226,6 +248,7 @@ class PersistedSimulationCliTests(unittest.TestCase):
             "(OSError, RuntimeError, TypeError, ValueError, sqlite3.Error)",
         )
         self.assertNotIn("apply_migrations", source)
+        self.assertNotIn("sqlite3.connect", source)
         self.assertNotIn("load_persisted_simulation_request_document", source)
         self.assertNotIn("build_sqlite_persisted_simulation_run_service", source)
         self.assertFalse(any(
@@ -253,6 +276,12 @@ class PersistedSimulationCliTests(unittest.TestCase):
             and node.func.id == "run_persisted_simulation_request"
         ]
         self.assertEqual(len(application_calls), 1)
+        self.assertEqual(len([node for node in ast.walk(tree) if isinstance(node, ast.Try)]), 1)
+        main_node = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "main")
+        main_body = main_node.body[1:] if ast.get_docstring(main_node) is not None else main_node.body
+        self.assertEqual(len(main_body), 1)
+        self.assertIsInstance(main_body[0], ast.Return)
+        self.assertEqual(ast.unparse(main_body[0].value), "run()")
 
     def test_success_serializer_is_compact_deterministic_and_preserves_decimals(self) -> None:
         envelope = {
@@ -291,6 +320,16 @@ class PersistedSimulationCliTests(unittest.TestCase):
         self.assertIsNone(empty_payload["bet_hit_rate"])
         self.assertIsNone(empty_payload["race_hit_rate"])
 
+    def test_multi_bet_type_summary_uses_sorted_payload_keys(self) -> None:
+        payload = _summary_payload(_two_bet_type_summary())
+        self.assertEqual(list(payload["by_bet_type"]), ["ワイド", "単勝"])
+        self.assertEqual(list(payload["by_bet_type"]), sorted(payload["by_bet_type"]))
+        for key, value in payload["by_bet_type"].items():
+            self.assertEqual(set(value), {field.name for field in fields(BetTypeSummary)})
+            self.assertEqual(value["bet_type"], key)
+            self.assertIsInstance(value["roi"], str)
+            self.assertIsInstance(value["bet_hit_rate"], str)
+
     def test_empty_file_backed_request_writes_success_to_stdout_only(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             directory = Path(temporary_directory)
@@ -300,6 +339,7 @@ class PersistedSimulationCliTests(unittest.TestCase):
             self.assertEqual(run([str(request_path)], stdout=stdout, stderr=stderr), 0)
             payload = json.loads(stdout.getvalue())
             self.assertEqual(stderr.getvalue(), "")
+            _assert_exact_json_line(self, stdout.getvalue())
             self.assertTrue(stdout.getvalue().endswith("\n"))
             self.assertEqual(
                 (
@@ -439,7 +479,9 @@ class PersistedSimulationCliTests(unittest.TestCase):
                 ),
                 (1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 100, 300, 200, "300", "100", "100", 0),
             )
-            bet_type = next(iter(summary["by_bet_type"].values()))
+            self.assertEqual(set(summary["by_bet_type"]), {"単勝"})
+            bet_type = summary["by_bet_type"]["単勝"]
+            self.assertEqual(bet_type["bet_type"], "単勝")
             self.assertEqual(set(bet_type), {field.name for field in fields(BetTypeSummary)})
             self.assertEqual(
                 (
@@ -459,6 +501,7 @@ class PersistedSimulationCliTests(unittest.TestCase):
         stdout, stderr = io.StringIO(), io.StringIO()
         self.assertEqual(run(["missing-request.json"], stdout=stdout, stderr=stderr), 1)
         self.assertEqual(stdout.getvalue(), "")
+        _assert_exact_json_line(self, stderr.getvalue())
         payload = json.loads(stderr.getvalue())
         self.assertEqual((payload["schema_version"], payload["status"]), (1, "error"))
         self.assertEqual(payload["error"]["type"], "FileNotFoundError")
@@ -514,11 +557,13 @@ class PersistedSimulationCliTests(unittest.TestCase):
                     stdout, stderr = io.StringIO(), io.StringIO()
                     self.assertEqual(run([str(request_path)], stdout=stdout, stderr=stderr), 1)
                     self.assertEqual(stdout.getvalue(), "")
+                    _assert_exact_json_line(self, stderr.getvalue())
                     payload = json.loads(stderr.getvalue())
                     self.assertEqual((payload["schema_version"], payload["status"]), (1, "error"))
                     self.assertEqual(payload["error"]["type"], exception_name)
                     self.assertTrue(payload["error"]["message"])
-                    self.assertNotIn("Traceback", stderr.getvalue())
+                    self.assertNotIn("traceback", stderr.getvalue().lower())
+                    self.assertNotIn("stack trace", stderr.getvalue().lower())
 
             reopened = sqlite3.connect(future_database)
             try:

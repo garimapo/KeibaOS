@@ -538,4 +538,32 @@ Python: C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\
 Python version: 3.12.13
 ```
 
+## Phase 4C-2d3b1i5c Final Review Test Closure
+
+Status remains `READY_FOR_REVIEW`. Production and README remain approved and unchanged. This final review
+closure changes only the two dedicated test files and this report.
+
+The application source contract now also rejects sys, clock, subprocess, requests, main/config,
+environment access, and source-level sort/copy/list/tuple calls. The CLI serializer now uses a valid
+multi-bet-type `SimulationSummary` to prove the payload order is the exact sorted bet-type order while
+retaining every `BetTypeSummary` field, key/value identity, and Decimal-string rules.
+
+Success and expected-error streams now explicitly require exactly one newline-terminated JSON record with
+no blank second line. Error coverage also rejects both traceback and stack-trace text. Settled coverage
+uses the explicit single bet-type key and verifies the nested `bet_type` field. CLI AST coverage now
+asserts one Try, one expected handler, one application call, `main()` as direct `return run()`, and no
+`sqlite3.connect`; application AST coverage additionally asserts the forbidden dependency/call boundary.
+
+Codex reran the dedicated, related, and full tests locally after this closure. The original workspace,
+`database/keiba.db`, and `logs/` remain unchanged. `git diff --check` succeeded.
+
+```text
+Request application dedicated: 3 passed
+CLI dedicated: 10 passed, 6 subtests passed
+Related: 94 passed, 583 subtests passed
+Full suite: 2374 passed, 2 skipped, 1314 subtests passed
+Python: C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe
+Python version: 3.12.13
+```
+
 blocker: none

@@ -71,8 +71,10 @@ class PersistedSimulationRequestApplicationTests(unittest.TestCase):
         self.assertEqual([node for node in tree.body if isinstance(node, ast.ClassDef)], [])
         self.assertFalse(any(isinstance(node, (ast.Try, ast.ExceptHandler)) for node in ast.walk(tree)))
         forbidden = (
-            "argparse", "json", "sqlite3", "apply_migrations", "repository",
-            "datetime.now", "date.today", "print(", "logging", "cache", "retry",
+            "argparse", "json", "sys", "logging", "sqlite3", "apply_migrations", "repository",
+            "datetime.now", "datetime.utcnow", "date.today", "print(", "cache", "retry",
+            "subprocess", "requests", "main.py", "config/settings.json", "os.environ",
+            "sorted(", "list(", "tuple(", "copy(", "deepcopy(",
         )
         self.assertFalse(any(fragment in source for fragment in forbidden))
         calls = [
