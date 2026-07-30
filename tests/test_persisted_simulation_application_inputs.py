@@ -79,8 +79,10 @@ class PersistedSimulationApplicationInputsTest(unittest.TestCase):
         self.assertEqual(assembler_hints["document"], PersistedSimulationRequestDocument)
         self.assertIs(assembler_hints["return"], PersistedSimulationApplicationInputs)
 
-        result = assemble_persisted_simulation_application_inputs(document=_document())
+        document = _document()
+        result = assemble_persisted_simulation_application_inputs(document=document)
 
+        self.assertIs(result.database_path, document.database_path)
         self.assertEqual(result.database_path, Path("simulation.db"))
         self.assertEqual(result.run_context.run_id, "run-1")
         self.assertEqual(result.run_context.dataset_id, "dataset-1")
@@ -490,6 +492,7 @@ class PersistedSimulationApplicationInputsTest(unittest.TestCase):
         self.assertIsNotNone(module)
         source = inspect.getsource(module)
         self.assertIn("class PersistedSimulationApplicationInputs", source)
+        self.assertNotIn("# type: ignore", source)
         forbidden_fragments = (
             "Path.read_text", "json.loads", "sqlite3", "apply_migrations", "run_sqlite_persisted_simulation",
             "build_sqlite_persisted_simulation_run_service", "SimulationRaceInput", "RacePredictionInput",
@@ -500,20 +503,18 @@ class PersistedSimulationApplicationInputsTest(unittest.TestCase):
         )
         for fragment in forbidden_fragments:
             self.assertNotIn(fragment, source)
-        tree = ast.parse(source)
+        tree = ast.parse(source, type_comments=True)
         self.assertEqual(tree.type_ignores, [])
-        imported_names = {
-            alias.asname or alias.name
+        imported_from_typing = {
+            alias.name
             for node in ast.walk(tree)
-            if isinstance(node, (ast.Import, ast.ImportFrom))
+            if isinstance(node, ast.ImportFrom)
+            and node.module == "typing"
             for alias in node.names
         }
-        self.assertNotIn("Any", imported_names)
-        self.assertNotIn("cast", imported_names)
-        self.assertNotIn("runtime_checkable", imported_names)
+        self.assertFalse({"Any", "cast", "runtime_checkable"} & imported_from_typing)
         named_identifiers = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
-        self.assertNotIn("Any", named_identifiers)
-        self.assertNotIn("cast", named_identifiers)
+        self.assertFalse({"Any", "cast", "runtime_checkable"} & named_identifiers)
         handled = [
             (function.name, ast.unparse(handler.type))
             for function in tree.body

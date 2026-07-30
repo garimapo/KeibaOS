@@ -136,6 +136,25 @@ Forbidden-dependency search: no matches
 git diff --check: success
 ```
 
-blocker: none
+## Review Test Contract Correction
+
+GitHub re-review found no further production correction: canonical ISO date validation, huge-integer
+finite validation, shared `StrategyConfig`, and pipeline/budget assembly remain approved.
+
+The normal assembly test now proves that `database_path` is the exact same already-anchored `Path`
+object from the document. The source contract now explicitly rejects the `# type: ignore` literal,
+parses with `type_comments=True`, validates `tree.type_ignores`, and checks `typing` imports by their
+original names so aliases cannot hide `Any`, `cast`, or `runtime_checkable`. The AST Name check includes
+`runtime_checkable`, and the exact two parser-owned `ValueError` handlers remain verified.
+
+The duplicated blocker entry was removed. Codex reran verification locally after this test correction:
+
+```text
+Dedicated: 17 passed, 82 subtests passed
+Related: 72 passed, 275 subtests passed
+Full suite: 2344 passed, 2 skipped, 976 subtests passed
+```
+
+Production remains unchanged.
 
 blocker: none
