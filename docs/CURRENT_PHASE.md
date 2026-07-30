@@ -6,11 +6,11 @@ APPROVED_FOR_CODEX
 
 ## Phase
 
-Phase 4C-2d3b1i5b1 — Persisted simulation request document loader
+Phase 4C-2d3b1i5b2a — Persisted simulation application input assembler
 
 ## Base Commit
 
-`c5933aa docs: approve SQLite persisted simulation application runner`
+`924a1e4 docs: approve persisted simulation request document loader`
 
 ## Branch
 
@@ -18,48 +18,45 @@ Phase 4C-2d3b1i5b1 — Persisted simulation request document loader
 
 ## Objective
 
-Load one UTF-8 JSON request file, reject malformed/non-deterministic document forms, validate its
-strict top-level envelope, anchor a relative database path to the request file, and return a deeply
-immutable request document:
+Assemble only the application-level inputs between the immutable 1i5b1 request document and the
+1i5a application runner:
 
 ```text
-request JSON path
--> UTF-8 read
--> duplicate-key rejection
--> strict JSON parse
--> exact top-level schema validation
--> relative database path anchoring
--> recursive immutable snapshot
--> PersistedSimulationRequestDocument
+PersistedSimulationRequestDocument
+-> database_path
+-> SimulationRunContext
+-> AllocationPolicyConfig
+-> StrategyConfig
+-> StrategyIdentity
+-> deterministic PredictionPipeline
+-> Mapping[int, BetStakeBudget]
+-> PersistedSimulationApplicationInputs
 ```
 
-This phase does not build simulation domain objects or invoke the application runner.
-
-## Phase Split
+This phase must not create `SimulationRaceInput`, `RacePredictionInput`, `PastRace`,
+`InputAuditEntry`, or `InputSnapshotAudit`. They belong to 1i5b2b. CLI, runner invocation, and
+Summary output belong to 1i5c.
 
 ```text
-1i5b1: JSON document loader and strict top-level envelope
-1i5b2: document-to-domain/application input assembler
-1i5c: CLI, exit code, stdout/stderr, and Summary output
+1i5b1: JSON request document loader (complete)
+1i5b2a: application input assembly (this phase)
+1i5b2b: race inputs and audit assembly (unstarted)
+1i5c: CLI, runner invocation, and Summary output (unstarted)
 ```
-
-1i5b1 must not create `SimulationRunContext`, `StrategyConfig`, `StrategyIdentity`,
-`PredictionPipeline`, `SimulationRaceInput`, `InputSnapshotAudit`, `PastRace`, `BetStakeBudget`, or
-`SimulationSummary`.
 
 ## Allowed Files
 
 ```text
-scripts/simulation/persisted_simulation_request_document.py
-tests/test_persisted_simulation_request_document.py
+scripts/simulation/persisted_simulation_application_inputs.py
+tests/test_persisted_simulation_application_inputs.py
 docs/LATEST_CODEX_REPORT.md
 ```
 
-`docs/CURRENT_PHASE.md` is approved contract documentation and is not an implementation target.
+`docs/CURRENT_PHASE.md` is approved contract documentation, not an implementation target.
 
 ## Formal Production API
 
-New module: `scripts/simulation/persisted_simulation_request_document.py`
+New module: `scripts/simulation/persisted_simulation_application_inputs.py`
 
 ```python
 from __future__ import annotations
@@ -68,177 +65,241 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from scripts.prediction.prediction_pipeline import PredictionPipeline
+from scripts.simulation.models import SimulationRunContext, StrategyIdentity
+from scripts.simulation.persisted_simulation_request_document import (
+    PersistedSimulationRequestDocument,
+)
+from scripts.simulation.stake_allocation import BetStakeBudget
+
 
 @dataclass(frozen=True)
-class PersistedSimulationRequestDocument:
-    schema_version: int
-    source_path: Path
+class PersistedSimulationApplicationInputs:
     database_path: Path
-    run_context: Mapping[str, object]
-    strategy: Mapping[str, object]
-    pipeline: Mapping[str, object]
-    races: tuple[Mapping[str, object], ...]
-    budgets_by_race_id: Mapping[str, object]
+    run_context: SimulationRunContext
+    strategy_identity: StrategyIdentity
+    prediction_pipeline: PredictionPipeline
+    budgets_by_race_id: Mapping[int, BetStakeBudget]
 
 
-def load_persisted_simulation_request_document(
+def assemble_persisted_simulation_application_inputs(
     *,
-    request_path: str | Path,
-) -> PersistedSimulationRequestDocument:
+    document: PersistedSimulationRequestDocument,
+) -> PersistedSimulationApplicationInputs:
     ...
 ```
 
-These are the only public production definitions. Private helpers are permitted. Do not add an
-application request bundle, domain assembler, database connection, runner wrapper, CLI parser,
-summary formatter, repository, Protocol, or abstract class.
+Only this class and function are public. Private helpers may start with `_`. Do not add a race-input
+assembler, combined request bundle, runner wrapper, repository, Protocol, ABC, CLI parser, or
+summary formatter.
 
-## Schema Version and Exact Envelope
+## Document Boundary
 
-Schema version is exactly integer `1`; `bool` is invalid. The only top-level keys are:
+Require exact type, rejecting subclasses:
+
+```python
+if type(document) is not PersistedSimulationRequestDocument:
+    raise ValueError("document must be a PersistedSimulationRequestDocument")
+```
+
+Do not re-read files, parse JSON, inspect duplicate/non-finite JSON, repeat the top-level envelope,
+or re-anchor database paths. Those are exclusively 1i5b1 responsibilities.
+
+## Request Schema and Assembly
+
+### Run context
+
+`run_context` requires exactly `run_id`, `dataset_id`, `started_at`, and `target_commit_id`, otherwise
+raise `ValueError("run_context keys must exactly match the run context schema")`. The three text
+fields must be exact non-empty, non-whitespace `str` values without trimming. Their errors are:
 
 ```text
-schema_version
-database_path
-run_context
-strategy
-pipeline
-races
-budgets_by_race_id
+run_context.run_id must be a non-empty string
+run_context.dataset_id must be a non-empty string
+run_context.target_commit_id must be a non-empty string
 ```
 
-Missing or extra keys raise `ValueError("request JSON keys must exactly match the request schema")`.
-Key order is irrelevant. The formal minimal document is:
+`started_at` must be exact `str`, parse with `datetime.fromisoformat`, be timezone-aware, and return a
+non-`None` UTC offset. `Z` may be interpreted as `+00:00`; naive/date-only values, timezone autofill,
+clock fallback, and conversion are forbidden. Invalid values raise:
 
-```json
-{
-  "schema_version": 1,
-  "database_path": "database/simulation.db",
-  "run_context": {},
-  "strategy": {},
-  "pipeline": {},
-  "races": [],
-  "budgets_by_race_id": {}
-}
+```text
+run_context.started_at must be an ISO 8601 timezone-aware datetime
 ```
 
-## Request Path and File Read
+Create `SimulationRunContext(run_id, dataset_id, started_at, target_commit_id)`.
 
-Before file read accept a non-empty `str`, `Path`, or `Path` subclass only. Reject `None`, bytes,
-bytearray, int, bool, arbitrary objects, empty/whitespace paths, and NUL-containing paths as
-`ValueError("request_path must be a non-empty path")`.
+### Strategy and allocation policy
+
+`strategy` requires exactly:
+
+```text
+strategy_name
+allowed_bet_types
+max_bet_count
+selection_style
+min_combination_score
+max_candidates
+sort_condition
+allocation_policy
+```
+
+Missing/extra keys raise `strategy keys must exactly match the strategy schema`.
+
+- `strategy_name` is exact `str` `RuleBasedBetStrategy`; otherwise
+  `strategy.strategy_name must be RuleBasedBetStrategy`. No alias, case folding, class import path,
+  plugin, or arbitrary class is accepted.
+- `allowed_bet_types` is the exact tuple frozen by 1i5b1; otherwise
+  `strategy.allowed_bet_types must be an array`. It permits only unique exact `str` values in `単勝`,
+  `馬連`, `ワイド`, `3連複`; invalid values raise
+  `strategy.allowed_bet_types must contain unique supported bet types`. Empty tuple is valid; convert
+  to `frozenset` so input order does not affect identity.
+- `max_bet_count` and `max_candidates` are exact non-bool `int` values >= 0; errors are respectively
+  `strategy.max_bet_count must be a non-negative integer` and
+  `strategy.max_candidates must be a non-negative integer`.
+- `selection_style` is exact `str` `box` or `formation`, then `SelectionStyle(value)`; otherwise
+  `strategy.selection_style must be box or formation`.
+- `min_combination_score` is exact non-bool `int`/`float`, finite, and may be negative; convert to
+  float. Invalid input raises `strategy.min_combination_score must be finite`.
+- `sort_condition` is exact `str` one of `generator_rank`, `combination_score`, `prediction_score`,
+  or `estimated_probability`, then `SortCondition(value)`; otherwise
+  `strategy.sort_condition is unsupported`.
+
+`allocation_policy` must be a Mapping, otherwise `strategy.allocation_policy must be an object`; it
+requires exactly `policy_name`, `policy_version`, `parameters`, otherwise
+`strategy.allocation_policy keys must exactly match the allocation policy schema`.
+
+Only `fixed_stake_per_recommendation` and string version `1` are accepted; errors are
+`strategy.allocation_policy.policy_name is unsupported` and
+`strategy.allocation_policy.policy_version is unsupported`. `parameters` is Mapping-only, otherwise
+`strategy.allocation_policy.parameters must be an object`; it requires only `stake_amount`, otherwise
+`strategy.allocation_policy.parameters keys must exactly match the fixed stake schema`. Stake is exact
+non-bool positive `int`, multiple of 100, otherwise
+`strategy.allocation_policy.parameters.stake_amount must be a positive multiple of 100`.
+
+Create `AllocationPolicyConfig`, then exactly one `StrategyConfig`, then call existing
+`build_strategy_identity(strategy_name, strategy_config)`. Do not generate IDs, hashes, SHA-256, or
+canonical JSON manually.
+
+### Pipeline
+
+`pipeline` requires exact key `track_reference_date`, otherwise
+`pipeline keys must exactly match the pipeline schema`. It is exact `str` ISO `YYYY-MM-DD`, parsed by
+`date.fromisoformat`, otherwise `pipeline.track_reference_date must be an ISO date`.
+
+Do not use `date.today`, current time, run/race date, timezone conversion, or inferred date. Build:
 
 ```python
-if not isinstance(request_path, (str, Path)):
-    raise ValueError("request_path must be a non-empty path")
-source_path = Path(request_path)
-request_path_text = str(request_path)
-if not request_path_text.strip() or "\x00" in request_path_text:
-    raise ValueError("request_path must be a non-empty path")
+track_engine = TrackEngine(reference_date=track_reference_date)
+pipeline_config = PipelineConfig(
+    track_engine=track_engine,
+    bet_strategy=RuleBasedBetStrategy(),
+    strategy_config=strategy_config,
+)
+prediction_pipeline = PredictionPipeline(config=pipeline_config)
 ```
 
-Do not call `resolve()`, canonicalize/symlink-resolve, pre-check existence, or alter the source
-path. Read only with `source_path.read_text(encoding="utf-8")`. Translate `UnicodeDecodeError` to
-`ValueError("request file must be UTF-8")`; propagate every other `OSError` unchanged. Do not strip
-a BOM, use a fallback encoding/path, or retry.
-
-## Strict JSON Parse
-
-Use standard-library `json` only. Translate `json.JSONDecodeError` to
-`ValueError("request file must contain valid JSON")`.
-
-All object levels must reject duplicate keys using `object_pairs_hook`; duplicate top-level keys,
-nested `run_context` keys, and nested race-item keys raise
-`ValueError("request JSON must not contain duplicate object keys")`. Do not permit last-write-wins.
-
-Reject `NaN`, `Infinity`, `-Infinity`, and finite-range overflow to float infinity at every level.
-Use `parse_constant` and recursive `math.isfinite` validation; raise
-`ValueError("request JSON must not contain non-finite numbers")`. Do not catch this or duplicate-key
-`ValueError` as generic JSON decode failure.
-
-## Root and Field Validation
-
-The JSON root must be exact `dict`, otherwise
-`ValueError("request JSON root must be an object")`. Validate fields without any domain interpretation:
-
-- `schema_version`: exact non-bool integer `1`, otherwise `ValueError("schema_version must be 1")`.
-- `database_path`: non-empty, non-whitespace, NUL-free string only, otherwise
-  `ValueError("database_path must be a non-empty string")`.
-- `run_context`, `strategy`, `pipeline`, and `budgets_by_race_id`: exact JSON object/dict only, with
-  their specified `"... must be an object"` errors.
-- `races`: exact JSON array/list only, otherwise `ValueError("races must be an array")`; every item
-  must be an exact JSON object/dict, otherwise `ValueError("races must contain objects")`.
-
-Empty races and budgets are valid. Nested domain keys and values belong to 1i5b2.
-
-## Database Path Anchoring
-
-Convert the validated JSON path to `Path`. Preserve an absolute path unchanged. For a relative path,
-use exactly:
+Other engines use PipelineConfig defaults. Require exact `PredictionPipeline`, `PipelineConfig`,
+`RuleBasedBetStrategy`, and `TrackEngine` types; reference date equality; and object identity:
 
 ```python
-database_path = source_path.parent / Path(database_path_text)
+prediction_pipeline.config.strategy_config is strategy_identity.strategy_config
 ```
 
-Do not resolve, force a CWD basis, check existence, create a directory/file, or use
-`scripts.database.DB_PATH`.
+### Budgets
 
-## Recursive Immutable Snapshot
+`budgets_by_race_id` is a Mapping with canonical positive-integer string keys matching `[1-9][0-9]*`;
+otherwise raise `budgets_by_race_id keys must be canonical positive integer strings`. Reject zero,
+signs, leading zeroes, decimals, and whitespace; convert accepted keys with `int(key)`.
 
-The returned document must share no mutable parsed JSON containers. Recursively convert every JSON
-object to `MappingProxyType`, every list to `tuple`, retain strings/ints/bools/None, and retain only
-finite floats. This applies to `run_context`, `strategy`, `pipeline`, every race item and nested
-array/object, and `budgets_by_race_id`. Object keys remain strings.
+Each value is Mapping-only, otherwise `budgets_by_race_id values must be objects`; it requires exact
+key `total_amount`, otherwise `budget keys must exactly match the budget schema`. Total is exact
+non-bool `int`, non-negative and a multiple of 100, otherwise
+`budget.total_amount must be a non-negative multiple of 100`. Create `BetStakeBudget(total_amount)`.
+Empty budgets are valid. Do not inspect `races` or enforce race/budget key-set agreement in 1i5b2a.
 
-`PersistedSimulationRequestDocument` is frozen. Its optional `__post_init__` may protect direct
-constructor values, defensive Mapping/tuple copies, and exact Path fields, but must not introduce a
-second schema interpretation or duplicate loader validation.
+## Output Invariants
 
-## Failure and Responsibility Boundaries
+`PersistedSimulationApplicationInputs` is frozen and its listed field order is formal. Direct
+construction requires: Path database; exact `SimulationRunContext`, `StrategyIdentity`, and
+`PredictionPipeline`; Mapping budgets; exact positive non-bool integer keys; and exact
+`BetStakeBudget` values. Errors are:
 
-- Pre-read validation: stable `ValueError`, with no read/parse.
-- File `OSError`: same exception object, no retry/fallback.
-- UTF-8, JSON, duplicate-key, non-finite, root, or envelope failure: stable `ValueError`, no partial
-  document, no database work, logging, or print.
+```text
+database_path must be a Path
+run_context must be a SimulationRunContext
+strategy_identity must be a StrategyIdentity
+prediction_pipeline must be a PredictionPipeline
+budgets_by_race_id must be a Mapping
+budgets_by_race_id keys must be positive integers
+budgets_by_race_id values must be BetStakeBudget
+```
 
-Allowed production concerns are `Path`, UTF-8 `read_text`, `json.loads` with hooks,
-`math.isfinite`, `MappingProxyType`, frozen dataclass, and recursive immutable conversion. Do not
-add sqlite/migrations/runner calls, domain creation, current time, UUID/git ID, network, logging,
-print, argparse, stdout/stderr, exit code, environment/config loading, or changes to `main.py` and
-`config/settings.json`.
+Require exact `PipelineConfig`, shared StrategyConfig identity, and exact `AllocationPolicyConfig`:
+
+```text
+prediction_pipeline.config must be a PipelineConfig
+prediction_pipeline strategy_config must be strategy_identity.strategy_config
+strategy_identity allocation_policy must be an AllocationPolicyConfig
+```
+
+Defensively copy budgets into a new race-ID-sorted dict and expose `MappingProxyType`. Do not copy
+the immutable domain objects. Caller mutation must not affect output, and output mapping mutation must
+fail.
+
+## Formal Order and Failure Semantics
+
+The order is mandatory:
+
+```text
+1. document exact type
+2. run_context schema and values
+3. SimulationRunContext
+4. strategy schema, scalar/enum values, allocation policy
+5. AllocationPolicyConfig
+6. StrategyConfig
+7. StrategyIdentity
+8. pipeline schema and track date
+9. PipelineConfig and PredictionPipeline
+10. budgets schema and BetStakeBudget values
+11. PersistedSimulationApplicationInputs
+```
+
+Never construct later objects after failure. Do not wrap collaborator exceptions. Only `ValueError`
+from `datetime.fromisoformat` or `date.fromisoformat` may be translated to the stable field-specific
+errors. Broad exception handling, retry, fallback, partial results, logging, print, DB work, and
+mutation of the document/nested Mapping are forbidden.
+
+## Responsibility Boundary
+
+Allowed dependencies: datetime/date parsing, `math.isfinite`, `MappingProxyType`, existing run,
+policy, strategy, enum, identity, track, pipeline, and budget classes/functions. Forbidden: file or
+JSON loading, SQLite/migrations/runner/composition, race/past/audit assembly, repositories, network,
+logging, print, argparse, stdout/stderr, exit code, clock/UUID/environment/config loading, `main.py`,
+and package-root export.
 
 ## Required Tests
 
-Add `tests/test_persisted_simulation_request_document.py` covering:
+Add `tests/test_persisted_simulation_application_inputs.py` using real objects only; mocks, patches,
+and monkeypatches are forbidden. Cover API/frozen/field/type invariants, valid direct 1i5b1 documents,
+offset and Z parsing, all strategy/enums/policy/identity/pipeline/budget outputs, deterministic double
+assembly, and 1i4 preconditions without DB execution.
 
-- module API, frozen dataclass, exact field order/type hints, keyword-only loader/return type, exactly
-  one public class/function, and no package-root export;
-- valid documents: source path preservation, relative parent anchoring, absolute path preservation,
-  empty races/budgets, deep `MappingProxyType`/tuple conversion, mutation failure, and frozen fields;
-- all request-path rejection cases before read; raw file failures, invalid UTF-8, empty/malformed JSON;
-- duplicate keys at top level, nested run context, and nested race item; and all required non-finite
-  values including `1e999`;
-- non-object root, exact key set, schema version variants, invalid database path, invalid object
-  fields, non-array races, and non-object race items;
-- independence from later file rewriting/reload; and
-- AST/source checks excluding application/database/domain/CLI/time/network imports and confirming no
-  `Any`, `cast`, `type: ignore`, `runtime_checkable`, or broad exception handling. Only
-  `UnicodeDecodeError` and `json.JSONDecodeError` exception handlers are permitted.
+Cover direct construction validation and defensive-copy mutation rejection; run-context, strategy,
+pipeline, and budget matrices, including empty bet types and budgets; and source/AST checks rejecting
+file/JSON/DB/runner/race/audit/network/time/CLI/config dependencies, `Any`, `cast`,
+`runtime_checkable`, type ignores, and broad except. Only date-parse `ValueError` handlers are allowed.
 
-Run the dedicated test, relevant request/JSON contract tests if present, full `pytest`, required
-searches, `git diff --check`, and `git status --short`.
+Run dedicated, related 1i5b1/application/composition/run-service/model tests, full pytest, required
+source searches, `git diff --check`, and `git status --short`.
 
-## Forbidden Files and Follow-up
+## Forbidden Files and Stop Condition
 
-Do not modify existing production/tests, the 1i5a runner, migration/schema, `scripts/database.py`,
-`main.py`, `config/settings.json`, existing CLI, or package `__init__` files. Never stage/commit
-`database/keiba.db`, `logs/`, or its contents.
+Do not modify existing production/tests, 1i5b1 loader, 1i5a runner/composition, migration/schema,
+`scripts/database.py`, `main.py`, `config/settings.json`, CLI, or package `__init__`. Never
+stage/commit `database/keiba.db`, `logs/`, or its contents.
 
-1i5b2 owns mapping-to-domain/application inputs. 1i5c owns argparse, request-path intake, stdout,
-stderr, exit codes, CLI entry point, and Summary display.
-
-## Stop Condition
-
-After implementation and verification, set `docs/LATEST_CODEX_REPORT.md` to `READY_FOR_REVIEW` and
-stop. Do not stage, commit, push, create a review branch, start 1i5b2/1i5c, or create domain objects.
+After implementation set `docs/LATEST_CODEX_REPORT.md` to `READY_FOR_REVIEW` and stop. Do not stage,
+commit, push, create a review branch, start 1i5b2b/1i5c, read a DB, or invoke the runner.
 
 blocker: none
