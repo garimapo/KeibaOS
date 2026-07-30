@@ -6,11 +6,11 @@ APPROVED_FOR_CODEX
 
 ## Current Phase
 
-Phase 4C-2d3b1i5b2b — Persisted simulation race input and audit assembler
+Phase 4C-2d3b1i5c — Persisted simulation request application, deterministic JSON CLI, and file-backed E2E
 
-Base commit: `b06503c docs: approve persisted simulation application inputs`
+Base commit: `cd6f8e6f8e9024c33f3dc44d5f14486d5d77fdfb docs: approve persisted simulation race inputs`
 
-Branch: `feature/ver0.8-simulator`
+Branch: `review/4c-2d3b1i5c-design`
 
 ## Preparation and Approval
 
@@ -407,6 +407,26 @@ docs/LATEST_CODEX_REPORT.md
 1i5b1, 1i5b2a, and 1i5a remain unchanged; 1i5c alone owns request application and CLI presentation.
 `database/keiba.db`, `logs/`, migration, schema, `scripts/database.py`, `main.py`, and
 `config/settings.json` are out of scope. This design-only activity changed no production, test, or README
-file and did not stage, commit, push, run a DB, or invoke the runner.
+file. The approved design was subsequently committed and pushed for GitHub review; no DB or runner was
+invoked.
+
+## Phase 4C-2d3b1i5c Design Review Publication
+
+Design commit: `9a7cabc docs: design persisted simulation CLI`
+
+Review branch: `review/4c-2d3b1i5c-design`
+
+Base commit: `cd6f8e6`
+
+Changed files:
+
+```text
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+```
+
+The design was committed and pushed for GitHub review. Production, tests, and README remain unchanged;
+no DB or runner was invoked. Implementation remains unstarted and Status remains
+`APPROVED_FOR_CODEX`.
 
 blocker: none

@@ -205,7 +205,8 @@ On success write one compact UTF-8 JSON line to stdout and nothing to stderr:
 ```
 
 Use `json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))`, followed by one
-newline. Construct `summary` explicitly from all and only `dataclasses.fields(SimulationSummary)`:
+newline. Production must explicitly enumerate every approved `SimulationSummary` field; it must not
+dynamically construct the schema by iterating `dataclasses.fields(SimulationSummary)`.
 
 ```text
 strategy_id strategy_name strategy_config_hash race_count settled_race_count
@@ -215,8 +216,11 @@ hit_bet_count hit_race_count investment payout profit roi bet_hit_rate
 race_hit_rate maximum_drawdown by_bet_type
 ```
 
-Do not use `repr`, `dataclasses.asdict`, `default=str`, floats for Decimal values, clocks, random values,
-pretty-printing, or logging metadata.
+Tests must compare the produced summary-key set with
+`{name.name for name in dataclasses.fields(SimulationSummary)}` to detect missing or extra fields.
+Production must not use `dataclasses.fields`, `dataclasses.asdict`, `summary.__dict__`, `default=str`,
+field-name-driven formatting, floats for Decimal values, clocks, random values, pretty-printing, or
+logging metadata.
 
 ## Error JSON Schema
 
@@ -251,14 +255,15 @@ For example, `Decimal("300")` serializes as `"300"`; precision is never lost thr
 ## by_bet_type Serialization
 
 Build the payload in sorted bet-type-key order, although `json.dumps(sort_keys=True)` remains enabled.
-Each `BetTypeSummary` payload contains exactly:
+Production explicitly enumerates every approved `BetTypeSummary` field:
 
 ```text
 bet_type bet_count settled_bet_count hit_bet_count investment payout profit roi bet_hit_rate
 ```
 
 Use the same Decimal/null serialization rules. The Japanese bet-type key is preserved with
-`ensure_ascii=False`.
+`ensure_ascii=False`. Tests compare the resulting key set with
+`{name.name for name in dataclasses.fields(BetTypeSummary)}`; production must not use that reflection.
 
 ## Stream Contract
 
@@ -288,8 +293,11 @@ clock fallbacks, or translate errors.
 ## README Contract
 
 Add only the persisted-simulation CLI usage documentation: module command syntax, request JSON path,
-relative `database_path` anchoring, stdout success JSON, stderr error JSON, exit codes 0/1, and Decimal
-rates as JSON strings. Do not remove or alter legacy Ver0.7 CLI guidance.
+relative `database_path` anchoring, stdout success JSON, stderr error JSON, and Decimal rates as JSON
+strings. Document exit code 0 for a successful simulation, 1 for expected request/application/runner
+failure, and 2 for argparse usage failure; `--help` retains argparse `SystemExit(0)`. State that Ver0.8
+persisted simulation is for research and verification use and does not guarantee profit or betting
+performance. Do not remove or alter legacy Ver0.7 CLI guidance.
 
 ## Failure Semantics
 
@@ -346,9 +354,15 @@ git status --short
 
 ## Stop Conditions
 
+During implementation and testing, tests may create/read temporary-directory SQLite DB files, apply
+existing migration APIs to those temporary DBs, prepare fixtures with existing repository APIs, invoke
+the application function and CLI `run()` for real E2E tests, and run pytest verification. These narrow
+test activities do not authorize a change to `database/keiba.db`, the original workspace, or any manual
+production DB/migration/repository/runner invocation.
+
 After implementation, update only the report to `READY_FOR_REVIEW` and stop. Do not stage, commit, push,
-create a review branch/PR, read or modify a DB, invoke the runner, modify the original workspace, or
-start any later phase. Stop immediately if an approved contract conflicts with existing code or requires
-a file outside Allowed Implementation Files.
+create a review branch/PR, modify `database/keiba.db`, modify the original workspace, manually invoke
+the main selected DB/migration/repository/runner, or start any later phase. Stop immediately if an
+approved contract conflicts with existing code or requires a file outside Allowed Implementation Files.
 
 blocker: none
