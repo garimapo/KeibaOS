@@ -85,15 +85,15 @@ and date parsing, which become the approved field-specific errors.
 Verification (Codex local execution):
 
 ```text
-Dedicated: 14 passed, 64 subtests passed
-Related: 69 passed, 257 subtests passed
+Dedicated: 17 passed, 82 subtests passed
+Related: 72 passed, 275 subtests passed
   tests/test_persisted_simulation_application_inputs.py
   tests/test_persisted_simulation_request_document.py
   tests/test_sqlite_persisted_simulation_application.py
   tests/test_sqlite_persisted_simulation_composition.py
   tests/test_persisted_simulation_run_service.py
   tests/test_simulation_models.py
-Full suite: 2341 passed, 2 skipped, 958 subtests passed
+Full suite: 2344 passed, 2 skipped, 976 subtests passed
 Forbidden-dependency search: no matches
 Exception-handler AST/source check: only the two ISO parser ValueError handlers
 git diff --check: success
@@ -104,7 +104,38 @@ and composition root remain unchanged. Migration, schema, `scripts/database.py`,
 `config/settings.json`, CLI, and package-root exports remain unchanged. `database/keiba.db` and `logs/`
 are out of scope and uncommitted.
 
-No files have been staged, committed, pushed, or placed on a review branch for this phase. Phase
-4C-2d3b1i5b2b and Phase 4C-2d3b1i5c remain unstarted.
+The initial review commit `093dd23` was pushed to
+`review/4c-2d3b1i5b2a-application-inputs`. Phase 4C-2d3b1i5b2b and Phase 4C-2d3b1i5c remain
+unstarted.
+
+## Review Correction
+
+GitHub review found that `date.fromisoformat()` accepts basic and ISO week-date forms, even though the
+approved request boundary requires canonical `YYYY-MM-DD`. `_parse_iso_date()` now compares the original
+text with `parsed.isoformat()`, so basic (`20260805`) and week (`2026-W32-3`) forms fail with the stable
+pipeline date error.
+
+The review also found that applying `math.isfinite()` or `float()` directly to an arbitrarily large
+integer can leak `OverflowError`. `_finite_score()` now bounds exact integers against the largest finite
+float before conversion, preserving the stable `strategy.min_combination_score must be finite` error for
+both huge positive and negative integers without an additional exception handler.
+
+The dedicated tests now additionally verify assembler type hints, module-defined public definitions,
+package-root non-export, the canonical date matrix, huge-integer behavior, valid assembly details,
+determinism details, source/AST exception ownership, and exact allocation-policy type enforcement in the
+direct output dataclass. Production changes are limited to the assembler; no existing production or test
+file was changed.
+
+Verification was rerun locally by Codex after the correction:
+
+```text
+Dedicated: 17 passed, 82 subtests passed
+Related: 72 passed, 275 subtests passed
+Full suite: 2344 passed, 2 skipped, 976 subtests passed
+Forbidden-dependency search: no matches
+git diff --check: success
+```
+
+blocker: none
 
 blocker: none

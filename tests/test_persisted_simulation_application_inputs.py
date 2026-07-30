@@ -10,6 +10,7 @@ from types import MappingProxyType
 from typing import get_type_hints
 import unittest
 
+import scripts.simulation as simulation_package
 from scripts.prediction.allocation_policy import AllocationPolicyConfig
 from scripts.prediction.bet_strategy import RuleBasedBetStrategy, SelectionStyle, SortCondition, StrategyConfig
 from scripts.prediction.prediction_pipeline import PipelineConfig, PredictionPipeline
@@ -74,16 +75,31 @@ class PersistedSimulationApplicationInputsTest(unittest.TestCase):
                 "budgets_by_race_id": Mapping[int, BetStakeBudget],
             },
         )
+        assembler_hints = get_type_hints(assemble_persisted_simulation_application_inputs)
+        self.assertEqual(assembler_hints["document"], PersistedSimulationRequestDocument)
+        self.assertIs(assembler_hints["return"], PersistedSimulationApplicationInputs)
 
         result = assemble_persisted_simulation_application_inputs(document=_document())
 
         self.assertEqual(result.database_path, Path("simulation.db"))
+        self.assertEqual(result.run_context.run_id, "run-1")
+        self.assertEqual(result.run_context.dataset_id, "dataset-1")
         self.assertEqual(result.run_context.started_at.utcoffset().total_seconds(), 9 * 60 * 60)
+        self.assertEqual(result.run_context.target_commit_id, "commit-1")
         self.assertEqual(result.strategy_identity.strategy_name, "RuleBasedBetStrategy")
         self.assertEqual(result.strategy_identity.strategy_config.allowed_bet_types, frozenset({"単勝", "馬連"}))
+        self.assertEqual(result.strategy_identity.strategy_config.max_bet_count, 3)
         self.assertEqual(result.strategy_identity.strategy_config.selection_style, SelectionStyle.FORMATION)
+        self.assertIs(type(result.strategy_identity.strategy_config.min_combination_score), float)
+        self.assertEqual(result.strategy_identity.strategy_config.min_combination_score, -1.5)
+        self.assertEqual(result.strategy_identity.strategy_config.max_candidates, 5)
         self.assertEqual(result.strategy_identity.strategy_config.sort_condition, SortCondition.GENERATOR_RANK)
+        self.assertIs(type(result.strategy_identity.strategy_config.allocation_policy), AllocationPolicyConfig)
         self.assertEqual(result.strategy_identity.strategy_config.allocation_policy.policy_name, "fixed_stake_per_recommendation")
+        self.assertEqual(result.strategy_identity.strategy_config.allocation_policy.policy_version, "1")
+        self.assertEqual(result.strategy_identity.strategy_config.allocation_policy.parameters["stake_amount"], 100)
+        self.assertIs(type(result.prediction_pipeline), PredictionPipeline)
+        self.assertIs(type(result.prediction_pipeline.config), PipelineConfig)
         self.assertIs(result.prediction_pipeline.config.strategy_config, result.strategy_identity.strategy_config)
         self.assertIs(type(result.prediction_pipeline.config.bet_strategy), RuleBasedBetStrategy)
         self.assertIs(type(result.prediction_pipeline.config.track_engine), TrackEngine)
@@ -99,8 +115,22 @@ class PersistedSimulationApplicationInputsTest(unittest.TestCase):
         first = assemble_persisted_simulation_application_inputs(document=document)
         second = assemble_persisted_simulation_application_inputs(document=document)
         self.assertEqual(first.run_context.started_at, datetime(2026, 8, 5, 3, 30, tzinfo=timezone.utc))
-        self.assertEqual(first.strategy_identity, second.strategy_identity)
+        self.assertEqual(first.run_context, second.run_context)
+        self.assertEqual(first.strategy_identity.strategy_id, second.strategy_identity.strategy_id)
+        self.assertEqual(first.strategy_identity.strategy_config_hash, second.strategy_identity.strategy_config_hash)
+        self.assertEqual(first.strategy_identity.strategy_config, second.strategy_identity.strategy_config)
+        self.assertEqual(
+            first.strategy_identity.strategy_config.allocation_policy,
+            second.strategy_identity.strategy_config.allocation_policy,
+        )
+        self.assertEqual(
+            first.prediction_pipeline.config.track_engine.reference_date,
+            second.prediction_pipeline.config.track_engine.reference_date,
+        )
+        self.assertIs(type(first.prediction_pipeline.config.bet_strategy), RuleBasedBetStrategy)
+        self.assertEqual(list(first.budgets_by_race_id), list(second.budgets_by_race_id))
         self.assertEqual(first.budgets_by_race_id, second.budgets_by_race_id)
+        self.assertEqual(first.database_path, second.database_path)
         self.assertIsNot(first.prediction_pipeline, second.prediction_pipeline)
 
     def test_document_and_run_context_validation(self) -> None:
@@ -253,6 +283,28 @@ class PersistedSimulationApplicationInputsTest(unittest.TestCase):
                     document=_replace_document(document, strategy=strategy)
                 )
 
+    def test_finite_score_huge_integer_and_valid_value_matrix(self) -> None:
+        document = _document()
+        for score in (10**1000, -(10**1000)):
+            strategy = dict(document.strategy)
+            strategy["min_combination_score"] = score
+            with self.subTest(score=score > 0), self.assertRaisesRegex(
+                ValueError,
+                "strategy.min_combination_score must be finite",
+            ):
+                assemble_persisted_simulation_application_inputs(
+                    document=_corrupt_document(document, strategy=strategy)
+                )
+        for score in (-1, 0, 1, -1.5, 0.0, 1.5):
+            strategy = dict(document.strategy)
+            strategy["min_combination_score"] = score
+            result = assemble_persisted_simulation_application_inputs(
+                document=_replace_document(document, strategy=strategy)
+            )
+            with self.subTest(score=score):
+                self.assertIs(type(result.strategy_identity.strategy_config.min_combination_score), float)
+                self.assertEqual(result.strategy_identity.strategy_config.min_combination_score, float(score))
+
     def test_pipeline_and_budget_validation(self) -> None:
         document = _document()
         with self.assertRaisesRegex(ValueError, "pipeline.track_reference_date must be an ISO date"):
@@ -269,6 +321,30 @@ class PersistedSimulationApplicationInputsTest(unittest.TestCase):
             with self.subTest(budgets=budgets), self.assertRaisesRegex(ValueError, error):
                 assemble_persisted_simulation_application_inputs(
                     document=_replace_document(document, budgets_by_race_id=budgets)
+                )
+
+    def test_track_reference_date_must_be_canonical_iso_date(self) -> None:
+        document = _document()
+        valid = assemble_persisted_simulation_application_inputs(document=document)
+        self.assertEqual(valid.prediction_pipeline.config.track_engine.reference_date.isoformat(), "2026-08-05")
+        for value in (
+            "20260805",
+            "2026-W32-3",
+            "2026/08/05",
+            "2026-8-5",
+            "2026-08-05T00:00:00",
+            "",
+            " ",
+            1,
+            True,
+            None,
+        ):
+            with self.subTest(value=value), self.assertRaisesRegex(
+                ValueError,
+                "pipeline.track_reference_date must be an ISO date",
+            ):
+                assemble_persisted_simulation_application_inputs(
+                    document=_corrupt_document(document, pipeline={"track_reference_date": value})
                 )
 
     def test_pipeline_and_budget_schema_matrices(self) -> None:
@@ -329,7 +405,9 @@ class PersistedSimulationApplicationInputsTest(unittest.TestCase):
         supplied = {2: BetStakeBudget(100)}
         output = PersistedSimulationApplicationInputs(Path("db"), SimulationRunContext("run", "dataset", datetime(2026, 8, 5, tzinfo=timezone.utc), "commit"), identity, pipeline, supplied)
         supplied[1] = BetStakeBudget(100)
+        supplied[2] = BetStakeBudget(200)
         self.assertEqual(list(output.budgets_by_race_id), [2])
+        self.assertEqual(output.budgets_by_race_id[2], BetStakeBudget(100))
         with self.assertRaisesRegex(ValueError, "budgets_by_race_id keys must be positive integers"):
             PersistedSimulationApplicationInputs(Path("db"), output.run_context, identity, pipeline, {True: BetStakeBudget(100)})
         with self.assertRaisesRegex(ValueError, "prediction_pipeline strategy_config must be strategy_identity.strategy_config"):
@@ -387,6 +465,26 @@ class PersistedSimulationApplicationInputsTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "strategy_identity allocation_policy must be an AllocationPolicyConfig"):
             PersistedSimulationApplicationInputs(Path("db"), run_context, no_policy_identity, no_policy_pipeline, {})
 
+        class AllocationPolicySubclass(AllocationPolicyConfig):
+            pass
+
+        subclass_policy = AllocationPolicySubclass(
+            "fixed_stake_per_recommendation",
+            "1",
+            {"stake_amount": 100},
+        )
+        subclass_config = StrategyConfig(allocation_policy=subclass_policy)
+        subclass_identity = build_strategy_identity("RuleBasedBetStrategy", subclass_config)
+        subclass_pipeline = PredictionPipeline(PipelineConfig(strategy_config=subclass_config))
+        with self.assertRaisesRegex(ValueError, "strategy_identity allocation_policy must be an AllocationPolicyConfig"):
+            PersistedSimulationApplicationInputs(
+                Path("db"),
+                run_context,
+                subclass_identity,
+                subclass_pipeline,
+                {},
+            )
+
     def test_source_responsibility_boundary(self) -> None:
         module = inspect.getmodule(assemble_persisted_simulation_application_inputs)
         self.assertIsNotNone(module)
@@ -394,15 +492,63 @@ class PersistedSimulationApplicationInputsTest(unittest.TestCase):
         self.assertIn("class PersistedSimulationApplicationInputs", source)
         forbidden_fragments = (
             "Path.read_text", "json.loads", "sqlite3", "apply_migrations", "run_sqlite_persisted_simulation",
-            "SimulationRaceInput", "RacePredictionInput", "PastRace", "InputAudit", "requests", "logging",
-            "argparse", "print(", "date.today", "datetime.now", "runtime_checkable", "typing.Any", "typing.cast", "# type: ignore",
+            "build_sqlite_persisted_simulation_run_service", "SimulationRaceInput", "RacePredictionInput",
+            "ImmutableRacePredictionInput", "PastRace", "RaceTrackConditions", "InputAuditEntry",
+            "InputSnapshotAudit", "repository", "subprocess", "requests", "logging", "print(", "argparse",
+            "stdout", "stderr", "datetime.now", "datetime.utcnow", "date.today", "uuid", "os.environ",
+            "config/settings.json", "main.py",
         )
         for fragment in forbidden_fragments:
             self.assertNotIn(fragment, source)
         tree = ast.parse(source)
-        handlers = [node for node in ast.walk(tree) if isinstance(node, ast.ExceptHandler)]
-        self.assertEqual(len(handlers), 2)
-        self.assertTrue(all(isinstance(handler.type, ast.Name) and handler.type.id == "ValueError" for handler in handlers))
+        self.assertEqual(tree.type_ignores, [])
+        imported_names = {
+            alias.asname or alias.name
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.Import, ast.ImportFrom))
+            for alias in node.names
+        }
+        self.assertNotIn("Any", imported_names)
+        self.assertNotIn("cast", imported_names)
+        self.assertNotIn("runtime_checkable", imported_names)
+        named_identifiers = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
+        self.assertNotIn("Any", named_identifiers)
+        self.assertNotIn("cast", named_identifiers)
+        handled = [
+            (function.name, ast.unparse(handler.type))
+            for function in tree.body
+            if isinstance(function, ast.FunctionDef)
+            for handler in ast.walk(function)
+            if isinstance(handler, ast.ExceptHandler)
+        ]
+        self.assertEqual(
+            handled,
+            [
+                ("_parse_aware_datetime", "ValueError"),
+                ("_parse_iso_date", "ValueError"),
+            ],
+        )
+        self.assertFalse(any(name in {"Exception", "BaseException", "OverflowError"} for _, name in handled))
+
+    def test_public_definitions_and_package_root_non_export(self) -> None:
+        module = inspect.getmodule(assemble_persisted_simulation_application_inputs)
+        self.assertIsNotNone(module)
+        public_definitions = {
+            name
+            for name, value in inspect.getmembers(module)
+            if (inspect.isclass(value) or inspect.isfunction(value))
+            and value.__module__ == module.__name__
+            and not name.startswith("_")
+        }
+        self.assertEqual(
+            public_definitions,
+            {
+                "PersistedSimulationApplicationInputs",
+                "assemble_persisted_simulation_application_inputs",
+            },
+        )
+        self.assertFalse(hasattr(simulation_package, "PersistedSimulationApplicationInputs"))
+        self.assertFalse(hasattr(simulation_package, "assemble_persisted_simulation_application_inputs"))
 
 
 def _replace_document(

@@ -49,6 +49,7 @@ _PIPELINE_KEYS = frozenset({"track_reference_date"})
 _BUDGET_KEYS = frozenset({"total_amount"})
 _SUPPORTED_BET_TYPES = frozenset({"単勝", "馬連", "ワイド", "3連複"})
 _CANONICAL_RACE_ID = re.compile(r"[1-9][0-9]*\Z")
+_MAX_FINITE_FLOAT = float.fromhex("0x1.fffffffffffffp+1023")
 
 __all__ = [
     "PersistedSimulationApplicationInputs",
@@ -280,9 +281,14 @@ def _selection_style(value: object) -> SelectionStyle:
 
 
 def _finite_score(value: object) -> float:
-    if type(value) not in (int, float) or not math.isfinite(value):
-        raise ValueError("strategy.min_combination_score must be finite")
-    return float(value)
+    error_message = "strategy.min_combination_score must be finite"
+    if type(value) is int:
+        if abs(value) > _MAX_FINITE_FLOAT:
+            raise ValueError(error_message)
+        return float(value)
+    if type(value) is float and math.isfinite(value):
+        return value
+    raise ValueError(error_message)
 
 
 def _sort_condition(value: object) -> SortCondition:
@@ -301,6 +307,9 @@ def _parse_iso_date(value: object) -> date:
     if type(value) is not str:
         raise ValueError(error_message)
     try:
-        return date.fromisoformat(value)
+        parsed = date.fromisoformat(value)
     except ValueError as error:
         raise ValueError(error_message) from error
+    if value != parsed.isoformat():
+        raise ValueError(error_message)
+    return parsed
