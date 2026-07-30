@@ -2,7 +2,7 @@
 
 ## Status
 
-APPROVED_FOR_CODEX
+APPROVED_FOR_COMMIT
 
 ## Current Phase
 
@@ -427,6 +427,32 @@ docs/LATEST_CODEX_REPORT.md
 
 The design was committed and pushed for GitHub review. Production, tests, and README remain unchanged;
 no DB or runner was invoked. Implementation remains unstarted and Status remains
-`APPROVED_FOR_CODEX`.
+`APPROVED_FOR_CODEX` until review approval is recorded below.
+
+## Phase 4C-2d3b1i5c Design Review Approval
+
+GitHub design review is complete.
+
+```text
+Base branch: feature/ver0.8-simulator
+Base commit: cd6f8e6
+Review branch: review/4c-2d3b1i5c-design
+```
+
+Approved commits:
+
+```text
+9a7cabc docs: design persisted simulation CLI
+35612b9 docs: correct persisted simulation CLI design
+```
+
+The approved design is a thin request-application orchestrator with the exact four-stage call chain and
+a deterministic JSON CLI. It explicitly defines the `SimulationSummary` and `BetTypeSummary` serializer
+schemas, Decimal string/null serialization, stdout/stderr separation, exit codes 0/1/2, native argparse
+help behavior, and the expected exception boundary. It also approves real temporary file-backed SQLite
+E2E coverage, snapshot-persistence verification, unchanged `main.py`, no duplicate DB/migration/
+repository responsibility, and the rule that the original workspace must not be modified.
+
+Production implementation remains unstarted. Base-branch integration is pending.
 
 blocker: none
