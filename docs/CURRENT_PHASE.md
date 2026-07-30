@@ -6,429 +6,349 @@ APPROVED_FOR_CODEX
 
 ## Phase
 
-Phase 4C-2d3b1i5b2b — Persisted simulation race input and audit assembler
+Phase 4C-2d3b1i5c — Persisted simulation request application, deterministic JSON CLI, and file-backed E2E
 
 ## Base Commit
 
-`b06503c docs: approve persisted simulation application inputs`
+`cd6f8e6f8e9024c33f3dc44d5f14486d5d77fdfb docs: approve persisted simulation race inputs`
 
 ## Branch
 
 `feature/ver0.8-simulator`
 
+## Canonical Workspace
+
+Use only the clean clone:
+
+```text
+C:\Users\garim\Desktop\KeibaAI-review-1i5b2b
+```
+
+The original workspace `C:\Users\garim\Desktop\KeibaAI` must not be modified.
+
 ## Objective
 
-Assemble complete, audited race inputs for the 1i5a application runner without opening a DB or invoking
-the runner:
+Add only the thin request-to-application orchestrator, deterministic JSON CLI, documentation, and their
+new tests. The phase composes existing approved boundaries in this exact order:
 
 ```text
-PersistedSimulationRequestDocument.races
-+ PersistedSimulationApplicationInputs
-→ PastRace
-→ RaceTrackConditions
-→ RacePredictionInput
-→ InputAuditEntry
-→ InputSnapshotAudit
-→ SimulationRaceInput
-→ tuple[SimulationRaceInput, ...]
+request path
+→ immutable request document
+→ application inputs
+→ audited race inputs
+→ existing SQLite application runner
+→ SimulationSummary
+→ deterministic JSON / CLI exit code
 ```
 
-1i5b1 document loading and 1i5b2a application assembly are complete. This phase owns no CLI, runner,
-DB, repository, schema, migration, summary, or persistence composition work. 1i5c alone owns:
+This phase must not change request parsing, application-input parsing, race/audit parsing, SQLite
+composition, repositories, migrations, pipeline logic, settlement logic, or summary calculations.
+
+## Completed Dependencies
+
+- 1i5a: `run_sqlite_persisted_simulation()` owns one connection, migrations, composition, run, and close.
+- 1i5b1: `load_persisted_simulation_request_document()` owns immutable JSON request loading.
+- 1i5b2a: `assemble_persisted_simulation_application_inputs()` owns run/strategy/pipeline/budget assembly.
+- 1i5b2b: `assemble_persisted_simulation_race_inputs()` owns audited immutable race-input assembly.
+- The remote base and approved 1i5b2b review branch are both `cd6f8e6`.
+
+## Allowed Implementation Files
 
 ```text
-load document → application inputs → race inputs → runner invocation → summary output
-```
-
-## Allowed Files
-
-```text
-scripts/simulation/persisted_simulation_race_inputs.py
-tests/test_persisted_simulation_race_inputs.py
+scripts/simulation/persisted_simulation_request_application.py
+scripts/cli/run_persisted_simulation.py
+tests/test_persisted_simulation_request_application.py
+tests/test_cli_run_persisted_simulation.py
+README.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
 `docs/CURRENT_PHASE.md` is approved contract documentation and is not an implementation target.
 
-## Formal Public API
+## Forbidden Files
+
+```text
+main.py
+config/settings.json
+scripts/database.py
+existing simulation production
+existing CLI
+existing tests
+migration
+schema
+package __init__ files
+database/keiba.db
+logs/
+```
+
+No production/test/README modification is permitted during this design-only activity. The eventual
+implementation must not stage, commit, or push without a separate explicit approval.
+
+## Application Public API
+
+Create only this module-defined public function in
+`scripts/simulation/persisted_simulation_request_application.py`:
 
 ```python
 from __future__ import annotations
 
-from scripts.simulation.models import SimulationRaceInput
-from scripts.simulation.persisted_simulation_application_inputs import (
-    PersistedSimulationApplicationInputs,
-)
-from scripts.simulation.persisted_simulation_request_document import (
-    PersistedSimulationRequestDocument,
-)
+from pathlib import Path
+
+from scripts.simulation.models import SimulationSummary
 
 
-def assemble_persisted_simulation_race_inputs(
+def run_persisted_simulation_request(
     *,
-    document: PersistedSimulationRequestDocument,
-    application_inputs: PersistedSimulationApplicationInputs,
-) -> tuple[SimulationRaceInput, ...]:
+    request_path: str | Path,
+) -> SimulationSummary:
     ...
 ```
 
-This function is the only public production definition. All helpers must begin with `_`. Do not add a
-public dataclass, Protocol, ABC, repository, service, bundle, CLI helper, or package-root export.
+All helpers are private. Do not add a public class, Protocol, dataclass, ABC, repository, service bundle,
+or package-root export.
 
-## Input Boundary and Linkage
+## Exact Call Order
 
-Require exact types; subclasses are rejected:
+For each valid call, make exactly one call at every stage and return the exact runner result:
 
 ```python
-if type(document) is not PersistedSimulationRequestDocument:
-    raise ValueError("document must be a PersistedSimulationRequestDocument")
-if type(application_inputs) is not PersistedSimulationApplicationInputs:
-    raise ValueError(
-        "application_inputs must be a PersistedSimulationApplicationInputs"
-    )
-if application_inputs.database_path is not document.database_path:
-    raise ValueError(
-        "application_inputs.database_path must be document.database_path"
-    )
+document = load_persisted_simulation_request_document(request_path=request_path)
+application_inputs = assemble_persisted_simulation_application_inputs(document=document)
+race_inputs = assemble_persisted_simulation_race_inputs(
+    document=document,
+    application_inputs=application_inputs,
+)
+return run_sqlite_persisted_simulation(
+    database_path=application_inputs.database_path,
+    run_context=application_inputs.run_context,
+    strategy_identity=application_inputs.strategy_identity,
+    prediction_pipeline=application_inputs.prediction_pipeline,
+    race_inputs=race_inputs,
+    budgets_by_race_id=application_inputs.budgets_by_race_id,
+)
 ```
 
-Do not reparse `document.run_context`, `strategy`, `pipeline`, or `budgets_by_race_id`. Use only
-`application_inputs.run_context.dataset_id` and `application_inputs.budgets_by_race_id` for application
-information. Do not reread JSON, revalidate its top-level envelope, or re-anchor the path.
+Do not sort, copy, reparse, recreate, or recompute document/application/race inputs. The race-input
+assembler owns the required sort and the runner owns SQLite lifecycle, migration, composition, and run.
 
-## Containers, Pre-scan, and Ordering
+## Identity and Linkage
 
-- `document.races` must be an exact tuple or raise `document.races must be an array`.
-- Empty races are valid only with empty budgets.
-- Race items must be Mapping values or raise `document.races must contain objects`.
-- Every race must have exactly `race_id`, `target_race_date`, `scheduled_start_at`,
-  `information_cutoff`, `audit`, `track_conditions`, and `entries`; otherwise raise
-  `race keys must exactly match the race schema`.
-- First pre-scan every race schema and its exact positive non-bool integer `race_id`; malformed IDs raise
-  `race.race_id must be a positive integer`.
-- Duplicate IDs raise `document.races must not contain duplicate race_id values`.
-- Before any domain object is made, require
-  `set(race_ids) == set(application_inputs.budgets_by_race_id)`, otherwise raise
-  `race IDs must exactly match application budget race IDs`.
-- Assemble all successful races, then return an exact tuple sorted by `(scheduled_start_at, race_id)`.
-  Request race order is not meaningful.
+- Pass the exact `document` object from loader to both assemblers.
+- Pass the exact `application_inputs` object to race assembly.
+- Pass `application_inputs.database_path`, `run_context`, `strategy_identity`, `prediction_pipeline`, and
+  `budgets_by_race_id` directly to the runner; do not copy or reparse them.
+- Pass the race assembler's returned tuple directly as `race_inputs`.
+- Do not add linkage validation or a second sort in 1i5c; approved upstream boundaries own those checks.
 
-Formal assembly order:
+## Application Exception Boundary
+
+The application module has no `try`, `except`, retry, fallback, logging, printing, stream handling, exit
+code, or exception translation. Loader, assembler, and runner exceptions propagate unchanged, by object
+identity. It must not import argparse, JSON, sys, SQLite connection APIs, migrations, composition factory,
+repositories, clock/environment/network/subprocess APIs, `main.py`, or configuration files.
+
+## CLI Public APIs
+
+Create only these module-defined public functions in `scripts/cli/run_persisted_simulation.py`:
+
+```python
+def build_parser() -> argparse.ArgumentParser: ...
+
+def run(
+    argv: Sequence[str] | None = None,
+    *,
+    stdout: TextIO | None = None,
+    stderr: TextIO | None = None,
+) -> int: ...
+
+def main() -> int: ...
+```
+
+No public class, Protocol, dataclass, ABC, formatter class, repository adapter, DB provider, or package-root
+export is allowed. Formatting/payload helpers remain private.
+
+## Parser Contract
+
+`build_parser()` has exactly one positional argument:
+
+```python
+parser.add_argument(
+    "request_path",
+    type=Path,
+    help="Persisted simulation request JSON path",
+)
+```
+
+No options are added. Native argparse behavior is preserved: missing/extra arguments raise
+`SystemExit(2)`; `--help` raises `SystemExit(0)`. The CLI must not catch either outcome.
+
+## Exit Codes
+
+`run()` parses arguments, selects supplied streams or `sys.stdout`/`sys.stderr`, calls
+`run_persisted_simulation_request()` once, emits exactly one JSON line, and returns:
 
 ```text
-1 document exact type
-2 application_inputs exact type
-3 database_path identity
-4 races exact tuple
-5 race object/key pre-scan
-6 race_id validation
-7 duplicate race_id validation
-8 race/budget ID set equality
-9 race timings
-10 race audit
-11 track conditions and track audit
-12 entries and entry IDs
-13 entry scalars
-14 entry audits
-15 past races and past-race audits
-16 RacePredictionInput
-17 InputSnapshotAudit
-18 SimulationRaceInput existing fail-closed validation
-19 race sort
-20 tuple return
+success: 0
+expected application failure: 1
+argparse usage failure: SystemExit(2)
+argparse help: SystemExit(0)
 ```
 
-Failure stops processing immediately: no later race/domain object, partial result, retry, fallback, or
-generic exception translation is permitted.
+`main()` is exactly `return run()`. Under module execution use `raise SystemExit(main())`.
 
-## Date and Numeric Rules
+## Success JSON Schema
 
-### Dates and required datetimes
+On success write one compact UTF-8 JSON line to stdout and nothing to stderr:
 
-`race.target_race_date` and `past_race.race_date` are exact `str` canonical `YYYY-MM-DD` values:
+```json
+{"schema_version":1,"status":"ok","summary":{}}
+```
+
+Use `json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))`, followed by one
+newline. Construct `summary` explicitly from all and only `dataclasses.fields(SimulationSummary)`:
+
+```text
+strategy_id strategy_name strategy_config_hash race_count settled_race_count
+unsettled_race_count no_bet_race_count void_race_count error_race_count
+unsupported_race_count bet_count settled_bet_count settled_purchase_race_count
+hit_bet_count hit_race_count investment payout profit roi bet_hit_rate
+race_hit_rate maximum_drawdown by_bet_type
+```
+
+Do not use `repr`, `dataclasses.asdict`, `default=str`, floats for Decimal values, clocks, random values,
+pretty-printing, or logging metadata.
+
+## Error JSON Schema
+
+Catch exactly this expected failure tuple once in CLI `run()`:
 
 ```python
-parsed = date.fromisoformat(value)
-if value != parsed.isoformat():
+except (OSError, RuntimeError, TypeError, ValueError, sqlite3.Error) as error:
     ...
 ```
 
-Their errors are respectively:
+Write one compact JSON line to stderr, write nothing to stdout, and return 1:
 
-```text
-race.target_race_date must be a canonical ISO date
-past_race.race_date must be a canonical ISO date
+```json
+{"error":{"message":"...","type":"ValueError"},"schema_version":1,"status":"error"}
 ```
 
-Reject basic, week, slash, unpadded, datetime, empty, and non-string forms. Preserve the original valid
-past-race text in `PastRace.race_date`.
+The type is `type(error).__name__`; message is `str(error) or type(error).__name__`. Never include a
+traceback, stack trace, request/database dump, or error output on stdout. Do not catch `Exception`,
+`BaseException`, `SystemExit`, `KeyboardInterrupt`, `GeneratorExit`, or `MemoryError`.
 
-Required aware datetime paths are `race.scheduled_start_at`, `race.information_cutoff`, and
-`race.audit.captured_at`. Require exact `str`, `datetime.fromisoformat` parsing (with terminal `Z`
-interpreted as `+00:00`), `tzinfo`, and non-`None` `utcoffset()`. Their errors are:
+## Decimal Serialization
 
-```text
-<field path> must be an ISO 8601 timezone-aware datetime
-```
-
-Generic-audit `available_at` and `observed_at` accept only exact `str` aware datetimes or exact `None`;
-invalid values raise:
+For `roi`, `bet_hit_rate`, and `race_hit_rate`:
 
 ```text
-<audit path>.<field> must be an ISO 8601 timezone-aware datetime or null
+None       → JSON null
+Decimal    → format(value, "f") as a JSON string
 ```
 
-No timezone conversion, automatic timezone, current-time fallback, `datetime.now`, `datetime.utcnow`,
-or `date.today` is allowed. Before domain construction require:
+For example, `Decimal("300")` serializes as `"300"`; precision is never lost through float conversion.
+
+## by_bet_type Serialization
+
+Build the payload in sorted bet-type-key order, although `json.dumps(sort_keys=True)` remains enabled.
+Each `BetTypeSummary` payload contains exactly:
 
 ```text
-race.information_cutoff <= race.scheduled_start_at
+bet_type bet_count settled_bet_count hit_bet_count investment payout profit roi bet_hit_rate
 ```
 
-Otherwise raise `race.information_cutoff must be earlier than or equal to race.scheduled_start_at`.
+Use the same Decimal/null serialization rules. The Japanese bet-type key is preserved with
+`ensure_ascii=False`.
 
-### Numeric conversion
-
-Numeric source values may be exact `int` or exact `float` only; bool, subclasses, strings, Decimal,
-NaN, infinities, clamp, and fallback are forbidden. Before float conversion, exact ints must be bounded
-against:
+## Stream Contract
 
 ```python
-_MAX_FINITE_FLOAT = float.fromhex("0x1.fffffffffffffp+1023")
+active_stdout = sys.stdout if stdout is None else stdout
+active_stderr = sys.stderr if stderr is None else stderr
 ```
 
-Do not catch `OverflowError`. This rule applies to entry odds and all finite past-race fields.
+Do not close either stream. Success writes only stdout; expected failures write only stderr. The supplied
+objects need only be writable; runtime `TextIO` validation is forbidden.
 
-## Race Audit and Generic Audit Stamps
+## File-backed E2E
 
-`race.audit` must be a Mapping with exactly `source`, `captured_at`, `is_complete`:
+Use real files, real SQLite, and existing migrations/repository APIs without mock/patch/monkeypatch:
+
+- Empty request with relative `simulation.db`, no races, and empty budgets verifies path anchoring,
+  migration application, an empty summary, and a usable file-backed DB.
+- A one-race, one-entry, no-past-race request with complete audits, 100-yen fixed stake, and 100-yen
+  budget uses parent tables plus complete race result and win payout fixture. It verifies snapshot
+  persistence and a settled 100 investment / 300 payout / 200 profit / `"300"` ROI summary.
+- Expected errors cover invalid request path, malformed/root/application/race-audit request failures,
+  database-open failure, and unknown-future migration; each returns the deterministic error envelope.
+
+The application function must not produce partial/empty fallback summaries, retry, supply path/timezone/
+clock fallbacks, or translate errors.
+
+## README Contract
+
+Add only the persisted-simulation CLI usage documentation: module command syntax, request JSON path,
+relative `database_path` anchoring, stdout success JSON, stderr error JSON, exit codes 0/1, and Decimal
+rates as JSON strings. Do not remove or alter legacy Ver0.7 CLI guidance.
+
+## Failure Semantics
 
 ```text
-race.audit must be an object
-race.audit keys must exactly match the race audit schema
-race.audit.source must be a non-empty string
-race.audit.is_complete must be a boolean
+loader failure              → no DB open
+application assembly failure → no DB open
+race assembly failure        → no DB open
+runner failure               → runner owns connection close
+expected CLI failure         → stderr JSON and exit 1
+argparse failure             → native argparse exit
+unexpected programming error → propagates
 ```
 
-Text must be exact non-empty, non-whitespace `str` and must not be trimmed. Build:
+No partial summary, retry, fallback, error-as-success JSON, or manual DB/migration/repository work is
+allowed.
 
-```python
-InputSnapshotAudit(
-    dataset_id=application_inputs.run_context.dataset_id,
-    source=source,
-    captured_at=captured_at,
-    entries=...,
-    is_complete=is_complete,
-)
-```
+## Source and AST Contract
 
-`False` is schema-valid; final existing `SimulationRaceInput` validation must fail closed if incomplete.
-
-All generic audit locations use the same exact Mapping schema:
-
-```text
-track_conditions.audit
-entry.audits.entry
-entry.audits.jockey
-entry.audits.odds
-entry.audits.past_race_absence
-past_race.audit
-```
-
-Required keys are `source`, `source_id`, `available_at`, `observed_at`. Errors use the exact patterns:
-
-```text
-<audit path> must be an object
-<audit path> keys must exactly match the audit stamp schema
-<audit path>.source must be a non-empty string
-<audit path>.source_id must be a non-empty string
-<audit path> requires available_at or observed_at
-```
-
-At least one timestamp is non-null. Existing final validation, not a custom workaround, rejects audit
-timestamps later than the cutoff as `SimulationValidationError`.
-
-## Track Conditions
-
-`race.track_conditions` is a Mapping with exact keys `place`, `distance`, `track`,
-`track_condition`, `audit`; otherwise use:
-
-```text
-race.track_conditions must be an object
-race.track_conditions keys must exactly match the track conditions schema
-race.track_conditions.place must be a non-empty string
-race.track_conditions.track must be a non-empty string
-race.track_conditions.track_condition must be a non-empty string
-race.track_conditions.distance must be a positive integer
-```
-
-Build exact `RaceTrackConditions`. Its audit becomes:
-
-```python
-InputAuditEntry(
-    input_type="track", audit_key="track", race_entry_id=None,
-    past_race_index=None, ...
-)
-```
-
-## Entries and Past Races
-
-`race.entries` is an exact nonempty tuple, otherwise
-`race.entries must be a non-empty array`; each item is Mapping or
-`race.entries must contain objects`. Each entry requires exact keys:
-
-```text
-race_entry_id
-jockey_name
-odds
-past_races
-audits
-```
-
-Key mismatch raises `entry keys must exactly match the entry schema`. `race_entry_id` is exact positive
-non-bool `int` (`entry.race_entry_id must be a positive integer`) and must be unique per race
-(`race.entries must not contain duplicate race_entry_id values`). Process entries in ascending
-`race_entry_id`, not request order.
-
-`jockey_name` is exact nonempty non-whitespace string or
-`entry.jockey_name must be a non-empty string`. `odds` is exact finite positive int/float and converts to
-float, otherwise `entry.odds must be a positive finite number`.
-
-`audits` is Mapping with exactly `entry`, `jockey`, `odds`, `past_race_absence`; errors are
-`entry.audits must be an object` and `entry.audits keys must exactly match the entry audits schema`.
-Generated canonical keys for each sorted entry are:
-
-```text
-entry/{race_entry_id}
-odds/{race_entry_id}
-jockey/{race_entry_id}
-past_race/{race_entry_id}/none             (no past races)
-past_race/{race_entry_id}/{request index}  (one or more past races)
-```
-
-For empty exact-tuple `past_races`, `past_race_absence` must be a Mapping; otherwise raise
-`entry.audits.past_race_absence is required when past_races is empty`. For nonempty exact-tuple
-`past_races`, it must be exact `None`; otherwise raise
-`entry.audits.past_race_absence must be null when past_races is not empty`. `past_races` itself must be
-an exact tuple or `entry.past_races must be an array`; items must be Mapping or
-`entry.past_races must contain objects`. Preserve its request order and indexes.
-
-Every past race requires exactly:
-
-```text
-race_date place race_name race_class distance track weather track_condition finish margin time
-weight weight_diff jockey popularity odds passing_order fourth_corner_position audit
-```
-
-Key mismatch raises `past_race keys must exactly match the past race schema`. Use the current
-`race_entry_id` as `PastRace.horse_id`; never accept `horse_id` in the request. Exact string fields
-`place`, `race_name`, `race_class`, `track`, `weather`, `track_condition`, `time`, `jockey`, and
-`passing_order` allow empty strings but otherwise raise `past_race.<field> must be a string`.
-
-The exact integer and numeric constraints/errors are:
-
-```text
-distance, finish: positive int
-  → past_race.distance must be a positive integer
-  → past_race.finish must be a positive integer
-popularity, fourth_corner_position: non-negative int
-  → past_race.popularity must be a non-negative integer
-  → past_race.fourth_corner_position must be a non-negative integer
-margin, weight_diff: finite numeric
-  → past_race.margin must be finite
-  → past_race.weight_diff must be finite
-weight, odds: non-negative finite numeric
-  → past_race.weight must be a non-negative finite number
-  → past_race.odds must be a non-negative finite number
-```
-
-Build its generic audit with `past_race/{race_entry_id}/{index}` and request index as
-`past_race_index`.
-
-## Domain Assembly and Existing Validation
-
-For sorted entries build:
-
-```python
-RacePredictionInput(
-    horse_past_races=...,
-    jockey_names_by_horse=...,
-    track_conditions=track_conditions,
-    odds_by_horse=...,
-    race_horse_count=len(entries),
-    race_id=race_id,
-    prediction_time=information_cutoff.isoformat(),
-)
-```
-
-Audit entries are ordered by each ascending entry ID as entry, odds, jockey, then absence or indexed
-past races; append `track` last. Build `InputSnapshotAudit`, then build `SimulationRaceInput`. The latter
-must perform its existing defensive conversion to `ImmutableRacePredictionInput` and existing
-fail-closed validation. Do not catch/wrap its `SimulationValidationError`, or domain `ValueError`/
-`TypeError`.
-
-Existing validation must reject, among other conditions: incomplete audits, audit captured/timestamped
-after cutoff, same/future past races, missing category entries, unknown audit keys, metadata/key mismatch,
-and race/pipeline ID mismatch.
-
-## Failure, Dependency, and Immutability Boundaries
-
-Only two production `ExceptHandler`s are allowed:
-
-```text
-_parse_canonical_iso_date → ValueError
-_parse_aware_datetime → ValueError
-```
-
-No `Exception`, `BaseException`, `OverflowError`, broad catches, retry, fallback, logging, print, or
-partial result is allowed. Generated snapshots must retain immutable mappings/tuples and have no mutable
-reference sharing with corrupt raw request containers.
-
-Forbidden dependencies include file/JSON parsing, path anchoring, SQLite/migrations/runner/composition,
-`PersistedSimulationRunService`, repository/DB/network/subprocess, logging/print/argparse/stdout/stderr,
-exit code, clock/UUID/environment/config loading, `main.py`, summary formatting, and package-root export.
-Do not modify 1i5b2a production.
+Application source must show each four-stage collaborator exactly once, direct runner-result return,
+zero `Try` and `ExceptHandler` nodes, and no SQLite/migration/composition/repository/CLI/JSON/stream/
+clock/subprocess/network/config dependency. CLI may import `sqlite3` only to catch `sqlite3.Error`; it
+may depend on the application function but must not import loader, assemblers, runner, migrations,
+repositories, or `PredictionPipeline`. CLI has exactly the one expected exception handler and no broad
+handler. Both modules have no package-root export and no type-ignore/`Any`/`cast`/`runtime_checkable`.
 
 ## Required Tests
 
-Add `tests/test_persisted_simulation_race_inputs.py` using real objects only; mocks, patches, and
-monkeypatches are forbidden. Cover:
+New tests use real objects only; mock, patch, and monkeypatch are forbidden.
 
-- formal module/function API, keyword-only argument order/type hints, one public function/no public
-  class, package-root non-export;
-- two-race valid assembly in reverse request/time order, two entries including one two-item past-race
-  history and one absence case; all generated domain/audit fields, immutable snapshots, canonical orders,
-  dataset linkage, database-path identity, and budget IDs;
-- deterministic double assembly; document/application exact-type and path-identity linkage;
-- all race container/ID/budget-set, timing/date, race-audit, generic-audit, track, entry, absence,
-  past-race, numeric huge-int, and direct snapshot immutability matrices described above;
-- existing `SimulationValidationError` fail-closed cases for audit timing/completeness and past-race dates;
-- source literal/AST contract: no forbidden dependencies, no type-ignore/Any/cast/runtime_checkable,
-  no broad handlers, and exactly the two parser-owned ValueError handlers.
+- Application API/public-surface/type-hint contract; exact four-stage call chain; identity/linkage;
+  no exception wrapper; real empty file-backed SQLite integration; source/AST boundary.
+- CLI API/parser/stream/exit contract; serializer field-completeness and byte-for-byte deterministic JSON;
+  Decimal/null/by-bet-type serialization; empty and settled real file-backed E2E; expected failures;
+  argparse behavior; dependency/exception AST boundaries.
+- Preserve and execute the related existing suites.
 
-Run exactly the dedicated test plus relevant existing suites (use existing nearest names if absent):
+## Verification Commands
+
+Use the bundled interpreter only:
 
 ```text
-tests/test_persisted_simulation_race_inputs.py
-tests/test_persisted_simulation_application_inputs.py
-tests/test_persisted_simulation_request_document.py
-tests/test_simulation_validation.py
-tests/test_sqlite_persisted_simulation_application.py
-tests/test_persisted_simulation_run_service.py
-tests/test_prediction_pipeline.py
-tests/test_track_engine.py
+C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe
+Python 3.12.13
+```
+
+```powershell
+python -m pytest tests/test_persisted_simulation_request_application.py -q
+python -m pytest tests/test_cli_run_persisted_simulation.py -q
+python -m pytest tests/test_persisted_simulation_request_application.py tests/test_cli_run_persisted_simulation.py tests/test_persisted_simulation_request_document.py tests/test_persisted_simulation_application_inputs.py tests/test_persisted_simulation_race_inputs.py tests/test_sqlite_persisted_simulation_application.py tests/test_persisted_simulation_run_service.py tests/test_simulation_models.py -q
 python -m pytest -q
 git diff --check
 git status --short
 ```
 
-## Forbidden Files and Stop Condition
+## Stop Conditions
 
-Do not change existing production/tests, 1i5b1, 1i5b2a, 1i5a runner/composition, migration/schema,
-`scripts/database.py`, `main.py`, `config/settings.json`, CLI, or package `__init__`. Never stage or
-commit `database/keiba.db` or `logs/`.
-
-After implementation set the report status to `READY_FOR_REVIEW` and stop. Do not stage, commit, push,
-create a review branch, read a DB, invoke the runner, or begin 1i5c.
+After implementation, update only the report to `READY_FOR_REVIEW` and stop. Do not stage, commit, push,
+create a review branch/PR, read or modify a DB, invoke the runner, modify the original workspace, or
+start any later phase. Stop immediately if an approved contract conflicts with existing code or requires
+a file outside Allowed Implementation Files.
 
 blocker: none

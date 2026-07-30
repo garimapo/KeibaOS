@@ -2,7 +2,7 @@
 
 ## Status
 
-APPROVED_FOR_COMMIT
+APPROVED_FOR_CODEX
 
 ## Current Phase
 
@@ -367,5 +367,46 @@ git diff --check: success
 
 Phase 1i5b1, 1i5b2a, and 1i5a remain unchanged; Phase 1i5c remains unstarted. `main.py` and
 `config/settings.json` remain unchanged. `database/keiba.db` and `logs/` remain out of scope.
+
+## Phase 4C-2d3b1i5c Preparation and Approval
+
+Phase 4C-2d3b1i5b2b is formally complete at `cd6f8e6`; remote base and its approved review branch are
+identical. The canonical workspace is the clean clone `C:\Users\garim\Desktop\KeibaAI-review-1i5b2b`.
+The original `C:\Users\garim\Desktop\KeibaAI` workspace must not be modified.
+
+Phase 4C-2d3b1i5c is `APPROVED_FOR_CODEX`. It will add the request-application orchestration module,
+the deterministic JSON CLI, their dedicated tests, and README documentation only. The orchestrator's
+exact four-stage chain is immutable request loading, application-input assembly, audited race-input
+assembly, then the existing SQLite application runner. It will pass the same document/application objects
+and the exact application-owned path, run context, strategy identity, pipeline, budgets, and race-input
+tuple; it adds no duplicate DB, migration, composition, repository, validation, sorting, or runner work.
+
+The CLI will own argparse, supplied stdout/stderr streams, deterministic compact JSON envelopes, and exit
+codes only. Success is `{schema_version: 1, status: "ok", summary: ...}` on stdout with exit 0. Expected
+`OSError`, `sqlite3.Error`, `RuntimeError`, `TypeError`, and `ValueError` become one deterministic error
+envelope on stderr with exit 1; argparse usage/help retain native `SystemExit(2)`/`SystemExit(0)` behavior.
+Decimal rates serialize as fixed-point JSON strings (or null); `by_bet_type` is deterministically ordered.
+`main.py` remains unchanged.
+
+Required tests include real empty and settled file-backed SQLite E2E, snapshot-persistence verification,
+relative database-path anchoring, error envelopes, argparse behavior, exact source/AST boundaries, and
+the specified dedicated, related, and full-suite verification. No mock, patch, monkeypatch, subprocess,
+or duplicate database/migration/repository responsibility is permitted.
+
+Candidate implementation files are:
+
+```text
+scripts/simulation/persisted_simulation_request_application.py
+scripts/cli/run_persisted_simulation.py
+tests/test_persisted_simulation_request_application.py
+tests/test_cli_run_persisted_simulation.py
+README.md
+docs/LATEST_CODEX_REPORT.md
+```
+
+1i5b1, 1i5b2a, and 1i5a remain unchanged; 1i5c alone owns request application and CLI presentation.
+`database/keiba.db`, `logs/`, migration, schema, `scripts/database.py`, `main.py`, and
+`config/settings.json` are out of scope. This design-only activity changed no production, test, or README
+file and did not stage, commit, push, run a DB, or invoke the runner.
 
 blocker: none
