@@ -503,7 +503,39 @@ git diff --check: success
 Only the six approved 1i5c files were changed: the new request application and CLI modules, their new
 dedicated tests, README, and this report. `docs/CURRENT_PHASE.md`, existing production/tests, migration,
 schema, `scripts/database.py`, `main.py`, configuration, package roots, `database/keiba.db`, `logs/`, and
-the original workspace remain untouched. Nothing was staged, committed, pushed, or placed on a new review
-branch. Phase 4C-2d3b1i5c now awaits implementation review.
+the original workspace remain untouched. The initial implementation commit `c098cf8 feat: add persisted
+simulation CLI` was committed and pushed to `review/4c-2d3b1i5c-implementation` for GitHub review; the
+base branch remains unchanged. Phase 4C-2d3b1i5c now awaits implementation review.
+
+## Phase 4C-2d3b1i5c Review Test Contract Correction
+
+Status remains `READY_FOR_REVIEW`. GitHub review approved the production implementation and README without
+correction. This correction changes only the two dedicated test files and this report on
+`review/4c-2d3b1i5c-implementation`.
+
+The application contract now asserts its exact four-statement AST body and call order, each keyword
+linkage, direct runner return, no Try/Except, approved dependency boundary, and the full empty-summary
+and file-backed database contract. The CLI contract now asserts its exact public APIs and type hints,
+the single expected exception boundary, forbidden imports/symbols, all summary and bet-type serializer
+fields, Decimal strings and nulls, deterministic compact Unicode JSON and sorted bet-type keys.
+
+The empty and settled E2E contracts now assert all approved summary values, stdout/stderr ownership,
+schema migration and snapshot tables, persisted snapshot count, and post-run reconnection. Expected error
+coverage includes missing request, malformed JSON, root/application/race-audit failures, database-open
+failure, and unknown future migration; every error is one stderr JSON envelope with no traceback. Native
+argparse missing, extra, and help cases are also covered. The future-migration fixture additionally proves
+that the temporary database can be reopened after the failed runner-owned connection closes.
+
+Codex reran the dedicated, related, and full suites locally after this correction. Production, README,
+`docs/CURRENT_PHASE.md`, `database/keiba.db`, `logs/`, and the original workspace remain unchanged.
+
+```text
+Request application dedicated: 3 passed
+CLI dedicated: 9 passed, 6 subtests passed
+Related: 93 passed, 583 subtests passed
+Full suite: 2373 passed, 2 skipped, 1314 subtests passed
+Python: C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe
+Python version: 3.12.13
+```
 
 blocker: none

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-from dataclasses import fields
 import inspect
 import json
 from pathlib import Path
@@ -68,10 +67,7 @@ class PersistedSimulationRequestApplicationTests(unittest.TestCase):
 
         source = inspect.getsource(module)
         tree = ast.parse(source)
-        self.assertEqual(
-            [node.name for node in tree.body if isinstance(node, ast.FunctionDef)],
-            ["run_persisted_simulation_request"],
-        )
+        self.assertEqual([node.name for node in tree.body if isinstance(node, ast.FunctionDef)], ["run_persisted_simulation_request"])
         self.assertEqual([node for node in tree.body if isinstance(node, ast.ClassDef)], [])
         self.assertFalse(any(isinstance(node, (ast.Try, ast.ExceptHandler)) for node in ast.walk(tree)))
         forbidden = (
@@ -89,6 +85,53 @@ class PersistedSimulationRequestApplicationTests(unittest.TestCase):
         self.assertEqual(calls.count("assemble_persisted_simulation_race_inputs"), 1)
         self.assertEqual(calls.count("run_sqlite_persisted_simulation"), 1)
 
+        function = next(
+            node for node in tree.body
+            if isinstance(node, ast.FunctionDef) and node.name == "run_persisted_simulation_request"
+        )
+        body = function.body[1:] if ast.get_docstring(function) is not None else function.body
+        self.assertEqual(len(body), 4)
+        self.assertTrue(all(isinstance(node, ast.Assign) for node in body[:3]))
+        self.assertIsInstance(body[3], ast.Return)
+        self.assertEqual([node.targets[0].id for node in body[:3]], [
+            "document", "application_inputs", "race_inputs",
+        ])
+        calls_by_statement = [
+            next(node.value for node in ast.walk(statement) if isinstance(node, ast.Assign))
+            for statement in body[:3]
+        ]
+        self.assertEqual(
+            [call.func.id for call in calls_by_statement if isinstance(call, ast.Call) and isinstance(call.func, ast.Name)],
+            [
+                "load_persisted_simulation_request_document",
+                "assemble_persisted_simulation_application_inputs",
+                "assemble_persisted_simulation_race_inputs",
+            ],
+        )
+        self.assertEqual(
+            [{keyword.arg: ast.unparse(keyword.value) for keyword in call.keywords} for call in calls_by_statement],
+            [
+                {"request_path": "request_path"},
+                {"document": "document"},
+                {"document": "document", "application_inputs": "application_inputs"},
+            ],
+        )
+        self.assertIsInstance(body[3].value, ast.Call)
+        runner_call = body[3].value
+        self.assertIsInstance(runner_call.func, ast.Name)
+        self.assertEqual(runner_call.func.id, "run_sqlite_persisted_simulation")
+        self.assertEqual(
+            {keyword.arg: ast.unparse(keyword.value) for keyword in runner_call.keywords},
+            {
+                "database_path": "application_inputs.database_path",
+                "run_context": "application_inputs.run_context",
+                "strategy_identity": "application_inputs.strategy_identity",
+                "prediction_pipeline": "application_inputs.prediction_pipeline",
+                "race_inputs": "race_inputs",
+                "budgets_by_race_id": "application_inputs.budgets_by_race_id",
+            },
+        )
+
     def test_empty_file_backed_request_runs_the_real_chain(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             directory = Path(temporary_directory)
@@ -99,12 +142,17 @@ class PersistedSimulationRequestApplicationTests(unittest.TestCase):
 
             self.assertIsInstance(summary, SimulationSummary)
             self.assertEqual(
-                {field.name for field in fields(SimulationSummary)} - {"by_bet_type"},
-                set(summary.__dataclass_fields__) - {"by_bet_type"},
-            )
-            self.assertEqual(
-                (summary.race_count, summary.bet_count, summary.investment, summary.payout),
-                (0, 0, 0, 0),
+                (
+                    summary.race_count, summary.settled_race_count,
+                    summary.unsettled_race_count, summary.no_bet_race_count,
+                    summary.void_race_count, summary.error_race_count,
+                    summary.unsupported_race_count, summary.bet_count,
+                    summary.settled_bet_count, summary.settled_purchase_race_count,
+                    summary.hit_bet_count, summary.hit_race_count, summary.investment,
+                    summary.payout, summary.profit, summary.roi, summary.bet_hit_rate,
+                    summary.race_hit_rate, summary.maximum_drawdown, summary.by_bet_type,
+                ),
+                (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, None, None, None, 0, {}),
             )
             database_path = directory / "simulation.db"
             self.assertTrue(database_path.is_file())
@@ -115,6 +163,12 @@ class PersistedSimulationRequestApplicationTests(unittest.TestCase):
                         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_migrations'",
                     ).fetchone(),
                 )
+                self.assertIsNotNone(
+                    connection.execute(
+                        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='simulation_bet_plans'",
+                    ).fetchone(),
+                )
+                self.assertEqual(connection.execute("SELECT 1").fetchone(), (1,))
             finally:
                 connection.close()
 
