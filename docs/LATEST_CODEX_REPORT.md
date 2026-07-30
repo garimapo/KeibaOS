@@ -300,3 +300,49 @@ migration, schema, `scripts/database.py`, `main.py`, `config/settings.json`, CLI
 unchanged. Phase 4C-2d3b1i5c remains unstarted.
 
 blocker: none
+
+## Phase 4C-2d3b1i5b2b Review Test Contract Correction
+
+Status remains `READY_FOR_REVIEW`. GitHub re-review approved the production two-pass pre-scan without
+any additional production change. This correction changes only the dedicated test contract and this
+report; `scripts/simulation/persisted_simulation_race_inputs.py` and `docs/CURRENT_PHASE.md` have no
+diff from review commit `88f2619`.
+
+The valid two-race assertion now compares every `TrackConditionsSnapshot` field, every field of two
+`PastRaceSnapshot` values (including the required `horse_id == race_entry_id` relationship), and every
+`InputAuditEntry` field in canonical order. The audit contract now exercises the complete race-audit
+matrix and the complete generic audit-stamp matrix at all six locations: track, entry, jockey, odds,
+past-race absence, and past-race audit. It covers Mapping/schema failures, exact non-empty text fields,
+aware/malformed/date-only/naive timestamps, both-null rejection, available-only, observed-only, both
+timestamps, and `Z` timestamps.
+
+Track, entry, and past-race coverage now includes their missing/extra schema boundaries, entry and
+past-race container/item boundaries, duplicate race-entry IDs, exact positive/non-negative numeric
+rules, normal numeric boundaries, valid integer/float odds conversion, canonical past-race date
+rejection, and huge integer finite limits. Snapshot testing now uses an exact document instance created
+with `object.__new__`, a tuple root, and mutable nested dict/list source values. It proves source
+mutations cannot alter assembled jockey, odds, track, past-race, or audit snapshots, and that output
+Mappings, tuples, and frozen snapshot fields reject mutation. Determinism compares race order,
+scheduled time, pipeline input, track/past-race snapshots, audit entries and key order, prediction time,
+and dataset ID across two assemblies. Direct-input tests now assert the three exact `ValueError`
+messages. Source AST checks retain exactly the two parser-owned `ValueError` handlers and prohibit
+catching `Exception`, `BaseException`, `OverflowError`, or `SimulationValidationError`.
+
+The dedicated suite now has 17 test methods and 332 subtests. Codex local verification after this test
+contract correction:
+
+```text
+Dedicated: 17 passed, 332 subtests passed
+Related: 88 passed, 577 subtests passed
+Full suite: 2361 passed, 2 skipped, 1308 subtests passed
+Python: C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe
+Python version: 3.12.13
+git diff --check: success
+```
+
+Only `tests/test_persisted_simulation_race_inputs.py` and this report are modified for this correction.
+The original repository `C:\Users\garim\Desktop\KeibaAI` is untouched. The review clone has no DB,
+runner, migration, schema, CLI, package-root, `database/keiba.db`, or `logs/` change. Phase
+4C-2d3b1i5c remains unstarted.
+
+blocker: none
