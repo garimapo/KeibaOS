@@ -2,7 +2,7 @@
 
 ## Status
 
-READY_FOR_REVIEW
+APPROVED_FOR_COMMIT
 
 ## Current Phase
 
@@ -200,8 +200,6 @@ loader and 1i5a runner/composition remain unchanged. Migration, schema, `scripts
 `config/settings.json`, CLI, and package-root remain unchanged. `database/keiba.db` and `logs/` remain
 out of scope.
 
-blocker: none
-
 ## Phase 4C-2d3b1i5b2b Preparation and Approval
 
 Phase 4C-2d3b1i5b2a is formally complete at base HEAD `b06503c`. Phase 4C-2d3b1i5b2b is approved for
@@ -265,8 +263,6 @@ The initial implementation was subsequently committed as `225d7f7` and pushed to
 `review/4c-2d3b1i5b2b-race-inputs` for GitHub review. `database/keiba.db` and `logs/` remain out of
 scope. Phase 4C-2d3b1i5c remains unstarted.
 
-blocker: none
-
 ## Phase 4C-2d3b1i5b2b Review Correction
 
 Status remains `READY_FOR_REVIEW`. GitHub review identified that the original pre-scan could validate an
@@ -298,8 +294,6 @@ Only the assembler, its dedicated test, and this report changed in the review cl
 the 1i5b1 loader, 1i5b2a application assembler, 1i5a runner/composition, existing production/tests,
 migration, schema, `scripts/database.py`, `main.py`, `config/settings.json`, CLI, and package root remain
 unchanged. Phase 4C-2d3b1i5c remains unstarted.
-
-blocker: none
 
 ## Phase 4C-2d3b1i5b2b Review Test Contract Correction
 
@@ -344,5 +338,34 @@ Only `tests/test_persisted_simulation_race_inputs.py` and this report are modifi
 The original repository `C:\Users\garim\Desktop\KeibaAI` is untouched. The review clone has no DB,
 runner, migration, schema, CLI, package-root, `database/keiba.db`, or `logs/` change. Phase
 4C-2d3b1i5c remains unstarted.
+
+## Phase 4C-2d3b1i5b2b GitHub Review Approval
+
+GitHub implementation review is complete. Base branch: `feature/ver0.8-simulator`; base commit:
+`b06503c`; review branch: `review/4c-2d3b1i5b2b-race-inputs`. The approved commits are `225d7f7`,
+`88f2619`, and `711e05f`. The production race assembler, its two-pass race-schema/race-ID pre-scan,
+and all dedicated contract corrections are approved; no further production or test correction is
+required. Base-branch integration is pending.
+
+Approved behavior includes the exact document/application-input boundary and database-path identity
+linkage; race-budget ID agreement before any DB responsibility; canonical dates, timezone-aware and
+`Z` datetimes; race, track, entry, past-race, audit-stamp schemas; generated canonical audit keys;
+huge-integer finite limits; existing `SimulationRaceInput` fail-closed validation; deterministic race,
+entry, and audit ordering; and immutable pipeline snapshots. The full dedicated contract suite is
+approved with 17 test methods and 332 subtests.
+
+Codex local verification results (not GitHub CI results):
+
+```text
+Dedicated: 17 passed, 332 subtests passed
+Related: 88 passed, 577 subtests passed
+Full suite: 2361 passed, 2 skipped, 1308 subtests passed
+Python: C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe
+Python version: 3.12.13
+git diff --check: success
+```
+
+Phase 1i5b1, 1i5b2a, and 1i5a remain unchanged; Phase 1i5c remains unstarted. `main.py` and
+`config/settings.json` remain unchanged. `database/keiba.db` and `logs/` remain out of scope.
 
 blocker: none
