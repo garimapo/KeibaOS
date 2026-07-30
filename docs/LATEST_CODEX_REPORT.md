@@ -8,8 +8,6 @@ APPROVED_FOR_COMMIT
 
 Phase 4C-2d3b1i5c — Persisted simulation request application, deterministic JSON CLI, and file-backed E2E
 
-Phase 4C-2d3b1i5c — Persisted simulation request application, deterministic JSON CLI, and file-backed E2E
-
 Base commit: `e43a9beea55e42a8eb0c383c9eeb6f04532a2a5a docs: approve persisted simulation CLI design`
 
 Branch: `review/4c-2d3b1i5c-implementation`
