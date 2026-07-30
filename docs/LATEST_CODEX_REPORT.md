@@ -2,13 +2,13 @@
 
 ## Status
 
-APPROVED_FOR_COMMIT
+READY_FOR_REVIEW
 
 ## Current Phase
 
-Phase 4C-2d3b1i5b2a — Persisted simulation application input assembler
+Phase 4C-2d3b1i5b2b — Persisted simulation race input and audit assembler
 
-Base commit: `924a1e4 docs: approve persisted simulation request document loader`
+Base commit: `b06503c docs: approve persisted simulation application inputs`
 
 Branch: `feature/ver0.8-simulator`
 
@@ -199,5 +199,71 @@ Phase 4C-2d3b1i5b2b and Phase 4C-2d3b1i5c remain unstarted. Race, past-race, tra
 loader and 1i5a runner/composition remain unchanged. Migration, schema, `scripts/database.py`, `main.py`,
 `config/settings.json`, CLI, and package-root remain unchanged. `database/keiba.db` and `logs/` remain
 out of scope.
+
+blocker: none
+
+## Phase 4C-2d3b1i5b2b Preparation and Approval
+
+Phase 4C-2d3b1i5b2a is formally complete at base HEAD `b06503c`. Phase 4C-2d3b1i5b2b is approved for
+implementation on `feature/ver0.8-simulator` and is restricted to:
+
+```text
+scripts/simulation/persisted_simulation_race_inputs.py
+tests/test_persisted_simulation_race_inputs.py
+docs/LATEST_CODEX_REPORT.md
+```
+
+The new assembler will accept only the exact immutable request document and exact application inputs,
+preserve their database-path object identity, pre-scan race IDs against application budget IDs before
+domain construction, and build sorted audited `SimulationRaceInput` values only. It must generate
+RacePredictionInput, InputSnapshotAudit, and canonical audit keys deterministically; preserve past-race
+order; use `information_cutoff.isoformat()` as prediction time; and let existing simulation validation
+fail closed without wrapping.
+
+The approved contract defines canonical dates, timezone-aware timestamps, audit schemas, track/entry/
+past-race schemas, huge-integer finite boundaries, immutable snapshot expectations, and the two-parser
+exception-handler limit. No DB, runner, repository, CLI, schema, migration, 1i5b1, or 1i5b2a change is
+authorized. Required tests include valid multi-race assembly, all input matrices, determinism, existing
+fail-closed validation, and source/AST boundaries.
+
+Phase 4C-2d3b1i5c remains unstarted. It alone owns request connection, runner invocation, CLI, output,
+stdout/stderr, and exit codes. `main.py`, `config/settings.json`, `database/keiba.db`, and `logs/` remain
+out of scope.
+
+## Phase 4C-2d3b1i5b2b Implementation
+
+Status: `READY_FOR_REVIEW`
+
+Implemented the new `scripts/simulation/persisted_simulation_race_inputs.py` assembler and its dedicated
+`tests/test_persisted_simulation_race_inputs.py` contract coverage. The assembler accepts only the exact
+request document and application-input objects, preserves the exact `database_path` object linkage, and
+pre-scans the immutable race array for exact schema, positive unique race IDs, and exact budget-ID parity
+before constructing domain objects.
+
+Race assembly now enforces canonical ISO dates, timezone-aware ISO datetimes (including `Z`), the cutoff
+ordering invariant, exact race/track/entry/past-race/audit schemas, finite numeric boundaries including
+huge integers, and explicit no-past-race audit evidence. It builds `PastRace`, `RaceTrackConditions`,
+`RacePredictionInput`, `InputSnapshotAudit`, and `SimulationRaceInput`; existing immutable snapshot and
+fail-closed simulation validation remain responsible for their existing invariants. Audit keys are emitted
+in canonical entry-ID order and results are sorted by `(scheduled_start_at, race_id)`.
+
+The module has no DB, loader, runner, migration, repository, CLI, clock, cache, retry, or package-root
+responsibility. Its only exception handlers are the two parser-owned `ValueError` handlers for canonical
+dates and aware datetimes; validation and domain exceptions are not caught or wrapped.
+
+Codex local verification:
+
+```text
+Dedicated: 4 passed
+Related: 75 passed, 245 subtests passed
+Full suite: 2348 passed, 2 skipped, 976 subtests passed
+Forbidden-dependency search: no matches
+git diff --check: success
+```
+
+The 1i5b1 loader, 1i5b2a application-input assembler, 1i5a runner/composition, existing production and
+tests, migration, schema, `scripts/database.py`, `main.py`, `config/settings.json`, and package root were
+not changed. No file has been staged, committed, pushed, or placed on a review branch. `database/keiba.db`
+and `logs/` remain out of scope. Phase 4C-2d3b1i5c remains unstarted.
 
 blocker: none
