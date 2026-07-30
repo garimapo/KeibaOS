@@ -2,15 +2,17 @@
 
 ## Status
 
-READY_FOR_REVIEW
+APPROVED_FOR_COMMIT
 
 ## Current Phase
 
 Phase 4C-2d3b1i5c — Persisted simulation request application, deterministic JSON CLI, and file-backed E2E
 
-Base commit: `cd6f8e6f8e9024c33f3dc44d5f14486d5d77fdfb docs: approve persisted simulation race inputs`
+Phase 4C-2d3b1i5c — Persisted simulation request application, deterministic JSON CLI, and file-backed E2E
 
-Branch: `review/4c-2d3b1i5c-design`
+Base commit: `e43a9beea55e42a8eb0c383c9eeb6f04532a2a5a docs: approve persisted simulation CLI design`
+
+Branch: `review/4c-2d3b1i5c-implementation`
 
 ## Preparation and Approval
 
@@ -565,5 +567,43 @@ Full suite: 2374 passed, 2 skipped, 1314 subtests passed
 Python: C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe
 Python version: 3.12.13
 ```
+
+## Phase 4C-2d3b1i5c GitHub Review Approval
+
+GitHub implementation review is complete.
+
+```text
+Base branch: feature/ver0.8-simulator
+Base commit: e43a9be
+Review branch: review/4c-2d3b1i5c-implementation
+
+Approved commits:
+- c098cf8 feat: add persisted simulation CLI
+- c2a8f9e test: complete persisted simulation CLI contract
+- ecf472c test: close persisted simulation CLI review gaps
+```
+
+Approved: thin persisted request application boundary; exact four-stage call order and identity linkage;
+unchanged application exception identity; compact deterministic success/error JSON; explicit
+SimulationSummary and BetTypeSummary schemas; Decimal fixed-point string/null serialization; sorted
+by_bet_type; stdout/stderr separation; exit codes 0/1/2; native argparse help; the single expected CLI
+exception boundary; empty and settled file-backed SQLite E2E; snapshot persistence and post-run DB
+reconnection; expected-error matrix; source/AST dependency boundaries; README CLI documentation and
+research-use disclaimer; unchanged main.py; and no duplicate DB/migration/repository responsibility.
+
+Codex local verification:
+
+```text
+Request application dedicated: 3 passed
+CLI dedicated: 10 passed, 6 subtests passed
+Related: 94 passed, 583 subtests passed
+Full suite: 2374 passed, 2 skipped, 1314 subtests passed
+Python version: 3.12.13
+git diff --check: success
+```
+
+Production implementation, README, and dedicated test contracts require no further correction. Base
+integration is pending. The original workspace remains unchanged; `database/keiba.db` and `logs/` remain
+unchanged.
 
 blocker: none
