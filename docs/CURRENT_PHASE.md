@@ -46,6 +46,9 @@ validation/canonicalization contract, the schema-version-1 canonical content pay
 and the exact Source and Repository Protocol signatures. The authoritative V3a detail is in
 `docs/VER0.8_SIMULATOR_DESIGN.md`.
 
+The V3a past-race contract preserves the existing valid empty `PastRace.passing_order` value as an
+NFC-normalized empty string; it does not convert it to `None`, omit it, or infer a value.
+
 V3b executable DDL, V3c source mapping and observed-only policy, and V3d consolidation remain incomplete.
 No wording in V3a resolves those later responsibilities.
 

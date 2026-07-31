@@ -1157,4 +1157,40 @@ Self-review:
 V3b executable DDL, V3c source mapping/policy, and V3d consolidation remain unstarted. Production, tests,
 README, migration, schema, database files, logs, and the original workspace remain unchanged.
 
+## Phase 4C-2d3b1i6a V3a Past-race Compatibility Review
+
+Reviewed commit: `8bd16bd`.
+
+- Review result: `REVISION_REQUIRED`.
+- Approval disposition: `NOT_APPROVED`.
+- The existing `PastRace` contract permits an unavailable passing order as `passing_order=""`.
+- The prior V3a `HistoricalPastRaceSnapshot.__post_init__` incorrectly passed this field through the
+  non-empty-text validator.
+
+## Phase 4C-2d3b1i6a V3a Past-race Compatibility Revision
+
+V3a status: `READY_FOR_REVIEW`.
+
+Overall 1i6a status: `REVISION_REQUIRED`.
+
+Approval disposition: `NOT_APPROVED`.
+
+`_normalize_text_allow_empty()` now accepts only exact `str`, NFC-normalizes it, and allows `""`.
+`HistoricalPastRaceSnapshot.__post_init__` applies it only to `passing_order`; all other required
+past-race text fields remain non-empty. The canonical payload retains `passing_order: str`, with missing
+data serialized exactly as `{"passing_order":""}` rather than `null`, omission, or inferred content.
+
+Self-review:
+
+1. PASS — `passing_order` accepts exact `str`, including `""`.
+2. PASS — `passing_order` is NFC-normalized.
+3. PASS — missing passing order remains `""`, never `None`.
+4. PASS — the digest payload preserves the empty string.
+5. PASS — all other required past-race strings remain non-empty.
+6. PASS — this is V3a documentation only.
+7. PASS — overall 1i6a remains `REVISION_REQUIRED`.
+
+V3b executable DDL, V3c source mapping/policy, and V3d consolidation remain unstarted. Production, tests,
+README, migration, schema, database files, logs, and the original workspace remain unchanged.
+
 blocker: V3b executable DDL, V3c source mapping/policy, and V3d consolidation are incomplete

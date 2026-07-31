@@ -2714,6 +2714,7 @@ are private to the future module and do not create a package-root export.
 ```python
 def _require_exact(value: object, expected: type[object], name: str) -> object: ...
 def _normalize_required_text(value: object, name: str) -> str: ...
+def _normalize_text_allow_empty(value: object, name: str) -> str: ...
 def _normalize_optional_text(value: object, name: str) -> str | None: ...
 def _normalize_utc_datetime(value: object, name: str) -> datetime: ...
 def _normalize_optional_utc_datetime(value: object, name: str) -> datetime | None: ...
@@ -2747,6 +2748,18 @@ every non-zero value becomes `value.normalize()`. `_normalize_decimal()` perform
 non-negative check before returning that canonical Decimal. The tuple helper requires
 `type(value) is tuple`. Every `__post_init__` below uses these helpers and records normalized immutable
 values only through `object.__setattr__`.
+
+`_normalize_text_allow_empty()` is the sole exception to the non-empty-text rule:
+
+```python
+def _normalize_text_allow_empty(value: object, name: str) -> str:
+    if type(value) is not str:
+        raise ValueError(f"{name} must be str")
+    return normalize("NFC", value)
+```
+
+It is used only for `HistoricalPastRaceSnapshot.passing_order`, because the existing `PastRace` contract
+defines its missing value as `""`.
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -2915,8 +2928,13 @@ class HistoricalPastRaceSnapshot:
                            _non_negative_int(self.past_race_index, \"past_race_index\"))
         object.__setattr__(self, \"race_date\", _normalize_date(self.race_date, \"race_date\"))
         for name in (\"place\", \"race_name\", \"race_class\", \"track\", \"weather\", \"track_condition\",
-                     \"race_time\", \"jockey\", \"passing_order\"):
+                     \"race_time\", \"jockey\"):
             object.__setattr__(self, name, _normalize_required_text(getattr(self, name), name))
+        object.__setattr__(
+            self,
+            \"passing_order\",
+            _normalize_text_allow_empty(self.passing_order, \"passing_order\"),
+        )
         object.__setattr__(self, \"distance_m\", _positive_int(self.distance_m, \"distance_m\"))
         object.__setattr__(self, \"finish\", _positive_int(self.finish, \"finish\"))
         object.__setattr__(self, \"margin\", _normalize_decimal(self.margin, \"margin\"))
@@ -3126,6 +3144,9 @@ The complete canonical Python payload shape is:
     ],
 }
 ```
+
+`passing_order` remains a JSON string. When unavailable it is represented exactly as
+`{"passing_order":""}`: it is never converted to `null`, omitted, or inferred.
 
 The only builder and digest APIs are:
 
