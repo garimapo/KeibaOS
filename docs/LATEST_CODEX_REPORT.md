@@ -2,15 +2,15 @@
 
 ## Status
 
-APPROVED_FOR_COMMIT
+READY_FOR_REVIEW
 
 ## Current Phase
 
-Phase 4C-2d3b1i5c — Persisted simulation request application, deterministic JSON CLI, and file-backed E2E
+Phase 4C-2d3b1i6a — Historical input snapshot and audit persistence gap design
 
-Base commit: `e43a9beea55e42a8eb0c383c9eeb6f04532a2a5a docs: approve persisted simulation CLI design`
+Base commit: `154c04de40cbae6898c0a8b3ff67eb3891da1456 docs: fix persisted simulation CLI approval metadata`
 
-Branch: `review/4c-2d3b1i5c-implementation`
+Branch: `feature/ver0.8-simulator`
 
 ## Preparation and Approval
 
@@ -603,5 +603,406 @@ git diff --check: success
 Production implementation, README, and dedicated test contracts require no further correction. Base
 integration is pending. The original workspace remains unchanged; `database/keiba.db` and `logs/` remain
 unchanged.
+
+## Post-1i5c Next Phase Proposal
+
+Status: `PROPOSED_FOR_REVIEW`
+
+Phase 4C-2d3b1i5c integration is complete. The base branch and the approved implementation-review
+branch both resolve to `154c04d`. Codex local verification for the integrated implementation was:
+
+```text
+Request application dedicated: 3 passed
+CLI dedicated: 10 passed, 6 subtests passed
+Related: 94 passed, 583 subtests passed
+Full suite: 2374 passed, 2 skipped, 1314 subtests passed
+git diff --check: success
+```
+
+The completed responsibility chain is intentionally reused rather than recreated:
+
+```text
+load_persisted_simulation_request_document
+  -> assemble_persisted_simulation_application_inputs
+  -> assemble_persisted_simulation_race_inputs
+  -> run_persisted_simulation_request
+  -> run_sqlite_persisted_simulation
+  -> python -m scripts.cli.run_persisted_simulation <request_path>
+```
+
+It already provides immutable request loading and assembly, a single SQLite lifecycle/migration/composition
+owner, deterministic success and error JSON, file-backed E2E coverage, and persisted bet-plan snapshots.
+The next phase must not duplicate any of those boundaries.
+
+### Remaining gaps
+
+- There is no checked-in, canonical request document that an operator can copy as the safe first CLI
+  invocation. The existing tests construct request dictionaries privately; they are not an operational
+  artifact.
+- The current successful CLI payload is a single `SimulationSummary` written to stdout. It does not yet
+  create the design-level `SimulationReport` with race detail, multi-strategy comparison, or JSON/CSV
+  artifact persistence.
+- No DB-backed request generator exists. Constructing one now would require a separate approved policy for
+  time-valid race, audit, and availability data; it must not infer those fields from the current SQLite
+  schema.
+- No batch-request or multi-strategy execution contract exists. Independent capital-curve and failure
+  semantics remain a larger report/orchestration design question.
+
+### Candidate A — Phase 4C-2d3b1i5d: Canonical persisted-simulation request example
+
+**Purpose.** Add one schema-valid, empty persisted-simulation request example and concise usage guidance.
+It is an operational health-check starting point, not a synthetic ROI example and not a DB data generator.
+
+| Item | Proposal |
+| --- | --- |
+| Production files | None. Reuse the existing loader, assemblers, request application, runner, and CLI unchanged. |
+| New files | `examples/persisted_simulation_empty_request.json`; `tests/test_persisted_simulation_request_example.py`. |
+| Existing files | `README.md` only, to state copy/use semantics and that the sample has no races. |
+| DB/migration | No product DB or migration change. The dedicated E2E test copies the example to a temporary directory and lets the existing runner create only a temporary file-backed SQLite database. |
+| Connection points | `load_persisted_simulation_request_document()` validates the checked-in document; `run_persisted_simulation_request()` and the existing CLI execute the copied sample. |
+| Completion | The exact request schema is loader-valid, its relative database path anchors to the copied request parent, and the existing CLI returns the deterministic empty-summary JSON without touching `database/keiba.db`. |
+| Risks | An empty request is a plumbing/operational sample, not evidence of ROI. README wording must prevent it from being presented as a real race-data template. |
+| Why now | It is the smallest independently reviewable gap between a tested CLI and a user-copyable invocation, and it introduces no new runtime responsibility. |
+
+### Candidate B — Persisted simulation summary artifact writer
+
+**Purpose.** Persist an explicit, deterministic `SimulationSummary` JSON artifact after a successful run.
+
+| Item | Proposal |
+| --- | --- |
+| Production files | A new dedicated summary-artifact writer module only. |
+| Test files | A new writer contract test with temporary output paths. |
+| Existing files | No existing runner/repository change in the first split; later CLI integration would be separate. |
+| DB/migration | None. |
+| Connection points | Existing `SimulationSummary` and the established Decimal/null and sorted-bet-type serialization rules. |
+| Completion | Exact output schema, deterministic bytes, safe file-write failure propagation, and no duplicate SQLite lifecycle. |
+| Risks | The current CLI already emits a summary JSON document, while the Ver0.8 design-level report requires race detail and multi-strategy metadata. A writer added without a report contract could create a competing, incomplete output format. |
+| Why not now | Its public artifact schema and ownership relative to the existing stdout serializer require design approval first. |
+
+### Candidate C — DB-backed request-input assembly
+
+**Purpose.** Build a persisted-simulation request from stored race data instead of hand-authored JSON.
+
+| Item | Proposal |
+| --- | --- |
+| Production files | New read-only SQLite request-input assembler/repository boundary. |
+| Test files | New temporary-DB integration suite with time/audit fixtures. |
+| Existing files | Potentially a separate request-generation API; the existing loader/runner should remain unchanged. |
+| DB/migration | Schema changes are not assumed, but the current data-availability/audit provenance must be proven before this can be designed. |
+| Connection points | Existing immutable request document and race-input assembler contracts. |
+| Completion | Every generated race/past-race/track/audit value has validated provenance and preserves the fail-closed cutoff rules. |
+| Risks | The current schema does not by itself define the source of every `available_at`/`observed_at` audit value. Guessing would violate the simulator's future-information policy and duplicate the approved request boundary. |
+| Why not now | This is a data-collection/request-generation phase, materially larger than the next independent operational increment. |
+
+### Candidate D — Multi-request and multi-strategy execution report
+
+**Purpose.** Produce the existing design-level `SimulationReport` across strategies and races.
+
+| Item | Proposal |
+| --- | --- |
+| Production files | A new report/orchestration boundary, with carefully scoped extensions to result collection. |
+| Test files | New multi-strategy and race-detail report contract/integration tests. |
+| Existing files | Likely `PersistedSimulationRunService`/`Simulator` result-capture contracts, which currently return only `SimulationSummary`. |
+| DB/migration | No schema change is assumed, but no product DB access may be added merely for reporting. |
+| Connection points | Existing `SimulationReport`, `SimulationRunMetadata`, `SimulationResult`, and `SimulationSummary` models. |
+| Completion | Deterministic multi-strategy result capture, explicit official-ROI validity, and unambiguous race-detail serialization. |
+| Risks | It mixes result capture, reporting, strategy comparison, and independent capital-curve decisions; the design lists the latter as unresolved. |
+| Why not now | It must be split after a separate report/result-capture design approval and is not a minimal phase. |
+
+### Recommendation
+
+Recommend **Phase 4C-2d3b1i5d — Canonical persisted-simulation request example**.
+
+It is closest to making the already-complete CLI safely runnable by an operator: it reuses every completed
+boundary, adds no production composition or repository logic, requires no migration or DB contract change,
+and has a focused temporary-file dedicated test. It also creates a clear handoff point before the larger
+future work of DB-derived request generation, run-level reporting, ROI analysis, batch execution, and
+multi-strategy comparison. Candidate B is the next likely reporting direction after an explicit artifact
+contract; Candidates C and D are deliberately deferred because their missing provenance and aggregation
+decisions are not safe to infer.
+
+The original workspace remains unchanged. `database/keiba.db` and `logs/` remain unchanged and out of
+scope. No candidate has been implemented, staged, committed, pushed, or put on a review branch.
+
+## Post-1i5c Next Phase Proposal Review
+
+The previous recommendation, **Phase 4C-2d3b1i5d — Canonical persisted-simulation request example**,
+has the review disposition `REJECTED_AS_NEXT_PHASE`.
+
+The repository already contains both empty-request and settled-win request fixtures inside the completed
+1i5c CLI tests, including real file-backed SQLite E2E and snapshot-persistence coverage. A checked-in
+sample would therefore duplicate test-only data without establishing the provenance, historical-audit,
+or real-race request-generation boundary required for Ver0.8. It remains a lower-priority documentation
+candidate, not the next implementation or design phase.
+
+## Post-1i5c Revised Next Phase Proposal
+
+Status: `PROPOSED_FOR_REVIEW`
+
+Current integrated HEAD: `154c04de40cbae6898c0a8b3ff67eb3891da1456`
+
+Phase 4C-2d3b1i5c is complete: the base and implementation-review branches are both at `154c04d`, and
+the completed chain remains:
+
+```text
+load_persisted_simulation_request_document
+  -> assemble_persisted_simulation_application_inputs
+  -> assemble_persisted_simulation_race_inputs
+  -> run_persisted_simulation_request
+  -> run_sqlite_persisted_simulation
+  -> python -m scripts.cli.run_persisted_simulation <request_path>
+```
+
+This chain deliberately consumes an already-audited request document. It must not be repurposed to
+invent, backfill, or silently derive historical prediction inputs.
+
+### Request field-source matrix and audit findings
+
+| Request field group | Current possible source | Provenance state | Result |
+| --- | --- | --- | --- |
+| `schema_version`, `database_path`, `run_context`, `strategy`, `pipeline`, budgets | Explicit request JSON and existing loader/application-input assembler | User-supplied and fully validated, but not DB-generated | Reusable unchanged. |
+| Race identity, target date, scheduled start | Legacy `races` table has `id`, `race_date`, and text `start_time` | No source/audit identity, `available_at`, `observed_at`, or snapshot `captured_at` is persisted for prediction use | Cannot safely generate an audited historical request. |
+| Track conditions | Legacy `races` table has place/distance/track/condition values | No historical input-audit stamp is stored | Cannot meet the request schema's required audit stamp. |
+| Entries and jockey names | Legacy `horses` table is race-scoped and already supports the shared JRA/local row identity model | No input availability/observation timestamp or snapshot provenance is stored | Cannot safely assert cutoff availability. |
+| Entry odds | Legacy `horses.odds`; v008 `odds_snapshot_batches` and `OddsSnapshotRepository` provide observed-time batches | Legacy odds lack history. v008 batches retain `observed_at`, but no historical `available_at` is persisted and no approved request-source mapping exists for all prediction inputs | Must not substitute later/current odds or infer availability. |
+| Past races | Legacy `past_races` table and existing `PastRace` conversion | No source ID, available/observed time, or historical snapshot capture record | Cannot establish that every past-race fact was usable by the prediction cutoff. |
+| Race, track, entry, jockey, odds, and past-race audit stamps | Existing request schema requires exact `source`, `source_id`, and at least one aware `available_at`/`observed_at`; `InputSnapshotAudit` also requires aware `captured_at` | No repository/schema persists a complete corresponding input-audit/snapshot set | Manual JSON is valid only when externally evidenced; DB-backed generation is blocked. |
+| Results and payouts | v008 repositories persist `observed_at` and, when complete, `finalized_at` | These are settlement facts, not prediction-input provenance, and are allowed after prediction cutoff | Reuse only for settlement; never route them into request generation. |
+
+The future-information rule is explicit: every prediction, entry, track, jockey, odds, and past-race input
+must have `available_at` or `observed_at <= information_cutoff`; a missing stamp fails closed. In
+particular, later odds must not fill an unavailable historical value. Existing `odds_snapshot_batches`
+therefore do not close the request-generation gap by themselves.
+
+The current generic race/horse identity supports both local racing and JRA without a separate ID model,
+but the implemented acquisition foundation is NAR/local. There is no approved JRA request-source mapping,
+organization discriminator policy, source URL/ID convention, or historical availability contract. JRA
+connection work must remain a separate provider/source-design concern.
+
+### Revised candidates
+
+#### Candidate A — Phase 4C-2d3b1i6a: Historical input snapshot and audit persistence gap design
+
+| Item | Proposal |
+| --- | --- |
+| Objective | Design the minimal source, snapshot, audit, and fail-closed contracts needed before a DB-backed persisted-simulation request can exist. |
+| Production files | None. |
+| Test files | None. This is a design-only phase. |
+| Documentation files | `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`; amend the authoritative simulator design only if the approved phase explicitly directs it. |
+| Existing API connection | The existing request document, `InputAuditEntry`, `InputSnapshotAudit`, `SimulationRaceInput`, legacy DB tables, v008 odds/result/payout repositories, and 1i5c application chain. |
+| DB/migration impact | None in 1i6a. It identifies, but does not implement, the later schema/repository changes needed to persist historical input snapshots and audit stamps. |
+| Completion criteria | A field-by-field authoritative source mapping; timestamp semantics; audit key/source ID policy; local/JRA organization boundary; exact fail-closed behavior; and a split, sequenced proposal for any later schema/migration/source phases. |
+| Main risk | Treating legacy values or later observation times as proof of cutoff availability would create invalid ROI. The phase must record uncertainty instead of repairing it. |
+| Why now | It is the smallest prerequisite that advances Ver0.8 toward real, reproducible ROI while avoiding a speculative request builder. |
+
+#### Candidate B — Historical input snapshot and audit persistence schema/migration
+
+| Item | Proposal |
+| --- | --- |
+| Objective | Persist the approved prediction-input snapshot and its audit stamps once Candidate A has fixed the data model. |
+| Production/test files | New migration/repository modules and focused temporary-DB migration/repository tests, selected only after the 1i6a contract identifies exact names and fields. |
+| Existing API connection | Candidate A's source/audit contract, `InputSnapshotAudit`, `InputAuditEntry`, and the current SQLite migration runner. |
+| DB/migration impact | Yes; this is a separate schema/migration phase. |
+| Completion criteria | Immutable stored snapshots preserve every required field, source ID, timezone-aware audit stamp, and cutoff-relevant fact without altering legacy records. |
+| Main risk | Premature table design could lock in an unusable provenance model or mix settlement facts with prediction inputs. |
+| Why later | It has no safe schema until Candidate A resolves the field-source and timestamp contract. |
+
+#### Candidate C — Audited DB-backed persisted-simulation request source
+
+| Item | Proposal |
+| --- | --- |
+| Objective | Construct a request-equivalent immutable input from only persisted, audit-complete historical data. |
+| Production/test files | A new read-only source/assembler boundary and dedicated temporary-DB integration tests, without changing the 1i5c runner or CLI. |
+| Existing API connection | Candidate B's persisted input snapshots; existing request/application/race assemblers or an explicitly approved equivalent boundary. |
+| DB/migration impact | No additional change assumed beyond Candidate B. |
+| Completion criteria | Exact race/budget selection, audit-complete input retrieval, cutoff validation, and object construction fail closed before prediction execution. |
+| Main risk | It must not fabricate request JSON, fill missing historical data, or fold DB, JSON writing, CLI, batch execution, and reporting into one phase. |
+| Why later | It requires a completed persistence contract and real persisted audit evidence. |
+
+#### Lower-priority candidate — Canonical request example
+
+Retain the former 1i5d idea only as a documentation phase after the audited generation path is defined.
+It may later explain how to run an externally evidenced request, but it must not claim that a test fixture
+or a manually written request establishes historical data availability.
+
+### Recommendation and follow-up order
+
+Recommend **Phase 4C-2d3b1i6a — Historical input snapshot and audit persistence gap design**.
+
+Its scope is intentionally design-only: source architecture, request-field mapping, timestamp/audit
+validation, fail-closed policy, and the split to later persistence/source phases. It excludes production
+implementation, tests, migrations, schema changes, DB access, request-file generation, CLI work, runner
+changes, batch execution, reporting, and strategy comparison.
+
+Proposed order:
+
+```text
+1i6a  historical input snapshot and audit persistence gap design
+1i6b  approved schema/migration and repository persistence for that audit-complete snapshot
+1i6c  audited DB-backed persisted-simulation request source
+later  request documentation, batch execution, report artifacts, and multi-strategy comparison
+```
+
+This advances the real operational requirement without disguising missing provenance as a runnable
+simulation input. The original workspace remains unchanged. `database/keiba.db` and `logs/` remain
+unchanged and out of scope. No candidate has been implemented, staged, committed, pushed, or put on a
+review branch.
+
+## Phase 4C-2d3b1i6a Design Report
+
+Status: `READY_FOR_REVIEW`
+
+Phase 4C-2d3b1i6a is the approved design-only response to the historical input snapshot and audit
+provenance gap. Base commit: `154c04de40cbae6898c0a8b3ff67eb3891da1456` on
+`feature/ver0.8-simulator`. The canonical workspace is
+`C:\Users\garim\Desktop\KeibaAI-review-1i5b2b`; the original workspace remains unchanged.
+
+The previous Phase 4C-2d3b1i5d canonical sample-request proposal is
+`REJECTED_AS_NEXT_PHASE`. A sample request cannot prove historical availability and is deferred until an
+auditable source exists.
+
+### Approved audit and snapshot design
+
+- Historical provenance is a complete race-level prediction-input snapshot with normalized child records
+  and normalized audit rows, not a schemaless JSON document.
+- The selected groups are race metadata, race entries, jockey data, track conditions, win odds, past
+  races, and explicit past-race-absence evidence.
+- Each group has a natural relation to the snapshot/race/race entry, source metadata, a stable source ID,
+  audit timestamps, completeness evidence, and deterministic reconstruction order.
+- `available_at` is source-public availability, `observed_at` is KeibaOS observation of the exact value,
+  `captured_at` is complete snapshot capture, and `finalized_at` is settlement-only. Future audit times
+  are timezone-aware UTC ISO timestamps.
+- Every `InputAuditEntry` requires `available_at` or `observed_at`. Observed-only and available-only
+  records have separate explicit rules; both timestamps describe the same value and satisfy
+  `available_at <= observed_at <= captured_at`. Unknown or invalid provenance fails closed.
+- Future cutoff selection uses race ID, information cutoff, input type, and source policy; it accepts only
+  one complete snapshot whose header and all relevant audit timestamps are no later than the cutoff. It
+  cannot mix records or use a later fallback. The deterministic future tie-break is latest `captured_at`,
+  then `snapshot_id` descending.
+
+### Existing-data findings and boundary
+
+- Legacy `races`, `horses`, and `past_races` lack required historical source/timestamp provenance. They
+  may remain references or prospective capture sources, but cannot be backfilled or used as formal
+  historical DB-backed prediction input.
+- v008 odds snapshots retain `observed_at`, completeness, source, and source URL but lack
+  `available_at`. Until observed-only eligibility is separately approved, that absence means they cannot
+  support official historical odds validation. A later approval must define that eligibility, any
+  availability requirement, complete odds-batch granularity, and win-odds selection-to-entry mapping.
+  Legacy `horses.odds` is not eligible for official historical odds validation.
+- A future JRA/local source contract must distinguish organization, source system, external race/entry
+  identifiers, canonical URL, internal mapping, and horse number. Current `horses.id` is internal and
+  race scoped; `horse_no` is not an external provider identity.
+- Settlement `race_results`, `race_result_entries`, `payout_publications`, and `payouts` remain separate.
+  Their finalization/observation provenance must not become prediction-input audit evidence.
+
+### Future implementation boundary
+
+The approved sequence is: schema/domain design approval, migration, repository contracts, SQLite
+repository implementation, and request-source integration. Future persistence must be normalized,
+insert-only, idempotency-aware, conflict/data-integrity explicit, constrained and indexed, and
+transactionally written. `source_id` must be a stable provider external ID, canonical URL, or later
+approved canonical content digest; it must never use `hash()`, insertion order, or random UUID.
+
+This activity changed only `docs/CURRENT_PHASE.md`, `docs/LATEST_CODEX_REPORT.md`, and
+`docs/VER0.8_SIMULATOR_DESIGN.md`. Production, tests, README, migrations, schema, database files, and
+logs were not changed. No stage, commit, push, branch creation, database operation, runner execution,
+CLI execution, or pytest execution was performed.
+
+## Phase 4C-2d3b1i6a Design Review Findings
+
+- Review result: `PARTIAL`.
+- Approval disposition: `NOT_APPROVED`.
+- Revision status: `REVISION_REQUIRED`.
+- PASS: time semantics, cutoff fail-closed rule, legacy no-backfill policy, race-level snapshot boundary,
+  settlement separation, and staged follow-up direction.
+- PARTIAL: field-to-source mapping, audit-entry detail, repository responsibility, and JRA/NAR identity.
+- FAIL: formal domain values/Protocol, normalized SQLite schema/identity/constraint/index design, and the
+  authoritative observed-only odds policy.
+- Required correction: complete the contracts above without starting production implementation.
+
+Production implementation was not started while the revision was prepared.
+
+## Phase 4C-2d3b1i6a Revised Design Report
+
+Status: `READY_FOR_REVIEW`
+
+The revised authoritative design supersedes the preliminary 1i6a note. It now fixes the complete
+field-to-source/audit matrix for race metadata, race entry, jockey, track, WIN odds, past races, and
+past-race absence evidence. Each field records request path, snapshot field, source record, source system,
+stable source ID, source URL policy, availability/observation provenance, audit key, relation, ordering,
+completeness rule, and legacy no-backfill result.
+
+The design defines exact audit keys, `InputAuditEntry` field rules, UTC timestamp semantics, observed-only
+and available-only eligibility, inclusive cutoff selection, deterministic ties, and source-identity digest
+canonicalization. It explicitly approves observed-only v008 WIN-batch import only through an immutable
+approved collection boundary with complete mapping and an eligible `observed_at`; all other v008 rows and
+legacy `horses.odds` fail closed.
+
+The following later domain values and keyword-only Protocols are approved for their dedicated follow-up:
+`HistoricalSourceIdentity`, `HistoricalInputProvenance`, `HistoricalPastRaceSnapshot`,
+`HistoricalRaceEntrySnapshot`, `HistoricalRaceSnapshot`, `HistoricalInputSnapshotIdentity`,
+`HistoricalInputSnapshot`, `HistoricalInputSnapshotSource.load_latest_snapshot()`, and
+`HistoricalInputSnapshotRepository.save_snapshot()`.
+
+The normalized SQLite design now specifies source-race and source-entry mapping, snapshot header, race,
+entry, past-race, and audit tables; natural identity; foreign keys; primary/unique/check constraints;
+indexes; ordering columns; no-trigger policy; and domain/repository checks. Repository responsibilities
+are fixed: caller-owned connection, one atomic insert-only transaction, canonical idempotent no-op,
+conflict/data-integrity errors, rollback, deterministic complete-snapshot read, and no repair/retry/fallback.
+
+JRA/NAR source identity is fixed to organization plus source system and external race/entry IDs, mapped
+explicitly to internal race/race-entry IDs. `horse_no` remains only a local race number. Settlement records
+remain excluded. The minimal implementation sequence is 1i6b1 domain/Protocols, 1i6b2 migration/schema,
+1i6b3 write repository, 1i6b4 read source, then 1i6c request-source integration.
+
+Completion criteria: all 13 revised 1i6a criteria are `PASS`. The former provenance/odds policy blocker is
+superseded by this completed design; implementation remains deferred to the separately reviewed phases.
+
+This revision changed only `docs/CURRENT_PHASE.md`, `docs/VER0.8_SIMULATOR_DESIGN.md`, and
+`docs/LATEST_CODEX_REPORT.md`. Production, tests, README, migration, schema, DB files, logs, and the
+original workspace remain unchanged. No stage, commit, push, branch creation, DB/migration/runner/CLI
+execution, or pytest execution was performed.
+
+## Phase 4C-2d3b1i6a Final Design Review Findings
+
+review result: `REVISION_REQUIRED`
+approval disposition: `NOT_APPROVED`
+
+The final review identified an identity contradiction, incomplete SQLite schema and field-to-source mapping,
+incomplete domain contracts, transaction/completeness gaps, incomplete v008 odds provenance, and blocker
+consistency failure. Production implementation was not started.
+
+## Phase 4C-2d3b1i6a Final Contract Revision
+
+Status: `READY_FOR_REVIEW`
+
+The final revision establishes one identity shared by domain equality, idempotency, and SQLite `UNIQUE`;
+the frozen domain contract; explicit source-ID canonicalization; exact normalized table set, key/constraint/
+trigger/index requirements; field-level provenance reconstruction; rejected-active-transaction writer
+ownership; deterministic reader/tie-break; completeness states; trusted observed-only v008 WIN policy;
+and JRA/NAR external-to-internal mapping. The final design section in
+`docs/VER0.8_SIMULATOR_DESIGN.md` is authoritative and supersedes earlier preliminary/revised wording.
+
+All 15 final completion criteria are explicit: identity, domain, crosswalk, DDL, timestamp provenance,
+InputAuditEntry correspondence, write/read semantics, completeness, v008/digest policy, identity mapping,
+cutoff fail-closed, deterministic reconstruction, settlement separation, and phase split. Production,
+tests, README, migration, schema, DB, logs, and the original workspace remain unchanged; no Git operation
+or runtime command was performed.
+
+## Phase 4C-2d3b1i6a Cross-contract Review V2
+
+review result: `REVISION_REQUIRED`; approval disposition: `NOT_APPROVED`.
+The review found identity/content-digest contradiction, dataset isolation gap, domain/DB mismatch,
+incomplete DDL, impossible completeness trigger, timestamp/order/provenance mismatch, unprovable v008
+trust, incomplete source-ID formats, and organization/source-system mismatch.
+
+## Phase 4C-2d3b1i6a Cross-contract Contract Revision V2
+
+Status: `READY_FOR_REVIEW`. The authoritative V2 design resolves the findings with one natural identity,
+dataset-isolated read API, external identity matching DB uniqueness, canonical UTC text, zero-based order,
+logical audit provenance, implementable transaction/trigger order, explicit JRA/local organization codes,
+and prospective collector-attested v008 import only. Earlier v008 rows are untrusted. The required V2
+completion criteria are explicit; production has not started.
 
 blocker: none

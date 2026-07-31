@@ -6,11 +6,11 @@ APPROVED_FOR_CODEX
 
 ## Phase
 
-Phase 4C-2d3b1i5c — Persisted simulation request application, deterministic JSON CLI, and file-backed E2E
+Phase 4C-2d3b1i6a — Historical input snapshot and audit persistence gap design
 
 ## Base Commit
 
-`cd6f8e6f8e9024c33f3dc44d5f14486d5d77fdfb docs: approve persisted simulation race inputs`
+`154c04de40cbae6898c0a8b3ff67eb3891da1456`
 
 ## Branch
 
@@ -18,351 +18,108 @@ Phase 4C-2d3b1i5c — Persisted simulation request application, deterministic JS
 
 ## Canonical Workspace
 
-Use only the clean clone:
+`C:\Users\garim\Desktop\KeibaAI-review-1i5b2b`
 
-```text
-C:\Users\garim\Desktop\KeibaAI-review-1i5b2b
-```
-
-The original workspace `C:\Users\garim\Desktop\KeibaAI` must not be modified.
+The original workspace, `C:\Users\garim\Desktop\KeibaAI`, is not a modification target.
 
 ## Objective
 
-Add only the thin request-to-application orchestrator, deterministic JSON CLI, documentation, and their
-new tests. The phase composes existing approved boundaries in this exact order:
+Finalize the design gap for historical prediction-input snapshots and their audit provenance. The design must define which race-level input records must be captured prospectively, how their source and timestamps are interpreted, how a historical snapshot is selected at an information cutoff, and which legacy records cannot be used as authoritative historical evidence.
 
-```text
-request path
-→ immutable request document
-→ application inputs
-→ audited race inputs
-→ existing SQLite application runner
-→ SimulationSummary
-→ deterministic JSON / CLI exit code
-```
+This phase is design only. It does not add a persistence implementation, a repository, a migration, a request source, or a CLI feature.
 
-This phase must not change request parsing, application-input parsing, race/audit parsing, SQLite
-composition, repositories, migrations, pipeline logic, settlement logic, or summary calculations.
+## Approved Design Decisions
 
-## Completed Dependencies
+- An official historical prediction input is one complete, race-level snapshot with normalized child records and normalized audit rows; it is not a schemaless JSON blob.
+- Every `InputAuditEntry` must contain at least one of `available_at` or `observed_at`. Missing both is invalid and fails closed.
+- `available_at` means when the source made the exact information publicly usable. `observed_at` means when KeibaOS observed or stored that exact information. `captured_at` is the time the complete race-level snapshot was recorded. `finalized_at` belongs only to settlement data and is never prediction-input audit evidence.
+- All future persisted audit timestamps are timezone-aware UTC ISO values. Unknown, invalid, or future-for-cutoff provenance fails closed.
+- A historical source selection uses `race_id`, `information_cutoff`, input type, and source policy. It must select one complete snapshot whose header `captured_at` and every relevant non-null `available_at` and `observed_at` are no later than the cutoff. It must not mix components from different snapshots or fall back to later records.
+- If more than one complete eligible snapshot exists, a future repository contract must select deterministically by latest `captured_at`, then stable `snapshot_id` descending.
+- Legacy `races`, `horses`, and `past_races` do not have the required historical provenance and cannot be backfilled or treated as official historical prediction input. They may remain references or prospective capture sources only.
+- Existing v008 odds batches preserve `observed_at`, completeness, source, and source URL, but not `available_at`. Until a later phase approves the authoritative observed-only odds policy, their missing `available_at` means they cannot be used for official historical odds validation. Legacy `horses.odds` has no auditable timestamp and cannot be used either.
+- JRA and local-racing provider identities must be designed explicitly. Existing `horses.id` is a race-scoped race-entry identifier and `horse_no` is a local race number; neither is a provider external identity by itself.
+- `source_id` must be a stable provider external identifier, canonical URL, or later-approved canonical content digest. It must never be based on `hash()`, row insertion order, or a random UUID.
+- Settlement records (`race_results`, `race_result_entries`, `payout_publications`, and `payouts`) remain separate from prediction-input audit data.
 
-- 1i5a: `run_sqlite_persisted_simulation()` owns one connection, migrations, composition, run, and close.
-- 1i5b1: `load_persisted_simulation_request_document()` owns immutable JSON request loading.
-- 1i5b2a: `assemble_persisted_simulation_application_inputs()` owns run/strategy/pipeline/budget assembly.
-- 1i5b2b: `assemble_persisted_simulation_race_inputs()` owns audited immutable race-input assembly.
-- The remote base and approved 1i5b2b review branch are both `cd6f8e6`.
+## Future Follow-up Boundary
 
-## Allowed Implementation Files
+The follow-up sequence is intentionally split into separate reviewable phases:
 
-```text
-scripts/simulation/persisted_simulation_request_application.py
-scripts/cli/run_persisted_simulation.py
-tests/test_persisted_simulation_request_application.py
-tests/test_cli_run_persisted_simulation.py
-README.md
-docs/LATEST_CODEX_REPORT.md
-```
+1. Schema and domain design approval.
+2. Migration.
+3. Repository contracts.
+4. SQLite repository implementation.
+5. Request-source integration.
 
-`docs/CURRENT_PHASE.md` is approved contract documentation and is not an implementation target.
+No part of that sequence is implemented in this phase.
+
+## Completion Criteria
+
+The following design items must all be explicit and internally consistent before this documentation-only
+phase is `READY_FOR_REVIEW`:
+
+1. Field-to-source and field-to-audit mapping for race metadata, entry, jockey, track, win odds, past
+   race, and past-race absence evidence.
+2. Canonical `available_at`, `observed_at`, `captured_at`, and `finalized_at` semantics.
+3. Complete `InputAuditEntry` field, audit-key, source-ID, timestamp, and absence-evidence rules.
+4. Deterministic cutoff selection and fail-closed behavior.
+5. Legacy-data and no-backfill policy.
+6. A single race-level normalized snapshot boundary.
+7. Approved domain-value and Protocol API designs.
+8. Approved SQLite table, natural-identity, constraint, index, and ordering designs.
+9. Approved repository read/write, insert-only, idempotency, conflict, and transaction responsibilities.
+10. Approved v008 observed-only odds and missing-`available_at` policy.
+11. Approved JRA/NAR source and internal/external identity mapping.
+12. Settlement separation, deterministic reconstruction, and a minimal follow-up phase split.
+
+The revision in `docs/VER0.8_SIMULATOR_DESIGN.md` is authoritative for these criteria and supersedes the
+earlier preliminary 1i6a notes.
+
+## Final Contract Completion Criteria
+
+The final revision additionally requires: one identity shared by domain equality and SQLite `UNIQUE`;
+complete frozen-domain field/type/canonicalization contracts; a domain-to-column crosswalk; complete DDL
+with types, nullability, keys, checks, indexes, and triggers; field-level time-source mapping; one-to-one
+provenance/InputAuditEntry reconstruction; rejected-active-transaction writer semantics; exact read/tie-
+break semantics; explicit completeness states; trusted-v008/digest/URL policy; JRA/NAR mapping; cutoff
+fail-closed behavior; deterministic reconstruction; settlement separation; and the 1i6b1–1i6c split.
+
+## Allowed Files
+
+- `docs/CURRENT_PHASE.md`
+- `docs/LATEST_CODEX_REPORT.md`
+- `docs/VER0.8_SIMULATOR_DESIGN.md`
 
 ## Forbidden Files
 
-```text
-main.py
-config/settings.json
-scripts/database.py
-existing simulation production
-existing CLI
-existing tests
-migration
-schema
-package __init__ files
-database/keiba.db
-logs/
-```
+- Production code.
+- Tests.
+- `README.md`.
+- Migrations, schema, and `scripts/database.py`.
+- `main.py`, CLI code, package exports, database files, and logs.
+- The original workspace.
 
-No production/test/README modification is permitted during this design-only activity. The eventual
-implementation must not stage, commit, or push without a separate explicit approval.
+## Required Verification
 
-## Application Public API
+- Inspect the existing simulator, request, audit, migration, repository, and design contracts read-only.
+- Confirm the design distinguishes source availability from KeibaOS observation.
+- Confirm the approved design excludes legacy unprovenanced records from official historical validation.
+- Run `git diff --check`, `git diff --name-status`, and `git status --short`.
 
-Create only this module-defined public function in
-`scripts/simulation/persisted_simulation_request_application.py`:
+Pytest, migration execution, database access, runner execution, and CLI execution are not part of this documentation-only phase.
 
-```python
-from __future__ import annotations
+## Stop Condition
 
-from pathlib import Path
+After the three allowed design documents are internally consistent, report the design as `READY_FOR_REVIEW` in `docs/LATEST_CODEX_REPORT.md` and stop without staging, committing, pushing, creating a branch, or beginning a follow-up phase.
 
-from scripts.simulation.models import SimulationSummary
+## Blocker
 
+none
 
-def run_persisted_simulation_request(
-    *,
-    request_path: str | Path,
-) -> SimulationSummary:
-    ...
-```
+## V2 Authority
 
-All helpers are private. Do not add a public class, Protocol, dataclass, ABC, repository, service bundle,
-or package-root export.
-
-## Exact Call Order
-
-For each valid call, make exactly one call at every stage and return the exact runner result:
-
-```python
-document = load_persisted_simulation_request_document(request_path=request_path)
-application_inputs = assemble_persisted_simulation_application_inputs(document=document)
-race_inputs = assemble_persisted_simulation_race_inputs(
-    document=document,
-    application_inputs=application_inputs,
-)
-return run_sqlite_persisted_simulation(
-    database_path=application_inputs.database_path,
-    run_context=application_inputs.run_context,
-    strategy_identity=application_inputs.strategy_identity,
-    prediction_pipeline=application_inputs.prediction_pipeline,
-    race_inputs=race_inputs,
-    budgets_by_race_id=application_inputs.budgets_by_race_id,
-)
-```
-
-Do not sort, copy, reparse, recreate, or recompute document/application/race inputs. The race-input
-assembler owns the required sort and the runner owns SQLite lifecycle, migration, composition, and run.
-
-## Identity and Linkage
-
-- Pass the exact `document` object from loader to both assemblers.
-- Pass the exact `application_inputs` object to race assembly.
-- Pass `application_inputs.database_path`, `run_context`, `strategy_identity`, `prediction_pipeline`, and
-  `budgets_by_race_id` directly to the runner; do not copy or reparse them.
-- Pass the race assembler's returned tuple directly as `race_inputs`.
-- Do not add linkage validation or a second sort in 1i5c; approved upstream boundaries own those checks.
-
-## Application Exception Boundary
-
-The application module has no `try`, `except`, retry, fallback, logging, printing, stream handling, exit
-code, or exception translation. Loader, assembler, and runner exceptions propagate unchanged, by object
-identity. It must not import argparse, JSON, sys, SQLite connection APIs, migrations, composition factory,
-repositories, clock/environment/network/subprocess APIs, `main.py`, or configuration files.
-
-## CLI Public APIs
-
-Create only these module-defined public functions in `scripts/cli/run_persisted_simulation.py`:
-
-```python
-def build_parser() -> argparse.ArgumentParser: ...
-
-def run(
-    argv: Sequence[str] | None = None,
-    *,
-    stdout: TextIO | None = None,
-    stderr: TextIO | None = None,
-) -> int: ...
-
-def main() -> int: ...
-```
-
-No public class, Protocol, dataclass, ABC, formatter class, repository adapter, DB provider, or package-root
-export is allowed. Formatting/payload helpers remain private.
-
-## Parser Contract
-
-`build_parser()` has exactly one positional argument:
-
-```python
-parser.add_argument(
-    "request_path",
-    type=Path,
-    help="Persisted simulation request JSON path",
-)
-```
-
-No options are added. Native argparse behavior is preserved: missing/extra arguments raise
-`SystemExit(2)`; `--help` raises `SystemExit(0)`. The CLI must not catch either outcome.
-
-## Exit Codes
-
-`run()` parses arguments, selects supplied streams or `sys.stdout`/`sys.stderr`, calls
-`run_persisted_simulation_request()` once, emits exactly one JSON line, and returns:
-
-```text
-success: 0
-expected application failure: 1
-argparse usage failure: SystemExit(2)
-argparse help: SystemExit(0)
-```
-
-`main()` is exactly `return run()`. Under module execution use `raise SystemExit(main())`.
-
-## Success JSON Schema
-
-On success write one compact UTF-8 JSON line to stdout and nothing to stderr:
-
-```json
-{"schema_version":1,"status":"ok","summary":{}}
-```
-
-Use `json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))`, followed by one
-newline. Production must explicitly enumerate every approved `SimulationSummary` field; it must not
-dynamically construct the schema by iterating `dataclasses.fields(SimulationSummary)`.
-
-```text
-strategy_id strategy_name strategy_config_hash race_count settled_race_count
-unsettled_race_count no_bet_race_count void_race_count error_race_count
-unsupported_race_count bet_count settled_bet_count settled_purchase_race_count
-hit_bet_count hit_race_count investment payout profit roi bet_hit_rate
-race_hit_rate maximum_drawdown by_bet_type
-```
-
-Tests must compare the produced summary-key set with
-`{name.name for name in dataclasses.fields(SimulationSummary)}` to detect missing or extra fields.
-Production must not use `dataclasses.fields`, `dataclasses.asdict`, `summary.__dict__`, `default=str`,
-field-name-driven formatting, floats for Decimal values, clocks, random values, pretty-printing, or
-logging metadata.
-
-## Error JSON Schema
-
-Catch exactly this expected failure tuple once in CLI `run()`:
-
-```python
-except (OSError, RuntimeError, TypeError, ValueError, sqlite3.Error) as error:
-    ...
-```
-
-Write one compact JSON line to stderr, write nothing to stdout, and return 1:
-
-```json
-{"error":{"message":"...","type":"ValueError"},"schema_version":1,"status":"error"}
-```
-
-The type is `type(error).__name__`; message is `str(error) or type(error).__name__`. Never include a
-traceback, stack trace, request/database dump, or error output on stdout. Do not catch `Exception`,
-`BaseException`, `SystemExit`, `KeyboardInterrupt`, `GeneratorExit`, or `MemoryError`.
-
-## Decimal Serialization
-
-For `roi`, `bet_hit_rate`, and `race_hit_rate`:
-
-```text
-None       → JSON null
-Decimal    → format(value, "f") as a JSON string
-```
-
-For example, `Decimal("300")` serializes as `"300"`; precision is never lost through float conversion.
-
-## by_bet_type Serialization
-
-Build the payload in sorted bet-type-key order, although `json.dumps(sort_keys=True)` remains enabled.
-Production explicitly enumerates every approved `BetTypeSummary` field:
-
-```text
-bet_type bet_count settled_bet_count hit_bet_count investment payout profit roi bet_hit_rate
-```
-
-Use the same Decimal/null serialization rules. The Japanese bet-type key is preserved with
-`ensure_ascii=False`. Tests compare the resulting key set with
-`{name.name for name in dataclasses.fields(BetTypeSummary)}`; production must not use that reflection.
-
-## Stream Contract
-
-```python
-active_stdout = sys.stdout if stdout is None else stdout
-active_stderr = sys.stderr if stderr is None else stderr
-```
-
-Do not close either stream. Success writes only stdout; expected failures write only stderr. The supplied
-objects need only be writable; runtime `TextIO` validation is forbidden.
-
-## File-backed E2E
-
-Use real files, real SQLite, and existing migrations/repository APIs without mock/patch/monkeypatch:
-
-- Empty request with relative `simulation.db`, no races, and empty budgets verifies path anchoring,
-  migration application, an empty summary, and a usable file-backed DB.
-- A one-race, one-entry, no-past-race request with complete audits, 100-yen fixed stake, and 100-yen
-  budget uses parent tables plus complete race result and win payout fixture. It verifies snapshot
-  persistence and a settled 100 investment / 300 payout / 200 profit / `"300"` ROI summary.
-- Expected errors cover invalid request path, malformed/root/application/race-audit request failures,
-  database-open failure, and unknown-future migration; each returns the deterministic error envelope.
-
-The application function must not produce partial/empty fallback summaries, retry, supply path/timezone/
-clock fallbacks, or translate errors.
-
-## README Contract
-
-Add only the persisted-simulation CLI usage documentation: module command syntax, request JSON path,
-relative `database_path` anchoring, stdout success JSON, stderr error JSON, and Decimal rates as JSON
-strings. Document exit code 0 for a successful simulation, 1 for expected request/application/runner
-failure, and 2 for argparse usage failure; `--help` retains argparse `SystemExit(0)`. State that Ver0.8
-persisted simulation is for research and verification use and does not guarantee profit or betting
-performance. Do not remove or alter legacy Ver0.7 CLI guidance.
-
-## Failure Semantics
-
-```text
-loader failure              → no DB open
-application assembly failure → no DB open
-race assembly failure        → no DB open
-runner failure               → runner owns connection close
-expected CLI failure         → stderr JSON and exit 1
-argparse failure             → native argparse exit
-unexpected programming error → propagates
-```
-
-No partial summary, retry, fallback, error-as-success JSON, or manual DB/migration/repository work is
-allowed.
-
-## Source and AST Contract
-
-Application source must show each four-stage collaborator exactly once, direct runner-result return,
-zero `Try` and `ExceptHandler` nodes, and no SQLite/migration/composition/repository/CLI/JSON/stream/
-clock/subprocess/network/config dependency. CLI may import `sqlite3` only to catch `sqlite3.Error`; it
-may depend on the application function but must not import loader, assemblers, runner, migrations,
-repositories, or `PredictionPipeline`. CLI has exactly the one expected exception handler and no broad
-handler. Both modules have no package-root export and no type-ignore/`Any`/`cast`/`runtime_checkable`.
-
-## Required Tests
-
-New tests use real objects only; mock, patch, and monkeypatch are forbidden.
-
-- Application API/public-surface/type-hint contract; exact four-stage call chain; identity/linkage;
-  no exception wrapper; real empty file-backed SQLite integration; source/AST boundary.
-- CLI API/parser/stream/exit contract; serializer field-completeness and byte-for-byte deterministic JSON;
-  Decimal/null/by-bet-type serialization; empty and settled real file-backed E2E; expected failures;
-  argparse behavior; dependency/exception AST boundaries.
-- Preserve and execute the related existing suites.
-
-## Verification Commands
-
-Use the bundled interpreter only:
-
-```text
-C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe
-Python 3.12.13
-```
-
-```powershell
-python -m pytest tests/test_persisted_simulation_request_application.py -q
-python -m pytest tests/test_cli_run_persisted_simulation.py -q
-python -m pytest tests/test_persisted_simulation_request_application.py tests/test_cli_run_persisted_simulation.py tests/test_persisted_simulation_request_document.py tests/test_persisted_simulation_application_inputs.py tests/test_persisted_simulation_race_inputs.py tests/test_sqlite_persisted_simulation_application.py tests/test_persisted_simulation_run_service.py tests/test_simulation_models.py -q
-python -m pytest -q
-git diff --check
-git status --short
-```
-
-## Stop Conditions
-
-During implementation and testing, tests may create/read temporary-directory SQLite DB files, apply
-existing migration APIs to those temporary DBs, prepare fixtures with existing repository APIs, invoke
-the application function and CLI `run()` for real E2E tests, and run pytest verification. These narrow
-test activities do not authorize a change to `database/keiba.db`, the original workspace, or any manual
-production DB/migration/repository/runner invocation.
-
-After implementation, update only the report to `READY_FOR_REVIEW` and stop. Do not stage, commit, push,
-create a review branch/PR, modify `database/keiba.db`, modify the original workspace, manually invoke
-the main selected DB/migration/repository/runner, or start any later phase. Stop immediately if an
-approved contract conflicts with existing code or requires a file outside Allowed Implementation Files.
-
-blocker: none
+The V2 section of `docs/VER0.8_SIMULATOR_DESIGN.md` supersedes all preliminary/final notes. Completion
+requires the V2 identity, dataset-isolated read signature, executable DDL, non-impossible trigger policy,
+canonical `+00:00` timestamps, zero-based ordering, logical provenance granularity, and prospective v008
+attestation to be internally consistent.
