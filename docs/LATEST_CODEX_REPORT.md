@@ -2,15 +2,15 @@
 
 ## Status
 
-DRAFT_FOR_REVIEW
+READY_FOR_REVIEW
 
 ## Current Phase
 
 Phase 4C-2d3b1i6a — Historical input snapshot and audit persistence gap design
 
-Base commit: `154c04de40cbae6898c0a8b3ff67eb3891da1456 docs: fix persisted simulation CLI approval metadata`
+Base commit: `052a5c6e76a0f5bb0634be074bc1089bd81da663 docs: preserve empty past-race passing order in v3a`
 
-Branch: `feature/ver0.8-simulator`
+Branch: `review/4c-2d3b1i6a-v3b-ddl`
 
 ## Preparation and Approval
 
@@ -1193,4 +1193,95 @@ Self-review:
 V3b executable DDL, V3c source mapping/policy, and V3d consolidation remain unstarted. Production, tests,
 README, migration, schema, database files, logs, and the original workspace remain unchanged.
 
-blocker: V3b executable DDL, V3c source mapping/policy, and V3d consolidation are incomplete
+## Phase 4C-2d3b1i6a V3a ChatGPT Approval
+
+Reviewed commit:
+`052a5c6e76a0f5bb0634be074bc1089bd81da663`.
+
+Review result: `APPROVED`.
+
+Approved scope: domain values, natural identity, canonical content digest, existing
+`InputAuditEntry` compatibility, `HistoricalInputSnapshotSource` Protocol, and
+`HistoricalInputSnapshotRepository` Protocol.
+
+Disposition: `APPROVED_FOR_V3B`.
+
+Overall 1i6a remains `REVISION_REQUIRED` with approval disposition `NOT_APPROVED`; V3b executable
+DDL, V3c source mapping/policy, and V3d consolidation remain required.
+
+## Phase 4C-2d3b1i6a V3b Executable DDL Design
+
+V3b documents only the executable SQLite DDL and the exhaustive V3a domain-to-column crosswalk. The
+planned, uncreated migration identity is `v010_historical_input_snapshot_schema`. No production migration,
+registration, test, database access, or DDL execution occurred.
+
+Read-only schema inspection confirmed: `races.id` is `INTEGER PRIMARY KEY`; `horses.id` is `INTEGER
+PRIMARY KEY`; `horses.race_id` is the internal-race linkage; and legacy tables do not declare all required
+foreign keys. The future migration must rely on the existing runner's `PRAGMA foreign_keys = ON` verification
+and one `BEGIN IMMEDIATE` transaction, with all statements committed atomically or rolled back together and
+with no legacy-data backfill.
+
+The DDL specifies exactly eight historical-input tables:
+
+- `historical_input_source_identities`
+- `historical_input_external_races`
+- `historical_input_external_entries`
+- `historical_input_snapshots`
+- `historical_input_snapshot_races`
+- `historical_input_snapshot_entries`
+- `historical_input_snapshot_past_races`
+- `historical_input_snapshot_provenance`
+
+It contains 8 `CREATE TABLE`, 4 `CREATE INDEX` (including the legacy composite-parent helper index), and 5
+linkage-only `CREATE TRIGGER` statements. The header natural identity is exactly
+`(dataset_id, organization, source_system, external_race_id, captured_at_utc)` and is enforced by the
+matching SQLite `UNIQUE` constraint. Same natural identity plus same content SHA-256 is the planned
+repository idempotent no-op; the same identity with a different digest remains a `RepositoryConflictError`.
+
+`source_url` remains snapshot content rather than natural identity or global mapping metadata.
+`external_horse_id` remains snapshot-entry content rather than external-entry identity. Decimal values are
+canonical fixed-point `TEXT`, never `REAL`; UTC datetimes are canonical 32-character
+`YYYY-MM-DDTHH:MM:SS.ffffff+00:00` `TEXT` with executable shape checks; and `passing_order` is `TEXT NOT
+NULL`, preserving an unavailable value as the empty string. External-race rows link to `races(id)`;
+external-entry rows use an executable `(internal_race_id, race_entry_id)` foreign key to
+`horses(race_id, id)`; and snapshot-entry/header mapping consistency is enforced by linkage triggers. All
+new-table foreign keys declare `ON DELETE RESTRICT ON UPDATE RESTRICT`.
+
+The crosswalk contains 64 explicit domain-field rows across all nine V3a domain values. It allocates
+canonical Decimal, NFC, calendar, ordering, contiguity, audit-key completeness, absence XOR, causal time,
+and digest-reconstruction checks to repository/domain load validation, while retaining SQL-owned type,
+nullability, key, foreign-key, coarse range, enum, and linkage invariants. It intentionally does not decide
+provider field/source mapping, source-ID formats, JRA/local policy, v008 policy, or other V3c responsibilities.
+
+V3b self-review:
+
+1. PASS — exactly eight historical-input tables.
+2. PASS — all V3a fields have storage columns.
+3. PASS — header `UNIQUE` exactly matches natural identity.
+4. PASS — `source_url` remains content, not identity.
+5. PASS — `external_horse_id` remains content, not entry identity.
+6. PASS — Decimal uses `TEXT`, never `REAL`.
+7. PASS — `passing_order` allows empty string but not `NULL`.
+8. PASS — fixed UTC format has executable checks.
+9. PASS — external-race mapping links to `races.id`.
+10. PASS — external-entry mapping proves `horses.race_id` consistency.
+11. PASS — snapshot entries prove external-entry mapping consistency.
+12. PASS — no impossible completeness trigger.
+13. PASS — child order has explicit columns and indexes.
+14. PASS — provenance has every `InputAuditEntry` field.
+15. PASS — all FK delete/update actions are explicit.
+16. PASS — query indexes are non-redundant.
+17. PASS — a complete domain-to-column crosswalk exists.
+18. PASS — no V3c policy is decided.
+19. PASS — overall 1i6a remains `REVISION_REQUIRED`.
+
+V3a status: `APPROVED`.
+
+V3b status: `READY_FOR_REVIEW`.
+
+Overall 1i6a status: `REVISION_REQUIRED`.
+
+Production, tests, README, migration, schema, database files, logs, and the original workspace remain
+unchanged. V3c and V3d remain unstarted.
+
+blocker: V3b review, V3c source mapping/policy, and V3d consolidation are incomplete
