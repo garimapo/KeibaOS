@@ -28,10 +28,10 @@ Overall 1i6a status: `REVISION_REQUIRED`.
 
 Approval disposition: `NOT_APPROVED`.
 
-V3a domain, identity, digest, and Protocol revision status: `REVISION_REQUIRED`.
+V3a domain, identity, digest, and Protocol revision status: `READY_FOR_REVIEW`.
 
-Approval disposition: `NOT_APPROVED`. The construction/digest and existing-audit compatibility correction
-is under review; it does not authorize production work.
+Approval disposition: `NOT_APPROVED`. The V3a contract is reviewable but does not authorize production
+work or approve overall 1i6a.
 
 ## Objective
 
@@ -78,4 +78,4 @@ Publish only the revised V3a design documents for review, then stop. Do not begi
 
 ## Blocker
 
-V3a construction and existing-audit compatibility remain under review; V3b executable DDL, V3c source mapping/policy, and V3d consolidation are incomplete.
+V3b executable DDL, V3c source mapping/policy, and V3d consolidation are incomplete.

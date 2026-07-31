@@ -1113,4 +1113,48 @@ Self-review of this revision:
 V3b executable DDL, V3c source mapping/policy, and V3d consolidation are not started. No production,
 test, README, migration, schema, database, or original-workspace file changed.
 
-blocker: V3a construction and existing-audit compatibility remain under review; V3b executable DDL, V3c source mapping/policy, and V3d consolidation are incomplete
+## Phase 4C-2d3b1i6a V3a Final Review Findings
+
+Reviewed commit: `05698a7`.
+
+- Review result: `REVISION_REQUIRED`.
+- Approval disposition: `NOT_APPROVED`.
+- Missing before this revision: postponed-annotation import, external-entry/snapshot race linkage,
+  available/observed/captured causal ordering, and Decimal scale canonicalization.
+- Existing-audit compatibility, non-circular digest construction, scheduled-start preservation, and external
+  horse metadata exclusion from entry identity were already resolved in the reviewed revision.
+
+## Phase 4C-2d3b1i6a V3a Final Contract Revision
+
+V3a status: `READY_FOR_REVIEW`.
+
+Overall 1i6a status: `REVISION_REQUIRED`.
+
+Approval disposition: `NOT_APPROVED`.
+
+- The future module formally uses `from __future__ import annotations`, so private helpers may reference the
+  nine domain values before their declarations under Python 3.12.
+- Every entry external-race identity must equal the snapshot source organization, source system, and external
+  race ID. `source_url` remains outside this comparison.
+- Causal time ordering is `available_at <= observed_at <= captured_at <= information_cutoff <=
+  scheduled_start_at`; nullable available/observed values each remain at or before capture.
+- Decimal content values are canonicalized before digest serialization: `2`, `2.0`, and `2.00` serialize as
+  `"2"`; both zero forms serialize as `"0"`; and `12.3400` serializes as `"12.34"`.
+- Snapshot identity equality remains natural identity. Repository idempotency/conflict checks use natural
+  identity plus derived `content_sha256`, never snapshot dataclass equality. Same identity plus same digest
+  is an idempotent no-op; same identity plus different digest raises `RepositoryConflictError`.
+
+Self-review:
+
+1. PASS — Python 3.12 forward annotations are defined by the future import.
+2. PASS — each entry external race identity must match the snapshot source identity.
+3. PASS — available/observed/captured/cutoff/start causal ordering is complete.
+4. PASS — numerically equal Decimal values produce one canonical content string.
+5. PASS — repository comparison uses natural identity plus digest, not dataclass equality.
+6. PASS — this revision is V3a documentation only.
+7. PASS — overall 1i6a remains `REVISION_REQUIRED`.
+
+V3b executable DDL, V3c source mapping/policy, and V3d consolidation remain unstarted. Production, tests,
+README, migration, schema, database files, logs, and the original workspace remain unchanged.
+
+blocker: V3b executable DDL, V3c source mapping/policy, and V3d consolidation are incomplete

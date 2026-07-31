@@ -2699,6 +2699,8 @@ executable Python-equivalent design, not an API sketch. Every direct constructio
 silently repairs malformed input.
 
 ```python
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from decimal import Decimal
@@ -2716,6 +2718,7 @@ def _normalize_optional_text(value: object, name: str) -> str | None: ...
 def _normalize_utc_datetime(value: object, name: str) -> datetime: ...
 def _normalize_optional_utc_datetime(value: object, name: str) -> datetime | None: ...
 def _normalize_date(value: object, name: str) -> date: ...
+def _canonical_decimal(value: Decimal) -> Decimal: ...
 def _normalize_decimal(value: object, name: str, *, positive: bool = False,
                        non_negative: bool = False) -> Decimal: ...
 def _positive_int(value: object, name: str) -> int: ...
@@ -2739,7 +2742,9 @@ def _sha256_canonical_payload(payload: dict[str, object]) -> str: ...
 such a string. Integer helpers reject `bool` and require exact `int`. The datetime helpers require exact
 `datetime`, a non-`None` offset, convert with `astimezone(timezone.utc)`, and return the converted value.
 The date helper requires exact `date` rather than `datetime`. Decimal validation requires exact `Decimal`,
-`is_finite()`, and canonicalizes through `Decimal(format(value, \"f\"))`. The tuple helper requires
+`is_finite()`, then uses `_canonical_decimal()`: zero (including negative zero) becomes `Decimal(\"0\")`;
+every non-zero value becomes `value.normalize()`. `_normalize_decimal()` performs its positive or
+non-negative check before returning that canonical Decimal. The tuple helper requires
 `type(value) is tuple`. Every `__post_init__` below uses these helpers and records normalized immutable
 values only through `object.__setattr__`.
 
@@ -2818,6 +2823,13 @@ class HistoricalInputSnapshotIdentity:
 The equality and hash key is exactly `(dataset_id, organization, source_system, external_race_id,
 captured_at)`. `source_url`, content digest, internal IDs, cutoff, and future SQLite surrogates are
 excluded.
+
+`HistoricalInputSnapshotIdentity` equality is the natural-identity comparison above.
+`HistoricalInputSnapshot.content_sha256` is the canonical immutable-content comparison. Repository
+idempotency and conflict detection must never use the snapshot dataclass equality: same natural identity and
+same digest is an idempotent no-op, while same natural identity and different digest raises
+`RepositoryConflictError`. `source_url` and `external_horse_id` are excluded from identity/equality/hash,
+but are present in canonical content payload and therefore change the digest when their metadata changes.
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -2996,9 +3008,23 @@ class HistoricalInputSnapshot:
 `_validate_snapshot_children` requires exact child dataclass types; non-empty entries; unique
 `race_entry_id`, `horse_no`, external-entry natural identity, `entry_order`, audit key, and
 `(race_entry_id, past_race_index)`; contiguous entry orders and per-entry past indices from zero; every
-past child to name a current entry; and exactly the compatible provenance set described above. It also
-requires `information_cutoff <= race.scheduled_start_at`, `identity.captured_at <= information_cutoff`,
-and every provenance timestamp at or before `information_cutoff`. A past race must satisfy
+past child to name a current entry; and exactly the compatible provenance set described above. For each
+entry, it also requires:
+
+```python
+entry.external_entry_identity.external_race_identity == HistoricalExternalRaceIdentity(
+    organization=identity.source_identity.organization,
+    source_system=identity.source_identity.source_system,
+    external_race_id=identity.source_identity.external_race_id,
+)
+```
+
+This comparison uses only organization, source system, and external race ID; `source_url` is not a
+comparison value. It further
+requires `available_at <= observed_at <= identity.captured_at <= information_cutoff <=
+race.scheduled_start_at` where both provenance timestamps exist. With only `available_at`, it requires
+`available_at <= identity.captured_at`; with only `observed_at`, it requires
+`observed_at <= identity.captured_at`. A past race must satisfy
 `past_race.race_date < race.target_race_date`. An entry with no past child requires exactly one
 `past_race/{race_entry_id}/none` record; an entry with children forbids that record.
 
@@ -3123,7 +3149,10 @@ The public builder requires an exact `HistoricalInputSnapshot`, delegates only t
 canonical payload helper, and returns no caller-supplied or derived `content_sha256` value. The public digest
 function uses that public builder. Neither function is called by `HistoricalInputSnapshot.__post_init__`.
 Serialization is UTF-8 JSON with `ensure_ascii=False`,
-`sort_keys=True`, and `separators=(\",\", \":\")`. A `Decimal` is `format(value, \"f\")`; a `date` is
+`sort_keys=True`, and `separators=(\",\", \":\")`. A Decimal is first canonicalized as specified above,
+then serialized as `format(canonical_value, \"f\")` without exponent notation: `Decimal(\"2\")`,
+`Decimal(\"2.0\")`, and `Decimal(\"2.00\")` all become `\"2\"`; `Decimal(\"0.00\")` and
+`Decimal(\"-0\")` become `\"0\"`; and `Decimal(\"12.3400\")` becomes `\"12.34\"`. A `date` is
 `YYYY-MM-DD`; a datetime is UTC `YYYY-MM-DDTHH:MM:SS.ffffff+00:00`; and `None` is JSON `null`.
 `bool` is never accepted as an integer. Entries are emitted by `entry_order ASC`; past races by
 `race_entry_id ASC, past_race_index ASC`; provenance by `audit_key ASC`. The digest is SHA-256 of those
