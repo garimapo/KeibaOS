@@ -2677,13 +2677,308 @@ and no post-cutoff backfill. It is otherwise untrusted; `horses.odds` is always 
 `available_at` to odds batches, but its authoritative use is only through the historical snapshot linkage.
 Settlement tables never contribute provenance. The later split remains 1i6b1 domain/Protocols, 1i6b2 DDL,
 1i6b3 writer, 1i6b4 reader, 1i6c request source.
-## Phase 4C-2d3b1i6a — Historical input snapshot and audit persistence contract
+## Phase 4C-2d3b1i6a — Historical input snapshot and audit persistence working contract
 
-This is the sole authoritative 1i6a contract; every earlier 1i6a section is superseded. Production is not authorized. Snapshot identity is dataset, organization, source system, external race ID, and captured UTC time; digest validates content only. Read requires keyword-only dataset ID, race ID, cutoff, and non-optional external race identity; no cross-dataset/source fallback exists. Existing v008 rows are untrusted; only a prospective collector-attested capture may provide trusted observed-only odds.
+Overall 1i6a remains `REVISION_REQUIRED` and is not approved for implementation. This section replaces
+earlier 1i6a draft wording only where V3a explicitly defines domain values, identity, digest, and Protocol
+API. Production is not authorized. The snapshot identity is dataset, organization, source system, external
+race ID, and captured UTC time; digest validates content only. V3b must define executable DDL, V3c must
+define source mapping and observed-only policy, and V3d must consolidate the complete contract. Existing
+v008 rows remain untrusted in this V3a slice; no observed-only eligibility decision is made here.
 ### V3a — Domain, identity, digest, and Protocol contract
 
-V3a is authoritative only for domain values, identity, digest, and Protocol API. The module is `scripts.simulation.historical_input_snapshots`; it defines nine frozen slotted dataclasses: `HistoricalSourceIdentity`, `HistoricalExternalRaceIdentity`, `HistoricalExternalEntryIdentity`, `HistoricalInputSnapshotIdentity`, `HistoricalRaceSnapshot`, `HistoricalRaceEntrySnapshot`, `HistoricalPastRaceSnapshot`, `HistoricalInputProvenance`, and `HistoricalInputSnapshot`. Constructors validate exact type, UTC-aware datetimes, immutable tuples, positive IDs, duplicates, and audit relations; `source_url` is `compare=False, hash=False` metadata.
+V3a is authoritative only for the future domain values, identity, digest, and Protocol API. It does not
+approve executable DDL, source mapping or observed-only policy, repository behavior, or any production
+implementation. Those remain V3b, V3c, and V3d work.
 
-Identity/equality/hash is exactly dataset ID, organization, source system, external race ID, and captured UTC time. Digest is not identity. Payload schema version is 1 with explicit keys `schema_version`, `dataset_id`, `source_identity`, `internal_race_id`, `information_cutoff`, `captured_at`, `race`, `entries`, `past_races`, and `provenance`; it uses canonical order, fixed Decimal, `+00:00` datetime, UTF-8, `ensure_ascii=False`, sorted keys, compact separators, and SHA-256 lowercase hex.
+#### Nine frozen domain values
 
-`HistoricalInputSnapshotSource.load_latest_snapshot` is keyword-only and requires dataset ID, race ID, cutoff, and non-optional external race identity; it returns complete matching snapshot or `None`, with inclusive cutoff and no cross-dataset/source fallback. V3b, V3c, and V3d remain unstarted.
+The future module is `scripts.simulation.historical_input_snapshots`. Its only public domain values are
+the following nine `@dataclass(frozen=True, slots=True)` classes. The code blocks intentionally specify
+only the public API: imports, validation bodies, defaults other than the documented URL metadata default,
+canonicalization implementation, and convenience methods are not implied by this design.
+
+```python
+@dataclass(frozen=True, slots=True)
+class HistoricalSourceIdentity:
+    organization: str
+    source_system: str
+    external_race_id: str
+    source_url: str | None = field(
+        default=None,
+        compare=False,
+        hash=False,
+    )
+```
+
+`source_url` is nullable descriptive metadata, is deliberately last to preserve dataclass default ordering,
+and never participates in identity, equality, or hashing.
+
+```python
+@dataclass(frozen=True, slots=True)
+class HistoricalExternalRaceIdentity:
+    organization: str
+    source_system: str
+    external_race_id: str
+```
+
+```python
+@dataclass(frozen=True, slots=True)
+class HistoricalExternalEntryIdentity:
+    external_race_identity: HistoricalExternalRaceIdentity
+    external_entry_id: str
+    external_horse_id: str | None
+```
+
+```python
+@dataclass(frozen=True, slots=True)
+class HistoricalInputSnapshotIdentity:
+    dataset_id: str
+    source_identity: HistoricalSourceIdentity
+    captured_at: datetime
+```
+
+The equality and hash key for `HistoricalInputSnapshotIdentity` is exactly the expansion of those fields:
+`(dataset_id, organization, source_system, external_race_id, captured_at)`. `source_url`,
+`content_sha256`, internal IDs, information cutoff, and any future SQLite surrogate `snapshot_id` are not
+part of this identity. `HistoricalSourceIdentity` supplies the organization/source-system/external-race
+portion while excluding URL metadata.
+
+```python
+@dataclass(frozen=True, slots=True)
+class HistoricalRaceSnapshot:
+    race_date: date
+    race_name: str
+    place: str
+    race_class: str
+    distance_m: int
+    track: str
+    weather: str
+    track_condition: str
+```
+
+```python
+@dataclass(frozen=True, slots=True)
+class HistoricalRaceEntrySnapshot:
+    race_entry_id: int
+    external_entry_identity: HistoricalExternalEntryIdentity
+    horse_no: int
+    jockey: str
+    win_odds: Decimal
+    entry_order: int
+```
+
+```python
+@dataclass(frozen=True, slots=True)
+class HistoricalPastRaceSnapshot:
+    race_entry_id: int
+    past_race_index: int
+    race_date: date
+    place: str
+    race_name: str
+    race_class: str
+    distance_m: int
+    track: str
+    weather: str
+    track_condition: str
+    finish: int
+    margin: Decimal
+    race_time: str
+    weight: Decimal
+    weight_diff: Decimal
+    jockey: str
+    popularity: int
+    odds: Decimal
+    passing_order: str
+    fourth_corner_position: int
+```
+
+```python
+@dataclass(frozen=True, slots=True)
+class HistoricalInputProvenance:
+    audit_key: str
+    input_type: str
+    source_id: str
+    available_at: datetime | None
+    observed_at: datetime | None
+    race_entry_id: int | None
+    past_race_index: int | None
+```
+
+```python
+@dataclass(frozen=True, slots=True)
+class HistoricalInputSnapshot:
+    identity: HistoricalInputSnapshotIdentity
+    internal_race_id: int
+    information_cutoff: datetime
+    race: HistoricalRaceSnapshot
+    entries: tuple[HistoricalRaceEntrySnapshot, ...]
+    past_races: tuple[HistoricalPastRaceSnapshot, ...]
+    provenance: tuple[HistoricalInputProvenance, ...]
+    content_sha256: str
+```
+
+All constructors reject subclasses where an exact domain type is required. IDs and ordering values reject
+`bool`; internal race and race-entry IDs are positive; `entry_order` and `past_race_index` are non-negative
+and contiguous from zero. Dates are canonical `YYYY-MM-DD`. Datetimes are timezone-aware and normalized
+to UTC. Strings used for identity, audit key, source ID, or required content are non-empty NFC-normalized
+text. Decimal values are finite and canonical fixed-point values. Child collections are tuple-only and no
+constructor performs a defensive list-to-tuple conversion.
+
+`HistoricalInputSnapshot` additionally rejects duplicate `race_entry_id`, `horse_no`, external entry
+identity, audit key, entry order, and `(race_entry_id, past_race_index)`. Every past-race child must point
+to an entry in the same snapshot. For every entry, the past-race children are either contiguous from zero
+or there is exactly one `past_race_absence:{race_entry_id}` provenance record; both forms together are
+invalid. `available_at` and `observed_at` must not both be absent, and when both exist
+`available_at <= observed_at`. Provenance relation fields must agree with the audit-key family:
+`race_metadata`, `track_conditions`, `entry:{race_entry_id}`, `jockey:{race_entry_id}`,
+`win_odds:{race_entry_id}`, `past_race:{race_entry_id}:{past_race_index}`, or
+`past_race_absence:{race_entry_id}`. A complete content digest must be lowercase 64-character SHA-256 hex
+and equal the independently recomputed digest described below.
+
+#### Canonical content payload and digest
+
+Content schema version is exactly `1`. `content_sha256` is validated against the canonical payload, but is
+not inserted into that payload and is not an identity component. The complete canonical Python payload shape
+is:
+
+```python
+{
+    \"schema_version\": 1,
+    \"snapshot_identity\": {
+        \"dataset_id\": str,
+        \"organization\": str,
+        \"source_system\": str,
+        \"external_race_id\": str,
+        \"captured_at\": str,
+    },
+    \"source_identity\": {
+        \"organization\": str,
+        \"source_system\": str,
+        \"external_race_id\": str,
+        \"source_url\": str | None,
+    },
+    \"internal_race_id\": int,
+    \"information_cutoff\": str,
+    \"race\": {
+        \"race_date\": str,
+        \"race_name\": str,
+        \"place\": str,
+        \"race_class\": str,
+        \"distance_m\": int,
+        \"track\": str,
+        \"weather\": str,
+        \"track_condition\": str,
+    },
+    \"entries\": [
+        {
+            \"race_entry_id\": int,
+            \"external_entry_identity\": {
+                \"organization\": str,
+                \"source_system\": str,
+                \"external_race_id\": str,
+                \"external_entry_id\": str,
+                \"external_horse_id\": str | None,
+            },
+            \"horse_no\": int,
+            \"jockey\": str,
+            \"win_odds\": str,
+            \"entry_order\": int,
+        },
+    ],
+    \"past_races\": [
+        {
+            \"race_entry_id\": int,
+            \"past_race_index\": int,
+            \"race_date\": str,
+            \"place\": str,
+            \"race_name\": str,
+            \"race_class\": str,
+            \"distance_m\": int,
+            \"track\": str,
+            \"weather\": str,
+            \"track_condition\": str,
+            \"finish\": int,
+            \"margin\": str,
+            \"race_time\": str,
+            \"weight\": str,
+            \"weight_diff\": str,
+            \"jockey\": str,
+            \"popularity\": int,
+            \"odds\": str,
+            \"passing_order\": str,
+            \"fourth_corner_position\": int,
+        },
+    ],
+    \"provenance\": [
+        {
+            \"audit_key\": str,
+            \"input_type\": str,
+            \"source_id\": str,
+            \"available_at\": str | None,
+            \"observed_at\": str | None,
+            \"race_entry_id\": int | None,
+            \"past_race_index\": int | None,
+        },
+    ],
+}
+```
+
+The only builder and digest APIs are:
+
+```python
+def build_historical_input_snapshot_content_payload(
+    *,
+    snapshot: HistoricalInputSnapshot,
+) -> dict[str, object]:
+    ...
+```
+
+```python
+def compute_historical_input_snapshot_content_sha256(
+    *,
+    snapshot: HistoricalInputSnapshot,
+) -> str:
+    ...
+```
+
+The builder validates the supplied snapshot before serializing it and returns only canonical content values;
+it does not accept a caller payload. Serialization is UTF-8 JSON with `ensure_ascii=False`,
+`sort_keys=True`, and `separators=(\",\", \":\")`. A `Decimal` is `format(value, \"f\")`; a `date` is
+`YYYY-MM-DD`; a datetime is UTC `YYYY-MM-DDTHH:MM:SS.ffffff+00:00`; and `None` is JSON `null`.
+`bool` is never accepted as an integer. Entries are emitted by `entry_order ASC`; past races by
+`race_entry_id ASC, past_race_index ASC`; provenance by `audit_key ASC`. The digest is SHA-256 of those
+UTF-8 bytes, encoded as lowercase hexadecimal.
+
+#### Exact Protocol API
+
+The future Protocols use the following exact, keyword-only signatures. Their `source_identity` argument is
+non-optional; there is no structural runtime Protocol check, fallback source, list API, or package-root
+export.
+
+```python
+class HistoricalInputSnapshotSource(Protocol):
+    def load_latest_snapshot(
+        self,
+        *,
+        dataset_id: str,
+        race_id: int,
+        information_cutoff: datetime,
+        source_identity: HistoricalExternalRaceIdentity,
+    ) -> HistoricalInputSnapshot | None:
+        ...
+```
+
+```python
+class HistoricalInputSnapshotRepository(Protocol):
+    def save_snapshot(
+        self,
+        *,
+        snapshot: HistoricalInputSnapshot,
+    ) -> None:
+        ...
+```
+
+`None` means that no complete, eligible matching snapshot exists. It must not stand for malformed stored
+data. Exact error, DDL, source-mapping, selection, and policy semantics remain unapproved V3b/V3c/V3d
+work.

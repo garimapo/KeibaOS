@@ -2,7 +2,7 @@
 
 ## Status
 
-READY_FOR_REVIEW
+DRAFT_FOR_REVIEW
 
 ## Current Phase
 
@@ -850,7 +850,7 @@ review branch.
 
 ## Phase 4C-2d3b1i6a Design Report
 
-Status: `READY_FOR_REVIEW`
+Historical draft status: superseded; it was not approved.
 
 Phase 4C-2d3b1i6a is the approved design-only response to the historical input snapshot and audit
 provenance gap. Base commit: `154c04de40cbae6898c0a8b3ff67eb3891da1456` on
@@ -925,7 +925,7 @@ Production implementation was not started while the revision was prepared.
 
 ## Phase 4C-2d3b1i6a Revised Design Report
 
-Status: `READY_FOR_REVIEW`
+Historical revised-draft status: superseded; it was not approved.
 
 The revised authoritative design supersedes the preliminary 1i6a note. It now fixes the complete
 field-to-source/audit matrix for race metadata, race entry, jockey, track, WIN odds, past races, and
@@ -975,7 +975,7 @@ consistency failure. Production implementation was not started.
 
 ## Phase 4C-2d3b1i6a Final Contract Revision
 
-Status: `READY_FOR_REVIEW`
+Historical final-draft status: superseded; it was not approved.
 
 The final revision establishes one identity shared by domain equality, idempotency, and SQLite `UNIQUE`;
 the frozen domain contract; explicit source-ID canonicalization; exact normalized table set, key/constraint/
@@ -999,10 +999,56 @@ trust, incomplete source-ID formats, and organization/source-system mismatch.
 
 ## Phase 4C-2d3b1i6a Cross-contract Contract Revision V2
 
-Status: `READY_FOR_REVIEW`. The authoritative V2 design resolves the findings with one natural identity,
+Historical V2 draft status: superseded; it was not approved. The V2 draft described one natural identity,
 dataset-isolated read API, external identity matching DB uniqueness, canonical UTC text, zero-based order,
 logical audit provenance, implementable transaction/trigger order, explicit JRA/local organization codes,
 and prospective collector-attested v008 import only. Earlier v008 rows are untrusted. The required V2
 completion criteria are explicit; production has not started.
 
-blocker: none
+## Phase 4C-2d3b1i6a V3a GitHub Review Findings
+
+Reviewed commit: `11b85ef2361c9ca82cd47481fa3fb7f070910333`
+(`docs: define historical input snapshot v3a contracts`).
+
+- Review result: `REVISION_REQUIRED`.
+- Approval disposition: `NOT_APPROVED`.
+- Overall 1i6a status: `REVISION_REQUIRED`.
+- The reviewed V3a prose was not a complete executable design: the nine dataclasses lacked formal field
+  declarations and validation boundaries; child payload fields were incomplete; the digest builder and
+  digest signatures were absent; and the exact Protocol declarations were incomplete.
+- The previous CURRENT_PHASE and report metadata incorrectly implied readiness or approval. Those claims
+  are superseded. Production, tests, README, migration, schema, database files, and the original workspace
+  remain unchanged.
+
+## Phase 4C-2d3b1i6a V3a Contract Revision
+
+V3a status: `READY_FOR_REVIEW`.
+
+Overall 1i6a status: `REVISION_REQUIRED`.
+
+The revision makes the domain/digest/API slice directly reviewable without treating it as overall approval:
+
+- `docs/VER0.8_SIMULATOR_DESIGN.md` now contains nine separate frozen, slotted dataclass code blocks:
+  `HistoricalSourceIdentity`, `HistoricalExternalRaceIdentity`,
+  `HistoricalExternalEntryIdentity`, `HistoricalInputSnapshotIdentity`,
+  `HistoricalRaceSnapshot`, `HistoricalRaceEntrySnapshot`, `HistoricalPastRaceSnapshot`,
+  `HistoricalInputProvenance`, and `HistoricalInputSnapshot`.
+- It fixes the sole domain equality/hash identity to `dataset_id`, `organization`, `source_system`,
+  `external_race_id`, and UTC-normalized `captured_at`. `content_sha256`, `source_url`, internal IDs,
+  cutoff, and a future SQLite surrogate are excluded. `source_url` is nullable final-field metadata with
+  `compare=False` and `hash=False`.
+- It specifies the complete schema-version-1 payload keys and every child key for source identity, race,
+  entry, past-race, and provenance values; `content_sha256` is recomputed from, but omitted from, its own
+  payload.
+- It fixes the keyword-only payload builder and SHA-256 digest signatures, UTF-8 compact sorted JSON,
+  Decimal fixed-point strings, canonical date/UTC datetime formatting, and all child ordering rules.
+- It fixes the exact keyword-only `HistoricalInputSnapshotSource.load_latest_snapshot()` and
+  `HistoricalInputSnapshotRepository.save_snapshot()` Protocol signatures. The source identity parameter is
+  a required `HistoricalExternalRaceIdentity`; `None` means only no eligible complete snapshot.
+- It enumerates exact-type, tuple-only, positive/non-bool ID, contiguous-order, duplicate, UTC,
+  provenance-relation, past-race absence-evidence, SHA-256 format, and digest-recomputation validation.
+
+V3b executable DDL, V3c source mapping and observed-only policy, and V3d cross-contract consolidation are
+not complete and are not authorized by this revision. No implementation phase has begun.
+
+blocker: V3a domain contracts remain under review; V3b executable DDL, V3c source mapping/policy, and V3d consolidation are incomplete
