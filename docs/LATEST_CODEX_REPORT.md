@@ -1022,7 +1022,7 @@ Reviewed commit: `11b85ef2361c9ca82cd47481fa3fb7f070910333`
 
 ## Phase 4C-2d3b1i6a V3a Contract Revision
 
-V3a status: `READY_FOR_REVIEW`.
+Historical V3a status: superseded by the compatibility revision; it was not approved.
 
 Overall 1i6a status: `REVISION_REQUIRED`.
 
@@ -1051,4 +1051,66 @@ The revision makes the domain/digest/API slice directly reviewable without treat
 V3b executable DDL, V3c source mapping and observed-only policy, and V3d cross-contract consolidation are
 not complete and are not authorized by this revision. No implementation phase has begun.
 
-blocker: V3a domain contracts remain under review; V3b executable DDL, V3c source mapping/policy, and V3d consolidation are incomplete
+## Phase 4C-2d3b1i6a V3a Compatibility Review
+
+Reviewed commit: `a66cbdd11e1c20bb5474d396642cbbf14d1b3b46`
+(`docs: complete historical input snapshot v3a contracts`).
+
+- Review result: `REVISION_REQUIRED`.
+- Approval disposition: `NOT_APPROVED`.
+- Overall 1i6a status: `REVISION_REQUIRED`.
+- The reviewed contract omitted executable validation bodies; did not retain
+  `HistoricalInputProvenance.source`; omitted `scheduled_start_at`; and did not match the existing audit-key
+  and input-type validation contract.
+- `external_horse_id` incorrectly participated in external-entry identity, and constructor-supplied
+  `content_sha256` made the digest construction circular.
+
+## Phase 4C-2d3b1i6a V3a Compatibility Contract Revision
+
+V3a status: `REVISION_REQUIRED`.
+
+Overall 1i6a status: `REVISION_REQUIRED`.
+
+Approval disposition: `NOT_APPROVED`.
+
+The revision now records a complete Python-equivalent construction contract for all nine dataclasses,
+including shared helper signatures and `ValueError` rules; exact type and bool rejection; NFC text,
+UTC datetime, and Decimal canonicalization through `object.__setattr__`; tuple-only child collections; and
+duplicate, order, provenance, timestamp, cutoff, and past-race relation validation.
+
+`HistoricalInputProvenance` has the exact existing-audit-compatible field order:
+`input_type`, `audit_key`, `source`, `source_id`, `race_entry_id`, `available_at`, `observed_at`, and
+`past_race_index`. Its allowed audit key set is `track`, `entry/{race_entry_id}`,
+`odds/{race_entry_id}`, `jockey/{race_entry_id}`, `past_race/{race_entry_id}/{past_race_index}`, and
+`past_race/{race_entry_id}/none`; allowed input types are `track`, `entry`, `odds`, `jockey`, and
+`past_race`. This permits lossless one-to-one reconstruction of the existing `InputAuditEntry`.
+
+`HistoricalRaceSnapshot` now contains `target_race_date`, UTC-aware `scheduled_start_at`, `place`,
+`distance_m`, `track`, and `track_condition`, with optional historical-only race name, class, and weather.
+This makes the date and scheduled-start values required for `SimulationRaceInput` reconstruction explicit.
+`HistoricalExternalEntryIdentity` now excludes optional `external_horse_id` metadata from equality, hash,
+and duplicate-entry identity.
+
+Snapshot content SHA-256 is derived, not supplied: structural validation and canonicalization run first,
+the private unchecked payload helper runs second, SHA-256 is computed third, and the frozen derived field is
+set fourth. Public builder/digest APIs omit the digest and are never used from `__post_init__`. A repository
+load owns stored-digest comparison and raises `RepositoryDataIntegrityError` on mismatch; a save writes only
+the derived digest.
+
+Self-review of this revision:
+
+1. PASS — all nine classes specify executable construction/validation contracts.
+2. PASS — provenance retains every `InputAuditEntry` field.
+3. PASS — audit keys and input types exactly match existing validation.
+4. PASS — race date and scheduled start can reconstruct `SimulationRaceInput`.
+5. PASS — external horse metadata is outside external-entry identity.
+6. PASS — digest construction has no constructor cycle.
+7. PASS — repository load owns stored-digest validation.
+8. PASS — cutoff and timestamp invariants are specified.
+9. PASS — past-race and absence semantics match existing validation.
+10. PASS — overall 1i6a remains `REVISION_REQUIRED`.
+
+V3b executable DDL, V3c source mapping/policy, and V3d consolidation are not started. No production,
+test, README, migration, schema, database, or original-workspace file changed.
+
+blocker: V3a construction and existing-audit compatibility remain under review; V3b executable DDL, V3c source mapping/policy, and V3d consolidation are incomplete

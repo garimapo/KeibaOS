@@ -28,8 +28,10 @@ Overall 1i6a status: `REVISION_REQUIRED`.
 
 Approval disposition: `NOT_APPROVED`.
 
-V3a domain, identity, digest, and Protocol revision status: `READY_FOR_REVIEW`. This is a reviewable
-sub-contract only; it does not approve the overall 1i6a design or authorize production work.
+V3a domain, identity, digest, and Protocol revision status: `REVISION_REQUIRED`.
+
+Approval disposition: `NOT_APPROVED`. The construction/digest and existing-audit compatibility correction
+is under review; it does not authorize production work.
 
 ## Objective
 
@@ -39,9 +41,10 @@ It does not create a domain module, migration, repository, request source, datab
 
 ## V3a Scope
 
-V3a is limited to the nine frozen domain dataclasses, their immutable validation/canonicalization contract,
-the schema-version-1 canonical content payload and SHA-256 digest, and the exact Source and Repository
-Protocol signatures. The authoritative V3a detail is in `docs/VER0.8_SIMULATOR_DESIGN.md`.
+V3a is limited to the nine frozen domain dataclasses, their executable construction and
+validation/canonicalization contract, the schema-version-1 canonical content payload and SHA-256 digest,
+and the exact Source and Repository Protocol signatures. The authoritative V3a detail is in
+`docs/VER0.8_SIMULATOR_DESIGN.md`.
 
 V3b executable DDL, V3c source mapping and observed-only policy, and V3d consolidation remain incomplete.
 No wording in V3a resolves those later responsibilities.
@@ -75,4 +78,4 @@ Publish only the revised V3a design documents for review, then stop. Do not begi
 
 ## Blocker
 
-V3a domain contracts remain under review; V3b executable DDL, V3c source mapping/policy, and V3d consolidation are incomplete.
+V3a construction and existing-audit compatibility remain under review; V3b executable DDL, V3c source mapping/policy, and V3d consolidation are incomplete.

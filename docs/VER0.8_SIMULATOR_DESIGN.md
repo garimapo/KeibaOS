@@ -2691,12 +2691,57 @@ V3a is authoritative only for the future domain values, identity, digest, and Pr
 approve executable DDL, source mapping or observed-only policy, repository behavior, or any production
 implementation. Those remain V3b, V3c, and V3d work.
 
-#### Nine frozen domain values
+#### Nine frozen domain values and construction contract
 
-The future module is `scripts.simulation.historical_input_snapshots`. Its only public domain values are
-the following nine `@dataclass(frozen=True, slots=True)` classes. The code blocks intentionally specify
-only the public API: imports, validation bodies, defaults other than the documented URL metadata default,
-canonicalization implementation, and convenience methods are not implied by this design.
+The future module is `scripts.simulation.historical_input_snapshots`. Its public construction contract is
+executable Python-equivalent design, not an API sketch. Every direct construction failure below raises
+`ValueError`; no constructor coerces a list to a tuple, accepts a subclass for an exact domain field, or
+silently repairs malformed input.
+
+```python
+from dataclasses import dataclass, field
+from datetime import date, datetime, timezone
+from decimal import Decimal
+from typing import Protocol
+from unicodedata import normalize
+```
+
+The private helpers have these exact contracts. Each rejects an invalid value with `ValueError`. The helpers
+are private to the future module and do not create a package-root export.
+
+```python
+def _require_exact(value: object, expected: type[object], name: str) -> object: ...
+def _normalize_required_text(value: object, name: str) -> str: ...
+def _normalize_optional_text(value: object, name: str) -> str | None: ...
+def _normalize_utc_datetime(value: object, name: str) -> datetime: ...
+def _normalize_optional_utc_datetime(value: object, name: str) -> datetime | None: ...
+def _normalize_date(value: object, name: str) -> date: ...
+def _normalize_decimal(value: object, name: str, *, positive: bool = False,
+                       non_negative: bool = False) -> Decimal: ...
+def _positive_int(value: object, name: str) -> int: ...
+def _non_negative_int(value: object, name: str) -> int: ...
+def _require_tuple(value: object, name: str) -> tuple[object, ...]: ...
+def _require_unique(values: tuple[object, ...], name: str) -> None: ...
+def _validate_provenance_shape(provenance: HistoricalInputProvenance) -> None: ...
+def _validate_snapshot_children(*, entries: tuple[object, ...],
+    past_races: tuple[object, ...], provenance: tuple[object, ...],
+    race: HistoricalRaceSnapshot, identity: HistoricalInputSnapshotIdentity,
+    information_cutoff: datetime) -> None: ...
+def _build_unchecked_historical_input_snapshot_content_payload(
+    *,
+    snapshot: HistoricalInputSnapshot,
+) -> dict[str, object]: ...
+def _sha256_canonical_payload(payload: dict[str, object]) -> str: ...
+```
+
+`_require_exact` uses `type(value) is expected`. Text helpers require a `str`, normalize with
+`normalize(\"NFC\", value)`, and reject empty normalized text; the optional version accepts only `None` or
+such a string. Integer helpers reject `bool` and require exact `int`. The datetime helpers require exact
+`datetime`, a non-`None` offset, convert with `astimezone(timezone.utc)`, and return the converted value.
+The date helper requires exact `date` rather than `datetime`. Decimal validation requires exact `Decimal`,
+`is_finite()`, and canonicalizes through `Decimal(format(value, \"f\"))`. The tuple helper requires
+`type(value) is tuple`. Every `__post_init__` below uses these helpers and records normalized immutable
+values only through `object.__setattr__`.
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -2704,15 +2749,20 @@ class HistoricalSourceIdentity:
     organization: str
     source_system: str
     external_race_id: str
-    source_url: str | None = field(
-        default=None,
-        compare=False,
-        hash=False,
-    )
+    source_url: str | None = field(default=None, compare=False, hash=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, \"organization\",
+                           _normalize_required_text(self.organization, \"organization\"))
+        object.__setattr__(self, \"source_system\",
+                           _normalize_required_text(self.source_system, \"source_system\"))
+        object.__setattr__(self, \"external_race_id\",
+                           _normalize_required_text(self.external_race_id, \"external_race_id\"))
+        object.__setattr__(self, \"source_url\",
+                           _normalize_optional_text(self.source_url, \"source_url\"))
 ```
 
-`source_url` is nullable descriptive metadata, is deliberately last to preserve dataclass default ordering,
-and never participates in identity, equality, or hashing.
+`source_url` is nullable final-field metadata and never participates in identity, equality, or hashing.
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -2720,6 +2770,14 @@ class HistoricalExternalRaceIdentity:
     organization: str
     source_system: str
     external_race_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, \"organization\",
+                           _normalize_required_text(self.organization, \"organization\"))
+        object.__setattr__(self, \"source_system\",
+                           _normalize_required_text(self.source_system, \"source_system\"))
+        object.__setattr__(self, \"external_race_id\",
+                           _normalize_required_text(self.external_race_id, \"external_race_id\"))
 ```
 
 ```python
@@ -2727,8 +2785,20 @@ class HistoricalExternalRaceIdentity:
 class HistoricalExternalEntryIdentity:
     external_race_identity: HistoricalExternalRaceIdentity
     external_entry_id: str
-    external_horse_id: str | None
+    external_horse_id: str | None = field(default=None, compare=False, hash=False)
+
+    def __post_init__(self) -> None:
+        _require_exact(self.external_race_identity, HistoricalExternalRaceIdentity,
+                       \"external_race_identity\")
+        object.__setattr__(self, \"external_entry_id\",
+                           _normalize_required_text(self.external_entry_id, \"external_entry_id\"))
+        object.__setattr__(self, \"external_horse_id\",
+                           _normalize_optional_text(self.external_horse_id, \"external_horse_id\"))
 ```
+
+The external-entry natural identity is exactly `(organization, source_system, external_race_id,
+external_entry_id)`. `external_horse_id` is optional provider metadata only: it is excluded from equality
+and hashing, and duplicate-entry validation uses the natural identity without it.
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -2736,26 +2806,50 @@ class HistoricalInputSnapshotIdentity:
     dataset_id: str
     source_identity: HistoricalSourceIdentity
     captured_at: datetime
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, \"dataset_id\",
+                           _normalize_required_text(self.dataset_id, \"dataset_id\"))
+        _require_exact(self.source_identity, HistoricalSourceIdentity, \"source_identity\")
+        object.__setattr__(self, \"captured_at\",
+                           _normalize_utc_datetime(self.captured_at, \"captured_at\"))
 ```
 
-The equality and hash key for `HistoricalInputSnapshotIdentity` is exactly the expansion of those fields:
-`(dataset_id, organization, source_system, external_race_id, captured_at)`. `source_url`,
-`content_sha256`, internal IDs, information cutoff, and any future SQLite surrogate `snapshot_id` are not
-part of this identity. `HistoricalSourceIdentity` supplies the organization/source-system/external-race
-portion while excluding URL metadata.
+The equality and hash key is exactly `(dataset_id, organization, source_system, external_race_id,
+captured_at)`. `source_url`, content digest, internal IDs, cutoff, and future SQLite surrogates are
+excluded.
 
 ```python
 @dataclass(frozen=True, slots=True)
 class HistoricalRaceSnapshot:
-    race_date: date
-    race_name: str
+    target_race_date: date
+    scheduled_start_at: datetime
     place: str
-    race_class: str
     distance_m: int
     track: str
-    weather: str
     track_condition: str
+    race_name: str | None = None
+    race_class: str | None = None
+    weather: str | None = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, \"target_race_date\",
+                           _normalize_date(self.target_race_date, \"target_race_date\"))
+        object.__setattr__(self, \"scheduled_start_at\",
+                           _normalize_utc_datetime(self.scheduled_start_at, \"scheduled_start_at\"))
+        object.__setattr__(self, \"place\", _normalize_required_text(self.place, \"place\"))
+        object.__setattr__(self, \"distance_m\", _positive_int(self.distance_m, \"distance_m\"))
+        object.__setattr__(self, \"track\", _normalize_required_text(self.track, \"track\"))
+        object.__setattr__(self, \"track_condition\",
+                           _normalize_required_text(self.track_condition, \"track_condition\"))
+        object.__setattr__(self, \"race_name\", _normalize_optional_text(self.race_name, \"race_name\"))
+        object.__setattr__(self, \"race_class\", _normalize_optional_text(self.race_class, \"race_class\"))
+        object.__setattr__(self, \"weather\", _normalize_optional_text(self.weather, \"weather\"))
 ```
+
+`target_race_date` and `scheduled_start_at` are required to reconstruct `SimulationRaceInput`. Optional
+`race_name`, `race_class`, and `weather` are retained as historical content only; they are not required by
+the current prediction-input constructor.
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -2766,6 +2860,17 @@ class HistoricalRaceEntrySnapshot:
     jockey: str
     win_odds: Decimal
     entry_order: int
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, \"race_entry_id\", _positive_int(self.race_entry_id, \"race_entry_id\"))
+        _require_exact(self.external_entry_identity, HistoricalExternalEntryIdentity,
+                       \"external_entry_identity\")
+        object.__setattr__(self, \"horse_no\", _positive_int(self.horse_no, \"horse_no\"))
+        object.__setattr__(self, \"jockey\", _normalize_required_text(self.jockey, \"jockey\"))
+        object.__setattr__(self, \"win_odds\",
+                           _normalize_decimal(self.win_odds, \"win_odds\", positive=True))
+        object.__setattr__(self, \"entry_order\",
+                           _non_negative_int(self.entry_order, \"entry_order\"))
 ```
 
 ```python
@@ -2791,19 +2896,70 @@ class HistoricalPastRaceSnapshot:
     odds: Decimal
     passing_order: str
     fourth_corner_position: int
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, \"race_entry_id\", _positive_int(self.race_entry_id, \"race_entry_id\"))
+        object.__setattr__(self, \"past_race_index\",
+                           _non_negative_int(self.past_race_index, \"past_race_index\"))
+        object.__setattr__(self, \"race_date\", _normalize_date(self.race_date, \"race_date\"))
+        for name in (\"place\", \"race_name\", \"race_class\", \"track\", \"weather\", \"track_condition\",
+                     \"race_time\", \"jockey\", \"passing_order\"):
+            object.__setattr__(self, name, _normalize_required_text(getattr(self, name), name))
+        object.__setattr__(self, \"distance_m\", _positive_int(self.distance_m, \"distance_m\"))
+        object.__setattr__(self, \"finish\", _positive_int(self.finish, \"finish\"))
+        object.__setattr__(self, \"margin\", _normalize_decimal(self.margin, \"margin\"))
+        object.__setattr__(self, \"weight\",
+                           _normalize_decimal(self.weight, \"weight\", non_negative=True))
+        object.__setattr__(self, \"weight_diff\", _normalize_decimal(self.weight_diff, \"weight_diff\"))
+        object.__setattr__(self, \"popularity\", _non_negative_int(self.popularity, \"popularity\"))
+        object.__setattr__(self, \"odds\",
+                           _normalize_decimal(self.odds, \"odds\", non_negative=True))
+        object.__setattr__(self, \"fourth_corner_position\",
+                           _non_negative_int(self.fourth_corner_position, \"fourth_corner_position\"))
 ```
 
 ```python
 @dataclass(frozen=True, slots=True)
 class HistoricalInputProvenance:
-    audit_key: str
     input_type: str
+    audit_key: str
+    source: str
     source_id: str
-    available_at: datetime | None
-    observed_at: datetime | None
     race_entry_id: int | None
-    past_race_index: int | None
+    available_at: datetime | None = None
+    observed_at: datetime | None = None
+    past_race_index: int | None = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, \"input_type\",
+                           _normalize_required_text(self.input_type, \"input_type\"))
+        object.__setattr__(self, \"audit_key\",
+                           _normalize_required_text(self.audit_key, \"audit_key\"))
+        object.__setattr__(self, \"source\", _normalize_required_text(self.source, \"source\"))
+        object.__setattr__(self, \"source_id\", _normalize_required_text(self.source_id, \"source_id\"))
+        if self.race_entry_id is not None:
+            object.__setattr__(self, \"race_entry_id\",
+                               _positive_int(self.race_entry_id, \"race_entry_id\"))
+        object.__setattr__(self, \"available_at\",
+                           _normalize_optional_utc_datetime(self.available_at, \"available_at\"))
+        object.__setattr__(self, \"observed_at\",
+                           _normalize_optional_utc_datetime(self.observed_at, \"observed_at\"))
+        if self.past_race_index is not None:
+            object.__setattr__(self, \"past_race_index\",
+                               _non_negative_int(self.past_race_index, \"past_race_index\"))
+        _validate_provenance_shape(self)
 ```
+
+`_validate_provenance_shape(provenance: HistoricalInputProvenance) -> None` raises `ValueError` unless
+`input_type` is exactly one of `track`, `entry`, `odds`, `jockey`, or `past_race`; its `audit_key` is
+exactly one of `track`, `entry/{race_entry_id}`, `odds/{race_entry_id}`,
+`jockey/{race_entry_id}`, `past_race/{race_entry_id}/{past_race_index}`, or
+`past_race/{race_entry_id}/none`; and its entry/index fields agree. `track` has no entry or past index;
+other types require a positive entry ID. A numbered past race requires an index, while `none` requires no
+index. It also requires one timestamp and `available_at <= observed_at` when both exist. Thus every
+instance can be passed field-for-field to the existing `InputAuditEntry` constructor with no information
+loss. There is no `race_metadata` category, `track_conditions` category, `win_odds` type,
+`past_race_absence` type, or colon-delimited audit key.
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -2815,32 +2971,51 @@ class HistoricalInputSnapshot:
     entries: tuple[HistoricalRaceEntrySnapshot, ...]
     past_races: tuple[HistoricalPastRaceSnapshot, ...]
     provenance: tuple[HistoricalInputProvenance, ...]
-    content_sha256: str
+    content_sha256: str = field(init=False, compare=False, hash=False)
+
+    def __post_init__(self) -> None:
+        _require_exact(self.identity, HistoricalInputSnapshotIdentity, \"identity\")
+        object.__setattr__(self, \"internal_race_id\",
+                           _positive_int(self.internal_race_id, \"internal_race_id\"))
+        object.__setattr__(self, \"information_cutoff\",
+                           _normalize_utc_datetime(self.information_cutoff, \"information_cutoff\"))
+        _require_exact(self.race, HistoricalRaceSnapshot, \"race\")
+        entries = _require_tuple(self.entries, \"entries\")
+        past_races = _require_tuple(self.past_races, \"past_races\")
+        provenance = _require_tuple(self.provenance, \"provenance\")
+        _validate_snapshot_children(entries=entries, past_races=past_races, provenance=provenance,
+                                    race=self.race, identity=self.identity,
+                                    information_cutoff=self.information_cutoff)
+        object.__setattr__(self, \"entries\", entries)
+        object.__setattr__(self, \"past_races\", past_races)
+        object.__setattr__(self, \"provenance\", provenance)
+        payload = _build_unchecked_historical_input_snapshot_content_payload(snapshot=self)
+        object.__setattr__(self, \"content_sha256\", _sha256_canonical_payload(payload))
 ```
 
-All constructors reject subclasses where an exact domain type is required. IDs and ordering values reject
-`bool`; internal race and race-entry IDs are positive; `entry_order` and `past_race_index` are non-negative
-and contiguous from zero. Dates are canonical `YYYY-MM-DD`. Datetimes are timezone-aware and normalized
-to UTC. Strings used for identity, audit key, source ID, or required content are non-empty NFC-normalized
-text. Decimal values are finite and canonical fixed-point values. Child collections are tuple-only and no
-constructor performs a defensive list-to-tuple conversion.
+`_validate_snapshot_children` requires exact child dataclass types; non-empty entries; unique
+`race_entry_id`, `horse_no`, external-entry natural identity, `entry_order`, audit key, and
+`(race_entry_id, past_race_index)`; contiguous entry orders and per-entry past indices from zero; every
+past child to name a current entry; and exactly the compatible provenance set described above. It also
+requires `information_cutoff <= race.scheduled_start_at`, `identity.captured_at <= information_cutoff`,
+and every provenance timestamp at or before `information_cutoff`. A past race must satisfy
+`past_race.race_date < race.target_race_date`. An entry with no past child requires exactly one
+`past_race/{race_entry_id}/none` record; an entry with children forbids that record.
 
-`HistoricalInputSnapshot` additionally rejects duplicate `race_entry_id`, `horse_no`, external entry
-identity, audit key, entry order, and `(race_entry_id, past_race_index)`. Every past-race child must point
-to an entry in the same snapshot. For every entry, the past-race children are either contiguous from zero
-or there is exactly one `past_race_absence:{race_entry_id}` provenance record; both forms together are
-invalid. `available_at` and `observed_at` must not both be absent, and when both exist
-`available_at <= observed_at`. Provenance relation fields must agree with the audit-key family:
-`race_metadata`, `track_conditions`, `entry:{race_entry_id}`, `jockey:{race_entry_id}`,
-`win_odds:{race_entry_id}`, `past_race:{race_entry_id}:{past_race_index}`, or
-`past_race_absence:{race_entry_id}`. A complete content digest must be lowercase 64-character SHA-256 hex
-and equal the independently recomputed digest described below.
+The digest is computed only after structural validation from canonicalized fields. Construction is therefore:
+(1) validate/canonicalize identity, race, children, provenance, and time relations; (2) build the private
+unchecked payload; (3) compute SHA-256; (4) set the derived digest with `object.__setattr__`. The public
+builder/digest functions must not be called by `__post_init__` because they perform public full validation
+and would re-enter construction. A repository load reads stored `content_sha256`, constructs the domain
+snapshot to recompute the derived digest, compares stored and derived values, and raises
+`RepositoryDataIntegrityError` on mismatch. A repository save writes the derived value only and never
+accepts a caller-supplied digest.
 
 #### Canonical content payload and digest
 
-Content schema version is exactly `1`. `content_sha256` is validated against the canonical payload, but is
-not inserted into that payload and is not an identity component. The complete canonical Python payload shape
-is:
+Content schema version is exactly `1`. `content_sha256` is a derived field computed from the canonical
+payload. It is neither constructor input nor identity component, and it is not inserted into its own payload.
+The complete canonical Python payload shape is:
 
 ```python
 {
@@ -2861,14 +3036,15 @@ is:
     \"internal_race_id\": int,
     \"information_cutoff\": str,
     \"race\": {
-        \"race_date\": str,
-        \"race_name\": str,
+        \"target_race_date\": str,
+        \"scheduled_start_at\": str,
         \"place\": str,
-        \"race_class\": str,
         \"distance_m\": int,
         \"track\": str,
-        \"weather\": str,
         \"track_condition\": str,
+        \"race_name\": str | None,
+        \"race_class\": str | None,
+        \"weather\": str | None,
     },
     \"entries\": [
         {
@@ -2912,8 +3088,9 @@ is:
     ],
     \"provenance\": [
         {
-            \"audit_key\": str,
             \"input_type\": str,
+            \"audit_key\": str,
+            \"source\": str,
             \"source_id\": str,
             \"available_at\": str | None,
             \"observed_at\": str | None,
@@ -2942,8 +3119,10 @@ def compute_historical_input_snapshot_content_sha256(
     ...
 ```
 
-The builder validates the supplied snapshot before serializing it and returns only canonical content values;
-it does not accept a caller payload. Serialization is UTF-8 JSON with `ensure_ascii=False`,
+The public builder requires an exact `HistoricalInputSnapshot`, delegates only to the private unchecked
+canonical payload helper, and returns no caller-supplied or derived `content_sha256` value. The public digest
+function uses that public builder. Neither function is called by `HistoricalInputSnapshot.__post_init__`.
+Serialization is UTF-8 JSON with `ensure_ascii=False`,
 `sort_keys=True`, and `separators=(\",\", \":\")`. A `Decimal` is `format(value, \"f\")`; a `date` is
 `YYYY-MM-DD`; a datetime is UTC `YYYY-MM-DDTHH:MM:SS.ffffff+00:00`; and `None` is JSON `null`.
 `bool` is never accepted as an integer. Entries are emitted by `entry_order ASC`; past races by
