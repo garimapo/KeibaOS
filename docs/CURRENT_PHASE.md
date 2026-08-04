@@ -47,8 +47,11 @@ V3b detail is in `docs/VER0.8_SIMULATOR_DESIGN.md`.
 
 The planned, but uncreated and unregistered, migration is
 `v010_historical_input_snapshot_schema`. Its future runner contract verifies `PRAGMA foreign_keys = ON`,
-uses one `BEGIN IMMEDIATE` transaction, succeeds atomically or rolls back atomically, and performs no
-legacy-data backfill. No database file is accessed during this design phase.
+owns one per-migration `BEGIN IMMEDIATE` transaction, commit, rollback, and migration-record insert. The
+future `apply(connection)` executes each DDL statement through `connection.execute()` only; it does not
+begin or close transactions, call `connection.commit()`, `connection.rollback()`, or
+`connection.executescript()`. It performs no legacy-data backfill. No database file is accessed during this
+design phase.
 
 V3b does not decide provider field/source mapping, source-ID formats, JRA/local organization policy, v008
 odds eligibility/import policy, collector behavior, repository Python behavior, or request-source behavior.

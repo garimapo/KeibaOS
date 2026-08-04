@@ -3211,15 +3211,15 @@ class HistoricalInputSnapshotRepository(Protocol):
 `None` means that no complete, eligible matching snapshot exists. It must not stand for malformed stored
 data. Exact error, DDL, source-mapping, selection, and policy semantics remain unapproved V3b/V3c/V3d
 work.
-+
 
 ### V3b — Executable SQLite DDL and domain crosswalk
 
 V3b is the complete DDL and storage crosswalk design for the approved V3a values. Its planned migration
 identity is `v010_historical_input_snapshot_schema`. No module is created, registered, or executed in this
-phase. The future migration runner must verify `PRAGMA foreign_keys = ON`, start one `BEGIN IMMEDIATE`
-transaction for this migration, commit only if every statement succeeds, roll back every statement on
-failure, and never backfill legacy records. Existing legacy observations are: `races.id` and `horses.id` are
+phase. The existing migration runner must verify `PRAGMA foreign_keys = ON` and own one per-migration
+`BEGIN IMMEDIATE` transaction, the commit, rollback, and `schema_migrations` insert. The future migration
+must only execute its DDL statements through `connection.execute()` within that runner-owned transaction;
+it never backfills legacy records. Existing legacy observations are: `races.id` and `horses.id` are
 `INTEGER PRIMARY KEY`, `horses.race_id` provides the internal-race link, and legacy tables do not declare
 all required foreign keys.
 
@@ -3239,15 +3239,15 @@ CREATE UNIQUE INDEX ux_horses_race_id_id
 ON horses (race_id, id);
 
 CREATE TABLE historical_input_source_identities (
-    organization TEXT NOT NULL CHECK (typeof(organization) = 'text' AND trim(organization) <> ''),
-    source_system TEXT NOT NULL CHECK (typeof(source_system) = 'text' AND trim(source_system) <> ''),
+    organization TEXT NOT NULL CHECK (typeof(organization) = 'text' AND organization <> ''),
+    source_system TEXT NOT NULL CHECK (typeof(source_system) = 'text' AND source_system <> ''),
     PRIMARY KEY (organization, source_system)
 ) WITHOUT ROWID;
 
 CREATE TABLE historical_input_external_races (
     organization TEXT NOT NULL,
     source_system TEXT NOT NULL,
-    external_race_id TEXT NOT NULL CHECK (typeof(external_race_id) = 'text' AND trim(external_race_id) <> ''),
+    external_race_id TEXT NOT NULL CHECK (typeof(external_race_id) = 'text' AND external_race_id <> ''),
     internal_race_id INTEGER NOT NULL CHECK (typeof(internal_race_id) = 'integer' AND internal_race_id > 0),
     PRIMARY KEY (organization, source_system, external_race_id),
     UNIQUE (organization, source_system, external_race_id, internal_race_id),
@@ -3264,7 +3264,7 @@ CREATE TABLE historical_input_external_entries (
     organization TEXT NOT NULL,
     source_system TEXT NOT NULL,
     external_race_id TEXT NOT NULL,
-    external_entry_id TEXT NOT NULL CHECK (typeof(external_entry_id) = 'text' AND trim(external_entry_id) <> ''),
+    external_entry_id TEXT NOT NULL CHECK (typeof(external_entry_id) = 'text' AND external_entry_id <> ''),
     internal_race_id INTEGER NOT NULL CHECK (typeof(internal_race_id) = 'integer' AND internal_race_id > 0),
     race_entry_id INTEGER NOT NULL CHECK (typeof(race_entry_id) = 'integer' AND race_entry_id > 0),
     PRIMARY KEY (organization, source_system, external_race_id, external_entry_id),
@@ -3280,12 +3280,12 @@ CREATE TABLE historical_input_external_entries (
 
 CREATE TABLE historical_input_snapshots (
     snapshot_id INTEGER PRIMARY KEY,
-    dataset_id TEXT NOT NULL CHECK (typeof(dataset_id) = 'text' AND trim(dataset_id) <> ''),
+    dataset_id TEXT NOT NULL CHECK (typeof(dataset_id) = 'text' AND dataset_id <> ''),
     organization TEXT NOT NULL,
     source_system TEXT NOT NULL,
     external_race_id TEXT NOT NULL,
     internal_race_id INTEGER NOT NULL CHECK (typeof(internal_race_id) = 'integer' AND internal_race_id > 0),
-    source_url TEXT NULL CHECK (source_url IS NULL OR (typeof(source_url) = 'text' AND trim(source_url) <> '')),
+    source_url TEXT NULL CHECK (source_url IS NULL OR (typeof(source_url) = 'text' AND source_url <> '')),
     captured_at_utc TEXT NOT NULL CHECK (
         typeof(captured_at_utc) = 'text' AND length(captured_at_utc) = 32
         AND substr(captured_at_utc, 11, 1) = 'T'
@@ -3327,13 +3327,13 @@ CREATE TABLE historical_input_snapshot_races (
         AND substr(scheduled_start_at_utc, -6) = '+00:00'
         AND scheduled_start_at_utc GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9][0-9][0-9][0-9]+00:00'
     ),
-    place TEXT NOT NULL CHECK (typeof(place) = 'text' AND trim(place) <> ''),
+    place TEXT NOT NULL CHECK (typeof(place) = 'text' AND place <> ''),
     distance_m INTEGER NOT NULL CHECK (typeof(distance_m) = 'integer' AND distance_m > 0),
-    track TEXT NOT NULL CHECK (typeof(track) = 'text' AND trim(track) <> ''),
-    track_condition TEXT NOT NULL CHECK (typeof(track_condition) = 'text' AND trim(track_condition) <> ''),
-    race_name TEXT NULL CHECK (race_name IS NULL OR (typeof(race_name) = 'text' AND trim(race_name) <> '')),
-    race_class TEXT NULL CHECK (race_class IS NULL OR (typeof(race_class) = 'text' AND trim(race_class) <> '')),
-    weather TEXT NULL CHECK (weather IS NULL OR (typeof(weather) = 'text' AND trim(weather) <> '')),
+    track TEXT NOT NULL CHECK (typeof(track) = 'text' AND track <> ''),
+    track_condition TEXT NOT NULL CHECK (typeof(track_condition) = 'text' AND track_condition <> ''),
+    race_name TEXT NULL CHECK (race_name IS NULL OR (typeof(race_name) = 'text' AND race_name <> '')),
+    race_class TEXT NULL CHECK (race_class IS NULL OR (typeof(race_class) = 'text' AND race_class <> '')),
+    weather TEXT NULL CHECK (weather IS NULL OR (typeof(weather) = 'text' AND weather <> '')),
     FOREIGN KEY (snapshot_id)
         REFERENCES historical_input_snapshots (snapshot_id)
         ON DELETE RESTRICT ON UPDATE RESTRICT
@@ -3342,11 +3342,11 @@ CREATE TABLE historical_input_snapshot_races (
 CREATE TABLE historical_input_snapshot_entries (
     snapshot_id INTEGER NOT NULL,
     race_entry_id INTEGER NOT NULL CHECK (typeof(race_entry_id) = 'integer' AND race_entry_id > 0),
-    external_entry_id TEXT NOT NULL CHECK (typeof(external_entry_id) = 'text' AND trim(external_entry_id) <> ''),
-    external_horse_id TEXT NULL CHECK (external_horse_id IS NULL OR (typeof(external_horse_id) = 'text' AND trim(external_horse_id) <> '')),
+    external_entry_id TEXT NOT NULL CHECK (typeof(external_entry_id) = 'text' AND external_entry_id <> ''),
+    external_horse_id TEXT NULL CHECK (external_horse_id IS NULL OR (typeof(external_horse_id) = 'text' AND external_horse_id <> '')),
     horse_no INTEGER NOT NULL CHECK (typeof(horse_no) = 'integer' AND horse_no > 0),
-    jockey TEXT NOT NULL CHECK (typeof(jockey) = 'text' AND trim(jockey) <> ''),
-    win_odds_text TEXT NOT NULL CHECK (typeof(win_odds_text) = 'text' AND trim(win_odds_text) <> ''),
+    jockey TEXT NOT NULL CHECK (typeof(jockey) = 'text' AND jockey <> ''),
+    win_odds_text TEXT NOT NULL CHECK (typeof(win_odds_text) = 'text' AND win_odds_text <> ''),
     entry_order INTEGER NOT NULL CHECK (typeof(entry_order) = 'integer' AND entry_order >= 0),
     PRIMARY KEY (snapshot_id, race_entry_id),
     UNIQUE (snapshot_id, external_entry_id),
@@ -3365,21 +3365,21 @@ CREATE TABLE historical_input_snapshot_past_races (
         typeof(race_date) = 'text' AND length(race_date) = 10
         AND race_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
     ),
-    place TEXT NOT NULL CHECK (typeof(place) = 'text' AND trim(place) <> ''),
-    race_name TEXT NOT NULL CHECK (typeof(race_name) = 'text' AND trim(race_name) <> ''),
-    race_class TEXT NOT NULL CHECK (typeof(race_class) = 'text' AND trim(race_class) <> ''),
+    place TEXT NOT NULL CHECK (typeof(place) = 'text' AND place <> ''),
+    race_name TEXT NOT NULL CHECK (typeof(race_name) = 'text' AND race_name <> ''),
+    race_class TEXT NOT NULL CHECK (typeof(race_class) = 'text' AND race_class <> ''),
     distance_m INTEGER NOT NULL CHECK (typeof(distance_m) = 'integer' AND distance_m > 0),
-    track TEXT NOT NULL CHECK (typeof(track) = 'text' AND trim(track) <> ''),
-    weather TEXT NOT NULL CHECK (typeof(weather) = 'text' AND trim(weather) <> ''),
-    track_condition TEXT NOT NULL CHECK (typeof(track_condition) = 'text' AND trim(track_condition) <> ''),
+    track TEXT NOT NULL CHECK (typeof(track) = 'text' AND track <> ''),
+    weather TEXT NOT NULL CHECK (typeof(weather) = 'text' AND weather <> ''),
+    track_condition TEXT NOT NULL CHECK (typeof(track_condition) = 'text' AND track_condition <> ''),
     finish INTEGER NOT NULL CHECK (typeof(finish) = 'integer' AND finish > 0),
-    margin_text TEXT NOT NULL CHECK (typeof(margin_text) = 'text' AND trim(margin_text) <> ''),
-    race_time TEXT NOT NULL CHECK (typeof(race_time) = 'text' AND trim(race_time) <> ''),
-    weight_text TEXT NOT NULL CHECK (typeof(weight_text) = 'text' AND trim(weight_text) <> ''),
-    weight_diff_text TEXT NOT NULL CHECK (typeof(weight_diff_text) = 'text' AND trim(weight_diff_text) <> ''),
-    jockey TEXT NOT NULL CHECK (typeof(jockey) = 'text' AND trim(jockey) <> ''),
+    margin_text TEXT NOT NULL CHECK (typeof(margin_text) = 'text' AND margin_text <> ''),
+    race_time TEXT NOT NULL CHECK (typeof(race_time) = 'text' AND race_time <> ''),
+    weight_text TEXT NOT NULL CHECK (typeof(weight_text) = 'text' AND weight_text <> ''),
+    weight_diff_text TEXT NOT NULL CHECK (typeof(weight_diff_text) = 'text' AND weight_diff_text <> ''),
+    jockey TEXT NOT NULL CHECK (typeof(jockey) = 'text' AND jockey <> ''),
     popularity INTEGER NOT NULL CHECK (typeof(popularity) = 'integer' AND popularity >= 0),
-    odds_text TEXT NOT NULL CHECK (typeof(odds_text) = 'text' AND trim(odds_text) <> ''),
+    odds_text TEXT NOT NULL CHECK (typeof(odds_text) = 'text' AND odds_text <> ''),
     passing_order TEXT NOT NULL CHECK (typeof(passing_order) = 'text'),
     fourth_corner_position INTEGER NOT NULL CHECK (
         typeof(fourth_corner_position) = 'integer' AND fourth_corner_position >= 0
@@ -3393,9 +3393,9 @@ CREATE TABLE historical_input_snapshot_past_races (
 CREATE TABLE historical_input_snapshot_provenance (
     snapshot_id INTEGER NOT NULL,
     input_type TEXT NOT NULL CHECK (input_type IN ('track', 'entry', 'odds', 'jockey', 'past_race')),
-    audit_key TEXT NOT NULL CHECK (typeof(audit_key) = 'text' AND trim(audit_key) <> ''),
-    source TEXT NOT NULL CHECK (typeof(source) = 'text' AND trim(source) <> ''),
-    source_id TEXT NOT NULL CHECK (typeof(source_id) = 'text' AND trim(source_id) <> ''),
+    audit_key TEXT NOT NULL CHECK (typeof(audit_key) = 'text' AND audit_key <> ''),
+    source TEXT NOT NULL CHECK (typeof(source) = 'text' AND source <> ''),
+    source_id TEXT NOT NULL CHECK (typeof(source_id) = 'text' AND source_id <> ''),
     race_entry_id INTEGER NULL CHECK (
         race_entry_id IS NULL OR (typeof(race_entry_id) = 'integer' AND race_entry_id > 0)
     ),
@@ -3582,10 +3582,23 @@ full digest reconstruction, and time semantics belong to repository/domain load 
 `entry_order` and `past_race_index` are explicit zero-based integer columns. Their contiguity starts at zero
 only at repository/domain load time; SQL provides coarse non-negative and uniqueness constraints.
 
-The existing runner already enables and verifies foreign keys before migrations. The future v010 migration
-must retain that behavior and execute the helper index, eight tables, four non-redundant indexes, and five
-linkage triggers in a single migration-owned `BEGIN IMMEDIATE` transaction. It must not access or backfill
-`database/keiba.db` as part of this design activity.
+The existing runner already enables and verifies foreign keys before migrations. It owns a per-migration
+`BEGIN IMMEDIATE` transaction, commit, rollback, and migration-record insert. The future v010
+`apply(connection)` only iterates `STATEMENTS + INDEXES + TRIGGERS` with `connection.execute(statement)`;
+it must not call `BEGIN`, `BEGIN IMMEDIATE`, `COMMIT`, `ROLLBACK`, `connection.commit()`,
+`connection.rollback()`, or `connection.executescript()`. It must not access or backfill `database/keiba.db`
+as part of this design activity.
+
+The future migration module has this exact transaction-neutral boundary:
+
+```python
+def apply(connection: sqlite3.Connection) -> None:
+    for statement in STATEMENTS + INDEXES + TRIGGERS:
+        connection.execute(statement)
+```
+
+The migration neither opens a transaction nor calls `connection.commit()`, `connection.rollback()`, or
+`connection.executescript()`; those operations remain exclusively runner-owned.
 
 #### Query-index rationale and trigger/FK proof
 
@@ -3610,70 +3623,70 @@ constructor or repository-load validation.
 
 | Domain class | Domain field | SQLite table.column | Storage / NULL | Classification | SQL validation | Repository/domain validation |
 | --- | --- | --- | --- | --- | --- | --- |
-| HistoricalSourceIdentity | organization | snapshots.organization; source_identities.organization | TEXT / NOT NULL | identity | PK/FK/nonempty | NFC text |
-| HistoricalSourceIdentity | source_system | snapshots.source_system; source_identities.source_system | TEXT / NOT NULL | identity | PK/FK/nonempty | NFC text |
-| HistoricalSourceIdentity | external_race_id | snapshots.external_race_id | TEXT / NOT NULL | identity | UNIQUE/FK/nonempty | NFC text |
-| HistoricalSourceIdentity | source_url | snapshots.source_url | TEXT / NULL | content | nonempty if present | NFC optional text |
-| HistoricalExternalRaceIdentity | organization | external_races.organization | TEXT / NOT NULL | linkage | PK/FK | exact/NFC |
-| HistoricalExternalRaceIdentity | source_system | external_races.source_system | TEXT / NOT NULL | linkage | PK/FK | exact/NFC |
-| HistoricalExternalRaceIdentity | external_race_id | external_races.external_race_id | TEXT / NOT NULL | linkage | PK/nonempty | NFC text |
-| HistoricalExternalEntryIdentity | external_race_identity | external_entries.organization/source_system/external_race_id | TEXT / NOT NULL | linkage identity | PK/FK | exact external-race object |
-| HistoricalExternalEntryIdentity | external_entry_id | external_entries.external_entry_id; snapshot_entries.external_entry_id | TEXT / NOT NULL | linkage identity | PK/UNIQUE/trigger | NFC text |
-| HistoricalExternalEntryIdentity | external_horse_id | snapshot_entries.external_horse_id | TEXT / NULL | content metadata | nonempty if present | NFC optional text; excluded from identity |
-| HistoricalInputSnapshotIdentity | dataset_id | snapshots.dataset_id | TEXT / NOT NULL | identity | UNIQUE/nonempty | NFC text |
-| HistoricalInputSnapshotIdentity | source_identity | snapshots.organization/source_system/external_race_id | TEXT / NOT NULL | identity | UNIQUE/FK | exact V3a source identity |
-| HistoricalInputSnapshotIdentity | captured_at | snapshots.captured_at_utc | TEXT / NOT NULL | identity | UTC-shape/UNIQUE | UTC/calendar/causal order |
-| HistoricalRaceSnapshot | target_race_date | snapshot_races.target_race_date | TEXT / NOT NULL | content | date shape | canonical date |
-| HistoricalRaceSnapshot | scheduled_start_at | snapshot_races.scheduled_start_at_utc | TEXT / NOT NULL | content | UTC shape | UTC/causal order |
-| HistoricalRaceSnapshot | place | snapshot_races.place | TEXT / NOT NULL | content | nonempty | NFC text |
-| HistoricalRaceSnapshot | distance_m | snapshot_races.distance_m | INTEGER / NOT NULL | content | > 0 | exact positive int |
-| HistoricalRaceSnapshot | track | snapshot_races.track | TEXT / NOT NULL | content | nonempty | NFC text |
-| HistoricalRaceSnapshot | track_condition | snapshot_races.track_condition | TEXT / NOT NULL | content | nonempty | NFC text |
-| HistoricalRaceSnapshot | race_name | snapshot_races.race_name | TEXT / NULL | content | nonempty if present | NFC optional text |
-| HistoricalRaceSnapshot | race_class | snapshot_races.race_class | TEXT / NULL | content | nonempty if present | NFC optional text |
-| HistoricalRaceSnapshot | weather | snapshot_races.weather | TEXT / NULL | content | nonempty if present | NFC optional text |
-| HistoricalRaceEntrySnapshot | race_entry_id | snapshot_entries.race_entry_id | INTEGER / NOT NULL | linkage/content | PK/>0/trigger | exact positive int |
-| HistoricalRaceEntrySnapshot | external_entry_identity | snapshot_entries.external_entry_id plus external_entries mapping | TEXT / NOT NULL | linkage | UNIQUE/trigger | exact identity; metadata excluded |
-| HistoricalRaceEntrySnapshot | horse_no | snapshot_entries.horse_no | INTEGER / NOT NULL | content | UNIQUE/>0 | exact positive int |
-| HistoricalRaceEntrySnapshot | jockey | snapshot_entries.jockey | TEXT / NOT NULL | content | nonempty | NFC text |
-| HistoricalRaceEntrySnapshot | win_odds | snapshot_entries.win_odds_text | TEXT / NOT NULL | content | nonempty | canonical Decimal |
-| HistoricalRaceEntrySnapshot | entry_order | snapshot_entries.entry_order | INTEGER / NOT NULL | ordering | UNIQUE/>=0 | zero-based contiguous |
-| HistoricalPastRaceSnapshot | race_entry_id | snapshot_past_races.race_entry_id | INTEGER / NOT NULL | linkage | PK/FK/>0 | exact positive int |
-| HistoricalPastRaceSnapshot | past_race_index | snapshot_past_races.past_race_index | INTEGER / NOT NULL | ordering | PK/>=0 | zero-based contiguous |
-| HistoricalPastRaceSnapshot | race_date | snapshot_past_races.race_date | TEXT / NOT NULL | content | date shape | canonical date; before target |
-| HistoricalPastRaceSnapshot | place | snapshot_past_races.place | TEXT / NOT NULL | content | nonempty | NFC text |
-| HistoricalPastRaceSnapshot | race_name | snapshot_past_races.race_name | TEXT / NOT NULL | content | nonempty | NFC text |
-| HistoricalPastRaceSnapshot | race_class | snapshot_past_races.race_class | TEXT / NOT NULL | content | nonempty | NFC text |
-| HistoricalPastRaceSnapshot | distance_m | snapshot_past_races.distance_m | INTEGER / NOT NULL | content | >0 | exact positive int |
-| HistoricalPastRaceSnapshot | track | snapshot_past_races.track | TEXT / NOT NULL | content | nonempty | NFC text |
-| HistoricalPastRaceSnapshot | weather | snapshot_past_races.weather | TEXT / NOT NULL | content | nonempty | NFC text |
-| HistoricalPastRaceSnapshot | track_condition | snapshot_past_races.track_condition | TEXT / NOT NULL | content | nonempty | NFC text |
-| HistoricalPastRaceSnapshot | finish | snapshot_past_races.finish | INTEGER / NOT NULL | content | >0 | exact positive int |
-| HistoricalPastRaceSnapshot | margin | snapshot_past_races.margin_text | TEXT / NOT NULL | content | nonempty | canonical Decimal |
-| HistoricalPastRaceSnapshot | race_time | snapshot_past_races.race_time | TEXT / NOT NULL | content | nonempty | NFC text |
-| HistoricalPastRaceSnapshot | weight | snapshot_past_races.weight_text | TEXT / NOT NULL | content | nonempty | canonical Decimal |
-| HistoricalPastRaceSnapshot | weight_diff | snapshot_past_races.weight_diff_text | TEXT / NOT NULL | content | nonempty | canonical Decimal |
-| HistoricalPastRaceSnapshot | jockey | snapshot_past_races.jockey | TEXT / NOT NULL | content | nonempty | NFC text |
-| HistoricalPastRaceSnapshot | popularity | snapshot_past_races.popularity | INTEGER / NOT NULL | content | >=0 | exact non-negative int |
-| HistoricalPastRaceSnapshot | odds | snapshot_past_races.odds_text | TEXT / NOT NULL | content | nonempty | canonical Decimal |
-| HistoricalPastRaceSnapshot | passing_order | snapshot_past_races.passing_order | TEXT / NOT NULL | content | text; empty allowed | NFC string, including empty |
-| HistoricalPastRaceSnapshot | fourth_corner_position | snapshot_past_races.fourth_corner_position | INTEGER / NOT NULL | content | >=0 | exact non-negative int |
-| HistoricalInputProvenance | input_type | snapshot_provenance.input_type | TEXT / NOT NULL | content/audit | enum CHECK | exact V3a type/key relation |
-| HistoricalInputProvenance | audit_key | snapshot_provenance.audit_key | TEXT / NOT NULL | ordering/audit | PK/nonempty | slash-key relation/completeness |
-| HistoricalInputProvenance | source | snapshot_provenance.source | TEXT / NOT NULL | audit | nonempty | NFC text |
-| HistoricalInputProvenance | source_id | snapshot_provenance.source_id | TEXT / NOT NULL | audit | nonempty | NFC text/formats deferred to V3c |
-| HistoricalInputProvenance | race_entry_id | snapshot_provenance.race_entry_id | INTEGER / NULL | linkage | FK/coarse check | input-type relation |
-| HistoricalInputProvenance | available_at | snapshot_provenance.available_at_utc | TEXT / NULL | audit time | UTC shape/one time | UTC causal order |
-| HistoricalInputProvenance | observed_at | snapshot_provenance.observed_at_utc | TEXT / NULL | audit time | UTC shape/one time | UTC causal order |
-| HistoricalInputProvenance | past_race_index | snapshot_provenance.past_race_index | INTEGER / NULL | linkage | FK/coarse check | audit-key relation/XOR |
-| HistoricalInputSnapshot | identity | snapshots.dataset_id/organization/source_system/external_race_id/captured_at_utc | mixed / NOT NULL | natural identity | exact UNIQUE | V3a identity object |
-| HistoricalInputSnapshot | internal_race_id | snapshots.internal_race_id | INTEGER / NOT NULL | linkage | FK/>0 | exact positive int |
-| HistoricalInputSnapshot | information_cutoff | snapshots.information_cutoff_utc | TEXT / NOT NULL | content | UTC shape | UTC causal order |
-| HistoricalInputSnapshot | race | snapshot_races row | normalized row / NOT NULL by repository | content | FK | exact V3a race object |
-| HistoricalInputSnapshot | entries | snapshot_entries rows | normalized rows / non-empty repository | content | FK/UNIQUE | tuple-only/order/completeness |
-| HistoricalInputSnapshot | past_races | snapshot_past_races rows | normalized rows / may be empty | content | FK | tuple-only/index/absence XOR |
-| HistoricalInputSnapshot | provenance | snapshot_provenance rows | normalized rows / non-empty repository | audit | FK/PK | tuple-only/key completeness |
-| HistoricalInputSnapshot | content_sha256 | snapshots.content_sha256 | TEXT / NOT NULL | derived content | 64 lowercase hex | recomputed digest equality |
+| HistoricalSourceIdentity | organization | historical_input_snapshots.organization; historical_input_source_identities.organization | TEXT / NOT NULL | identity | PK/FK/nonempty | NFC text |
+| HistoricalSourceIdentity | source_system | historical_input_snapshots.source_system; historical_input_source_identities.source_system | TEXT / NOT NULL | identity | PK/FK/nonempty | NFC text |
+| HistoricalSourceIdentity | external_race_id | historical_input_snapshots.external_race_id | TEXT / NOT NULL | identity | UNIQUE/FK/nonempty | NFC text |
+| HistoricalSourceIdentity | source_url | historical_input_snapshots.source_url | TEXT / NULL | content | nonempty if present | NFC optional text |
+| HistoricalExternalRaceIdentity | organization | historical_input_external_races.organization | TEXT / NOT NULL | linkage | PK/FK | exact/NFC |
+| HistoricalExternalRaceIdentity | source_system | historical_input_external_races.source_system | TEXT / NOT NULL | linkage | PK/FK | exact/NFC |
+| HistoricalExternalRaceIdentity | external_race_id | historical_input_external_races.external_race_id | TEXT / NOT NULL | linkage | PK/nonempty | NFC text |
+| HistoricalExternalEntryIdentity | external_race_identity | historical_input_external_entries.organization/source_system/external_race_id | TEXT / NOT NULL | linkage identity | PK/FK | exact external-race object |
+| HistoricalExternalEntryIdentity | external_entry_id | historical_input_external_entries.external_entry_id; historical_input_snapshot_entries.external_entry_id | TEXT / NOT NULL | linkage identity | PK/UNIQUE/trigger | NFC text |
+| HistoricalExternalEntryIdentity | external_horse_id | historical_input_snapshot_entries.external_horse_id | TEXT / NULL | content metadata | nonempty if present | NFC optional text; excluded from identity |
+| HistoricalInputSnapshotIdentity | dataset_id | historical_input_snapshots.dataset_id | TEXT / NOT NULL | identity | UNIQUE/nonempty | NFC text |
+| HistoricalInputSnapshotIdentity | source_identity | historical_input_snapshots.organization/source_system/external_race_id | TEXT / NOT NULL | identity | UNIQUE/FK | exact V3a source identity |
+| HistoricalInputSnapshotIdentity | captured_at | historical_input_snapshots.captured_at_utc | TEXT / NOT NULL | identity | UTC-shape/UNIQUE | UTC/calendar/causal order |
+| HistoricalRaceSnapshot | target_race_date | historical_input_snapshot_races.target_race_date | TEXT / NOT NULL | content | date shape | canonical date |
+| HistoricalRaceSnapshot | scheduled_start_at | historical_input_snapshot_races.scheduled_start_at_utc | TEXT / NOT NULL | content | UTC shape | UTC/causal order |
+| HistoricalRaceSnapshot | place | historical_input_snapshot_races.place | TEXT / NOT NULL | content | nonempty | NFC text |
+| HistoricalRaceSnapshot | distance_m | historical_input_snapshot_races.distance_m | INTEGER / NOT NULL | content | > 0 | exact positive int |
+| HistoricalRaceSnapshot | track | historical_input_snapshot_races.track | TEXT / NOT NULL | content | nonempty | NFC text |
+| HistoricalRaceSnapshot | track_condition | historical_input_snapshot_races.track_condition | TEXT / NOT NULL | content | nonempty | NFC text |
+| HistoricalRaceSnapshot | race_name | historical_input_snapshot_races.race_name | TEXT / NULL | content | nonempty if present | NFC optional text |
+| HistoricalRaceSnapshot | race_class | historical_input_snapshot_races.race_class | TEXT / NULL | content | nonempty if present | NFC optional text |
+| HistoricalRaceSnapshot | weather | historical_input_snapshot_races.weather | TEXT / NULL | content | nonempty if present | NFC optional text |
+| HistoricalRaceEntrySnapshot | race_entry_id | historical_input_snapshot_entries.race_entry_id | INTEGER / NOT NULL | linkage/content | PK/>0/trigger | exact positive int |
+| HistoricalRaceEntrySnapshot | external_entry_identity | historical_input_snapshot_entries.external_entry_id plus historical_input_external_entries mapping | TEXT / NOT NULL | linkage | UNIQUE/trigger | exact identity; metadata excluded |
+| HistoricalRaceEntrySnapshot | horse_no | historical_input_snapshot_entries.horse_no | INTEGER / NOT NULL | content | UNIQUE/>0 | exact positive int |
+| HistoricalRaceEntrySnapshot | jockey | historical_input_snapshot_entries.jockey | TEXT / NOT NULL | content | nonempty | NFC text |
+| HistoricalRaceEntrySnapshot | win_odds | historical_input_snapshot_entries.win_odds_text | TEXT / NOT NULL | content | nonempty | canonical Decimal |
+| HistoricalRaceEntrySnapshot | entry_order | historical_input_snapshot_entries.entry_order | INTEGER / NOT NULL | ordering | UNIQUE/>=0 | zero-based contiguous |
+| HistoricalPastRaceSnapshot | race_entry_id | historical_input_snapshot_past_races.race_entry_id | INTEGER / NOT NULL | linkage | PK/FK/>0 | exact positive int |
+| HistoricalPastRaceSnapshot | past_race_index | historical_input_snapshot_past_races.past_race_index | INTEGER / NOT NULL | ordering | PK/>=0 | zero-based contiguous |
+| HistoricalPastRaceSnapshot | race_date | historical_input_snapshot_past_races.race_date | TEXT / NOT NULL | content | date shape | canonical date; before target |
+| HistoricalPastRaceSnapshot | place | historical_input_snapshot_past_races.place | TEXT / NOT NULL | content | nonempty | NFC text |
+| HistoricalPastRaceSnapshot | race_name | historical_input_snapshot_past_races.race_name | TEXT / NOT NULL | content | nonempty | NFC text |
+| HistoricalPastRaceSnapshot | race_class | historical_input_snapshot_past_races.race_class | TEXT / NOT NULL | content | nonempty | NFC text |
+| HistoricalPastRaceSnapshot | distance_m | historical_input_snapshot_past_races.distance_m | INTEGER / NOT NULL | content | >0 | exact positive int |
+| HistoricalPastRaceSnapshot | track | historical_input_snapshot_past_races.track | TEXT / NOT NULL | content | nonempty | NFC text |
+| HistoricalPastRaceSnapshot | weather | historical_input_snapshot_past_races.weather | TEXT / NOT NULL | content | nonempty | NFC text |
+| HistoricalPastRaceSnapshot | track_condition | historical_input_snapshot_past_races.track_condition | TEXT / NOT NULL | content | nonempty | NFC text |
+| HistoricalPastRaceSnapshot | finish | historical_input_snapshot_past_races.finish | INTEGER / NOT NULL | content | >0 | exact positive int |
+| HistoricalPastRaceSnapshot | margin | historical_input_snapshot_past_races.margin_text | TEXT / NOT NULL | content | nonempty | canonical Decimal |
+| HistoricalPastRaceSnapshot | race_time | historical_input_snapshot_past_races.race_time | TEXT / NOT NULL | content | nonempty | NFC text |
+| HistoricalPastRaceSnapshot | weight | historical_input_snapshot_past_races.weight_text | TEXT / NOT NULL | content | nonempty | canonical Decimal |
+| HistoricalPastRaceSnapshot | weight_diff | historical_input_snapshot_past_races.weight_diff_text | TEXT / NOT NULL | content | nonempty | canonical Decimal |
+| HistoricalPastRaceSnapshot | jockey | historical_input_snapshot_past_races.jockey | TEXT / NOT NULL | content | nonempty | NFC text |
+| HistoricalPastRaceSnapshot | popularity | historical_input_snapshot_past_races.popularity | INTEGER / NOT NULL | content | >=0 | exact non-negative int |
+| HistoricalPastRaceSnapshot | odds | historical_input_snapshot_past_races.odds_text | TEXT / NOT NULL | content | nonempty | canonical Decimal |
+| HistoricalPastRaceSnapshot | passing_order | historical_input_snapshot_past_races.passing_order | TEXT / NOT NULL | content | text; empty allowed | NFC string, including empty |
+| HistoricalPastRaceSnapshot | fourth_corner_position | historical_input_snapshot_past_races.fourth_corner_position | INTEGER / NOT NULL | content | >=0 | exact non-negative int |
+| HistoricalInputProvenance | input_type | historical_input_snapshot_provenance.input_type | TEXT / NOT NULL | content/audit | enum CHECK | exact V3a type/key relation |
+| HistoricalInputProvenance | audit_key | historical_input_snapshot_provenance.audit_key | TEXT / NOT NULL | ordering/audit | PK/nonempty | slash-key relation/completeness |
+| HistoricalInputProvenance | source | historical_input_snapshot_provenance.source | TEXT / NOT NULL | audit | nonempty | NFC text |
+| HistoricalInputProvenance | source_id | historical_input_snapshot_provenance.source_id | TEXT / NOT NULL | audit | nonempty | NFC text/formats deferred to V3c |
+| HistoricalInputProvenance | race_entry_id | historical_input_snapshot_provenance.race_entry_id | INTEGER / NULL | linkage | FK/coarse check | input-type relation |
+| HistoricalInputProvenance | available_at | historical_input_snapshot_provenance.available_at_utc | TEXT / NULL | audit time | UTC shape/one time | UTC causal order |
+| HistoricalInputProvenance | observed_at | historical_input_snapshot_provenance.observed_at_utc | TEXT / NULL | audit time | UTC shape/one time | UTC causal order |
+| HistoricalInputProvenance | past_race_index | historical_input_snapshot_provenance.past_race_index | INTEGER / NULL | linkage | FK/coarse check | audit-key relation/XOR |
+| HistoricalInputSnapshot | identity | historical_input_snapshots.dataset_id/organization/source_system/external_race_id/captured_at_utc | mixed / NOT NULL | natural identity | exact UNIQUE | V3a identity object |
+| HistoricalInputSnapshot | internal_race_id | historical_input_snapshots.internal_race_id | INTEGER / NOT NULL | linkage | FK/>0 | exact positive int |
+| HistoricalInputSnapshot | information_cutoff | historical_input_snapshots.information_cutoff_utc | TEXT / NOT NULL | content | UTC shape | UTC causal order |
+| HistoricalInputSnapshot | race | historical_input_snapshot_races row | normalized row / NOT NULL by repository | content | FK | exact V3a race object |
+| HistoricalInputSnapshot | entries | historical_input_snapshot_entries rows | normalized rows / non-empty repository | content | FK/UNIQUE | tuple-only/order/completeness |
+| HistoricalInputSnapshot | past_races | historical_input_snapshot_past_races rows | normalized rows / may be empty | content | FK | tuple-only/index/absence XOR |
+| HistoricalInputSnapshot | provenance | historical_input_snapshot_provenance rows | normalized rows / non-empty repository | audit | FK/PK | tuple-only/key completeness |
+| HistoricalInputSnapshot | content_sha256 | historical_input_snapshots.content_sha256 | TEXT / NOT NULL | derived content | 64 lowercase hex | recomputed digest equality |
 
 #### V3b self-review
 

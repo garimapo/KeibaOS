@@ -1217,9 +1217,9 @@ registration, test, database access, or DDL execution occurred.
 
 Read-only schema inspection confirmed: `races.id` is `INTEGER PRIMARY KEY`; `horses.id` is `INTEGER
 PRIMARY KEY`; `horses.race_id` is the internal-race linkage; and legacy tables do not declare all required
-foreign keys. The future migration must rely on the existing runner's `PRAGMA foreign_keys = ON` verification
-and one `BEGIN IMMEDIATE` transaction, with all statements committed atomically or rolled back together and
-with no legacy-data backfill.
+foreign keys. The existing runner owns `PRAGMA foreign_keys = ON` verification, one per-migration
+`BEGIN IMMEDIATE` transaction, commit, rollback, and the `schema_migrations` insert. The future migration
+only calls `connection.execute(statement)` for its DDL and performs no legacy-data backfill.
 
 The DDL specifies exactly eight historical-input tables:
 
@@ -1284,4 +1284,61 @@ Overall 1i6a status: `REVISION_REQUIRED`.
 Production, tests, README, migration, schema, database files, logs, and the original workspace remain
 unchanged. V3c and V3d remain unstarted.
 
-blocker: V3b review, V3c source mapping/policy, and V3d consolidation are incomplete
+## Phase 4C-2d3b1i6a V3b ChatGPT Review Findings
+
+Reviewed commit: `27d82a6c2a37e095cb055876efd47d5b5ac5873b`.
+
+Review result: `REVISION_REQUIRED`.
+
+Approval disposition: `NOT_APPROVED`.
+
+Findings:
+
+- V3a NFC text normalization and V3b SQL `trim()` checks disagreed.
+- Migration transaction ownership was ambiguous.
+- The crosswalk used aliases rather than exact SQLite table names.
+- A stray literal `+` line appeared before the V3b heading.
+
+## Phase 4C-2d3b1i6a V3b Contract Alignment Revision
+
+V3a accepts NFC-normalized text and rejects exact empty strings; it does not trim, strip, case-normalize, or
+rewrite text. V3b required `TEXT` checks therefore now use only
+`typeof(column_name) = 'text' AND column_name <> ''`. Optional V3a text accepts `NULL` or exact non-empty
+`TEXT`. `passing_order` remains `TEXT NOT NULL` with only `typeof(passing_order) = 'text'`, preserving `""`.
+NFC validation remains repository/domain work.
+
+The existing migration runner exclusively owns foreign-key verification, the per-migration `BEGIN IMMEDIATE`
+transaction, commit, rollback, and migration-record insertion. The future
+`v010_historical_input_snapshot_schema.apply(connection)` only loops over `STATEMENTS + INDEXES + TRIGGERS`
+and calls `connection.execute(statement)`. It must not issue transaction SQL, call `connection.commit()`,
+`connection.rollback()`, or use `connection.executescript()`.
+
+All 64 crosswalk rows now use exact V3b DDL table names; undocumented aliases were removed. The standalone
+`+` before the V3b heading was removed. The DDL remains exactly 8 `CREATE TABLE`, 4 `CREATE INDEX`, and 5
+`CREATE TRIGGER` statements; V3c source mapping/policy remains unstarted.
+
+Self-review:
+
+1. PASS — V3a-accepted text is not rejected by an extra SQL trim policy.
+2. PASS — required `TEXT` rejects only exact empty strings at the coarse SQL level.
+3. PASS — optional `TEXT` accepts `NULL` or exact non-empty `TEXT`.
+4. PASS — `passing_order` still accepts `""`.
+5. PASS — the migration runner exclusively owns transaction control.
+6. PASS — future migration `apply()` uses `connection.execute()`, never `executescript()`.
+7. PASS — all 64 crosswalk rows use exact full table names.
+8. PASS — exactly eight tables, four indexes, and five triggers remain.
+9. PASS — V3c policy has not started.
+10. PASS — overall 1i6a remains `REVISION_REQUIRED`.
+
+V3a status: `APPROVED`.
+
+V3b status: `READY_FOR_REVIEW`.
+
+Overall 1i6a status: `REVISION_REQUIRED`.
+
+Overall approval disposition: `NOT_APPROVED`.
+
+Production, tests, README, migration, schema, database files, logs, and the original workspace remain
+unchanged. V3c and V3d remain unstarted.
+
+blocker: V3b review, V3c source mapping/policy, and V3d consolidation remain incomplete
