@@ -32,7 +32,7 @@ V3c status: `APPROVED`.
 
 V3d status: `READY_FOR_REVIEW`.
 
-Overall 1i6a status: `REVISION_REQUIRED`.
+Overall 1i6a status: `READY_FOR_FINAL_REVIEW`.
 
 Overall approval disposition: `NOT_APPROVED`.
 
