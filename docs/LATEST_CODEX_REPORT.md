@@ -1448,4 +1448,45 @@ to `READY_FOR_REVIEW`; overall 1i6a remains `REVISION_REQUIRED` with approval di
 Production, tests, README, migration, schema, database files, logs, and the original workspace remain
 unchanged. V3d remains unstarted.
 
+## Phase 4C-2d3b1i6a V3c Absence-scope Review Finding
+
+Reviewed commit: `88b7d623179a5f16b58b6a6f6b38fa35616a8150`.
+
+Review result: `REVISION_REQUIRED`.
+
+Approval disposition: `NOT_APPROVED`.
+
+Finding: `past_race_absence.query_scope` lacked an exact canonical internal schema.
+
+## Phase 4C-2d3b1i6a V3c Absence-scope Contract Revision
+
+`query_scope` now has exactly three fixed keys: `external_entry_id`, `target_race_date`, and
+`strictly_before_target_race`. No extra or omitted keys are allowed. The entry ID must exactly equal the
+envelope entry ID; the target date must exactly equal `HistoricalRaceSnapshot.target_race_date`; and the
+boolean must be exact `true`, limiting the scope to `past_race.race_date < target_race_date`.
+
+The absence record requires exact integer `result_count = 0` (not `False`), a successful approved official
+request, successful parsing, positively identified scope, and a valid complete result set. Database absence,
+parser omission/failure, HTTP/network failure, unsupported pages, lookup failure, malformed/empty HTML,
+legacy absence, and current refetches fail closed and never prove historical absence. The exact query-scope
+object participates in the version-1 canonical digest, yielding
+`his-v1:past_race_absence:{sha256}` for the same logical absence record.
+
+The three related 64x11 matrix rows—`HistoricalInputSnapshot.past_races`,
+`HistoricalInputProvenance.source_id`, and `HistoricalInputProvenance.past_race_index`—now use the exact
+missing-data policy `exact validated absence query only`; no new matrix row was added.
+
+V3a status: `APPROVED`.
+
+V3b status: `APPROVED`.
+
+V3c status: `READY_FOR_REVIEW`.
+
+Overall 1i6a status: `REVISION_REQUIRED`.
+
+Overall approval disposition: `NOT_APPROVED`.
+
+V3c absence-scope self-review: all 13 required items PASS. Production, tests, README, migration, DDL,
+schema, database files, logs, and the original workspace remain unchanged. V3d remains unstarted.
+
 blocker: V3c review and V3d consolidation remain incomplete

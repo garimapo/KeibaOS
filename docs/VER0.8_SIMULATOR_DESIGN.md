@@ -3823,8 +3823,61 @@ official URL is required.
 
 `track` optional source facts use `null`; `win_odds`, `margin`, `weight`, `weight_diff`, and `odds` are
 canonical fixed-point Decimal strings. In a `past_race_absence` payload, `query_scope` is a canonical plain
-JSON value with sorted keys and `result_count` must equal the integer `0`. Database-row absence is not this
-evidence.
+JSON object with exactly `external_entry_id`, `target_race_date`, and `strictly_before_target_race`; its
+values are specified below. `result_count` must equal the exact integer `0`, not `False`. Database-row
+absence is not this evidence.
+
+#### Past-race absence query scope
+
+`past_race_absence.record_values.query_scope` is exactly this canonical object, with no additional or omitted
+keys:
+
+```text
+external_entry_id: string
+target_race_date: YYYY-MM-DD string
+strictly_before_target_race: true
+```
+
+Its `external_entry_id` must equal the envelope `external_entry_id` and the exact
+`HistoricalExternalEntryIdentity.external_entry_id` for the queried horse. Its `target_race_date` must equal
+the exact `HistoricalRaceSnapshot.target_race_date`. `strictly_before_target_race` is the exact boolean
+`true`; `false` is forbidden. The scope therefore covers only records where
+`past_race.race_date < target_race_date`.
+
+The complete `past_race_absence.record_values` object is exactly:
+
+```text
+external_entry_id: string
+query_scope:
+  external_entry_id: string
+  target_race_date: YYYY-MM-DD string
+  strictly_before_target_race: true
+result_count: exact integer 0
+```
+
+At `observed_at`, it proves only that an approved official-source request for that exact scope succeeded, its
+response was successfully parsed, the scope was positively identified, the result set was valid and complete
+under the source contract, and the result count was zero. Database absence, parser omission, HTTP or timeout
+failure, unsupported pages, horse lookup failure, malformed/empty HTML, legacy absence, or a current refetch
+cannot create historical absence evidence; each fails closed. The query-scope object participates unchanged
+in the schema-version-1 canonical JSON digest, producing
+`his-v1:past_race_absence:{sha256}` for the same logical absence record.
+
+Absence-scope self-review:
+
+1. PASS — `query_scope` has exactly three fixed keys.
+2. PASS — no extra `query_scope` keys are allowed.
+3. PASS — `external_entry_id` equals the envelope entry ID.
+4. PASS — `target_race_date` equals the snapshot target-race date.
+5. PASS — `strictly_before_target_race` is exact boolean `True`.
+6. PASS — `result_count` is exact integer `0`; `False` is rejected.
+7. PASS — parser or network failure cannot create absence evidence.
+8. PASS — database absence cannot create absence evidence.
+9. PASS — the source ID is reproducible for the same logical absence record.
+10. PASS — the matrix remains exactly 64 rows and 11 columns.
+11. PASS — V3b DDL remains untouched.
+12. PASS — V3d remains unstarted.
+13. PASS — overall 1i6a remains `REVISION_REQUIRED`.
 
 #### Provenance-time contract
 
@@ -3977,17 +4030,17 @@ captured`, `not provided by provider`, or `forbidden to infer` as applicable.
 | HistoricalInputProvenance.input_type | derived from approved capture boundary | derived from approved capture boundary | not applicable | audit-key mapping only | not applicable | not applicable | not applicable | not applicable | fail closed if unknown | legacy reuse forbidden |
 | HistoricalInputProvenance.audit_key | derived from approved capture boundary | derived from approved capture boundary | not applicable | V3a key grammar only | not applicable | not applicable | not applicable | not applicable | fail closed if unknown | legacy reuse forbidden |
 | HistoricalInputProvenance.source | not currently captured | fixed `nar_official` | not applicable | fixed source-system literal | not applicable | not applicable | not applicable | not applicable | forbidden to infer | legacy reuse forbidden |
-| HistoricalInputProvenance.source_id | not currently captured | canonical digest result | exact logical record | envelope plus exact kind payload | track/entry/jockey/odds_win/past_race/past_race_absence | matching payload | provider timestamp or `None` | approved response receipt | fail closed if incomplete | legacy reuse forbidden |
+| HistoricalInputProvenance.source_id | not currently captured | canonical digest result | exact logical record | envelope plus exact kind payload | track/entry/jockey/odds_win/past_race/past_race_absence | matching payload | provider timestamp or `None` | approved response receipt | exact validated absence query only | legacy reuse forbidden |
 | HistoricalInputProvenance.race_entry_id | mapped internal linkage only | matching snapshot entry or `None` | external-entry mapping | mapping or track `None` only | not applicable | not applicable | not applicable | not applicable | fail closed if unmapped | legacy linkage only |
 | HistoricalInputProvenance.available_at | not currently captured | exact provider timestamp or `None` | same logical source record | aware UTC parse only | matching record kind | matching payload | provider timestamp or `None` | approved response receipt | `None` if not provided | legacy reuse forbidden |
 | HistoricalInputProvenance.observed_at | not currently captured | approved response receipt UTC | collector response boundary | no derivation | matching record kind | matching payload | provider timestamp or `None` | approved response receipt | not currently captured | legacy reuse forbidden |
-| HistoricalInputProvenance.past_race_index | not currently captured | matching past row or `None` | past record or absence query | mapping only | past_race/past_race_absence/not applicable | matching payload/not applicable | provider timestamp or `None` | approved response receipt | `None` only when not applicable | legacy reuse forbidden |
+| HistoricalInputProvenance.past_race_index | not currently captured | matching past row or `None` | past record or absence query | mapping only | past_race/past_race_absence/not applicable | matching payload/not applicable | provider timestamp or `None` | approved response receipt | exact validated absence query only | legacy reuse forbidden |
 | HistoricalInputSnapshot.identity | derived from approved capture boundary | approved source identity plus capture time | not applicable | V3a natural identity only | not applicable | not applicable | not applicable | not applicable | fail closed if incomplete | legacy reuse forbidden |
 | HistoricalInputSnapshot.internal_race_id | mapped internal linkage only | external-race mapping to `races.id` | external-race mapping | mapping lookup only | not applicable | not applicable | not applicable | not applicable | fail closed if unmapped | legacy linkage only |
 | HistoricalInputSnapshot.information_cutoff | caller request | caller request | not applicable | no provider derivation | not applicable | not applicable | not applicable | not applicable | not applicable | legacy reuse forbidden |
 | HistoricalInputSnapshot.race | not currently captured | one complete track record | primary race record | exact V3a constructor only | track | track payload | provider timestamp or `None` | approved response receipt | fail closed if incomplete | legacy reuse forbidden |
 | HistoricalInputSnapshot.entries | not currently captured | complete entry/jockey/odds records | official entry records | validated canonical assembly only | entry/jockey/odds_win | matching payloads | provider timestamp or `None` | approved response receipt | fail closed if incomplete | legacy reuse forbidden |
-| HistoricalInputSnapshot.past_races | not currently captured | complete past records or exact absence | official history/query result | validated canonical assembly only | past_race/past_race_absence | matching payloads | provider timestamp or `None` | approved response receipt | fail closed if incomplete | legacy reuse forbidden |
+| HistoricalInputSnapshot.past_races | not currently captured | complete past records or exact absence | official history/query result | validated canonical assembly only | past_race/past_race_absence | matching payloads | provider timestamp or `None` | approved response receipt | exact validated absence query only | legacy reuse forbidden |
 | HistoricalInputSnapshot.provenance | derived from approved capture boundary | one row per required audit key | all logical records | exact V3a audit assembly only | all applicable kinds | matching payloads | provider timestamp or `None` | approved response receipt | fail closed if incomplete | legacy reuse forbidden |
 | HistoricalInputSnapshot.content_sha256 | derived from approved capture boundary | derived from approved capture boundary | not applicable | V3a canonical payload only | not applicable | not applicable | not applicable | not applicable | fail closed if mismatch | legacy reuse forbidden |
 

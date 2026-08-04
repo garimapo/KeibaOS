@@ -39,6 +39,12 @@ payload schemas; executable NAR official-host eligibility; and prediction-input-
 `(race_date DESC, source_id ASC)`, where index `0` is the newest applicable past race. V3c self-review is
 23/23 PASS. This preserves V3a/V3b approval while V3c remains `READY_FOR_REVIEW` and V3d remains unstarted.
 
+The V3c absence-scope revision fixes `past_race_absence.query_scope` to exactly three keys:
+`external_entry_id`, `target_race_date`, and `strictly_before_target_race: true`. It requires equality with
+the envelope entry identity and snapshot target-race date, exact integer `result_count = 0`, a successfully
+parsed complete official result set, and fail-closed rejection of database, parser, network, legacy, or
+refetch absence. The matrix remains exactly 64 rows and 11 columns.
+
 ## Objective
 
 Define the field-level official-source mapping, source-system and external-identity contracts, provenance-time
