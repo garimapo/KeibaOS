@@ -1408,4 +1408,44 @@ Overall approval disposition: `NOT_APPROVED`.
 Production, tests, README, migration, schema, database files, logs, and the original workspace remain
 unchanged.
 
+## Phase 4C-2d3b1i6a V3c ChatGPT Review Findings
+
+Reviewed commit: `85a7fe4361c323b489a7e8339f280b931a789f0a`.
+
+Review result: `REVISION_REQUIRED`.
+
+Approval disposition: `NOT_APPROVED`.
+
+Findings:
+
+- The field-level matrix lacked its required per-field audit/source columns.
+- Record-kind-specific canonical digest payloads were not fully enumerated.
+- Past-race ordering conflicted with the existing newest-first prediction input.
+- Official source URL host eligibility was not executable enough.
+
+## Phase 4C-2d3b1i6a V3c Source Contract Revision
+
+The normative field-level matrix is now exactly 64 rows and 11 columns: domain field; JRA official origin;
+NAR official origin; provider field/HTML record; derivation allowed; source record kind; source-ID basis;
+available-at origin; observed-at origin; missing-data policy; and legacy-reuse policy. No normative cell is
+blank. The preceding four-column origin table is explicitly non-normative support-status context only.
+
+The canonical source-ID envelope has fixed schema version 1 and six fully enumerated `record_values` schemas:
+`track`, `entry`, `jockey`, `odds_win`, `past_race`, and `past_race_absence`. No extra record-values keys
+are allowed. Digest input identifies parsed logical record values, never raw HTML bytes, CSS/DOM details,
+parser representations, local paths, or local database IDs.
+
+NAR official URL eligibility is machine-checkable: HTTPS, exact host `www.keiba.go.jp`, no credentials,
+no fragment, and no non-default port; final redirected URLs must satisfy the same rule. JRA retains no host
+allowlist and remains unsupported rather than guessed.
+
+Past races are sorted by `(race_date DESC, source_id ASC)` before assigning zero-based index, so
+`past_race_index = 0` is the newest applicable past race and remains compatible with existing
+`get_past_races()` newest-first behavior. The V3a digest emits that stable index order.
+
+V3c self-review: all 23 required items PASS. V3a and V3b remain approved; V3b DDL is untouched. V3c returns
+to `READY_FOR_REVIEW`; overall 1i6a remains `REVISION_REQUIRED` with approval disposition `NOT_APPROVED`.
+Production, tests, README, migration, schema, database files, logs, and the original workspace remain
+unchanged. V3d remains unstarted.
+
 blocker: V3c review and V3d consolidation remain incomplete

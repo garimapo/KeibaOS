@@ -3777,6 +3777,12 @@ source record separately. Canonicalization is versioned as `url-v1`:
    space.
 5. Emit `https://{lowercase-host}{path}?{canonical-query}` with no trailing `?` for an empty query.
 
+For `nar_official`, this is also an executable eligibility rule: the parsed scheme must equal `https`, the
+lowercased host must equal exactly `www.keiba.go.jp`, the port must be absent or 443, and the final canonical
+URL must still have that host. A redirect is eligible only after its final response URL independently passes
+the same rule; a cross-host redirect, credentials, fragment, non-default port, or any unapproved host fails
+closed. `jra_official` has no approved host and remains `CURRENTLY_UNSUPPORTED` rather than guessed.
+
 The `source_id` grammar is exact and does not use URL text, local IDs, timestamps, or paths as the identity:
 
 ```text
@@ -3784,7 +3790,7 @@ his-v1:{record_kind}:{sha256}
 ```
 
 `record_kind` is one of `track`, `entry`, `jockey`, `odds_win`, `past_race`, or `past_race_absence`; `sha256`
-is 64 lowercase hexadecimal characters. It is SHA-256 over the UTF-8 bytes of this canonical JSON payload:
+is 64 lowercase hexadecimal characters. It is SHA-256 over the UTF-8 bytes of this exact envelope:
 
 ```text
 schema_version: 1
@@ -3795,13 +3801,30 @@ external_race_id
 external_entry_id: string or null
 canonical_source_url: string or null
 provider_record_id: string or null
-record_values: exact parsed source values with Decimal fixed-point strings
+record_values: the exact record-kind key set below, with no extra keys
 ```
 
 The JSON uses NFC strings, `ensure_ascii=False`, `sort_keys=True`, `separators=(",", ":")`, canonical UTC
-microsecond `+00:00` strings, and `null` for absent optionals. Raw HTML is not the payload; the exact parsed
-record values are. A future implementation must specify a provider-record-ID grammar before using a
-provider-ID-backed record. Until then, a canonical official URL is required.
+microsecond `+00:00` strings, canonical fixed-point Decimal strings, and `null` for absent optionals. A
+record kind must use exactly its listed `record_values` keys; missing optional values use JSON `null`, and a
+missing required value fails closed. Raw HTML, response bytes, CSS classes, parser object representations,
+local paths, local IDs, and HTML insertion order are never digest input. A future implementation must
+specify a provider-record-ID grammar before using a provider-ID-backed record. Until then, a canonical
+official URL is required.
+
+| `record_kind` | Exact `record_values` key set |
+| --- | --- |
+| `track` | `target_race_date`, `scheduled_start_at`, `place`, `distance_m`, `track`, `track_condition`, `race_name`, `race_class`, `weather` |
+| `entry` | `external_entry_id`, `external_horse_id`, `horse_no` |
+| `jockey` | `external_entry_id`, `jockey` |
+| `odds_win` | `external_entry_id`, `horse_no`, `win_odds` |
+| `past_race` | `race_date`, `place`, `race_name`, `race_class`, `distance_m`, `track`, `weather`, `track_condition`, `finish`, `margin`, `race_time`, `weight`, `weight_diff`, `jockey`, `popularity`, `odds`, `passing_order`, `fourth_corner_position` |
+| `past_race_absence` | `external_entry_id`, `query_scope`, `result_count` |
+
+`track` optional source facts use `null`; `win_odds`, `margin`, `weight`, `weight_diff`, and `odds` are
+canonical fixed-point Decimal strings. In a `past_race_absence` payload, `query_scope` is a canonical plain
+JSON value with sorted keys and `result_count` must equal the integer `0`. Database-row absence is not this
+evidence.
 
 #### Provenance-time contract
 
@@ -3819,12 +3842,14 @@ It is not race start, database-save time, simulation time, migration time, or se
 timestamps must satisfy `available_at <= observed_at <= captured_at <= information_cutoff <=
 scheduled_start_at`; nullable `available_at` and `observed_at` each must not be after `captured_at`.
 
-#### Field-level source matrix
+#### Superseded source-origin overview
 
-The following 64 rows cover every V3a scalar/normalized value. `unsupported` means a future official source
-may only populate the field after it satisfies the preceding capture and source-ID rules; it is never filled
-from legacy data or inference. Every JRA row is currently unsupported because the present fetcher is sample
-data only.
+The following superseded four-column overview is retained solely as historical design context. It is not a
+V3c contract and must not be used for field-level audit, source-ID, timestamp, missing-data, or legacy-reuse
+decisions. The exact 64-row, 11-column matrix below is the sole normative V3c field-level source contract.
+`unsupported` means a future official source may only populate the field after it satisfies the capture and
+source-ID rules; it is never filled from legacy data or inference. Every JRA row is currently unsupported
+because the present fetcher is sample data only.
 
 | Domain value.field | JRA official origin | NAR official origin / derivation | Current rule |
 | --- | --- | --- | --- |
@@ -3857,7 +3882,7 @@ data only.
 | HistoricalRaceEntrySnapshot.win_odds | unsupported | exact official WIN-odds source text → Decimal | float parser/0.0 forbidden |
 | HistoricalRaceEntrySnapshot.entry_order | unsupported | canonical ascending `horseNum` after validated complete entry set | not HTML/DB display order |
 | HistoricalPastRaceSnapshot.race_entry_id | mapped internal linkage | matching snapshot-entry mapping | not provider field |
-| HistoricalPastRaceSnapshot.past_race_index | unsupported | zero-based order after sorting by `(race_date, source_id)` ascending | independent of provider display order |
+| HistoricalPastRaceSnapshot.past_race_index | unsupported | zero-based order after sorting by `(race_date DESC, source_id ASC)` | independent of provider display order |
 | HistoricalPastRaceSnapshot.race_date | unsupported | official horse-history record | exact canonical date |
 | HistoricalPastRaceSnapshot.place | unsupported | official horse-history record | exact text |
 | HistoricalPastRaceSnapshot.race_name | unsupported | official horse-history record | exact text |
@@ -3893,11 +3918,84 @@ data only.
 | HistoricalInputSnapshot.provenance | unsupported | one exact record per V3a audit key | source-ID contract |
 | HistoricalInputSnapshot.content_sha256 | derived | canonical V3a payload after validation | never supplied by provider |
 
-Past-race order is source-independent and deterministic: after each complete past-race record has its exact
-`source_id`, V3c sorts records by `(race_date, source_id)` ascending and assigns zero-based
-`past_race_index`. No provider display order, database row order, local ID, or inferred chronology is used.
-This preserves V3b DDL while keeping current NAR capture fail-closed until a collector can construct each
-exact source record.
+#### Exact 11-column field-level source matrix
+
+The following 64 rows are the normative V3c matrix. No cell is implicit: aggregate/domain-derived values use
+`not applicable` for a source record, and every currently unavailable provider field says `not currently
+captured`, `not provided by provider`, or `forbidden to infer` as applicable.
+
+| Domain field | JRA official origin | NAR official origin | Provider field / HTML record | Derivation allowed? | Source record kind | Source-ID basis | `available_at` origin | `observed_at` origin | Missing-data policy | Legacy reuse allowed? |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| HistoricalSourceIdentity.organization | not currently captured | fixed `NAR` | not applicable | fixed source-family literal | track | track payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalSourceIdentity.source_system | not currently captured | fixed `nar_official` | not applicable | fixed source-family literal | track | track payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalSourceIdentity.external_race_id | not currently captured | NAR race identity | race URL query | exact URL parameters only | track | track payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalSourceIdentity.source_url | not currently captured | primary NAR race URL | official race URL | `url-v1` only | track | track payload | provider timestamp or `None` | approved response receipt | not currently captured | legacy reuse forbidden |
+| HistoricalExternalRaceIdentity.organization | not currently captured | fixed `NAR` | not applicable | fixed source-family literal | track | track payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalExternalRaceIdentity.source_system | not currently captured | fixed `nar_official` | not applicable | fixed source-family literal | track | track payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalExternalRaceIdentity.external_race_id | not currently captured | exact NAR race ID | race URL query | exact URL parameters only | track | track payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalExternalEntryIdentity.external_race_identity | not currently captured | matching NAR race identity | entry record plus race URL | exact parent identity | entry | entry payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalExternalEntryIdentity.external_entry_id | not currently captured | exact NAR entry ID | `horseNum` | canonical integer formatting only | entry | entry payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalExternalEntryIdentity.external_horse_id | not currently captured | not provided by provider | horse-detail href is not an approved ID | no | entry | entry payload | provider timestamp or `None` | approved response receipt | `None` | legacy reuse forbidden |
+| HistoricalInputSnapshotIdentity.dataset_id | caller/run context | caller/run context | not applicable | no provider derivation | not applicable | not applicable | not applicable | not applicable | not applicable | legacy reuse forbidden |
+| HistoricalInputSnapshotIdentity.source_identity | not currently captured | approved NAR source identity | approved source records | exact object fields only | track | track payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalInputSnapshotIdentity.captured_at | derived from approved capture boundary | derived from approved capture boundary | complete snapshot assembly | yes, assembly completion only | not applicable | not applicable | not applicable | not applicable | forbidden to infer | legacy reuse forbidden |
+| HistoricalRaceSnapshot.target_race_date | not currently captured | `k_raceDate` | race URL query | canonical date only | track | track payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalRaceSnapshot.scheduled_start_at | not currently captured | not currently captured | official race schedule record | timezone-aware parse only | track | track payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalRaceSnapshot.place | not currently captured | not currently captured | official race/meeting record | NFC only | track | track payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalRaceSnapshot.distance_m | not currently captured | not currently captured | official race record | exact positive integer only | track | track payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalRaceSnapshot.track | not currently captured | not currently captured | official race record | no inference | track | track payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalRaceSnapshot.track_condition | not currently captured | not currently captured | official race record | no inference | track | track payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalRaceSnapshot.race_name | not currently captured | not currently captured | official race record | NFC optional text only | track | track payload | provider timestamp or `None` | approved response receipt | `None` if provider omits | legacy reuse forbidden |
+| HistoricalRaceSnapshot.race_class | not currently captured | not currently captured | official race record | NFC optional text only | track | track payload | provider timestamp or `None` | approved response receipt | `None` if provider omits | legacy reuse forbidden |
+| HistoricalRaceSnapshot.weather | not currently captured | not currently captured | official race record | NFC optional text only | track | track payload | provider timestamp or `None` | approved response receipt | `None` if provider omits | legacy reuse forbidden |
+| HistoricalRaceEntrySnapshot.race_entry_id | mapped internal linkage only | mapped internal linkage only | external-entry mapping | mapping lookup only | not applicable | not applicable | not applicable | not applicable | fail closed if unmapped | legacy linkage only |
+| HistoricalRaceEntrySnapshot.external_entry_identity | not currently captured | exact NAR entry identity | `horseNum` | canonical integer formatting only | entry | entry payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalRaceEntrySnapshot.horse_no | not currently captured | not currently captured | `horseNum` | exact positive integer only | entry | entry payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalRaceEntrySnapshot.jockey | not currently captured | not currently captured | official entry record | NFC only | jockey | jockey payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalRaceEntrySnapshot.win_odds | not currently captured | not currently captured | exact WIN odds text | Decimal parse only | odds_win | odds_win payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalRaceEntrySnapshot.entry_order | not currently captured | derived from complete entry set | validated `horseNum` set | sort `horseNum` ascending | not applicable | not applicable | not applicable | not applicable | fail closed if duplicate/missing | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.race_entry_id | mapped internal linkage only | matching snapshot-entry mapping | external-entry mapping | mapping lookup only | not applicable | not applicable | not applicable | not applicable | fail closed if unmapped | legacy linkage only |
+| HistoricalPastRaceSnapshot.past_race_index | not currently captured | derived from complete past records | `race_date` plus source ID | sort date DESC/source ID ASC | not applicable | not applicable | not applicable | not applicable | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.race_date | not currently captured | not currently captured | official horse-history record | canonical date only | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.place | not currently captured | not currently captured | official horse-history record | NFC only | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.race_name | not currently captured | not currently captured | official horse-history record | NFC only | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.race_class | not currently captured | not currently captured | official horse-history record | NFC only | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.distance_m | not currently captured | not currently captured | official horse-history record | exact positive integer only | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.track | not currently captured | not currently captured | official horse-history record | NFC only | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.weather | not currently captured | not currently captured | official horse-history record | NFC only | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.track_condition | not currently captured | not currently captured | official horse-history record | NFC only | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.finish | not currently captured | not currently captured | official horse-history record | exact positive integer only | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.margin | not currently captured | not currently captured | exact source text | Decimal parse only | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.race_time | not currently captured | not currently captured | official horse-history record | NFC only | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.weight | not currently captured | not currently captured | exact source text | Decimal parse only | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.weight_diff | not currently captured | not currently captured | exact source text | Decimal parse only | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.jockey | not currently captured | not currently captured | official horse-history record | NFC only | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.popularity | not currently captured | not currently captured | official horse-history record | exact non-negative integer only | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.odds | not currently captured | not currently captured | exact source text | Decimal parse only | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.passing_order | not currently captured | not currently captured | official horse-history record | NFC; empty exact string allowed | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalPastRaceSnapshot.fourth_corner_position | not currently captured | not currently captured | official horse-history record | exact non-negative integer only | past_race | past_race payload | provider timestamp or `None` | approved response receipt | forbidden to infer | legacy reuse forbidden |
+| HistoricalInputProvenance.input_type | derived from approved capture boundary | derived from approved capture boundary | not applicable | audit-key mapping only | not applicable | not applicable | not applicable | not applicable | fail closed if unknown | legacy reuse forbidden |
+| HistoricalInputProvenance.audit_key | derived from approved capture boundary | derived from approved capture boundary | not applicable | V3a key grammar only | not applicable | not applicable | not applicable | not applicable | fail closed if unknown | legacy reuse forbidden |
+| HistoricalInputProvenance.source | not currently captured | fixed `nar_official` | not applicable | fixed source-system literal | not applicable | not applicable | not applicable | not applicable | forbidden to infer | legacy reuse forbidden |
+| HistoricalInputProvenance.source_id | not currently captured | canonical digest result | exact logical record | envelope plus exact kind payload | track/entry/jockey/odds_win/past_race/past_race_absence | matching payload | provider timestamp or `None` | approved response receipt | fail closed if incomplete | legacy reuse forbidden |
+| HistoricalInputProvenance.race_entry_id | mapped internal linkage only | matching snapshot entry or `None` | external-entry mapping | mapping or track `None` only | not applicable | not applicable | not applicable | not applicable | fail closed if unmapped | legacy linkage only |
+| HistoricalInputProvenance.available_at | not currently captured | exact provider timestamp or `None` | same logical source record | aware UTC parse only | matching record kind | matching payload | provider timestamp or `None` | approved response receipt | `None` if not provided | legacy reuse forbidden |
+| HistoricalInputProvenance.observed_at | not currently captured | approved response receipt UTC | collector response boundary | no derivation | matching record kind | matching payload | provider timestamp or `None` | approved response receipt | not currently captured | legacy reuse forbidden |
+| HistoricalInputProvenance.past_race_index | not currently captured | matching past row or `None` | past record or absence query | mapping only | past_race/past_race_absence/not applicable | matching payload/not applicable | provider timestamp or `None` | approved response receipt | `None` only when not applicable | legacy reuse forbidden |
+| HistoricalInputSnapshot.identity | derived from approved capture boundary | approved source identity plus capture time | not applicable | V3a natural identity only | not applicable | not applicable | not applicable | not applicable | fail closed if incomplete | legacy reuse forbidden |
+| HistoricalInputSnapshot.internal_race_id | mapped internal linkage only | external-race mapping to `races.id` | external-race mapping | mapping lookup only | not applicable | not applicable | not applicable | not applicable | fail closed if unmapped | legacy linkage only |
+| HistoricalInputSnapshot.information_cutoff | caller request | caller request | not applicable | no provider derivation | not applicable | not applicable | not applicable | not applicable | not applicable | legacy reuse forbidden |
+| HistoricalInputSnapshot.race | not currently captured | one complete track record | primary race record | exact V3a constructor only | track | track payload | provider timestamp or `None` | approved response receipt | fail closed if incomplete | legacy reuse forbidden |
+| HistoricalInputSnapshot.entries | not currently captured | complete entry/jockey/odds records | official entry records | validated canonical assembly only | entry/jockey/odds_win | matching payloads | provider timestamp or `None` | approved response receipt | fail closed if incomplete | legacy reuse forbidden |
+| HistoricalInputSnapshot.past_races | not currently captured | complete past records or exact absence | official history/query result | validated canonical assembly only | past_race/past_race_absence | matching payloads | provider timestamp or `None` | approved response receipt | fail closed if incomplete | legacy reuse forbidden |
+| HistoricalInputSnapshot.provenance | derived from approved capture boundary | one row per required audit key | all logical records | exact V3a audit assembly only | all applicable kinds | matching payloads | provider timestamp or `None` | approved response receipt | fail closed if incomplete | legacy reuse forbidden |
+| HistoricalInputSnapshot.content_sha256 | derived from approved capture boundary | derived from approved capture boundary | not applicable | V3a canonical payload only | not applicable | not applicable | not applicable | not applicable | fail closed if mismatch | legacy reuse forbidden |
+
+Past-race order is prediction-input-compatible and deterministic: after each complete past-race record has
+its exact `source_id`, V3c sorts records by `(race_date DESC, source_id ASC)` and assigns zero-based
+`past_race_index`. Therefore index `0` is the newest applicable past race. Provider display order, database
+row order, local ID, and HTML insertion order are forbidden. The V3a digest emits past races in
+`race_entry_id ASC, past_race_index ASC` order, so this index definition yields a stable digest.
 
 #### Legacy, v008, and support policy
 
@@ -3918,28 +4016,29 @@ rows or current refetches.
 
 #### V3c self-review
 
-1. PASS — source-system values are exact.
-2. PASS — organization derivation is deterministic and does not use `"地方"`.
-3. PASS — the NAR external race ID format is exact.
-4. PASS — the NAR external entry ID format is exact.
-5. PASS — `external_horse_id` is never entry identity.
-6. PASS — source-ID grammar and canonical payload are complete.
-7. PASS — Python hash, random, local IDs, paths, and time-alone IDs are forbidden.
-8. PASS — canonical source-record digest schema version is fixed.
-9. PASS — every V3a source-relevant scalar has one of 64 matrix rows.
-10. PASS — every matrix row states JRA and NAR origin or explicit unsupported status.
-11. PASS — `available_at` origin is exact.
-12. PASS — `observed_at` origin is exact.
-13. PASS — `captured_at` origin is exact.
-14. PASS — legacy DB values cannot become provenance.
-15. PASS — past-race absence requires exact source evidence.
-16. PASS — existing v008 rows are untrusted.
-17. PASS — `horses.odds` is forbidden.
-18. PASS — hard-coded `JRAFetcher` is not official provenance.
-19. PASS — the float odds parser is not historical odds evidence.
-20. PASS — V3b DDL is unchanged.
-21. PASS — V3d has not started.
-22. PASS — overall 1i6a remains `REVISION_REQUIRED`.
+1. PASS — the normative matrix remains exactly 64 domain rows.
+2. PASS — all 11 required matrix columns exist.
+3. PASS — no normative matrix cell is blank.
+4. PASS — every source-relevant field names an explicit record kind or `not applicable`.
+5. PASS — all six record-kind payload schemas are fully enumerated.
+6. PASS — digest construction permits no discretionary `record_values` keys.
+7. PASS — the NAR official URL host rule is machine-checkable.
+8. PASS — the JRA host remains unsupported rather than guessed.
+9. PASS — the NAR race ID format is deterministic.
+10. PASS — the NAR entry ID is race-scoped and deterministic.
+11. PASS — `external_horse_id` remains metadata only.
+12. PASS — `past_race_index = 0` means the newest applicable past race.
+13. PASS — the tie-break is `race_date DESC, source_id ASC`.
+14. PASS — `source_id` identifies the parsed logical record, not raw HTML bytes.
+15. PASS — `available_at` is provider-only.
+16. PASS — `observed_at` is collector response-receipt time.
+17. PASS — `captured_at` is complete snapshot assembly time.
+18. PASS — legacy values remain linkage-only.
+19. PASS — existing v008 rows remain untrusted.
+20. PASS — `horses.odds` remains forbidden.
+21. PASS — V3b DDL is untouched.
+22. PASS — V3d remains unstarted.
+23. PASS — overall 1i6a remains `REVISION_REQUIRED`.
 
 V3a status: `APPROVED`. V3b status: `APPROVED`. V3c status: `READY_FOR_REVIEW`. Overall 1i6a remains
 `REVISION_REQUIRED` with approval disposition `NOT_APPROVED`; V3c review and V3d consolidation remain

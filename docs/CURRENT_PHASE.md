@@ -34,6 +34,11 @@ Overall 1i6a status: `REVISION_REQUIRED`.
 
 Overall approval disposition: `NOT_APPROVED`.
 
+The V3c revision has an exact 64-row, 11-column normative field-level matrix; six fixed record-kind digest
+payload schemas; executable NAR official-host eligibility; and prediction-input-compatible past-race ordering
+`(race_date DESC, source_id ASC)`, where index `0` is the newest applicable past race. V3c self-review is
+23/23 PASS. This preserves V3a/V3b approval while V3c remains `READY_FOR_REVIEW` and V3d remains unstarted.
+
 ## Objective
 
 Define the field-level official-source mapping, source-system and external-identity contracts, provenance-time
