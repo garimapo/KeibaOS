@@ -2,367 +2,82 @@
 
 ## Status
 
-APPROVED_FOR_CODEX
+WAITING_FOR_PHASE_INSTRUCTION
 
 ## Phase
 
-Phase 4C-2d3b1i5c — Persisted simulation request application, deterministic JSON CLI, and file-backed E2E
+Phase 4C-2d3b1i6a V3d — Historical input snapshot contract consolidation
 
 ## Base Commit
 
-`cd6f8e6f8e9024c33f3dc44d5f14486d5d77fdfb docs: approve persisted simulation race inputs`
+`430add64f96c52db8d8cf86f86ea08fd1b7caac0`
 
 ## Branch
 
-`feature/ver0.8-simulator`
+`review/4c-2d3b1i6a-v3d-consolidation`
 
 ## Canonical Workspace
 
-Use only the clean clone:
+`C:\Users\garim\Desktop\KeibaAI-review-1i5b2b`
 
-```text
-C:\Users\garim\Desktop\KeibaAI-review-1i5b2b
-```
+The original workspace, `C:\Users\garim\Desktop\KeibaAI`, is not a modification target.
 
-The original workspace `C:\Users\garim\Desktop\KeibaAI` must not be modified.
+## Review State
+
+V3a status: `APPROVED`.
+
+V3b status: `APPROVED`.
+
+V3c status: `APPROVED`.
+
+V3d status: `APPROVED`.
+
+Overall 1i6a status: `APPROVED`.
+
+Overall approval disposition: `APPROVED`.
 
 ## Objective
 
-Add only the thin request-to-application orchestrator, deterministic JSON CLI, documentation, and their
-new tests. The phase composes existing approved boundaries in this exact order:
+Consolidate V3a, V3b, and V3c into one authoritative implementation contract. Resolve precedence,
+cross-contract semantics, natural identity, selection, save/load integrity, causal time order, digest, audit,
+storage, and legacy-policy ambiguity before any historical-input implementation phase.
 
-```text
-request path
-→ immutable request document
-→ application inputs
-→ audited race inputs
-→ existing SQLite application runner
-→ SimulationSummary
-→ deterministic JSON / CLI exit code
-```
+## V3d Scope
 
-This phase must not change request parsing, application-input parsing, race/audit parsing, SQLite
-composition, repositories, migrations, pipeline logic, settlement logic, or summary calculations.
+V3d establishes authoritative precedence; final identity/content/context/linkage classification; natural
+identity and information-cutoff semantics; repository save/load and integrity validation rules; source/audit
+semantics; a cross-contract consistency table; and the implementation-readiness gate.
 
-## Completed Dependencies
+V3d does not revise V3b's eight tables, columns, constraints, indexes, triggers, crosswalk, or runner-owned
+transaction boundary. It does not implement a collector, provider, parser, repository, importer, backfill,
+migration, or tests.
 
-- 1i5a: `run_sqlite_persisted_simulation()` owns one connection, migrations, composition, run, and close.
-- 1i5b1: `load_persisted_simulation_request_document()` owns immutable JSON request loading.
-- 1i5b2a: `assemble_persisted_simulation_application_inputs()` owns run/strategy/pipeline/budget assembly.
-- 1i5b2b: `assemble_persisted_simulation_race_inputs()` owns audited immutable race-input assembly.
-- The remote base and approved 1i5b2b review branch are both `cd6f8e6`.
+## Allowed Files
 
-## Allowed Implementation Files
-
-```text
-scripts/simulation/persisted_simulation_request_application.py
-scripts/cli/run_persisted_simulation.py
-tests/test_persisted_simulation_request_application.py
-tests/test_cli_run_persisted_simulation.py
-README.md
-docs/LATEST_CODEX_REPORT.md
-```
-
-`docs/CURRENT_PHASE.md` is approved contract documentation and is not an implementation target.
+- `docs/CURRENT_PHASE.md`
+- `docs/LATEST_CODEX_REPORT.md`
+- `docs/VER0.8_SIMULATOR_DESIGN.md`
 
 ## Forbidden Files
 
-```text
-main.py
-config/settings.json
-scripts/database.py
-existing simulation production
-existing CLI
-existing tests
-migration
-schema
-package __init__ files
-database/keiba.db
-logs/
-```
+- Production code, tests, and `README.md`.
+- Migration modules, migration runner, V3b DDL/schema, and `scripts/database.py`.
+- Database files, logs, CLI/settings, provider/parser/collector/repository implementation, package exports, and
+  the original workspace.
 
-No production/test/README modification is permitted during this design-only activity. The eventual
-implementation must not stage, commit, or push without a separate explicit approval.
+## Required Verification
 
-## Application Public API
+- Confirm the V3d precedence, natural identity, selection, and integrity rules resolve prior ambiguity.
+- Confirm all cross-contract rows and all 20 implementation-readiness checks are `PASS` before publishing.
+- Run `git diff --check`, `git diff --name-status`, and `git status --short`.
 
-Create only this module-defined public function in
-`scripts/simulation/persisted_simulation_request_application.py`:
+## Stop Condition
 
-```python
-from __future__ import annotations
+Publish only the V3d consolidation documents for review, then stop. Do not begin 1i6b1, provider/parser/
+collector/repository work, migration work, database operations, or implementation.
 
-from pathlib import Path
+## Blocker
 
-from scripts.simulation.models import SimulationSummary
-
-
-def run_persisted_simulation_request(
-    *,
-    request_path: str | Path,
-) -> SimulationSummary:
-    ...
-```
-
-All helpers are private. Do not add a public class, Protocol, dataclass, ABC, repository, service bundle,
-or package-root export.
-
-## Exact Call Order
-
-For each valid call, make exactly one call at every stage and return the exact runner result:
-
-```python
-document = load_persisted_simulation_request_document(request_path=request_path)
-application_inputs = assemble_persisted_simulation_application_inputs(document=document)
-race_inputs = assemble_persisted_simulation_race_inputs(
-    document=document,
-    application_inputs=application_inputs,
-)
-return run_sqlite_persisted_simulation(
-    database_path=application_inputs.database_path,
-    run_context=application_inputs.run_context,
-    strategy_identity=application_inputs.strategy_identity,
-    prediction_pipeline=application_inputs.prediction_pipeline,
-    race_inputs=race_inputs,
-    budgets_by_race_id=application_inputs.budgets_by_race_id,
-)
-```
-
-Do not sort, copy, reparse, recreate, or recompute document/application/race inputs. The race-input
-assembler owns the required sort and the runner owns SQLite lifecycle, migration, composition, and run.
-
-## Identity and Linkage
-
-- Pass the exact `document` object from loader to both assemblers.
-- Pass the exact `application_inputs` object to race assembly.
-- Pass `application_inputs.database_path`, `run_context`, `strategy_identity`, `prediction_pipeline`, and
-  `budgets_by_race_id` directly to the runner; do not copy or reparse them.
-- Pass the race assembler's returned tuple directly as `race_inputs`.
-- Do not add linkage validation or a second sort in 1i5c; approved upstream boundaries own those checks.
-
-## Application Exception Boundary
-
-The application module has no `try`, `except`, retry, fallback, logging, printing, stream handling, exit
-code, or exception translation. Loader, assembler, and runner exceptions propagate unchanged, by object
-identity. It must not import argparse, JSON, sys, SQLite connection APIs, migrations, composition factory,
-repositories, clock/environment/network/subprocess APIs, `main.py`, or configuration files.
-
-## CLI Public APIs
-
-Create only these module-defined public functions in `scripts/cli/run_persisted_simulation.py`:
-
-```python
-def build_parser() -> argparse.ArgumentParser: ...
-
-def run(
-    argv: Sequence[str] | None = None,
-    *,
-    stdout: TextIO | None = None,
-    stderr: TextIO | None = None,
-) -> int: ...
-
-def main() -> int: ...
-```
-
-No public class, Protocol, dataclass, ABC, formatter class, repository adapter, DB provider, or package-root
-export is allowed. Formatting/payload helpers remain private.
-
-## Parser Contract
-
-`build_parser()` has exactly one positional argument:
-
-```python
-parser.add_argument(
-    "request_path",
-    type=Path,
-    help="Persisted simulation request JSON path",
-)
-```
-
-No options are added. Native argparse behavior is preserved: missing/extra arguments raise
-`SystemExit(2)`; `--help` raises `SystemExit(0)`. The CLI must not catch either outcome.
-
-## Exit Codes
-
-`run()` parses arguments, selects supplied streams or `sys.stdout`/`sys.stderr`, calls
-`run_persisted_simulation_request()` once, emits exactly one JSON line, and returns:
-
-```text
-success: 0
-expected application failure: 1
-argparse usage failure: SystemExit(2)
-argparse help: SystemExit(0)
-```
-
-`main()` is exactly `return run()`. Under module execution use `raise SystemExit(main())`.
-
-## Success JSON Schema
-
-On success write one compact UTF-8 JSON line to stdout and nothing to stderr:
-
-```json
-{"schema_version":1,"status":"ok","summary":{}}
-```
-
-Use `json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))`, followed by one
-newline. Production must explicitly enumerate every approved `SimulationSummary` field; it must not
-dynamically construct the schema by iterating `dataclasses.fields(SimulationSummary)`.
-
-```text
-strategy_id strategy_name strategy_config_hash race_count settled_race_count
-unsettled_race_count no_bet_race_count void_race_count error_race_count
-unsupported_race_count bet_count settled_bet_count settled_purchase_race_count
-hit_bet_count hit_race_count investment payout profit roi bet_hit_rate
-race_hit_rate maximum_drawdown by_bet_type
-```
-
-Tests must compare the produced summary-key set with
-`{name.name for name in dataclasses.fields(SimulationSummary)}` to detect missing or extra fields.
-Production must not use `dataclasses.fields`, `dataclasses.asdict`, `summary.__dict__`, `default=str`,
-field-name-driven formatting, floats for Decimal values, clocks, random values, pretty-printing, or
-logging metadata.
-
-## Error JSON Schema
-
-Catch exactly this expected failure tuple once in CLI `run()`:
-
-```python
-except (OSError, RuntimeError, TypeError, ValueError, sqlite3.Error) as error:
-    ...
-```
-
-Write one compact JSON line to stderr, write nothing to stdout, and return 1:
-
-```json
-{"error":{"message":"...","type":"ValueError"},"schema_version":1,"status":"error"}
-```
-
-The type is `type(error).__name__`; message is `str(error) or type(error).__name__`. Never include a
-traceback, stack trace, request/database dump, or error output on stdout. Do not catch `Exception`,
-`BaseException`, `SystemExit`, `KeyboardInterrupt`, `GeneratorExit`, or `MemoryError`.
-
-## Decimal Serialization
-
-For `roi`, `bet_hit_rate`, and `race_hit_rate`:
-
-```text
-None       → JSON null
-Decimal    → format(value, "f") as a JSON string
-```
-
-For example, `Decimal("300")` serializes as `"300"`; precision is never lost through float conversion.
-
-## by_bet_type Serialization
-
-Build the payload in sorted bet-type-key order, although `json.dumps(sort_keys=True)` remains enabled.
-Production explicitly enumerates every approved `BetTypeSummary` field:
-
-```text
-bet_type bet_count settled_bet_count hit_bet_count investment payout profit roi bet_hit_rate
-```
-
-Use the same Decimal/null serialization rules. The Japanese bet-type key is preserved with
-`ensure_ascii=False`. Tests compare the resulting key set with
-`{name.name for name in dataclasses.fields(BetTypeSummary)}`; production must not use that reflection.
-
-## Stream Contract
-
-```python
-active_stdout = sys.stdout if stdout is None else stdout
-active_stderr = sys.stderr if stderr is None else stderr
-```
-
-Do not close either stream. Success writes only stdout; expected failures write only stderr. The supplied
-objects need only be writable; runtime `TextIO` validation is forbidden.
-
-## File-backed E2E
-
-Use real files, real SQLite, and existing migrations/repository APIs without mock/patch/monkeypatch:
-
-- Empty request with relative `simulation.db`, no races, and empty budgets verifies path anchoring,
-  migration application, an empty summary, and a usable file-backed DB.
-- A one-race, one-entry, no-past-race request with complete audits, 100-yen fixed stake, and 100-yen
-  budget uses parent tables plus complete race result and win payout fixture. It verifies snapshot
-  persistence and a settled 100 investment / 300 payout / 200 profit / `"300"` ROI summary.
-- Expected errors cover invalid request path, malformed/root/application/race-audit request failures,
-  database-open failure, and unknown-future migration; each returns the deterministic error envelope.
-
-The application function must not produce partial/empty fallback summaries, retry, supply path/timezone/
-clock fallbacks, or translate errors.
-
-## README Contract
-
-Add only the persisted-simulation CLI usage documentation: module command syntax, request JSON path,
-relative `database_path` anchoring, stdout success JSON, stderr error JSON, and Decimal rates as JSON
-strings. Document exit code 0 for a successful simulation, 1 for expected request/application/runner
-failure, and 2 for argparse usage failure; `--help` retains argparse `SystemExit(0)`. State that Ver0.8
-persisted simulation is for research and verification use and does not guarantee profit or betting
-performance. Do not remove or alter legacy Ver0.7 CLI guidance.
-
-## Failure Semantics
-
-```text
-loader failure              → no DB open
-application assembly failure → no DB open
-race assembly failure        → no DB open
-runner failure               → runner owns connection close
-expected CLI failure         → stderr JSON and exit 1
-argparse failure             → native argparse exit
-unexpected programming error → propagates
-```
-
-No partial summary, retry, fallback, error-as-success JSON, or manual DB/migration/repository work is
-allowed.
-
-## Source and AST Contract
-
-Application source must show each four-stage collaborator exactly once, direct runner-result return,
-zero `Try` and `ExceptHandler` nodes, and no SQLite/migration/composition/repository/CLI/JSON/stream/
-clock/subprocess/network/config dependency. CLI may import `sqlite3` only to catch `sqlite3.Error`; it
-may depend on the application function but must not import loader, assemblers, runner, migrations,
-repositories, or `PredictionPipeline`. CLI has exactly the one expected exception handler and no broad
-handler. Both modules have no package-root export and no type-ignore/`Any`/`cast`/`runtime_checkable`.
-
-## Required Tests
-
-New tests use real objects only; mock, patch, and monkeypatch are forbidden.
-
-- Application API/public-surface/type-hint contract; exact four-stage call chain; identity/linkage;
-  no exception wrapper; real empty file-backed SQLite integration; source/AST boundary.
-- CLI API/parser/stream/exit contract; serializer field-completeness and byte-for-byte deterministic JSON;
-  Decimal/null/by-bet-type serialization; empty and settled real file-backed E2E; expected failures;
-  argparse behavior; dependency/exception AST boundaries.
-- Preserve and execute the related existing suites.
-
-## Verification Commands
-
-Use the bundled interpreter only:
-
-```text
-C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe
-Python 3.12.13
-```
-
-```powershell
-python -m pytest tests/test_persisted_simulation_request_application.py -q
-python -m pytest tests/test_cli_run_persisted_simulation.py -q
-python -m pytest tests/test_persisted_simulation_request_application.py tests/test_cli_run_persisted_simulation.py tests/test_persisted_simulation_request_document.py tests/test_persisted_simulation_application_inputs.py tests/test_persisted_simulation_race_inputs.py tests/test_sqlite_persisted_simulation_application.py tests/test_persisted_simulation_run_service.py tests/test_simulation_models.py -q
-python -m pytest -q
-git diff --check
-git status --short
-```
-
-## Stop Conditions
-
-During implementation and testing, tests may create/read temporary-directory SQLite DB files, apply
-existing migration APIs to those temporary DBs, prepare fixtures with existing repository APIs, invoke
-the application function and CLI `run()` for real E2E tests, and run pytest verification. These narrow
-test activities do not authorize a change to `database/keiba.db`, the original workspace, or any manual
-production DB/migration/repository/runner invocation.
-
-After implementation, update only the report to `READY_FOR_REVIEW` and stop. Do not stage, commit, push,
-create a review branch/PR, modify `database/keiba.db`, modify the original workspace, manually invoke
-the main selected DB/migration/repository/runner, or start any later phase. Stop immediately if an
-approved contract conflicts with existing code or requires a file outside Allowed Implementation Files.
-
-blocker: none
+None for Phase 4C-2d3b1i6a. Implementation authorization is `APPROVED_FOR_NEXT_PHASE`; the next candidate is
+Phase 4C-2d3b1i6b1 — Historical input snapshot domain implementation. Integrate the approved V3 contract and
+stop; do not begin Phase 4C-2d3b1i6b1 in this commit.
