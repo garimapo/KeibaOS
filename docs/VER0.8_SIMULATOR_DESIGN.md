@@ -4096,3 +4096,193 @@ rows or current refetches.
 V3a status: `APPROVED`. V3b status: `APPROVED`. V3c status: `READY_FOR_REVIEW`. Overall 1i6a remains
 `REVISION_REQUIRED` with approval disposition `NOT_APPROVED`; V3c review and V3d consolidation remain
 incomplete.
+
+### V3d — Consolidated authoritative contract and implementation gate
+
+#### Authority and precedence
+
+This section consolidates the approved V3 contracts and resolves their cross-contract semantics. Authority is
+partitioned as follows:
+
+| Contract | Authoritative responsibility |
+| --- | --- |
+| V3a | Domain objects, identities, validation, canonical snapshot digest, and Protocols |
+| V3b | SQLite storage, DDL, FK constraints, indexes, triggers, and storage crosswalk |
+| V3c | Official source identity, source-record digest, field provenance, capture times, eligibility, and fail-closed policy |
+| V3d | Precedence, cross-contract semantics, repository selection, and implementation gate |
+
+The authoritative set is V3a, V3b, V3c, and this V3d section. All pre-V3 proposals, V1/V2 drafts,
+time-boxed partial V3 text, the superseded source-origin overview, old review findings, and old
+`READY_FOR_REVIEW` state descriptions are `HISTORICAL / NON-AUTHORITATIVE`. A historic statement that
+conflicts with V3a/V3b/V3c/V3d must not be used for implementation.
+
+The following are expressly non-authoritative and forbidden as implementation rules: optional
+`source_identity`; cross-source fallback; `snapshot_id DESC` tie-break; `race_metadata` or
+`track_conditions` audit categories; `win_odds` or `past_race_absence` as audit input types;
+colon-delimited audit keys; organization display text as historical identity; Python-hash source IDs; trusted
+automatic v008 import; `horses.odds` fallback; oldest-first past-race order; trim-based TEXT normalization;
+and migration-owned transactions.
+
+#### Natural identity, content, context, and linkage
+
+The final natural identity is exactly:
+
+```text
+dataset_id
+organization
+source_system
+external_race_id
+captured_at
+```
+
+V3b enforces its SQLite UNIQUE form as
+`(dataset_id, organization, source_system, external_race_id, captured_at_utc)`. `snapshot_id`,
+`source_url`, `internal_race_id`, `information_cutoff`, and `content_sha256` are not natural-identity fields.
+
+| Field | Final class |
+| --- | --- |
+| `dataset_id`, `organization`, `source_system`, `external_race_id`, `captured_at` | identity |
+| `source_url`, `information_cutoff`, `race`, `entries`, `past_races`, `provenance` | content or immutable content context |
+| `content_sha256` | derived content |
+| `internal_race_id`, `race_entry_id` | local linkage |
+| `external_horse_id` | content metadata, never entry identity |
+
+`information_cutoff` is immutable prediction context and is included in the canonical V3a content
+payload/digest, but is not natural identity. `captured_at` represents one successful complete assembly event;
+it cannot be reused for a different cutoff. Therefore same natural identity plus a different information
+cutoff produces a different `content_sha256` and must raise `RepositoryConflictError`; a new cutoff requires
+a new assembly and a new `captured_at`, hence a new natural identity.
+
+The causal time order is:
+
+```text
+available_at <= observed_at <= captured_at <= information_cutoff <= scheduled_start_at
+```
+
+Nullable values follow approved V3a validation; no later timestamp may be substituted into an absent source
+timestamp.
+
+#### Digest and source policy finalization
+
+`content_sha256` is the integrity fingerprint of the exact persisted `HistoricalInputSnapshot` domain state
+for one assembly event. It excludes itself and includes `information_cutoff`, `source_url`,
+`external_horse_id`, provenance, and approved V3a local linkage fields. It is distinct from the V3c source
+record ID `his-v1:{record_kind}:{sha256}`, which identifies one canonical parsed logical official-source
+record. The two digests are never interchangeable.
+
+V3c source policy remains final: `jra_official` is `CURRENTLY_UNSUPPORTED`; `nar_official` is currently
+unsupported by implementation; NAR organization is `NAR`; the approved NAR host is HTTPS with exact
+`www.keiba.go.jp`; race ID is `nar:{YYYYMMDD}:{k_babaCode}:{k_raceNo}`; entry ID is
+`nar:{YYYYMMDD}:{k_babaCode}:{k_raceNo}:entry:{horseNum}`. Legacy races/horses are linkage only; legacy
+past races are forbidden as official content/provenance; v008 is
+`UNTRUSTED_FOR_OFFICIAL_HISTORICAL_INPUT`; and `horses.odds` is forbidden.
+
+Past races are ordered by `race_date DESC, source_id ASC`; index `0` is the newest applicable past race.
+Absence uses audit key `past_race/{race_entry_id}/none` and requires V3c exact absence evidence: query scope
+has `external_entry_id`, `target_race_date`, and `strictly_before_target_race = true`, with exact integer
+`result_count = 0`.
+
+Audit keys are only `track`, `entry/{race_entry_id}`, `odds/{race_entry_id}`,
+`jockey/{race_entry_id}`, `past_race/{race_entry_id}/{past_race_index}`, and
+`past_race/{race_entry_id}/none`. Audit input types are only `track`, `entry`, `odds`, `jockey`, and
+`past_race`; V3c `odds_win` and `past_race_absence` are source-record kinds, not audit input types.
+
+#### Repository save, load, and integrity contract
+
+Saving uses the final natural identity. No existing row inserts one complete snapshot transactionally; an
+existing row with the same `content_sha256` is an idempotent no-op; an existing row with a different digest
+raises `RepositoryConflictError`. Caller-supplied digests and partial snapshot writes are forbidden. The
+migration runner, not a migration `apply()`, owns the transaction boundary.
+
+`HistoricalInputSnapshotSource.load_latest_snapshot()` requires exact validated inputs:
+
+```text
+dataset_id
+race_id
+information_cutoff
+source_identity (non-optional)
+```
+
+Candidates must satisfy exact dataset ID, local race ID, organization, source system, external race ID,
+`captured_at_utc <= requested information_cutoff`, and
+`information_cutoff_utc <= requested information_cutoff`. `source_url` is not a selection key. Candidates
+are ordered only by `captured_at_utc DESC`; natural-identity uniqueness makes a captured-at tie impossible,
+so `snapshot_id` tie-breaking is forbidden. A malformed latest candidate raises
+`RepositoryDataIntegrityError` rather than falling back. No candidate returns `None`; cross-source fallback
+is forbidden.
+
+Loading means: select exactly one latest header; load one race row; load entries by `entry_order`; load past
+races by `(race_entry_id, past_race_index)`; load provenance by `audit_key`; reconstruct approved V3a
+objects; re-run V3a validation/canonicalization; recompute `content_sha256`; compare it to the stored value;
+then return the snapshot. Missing/duplicate children, invalid order, audit-set error, invalid external
+linkage, invalid time order, invalid Decimal content, invalid source/provenance relation, or digest mismatch
+is `RepositoryDataIntegrityError`.
+
+V3b DDL remains frozen: eight historical tables, four `CREATE INDEX` statements, five `CREATE TRIGGER`
+statements, and 64 storage-crosswalk rows in planned migration
+`v010_historical_input_snapshot_schema`.
+
+#### Cross-contract consistency table
+
+| Contract subject | V3a | V3b | V3c | V3d final resolution | Status |
+| --- | --- | --- | --- | --- | --- |
+| Natural identity | domain identity | UNIQUE columns | source components | five exact fields | PASS |
+| Source identity | immutable object | header columns | official literals | non-optional selection input | PASS |
+| External race identity | domain value | stored linkage | deterministic NAR form | no venue substitution | PASS |
+| External entry identity | domain value | entry linkage | race-scoped NAR form | no local-ID substitution | PASS |
+| `source_url` | canonical content | stored content | host eligibility | never selection key | PASS |
+| `external_horse_id` | metadata | stored metadata | optional provider metadata | not entry identity | PASS |
+| `captured_at` | immutable | UNIQUE timestamp | complete assembly time | cannot be reused | PASS |
+| `information_cutoff` | canonical content | stored context | prediction boundary | not natural identity | PASS |
+| Content digest | canonical snapshot digest | stored digest | distinct from source ID | integrity fingerprint | PASS |
+| Source-record digest | provenance source ID | stored provenance | `his-v1` payload | not content digest | PASS |
+| Race fields | V3a snapshot | race row | track record provenance | exact reconstruction | PASS |
+| Entry fields | V3a snapshot | entry rows | entry/jockey/odds provenance | canonical entry order | PASS |
+| Past-race fields | V3a snapshot | past-race rows | official history provenance | exact reconstruction | PASS |
+| Past-race ordering | V3a validation | ordering columns | DESC/ASC rule | newest at index zero | PASS |
+| Absence evidence | audit validation | provenance rows | exact query scope | no DB/parser absence | PASS |
+| Audit keys | V3a grammar | key storage | source-kind mapping | fixed slash grammar | PASS |
+| Provenance timestamps | V3a validation | stored timestamps | provider/receipt/assembly origins | causal order enforced | PASS |
+| Decimal canonicalization | V3a canonicalization | text storage | fixed source strings | recompute on load | PASS |
+| SQLite storage | domain mapping | eight frozen tables | provenance fields | V3b is controlling DDL | PASS |
+| Repository save | domain snapshot | transaction storage | no legacy import | idempotent/conflict rules | PASS |
+| Repository load | source protocol | query/reconstruction | exact source eligibility | latest valid-or-error | PASS |
+| Latest selection | immutable context | query predicates | source exact match | captured DESC only | PASS |
+| Malformed latest row | validation error | data integrity path | fail closed | no fallback | PASS |
+| Legacy policy | no reconstruction | linkage FKs | linkage only | never provenance/content | PASS |
+| v008 policy | no automatic trust | existing rows remain | untrusted | no importer/backfill | PASS |
+| `horses.odds` | not snapshot content | legacy column | forbidden | no fallback | PASS |
+| JRA status | no approved source | no import | unsupported | fail closed | PASS |
+| NAR status | no approved snapshot | no collector storage use | current capture unsupported | fail closed | PASS |
+| Transaction ownership | no domain transaction | runner context | no source exception | runner owns transaction | PASS |
+| Normalization | V3a NFC/canonicalization | TEXT constraints | no trim rule | trim-based text forbidden | PASS |
+| Cross-source fallback | source identity required | exact header columns | source family fixed | forbidden | PASS |
+
+#### Implementation-readiness checklist
+
+1. PASS — domain API is implementation-complete.
+2. PASS — all domain fields map to storage.
+3. PASS — DDL is executable and frozen.
+4. PASS — source provenance contract is deterministic.
+5. PASS — natural identity is unambiguous.
+6. PASS — snapshot/content digest distinction is unambiguous.
+7. PASS — source-record digest distinction is unambiguous.
+8. PASS — information-cutoff semantics are explicit.
+9. PASS — save idempotency/conflict is explicit.
+10. PASS — load candidate selection is explicit.
+11. PASS — malformed latest candidate fails closed.
+12. PASS — no cross-source fallback exists.
+13. PASS — timestamp causal order is explicit.
+14. PASS — past-race ordering is prediction-compatible.
+15. PASS — absence evidence is reproducible.
+16. PASS — legacy backfill is forbidden.
+17. PASS — current v008 automatic trust is forbidden.
+18. PASS — current JRA/NAR unsupported state is explicit.
+19. PASS — pre-V3 text cannot override V3.
+20. PASS — no implementation has started.
+
+V3d status is `READY_FOR_REVIEW` only when every table row and all 20 checks remain PASS. Until ChatGPT
+approves this V3d section, overall 1i6a is `READY_FOR_FINAL_REVIEW` with disposition `NOT_APPROVED` and
+implementation authorization is `NOT_YET_AUTHORIZED`. After V3d approval, Phase 4C-2d3b1i6a may be
+`APPROVED`; the next implementation candidate is Phase 4C-2d3b1i6b1 — Historical input snapshot domain
+implementation. V3d itself does not begin 1i6b1.

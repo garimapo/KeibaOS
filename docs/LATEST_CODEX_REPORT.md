@@ -8,9 +8,9 @@ READY_FOR_REVIEW
 
 Phase 4C-2d3b1i6a — Historical input snapshot and audit persistence gap design
 
-Base commit: `524e3d729f40611bfec857d5152cc64ee023a1ab docs: align historical input snapshot v3b ddl`
+Base commit: `430add64f96c52db8d8cf86f86ea08fd1b7caac0 docs: finalize v3c past-race absence scope`
 
-Branch: `review/4c-2d3b1i6a-v3c-source-policy`
+Branch: `review/4c-2d3b1i6a-v3d-consolidation`
 
 ## Preparation and Approval
 
@@ -1489,4 +1489,31 @@ Overall approval disposition: `NOT_APPROVED`.
 V3c absence-scope self-review: all 13 required items PASS. Production, tests, README, migration, DDL,
 schema, database files, logs, and the original workspace remain unchanged. V3d remains unstarted.
 
-blocker: V3c review and V3d consolidation remain incomplete
+## Phase 4C-2d3b1i6a V3c ChatGPT Approval
+
+Reviewed commit: `430add64f96c52db8d8cf86f86ea08fd1b7caac0`.
+
+Review result: `APPROVED`.
+
+Disposition: `APPROVED_FOR_V3D`.
+
+Approved scope: source-system and organization policy; external identities; source URL eligibility;
+source-ID/digest schemas; the 64x11 source matrix; provenance timestamps; past-race ordering; absence
+evidence; and legacy/v008 fail-closed policy.
+
+Overall 1i6a was `REVISION_REQUIRED` with disposition `NOT_APPROVED` at V3c approval.
+
+## Phase 4C-2d3b1i6a V3d Consolidation Draft
+
+V3d consolidates the approved V3a, V3b, and V3c contracts without production change. The authoritative
+section establishes precedence, resolves repository selection and identity semantics, records a 31-row
+cross-contract table, and passes all 20 implementation-readiness checks.
+
+V3a status: `APPROVED`. V3b status: `APPROVED`. V3c status: `APPROVED`. V3d status:
+`READY_FOR_REVIEW`. Overall 1i6a is `READY_FOR_FINAL_REVIEW` with disposition `NOT_APPROVED`.
+Implementation authorization remains `NOT_YET_AUTHORIZED`.
+
+Production, tests, README, migration, DDL, schema, database files, logs, and the original workspace remain
+unchanged. V3d does not begin 1i6b1.
+
+blocker: final V3d/1i6a review approval remains incomplete

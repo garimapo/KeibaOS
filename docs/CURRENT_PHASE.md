@@ -6,15 +6,15 @@ READY_FOR_REVIEW
 
 ## Phase
 
-Phase 4C-2d3b1i6a — Historical input snapshot and audit persistence gap design
+Phase 4C-2d3b1i6a V3d — Historical input snapshot contract consolidation
 
 ## Base Commit
 
-`524e3d729f40611bfec857d5152cc64ee023a1ab`
+`430add64f96c52db8d8cf86f86ea08fd1b7caac0`
 
 ## Branch
 
-`review/4c-2d3b1i6a-v3c-source-policy`
+`review/4c-2d3b1i6a-v3d-consolidation`
 
 ## Canonical Workspace
 
@@ -28,53 +28,29 @@ V3a status: `APPROVED`.
 
 V3b status: `APPROVED`.
 
-V3c status: `READY_FOR_REVIEW`.
+V3c status: `APPROVED`.
+
+V3d status: `READY_FOR_REVIEW`.
 
 Overall 1i6a status: `REVISION_REQUIRED`.
 
 Overall approval disposition: `NOT_APPROVED`.
 
-The V3c revision has an exact 64-row, 11-column normative field-level matrix; six fixed record-kind digest
-payload schemas; executable NAR official-host eligibility; and prediction-input-compatible past-race ordering
-`(race_date DESC, source_id ASC)`, where index `0` is the newest applicable past race. V3c self-review is
-23/23 PASS. This preserves V3a/V3b approval while V3c remains `READY_FOR_REVIEW` and V3d remains unstarted.
-
-The V3c absence-scope revision fixes `past_race_absence.query_scope` to exactly three keys:
-`external_entry_id`, `target_race_date`, and `strictly_before_target_race: true`. It requires equality with
-the envelope entry identity and snapshot target-race date, exact integer `result_count = 0`, a successfully
-parsed complete official result set, and fail-closed rejection of database, parser, network, legacy, or
-refetch absence. The matrix remains exactly 64 rows and 11 columns.
-
 ## Objective
 
-Define the field-level official-source mapping, source-system and external-identity contracts, provenance-time
-rules, and fail-closed eligibility policy for the V3a/V3b historical input snapshot. This V3c activity is
-documentation only; it does not modify or execute production providers, parsers, migrations, DDL, databases,
-or tests.
+Consolidate V3a, V3b, and V3c into one authoritative implementation contract. Resolve precedence,
+cross-contract semantics, natural identity, selection, save/load integrity, causal time order, digest, audit,
+storage, and legacy-policy ambiguity before any historical-input implementation phase.
 
-## V3c Scope
+## V3d Scope
 
-V3c fixes the source families `jra_official` and `nar_official`; organization and external race/entry identity
-derivation; canonical source URL and source-record digest rules; `source_id`, `available_at`, `observed_at`,
-and `captured_at` contracts; the field-level JRA/NAR mapping matrix; legacy-data eligibility; v008 odds
-eligibility; and the JRA/NAR fail-closed support matrix.
+V3d establishes authoritative precedence; final identity/content/context/linkage classification; natural
+identity and information-cutoff semantics; repository save/load and integrity validation rules; source/audit
+semantics; a cross-contract consistency table; and the implementation-readiness gate.
 
-V3c does not revise V3b's eight tables, columns, constraints, indexes, triggers, or runner-owned transaction
-boundary. It does not decide a collector/provider/parser implementation, create an importer, or backfill
-legacy values.
-
-## Read-only Evidence
-
-- `NARProvider` uses `https://www.keiba.go.jp/`, but has no approved observed-at, canonical source-record
-  digest, or stable `source_id` capture boundary; log filenames use `abs(hash(url))` and are ineligible.
-- `NARParser` currently sets `RaceMeeting.organization` to the generic display value `"地方"`; V3c forbids
-  using that display value as historical identity.
-- `JRAFetcher` is hard-coded sample data and is not official historical provenance.
-- `HorseParser` converts odds through `float` and silently substitutes `0.0` on parse failure; it is not
-  official historical WIN-odds evidence.
-- Legacy `races`, `horses`, and `past_races` lack adequate historical provenance timestamps and source-record
-  identity; they are linkage references only.
-- Existing v008 odds rows are not collector-attested historical input and are untrusted for official history.
+V3d does not revise V3b's eight tables, columns, constraints, indexes, triggers, crosswalk, or runner-owned
+transaction boundary. It does not implement a collector, provider, parser, repository, importer, backfill,
+migration, or tests.
 
 ## Allowed Files
 
@@ -86,23 +62,20 @@ legacy values.
 
 - Production code, tests, and `README.md`.
 - Migration modules, migration runner, V3b DDL/schema, and `scripts/database.py`.
-- Database files, logs, CLI/settings, provider/parser implementation, package exports, and the original
-  workspace.
+- Database files, logs, CLI/settings, provider/parser/collector/repository implementation, package exports, and
+  the original workspace.
 
 ## Required Verification
 
-- Read the current provider, parser, legacy model/database, v008, migration-runner, and existing audit/input
-  validation sources without network, database, runner, CLI, or test execution.
-- Confirm a V3b approval record and no V3b schema revision.
-- Confirm every V3a source-relevant scalar is represented in the V3c source matrix.
-- Confirm the V3c self-review items are `PASS` before publishing.
+- Confirm the V3d precedence, natural identity, selection, and integrity rules resolve prior ambiguity.
+- Confirm all cross-contract rows and all 20 implementation-readiness checks are `PASS` before publishing.
 - Run `git diff --check`, `git diff --name-status`, and `git status --short`.
 
 ## Stop Condition
 
-Publish only the V3c source mapping and policy documents for review, then stop. Do not begin V3d, 1i6b1,
-provider/parser/collector work, migration work, or database operations.
+Publish only the V3d consolidation documents for review, then stop. Do not begin 1i6b1, provider/parser/
+collector/repository work, migration work, database operations, or implementation.
 
 ## Blocker
 
-V3c review and V3d consolidation remain incomplete.
+Final V3d/1i6a review approval remains incomplete; implementation authorization is `NOT_YET_AUTHORIZED`.
