@@ -10,11 +10,11 @@ Phase 4C-2d3b1i6a — Historical input snapshot and audit persistence gap design
 
 ## Base Commit
 
-`052a5c6e76a0f5bb0634be074bc1089bd81da663`
+`524e3d729f40611bfec857d5152cc64ee023a1ab`
 
 ## Branch
 
-`review/4c-2d3b1i6a-v3b-ddl`
+`review/4c-2d3b1i6a-v3c-source-policy`
 
 ## Canonical Workspace
 
@@ -26,7 +26,9 @@ The original workspace, `C:\Users\garim\Desktop\KeibaAI`, is not a modification 
 
 V3a status: `APPROVED`.
 
-V3b status: `READY_FOR_REVIEW`.
+V3b status: `APPROVED`.
+
+V3c status: `READY_FOR_REVIEW`.
 
 Overall 1i6a status: `REVISION_REQUIRED`.
 
@@ -34,37 +36,34 @@ Overall approval disposition: `NOT_APPROVED`.
 
 ## Objective
 
-Define a complete executable SQLite DDL design and domain-to-column crosswalk that can persist every V3a
-domain value without loss. This V3b activity is documentation only. It does not create, register, execute,
-or test a production migration.
+Define the field-level official-source mapping, source-system and external-identity contracts, provenance-time
+rules, and fail-closed eligibility policy for the V3a/V3b historical input snapshot. This V3c activity is
+documentation only; it does not modify or execute production providers, parsers, migrations, DDL, databases,
+or tests.
 
-## V3b Scope
+## V3c Scope
 
-V3b fixes the exact eight-table set, all `CREATE TABLE`, `CREATE INDEX`, and approved `CREATE TRIGGER`
-statements, SQL types/nullability/defaults/keys/FKs/checks, query indexes, SQL-owned versus
-repository/domain-owned invariants, and the future migration ordering/atomicity contract. The authoritative
-V3b detail is in `docs/VER0.8_SIMULATOR_DESIGN.md`.
+V3c fixes the source families `jra_official` and `nar_official`; organization and external race/entry identity
+derivation; canonical source URL and source-record digest rules; `source_id`, `available_at`, `observed_at`,
+and `captured_at` contracts; the field-level JRA/NAR mapping matrix; legacy-data eligibility; v008 odds
+eligibility; and the JRA/NAR fail-closed support matrix.
 
-The planned, but uncreated and unregistered, migration is
-`v010_historical_input_snapshot_schema`. Its future runner contract verifies `PRAGMA foreign_keys = ON`,
-owns one per-migration `BEGIN IMMEDIATE` transaction, commit, rollback, and migration-record insert. The
-future `apply(connection)` executes each DDL statement through `connection.execute()` only; it does not
-begin or close transactions, call `connection.commit()`, `connection.rollback()`, or
-`connection.executescript()`. It performs no legacy-data backfill. No database file is accessed during this
-design phase.
+V3c does not revise V3b's eight tables, columns, constraints, indexes, triggers, or runner-owned transaction
+boundary. It does not decide a collector/provider/parser implementation, create an importer, or backfill
+legacy values.
 
-V3b does not decide provider field/source mapping, source-ID formats, JRA/local organization policy, v008
-odds eligibility/import policy, collector behavior, repository Python behavior, or request-source behavior.
-Those are V3c or later responsibilities.
+## Read-only Evidence
 
-## Existing-schema observations
-
-- `races.id` is `INTEGER PRIMARY KEY`.
-- `horses.id` is `INTEGER PRIMARY KEY` and `horses.race_id` is the legacy internal-race linkage.
-- Legacy tables do not declare every foreign key required by historical snapshots.
-- The existing migration runner verifies foreign-key activation and applies each registered migration inside
-  `BEGIN IMMEDIATE` with rollback on error. Existing SQLite repositories also require a clean caller
-  transaction before their own `BEGIN IMMEDIATE` writes.
+- `NARProvider` uses `https://www.keiba.go.jp/`, but has no approved observed-at, canonical source-record
+  digest, or stable `source_id` capture boundary; log filenames use `abs(hash(url))` and are ineligible.
+- `NARParser` currently sets `RaceMeeting.organization` to the generic display value `"地方"`; V3c forbids
+  using that display value as historical identity.
+- `JRAFetcher` is hard-coded sample data and is not official historical provenance.
+- `HorseParser` converts odds through `float` and silently substitutes `0.0` on parse failure; it is not
+  official historical WIN-odds evidence.
+- Legacy `races`, `horses`, and `past_races` lack adequate historical provenance timestamps and source-record
+  identity; they are linkage references only.
+- Existing v008 odds rows are not collector-attested historical input and are untrusted for official history.
 
 ## Allowed Files
 
@@ -75,24 +74,24 @@ Those are V3c or later responsibilities.
 ## Forbidden Files
 
 - Production code, tests, and `README.md`.
-- Migration files, migration registration, schema execution, and `scripts/database.py`.
-- Database files, logs, package exports, `main.py`, and CLI code.
-- The original workspace.
+- Migration modules, migration runner, V3b DDL/schema, and `scripts/database.py`.
+- Database files, logs, CLI/settings, provider/parser implementation, package exports, and the original
+  workspace.
 
 ## Required Verification
 
-- Inspect existing legacy schema, migration-runner, and repository conventions read-only.
-- Confirm the DDL has exactly eight historical-input tables and a complete V3a field crosswalk.
-- Confirm all V3b self-review items are `PASS`.
+- Read the current provider, parser, legacy model/database, v008, migration-runner, and existing audit/input
+  validation sources without network, database, runner, CLI, or test execution.
+- Confirm a V3b approval record and no V3b schema revision.
+- Confirm every V3a source-relevant scalar is represented in the V3c source matrix.
+- Confirm the V3c self-review items are `PASS` before publishing.
 - Run `git diff --check`, `git diff --name-status`, and `git status --short`.
-
-Pytest, database access, migration execution, runner execution, and CLI execution are out of scope.
 
 ## Stop Condition
 
-Publish only the V3b DDL design documents for review, then stop. Do not begin V3c, V3d, 1i6b1, a
-production migration, or any database operation.
+Publish only the V3c source mapping and policy documents for review, then stop. Do not begin V3d, 1i6b1,
+provider/parser/collector work, migration work, or database operations.
 
 ## Blocker
 
-V3b review, V3c source mapping/policy, and V3d consolidation remain incomplete.
+V3c review and V3d consolidation remain incomplete.

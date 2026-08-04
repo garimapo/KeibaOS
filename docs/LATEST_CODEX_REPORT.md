@@ -8,9 +8,9 @@ READY_FOR_REVIEW
 
 Phase 4C-2d3b1i6a — Historical input snapshot and audit persistence gap design
 
-Base commit: `052a5c6e76a0f5bb0634be074bc1089bd81da663 docs: preserve empty past-race passing order in v3a`
+Base commit: `524e3d729f40611bfec857d5152cc64ee023a1ab docs: align historical input snapshot v3b ddl`
 
-Branch: `review/4c-2d3b1i6a-v3b-ddl`
+Branch: `review/4c-2d3b1i6a-v3c-source-policy`
 
 ## Preparation and Approval
 
@@ -1341,4 +1341,71 @@ Overall approval disposition: `NOT_APPROVED`.
 Production, tests, README, migration, schema, database files, logs, and the original workspace remain
 unchanged. V3c and V3d remain unstarted.
 
-blocker: V3b review, V3c source mapping/policy, and V3d consolidation remain incomplete
+## Phase 4C-2d3b1i6a V3b ChatGPT Approval
+
+Reviewed commit: `524e3d729f40611bfec857d5152cc64ee023a1ab`.
+
+Review result: `APPROVED`.
+
+Disposition: `APPROVED_FOR_V3C`.
+
+Approved scope: eight-table DDL, storage crosswalk, FK/linkage constraints, query indexes, trigger policy,
+and the runner-owned transaction boundary. Overall 1i6a remains `REVISION_REQUIRED` with approval
+disposition `NOT_APPROVED`.
+
+## Phase 4C-2d3b1i6a V3c Source Mapping and Policy Design
+
+V3c is documentation only. Read-only inspection covered the current NAR provider/parser, HorseParser,
+JRAFetcher, legacy models/database, v008 simulation schema, migration runner, and existing input-audit
+validation. No network, database, migration, runner, CLI, or test execution occurred.
+
+The design fixes source-system literals `jra_official` and `nar_official`; organization literals `JRA` and
+`NAR`; NAR external race ID `nar:{YYYYMMDD}:{k_babaCode}:{k_raceNo}`; and NAR external entry ID
+`nar:{YYYYMMDD}:{k_babaCode}:{k_raceNo}:entry:{horseNum}`. The current NAR parser display value `地方` is
+forbidden as an identity value. `external_horse_id` remains optional metadata and never becomes entry
+identity. JRA external identities remain unsupported until a real official capture source exists.
+
+`source_id` is `his-v1:{record_kind}:{sha256}` over a version-1 canonical UTF-8 JSON source-record payload.
+The design fixes URL canonicalization, source record kinds, Decimal/UTC serialization, and forbids Python
+hashes, random values, local database IDs, log filenames, temporary paths, and timestamp-only IDs.
+`available_at` is an exact provider-publication time or `None`; `observed_at` is created when approved
+collector code receives successful response bytes before parsing; and `captured_at` is successful complete
+snapshot assembly time. Existing NAR code lacks this observation boundary and is therefore currently
+ineligible for official historical snapshots.
+
+All legacy `races`, `horses`, and `past_races` values are linkage-only and ineligible as historical content
+or provenance. Existing v008 odds rows are `UNTRUSTED_FOR_OFFICIAL_HISTORICAL_INPUT`; `horses.odds` is
+forbidden. Current JRA code is hard-coded sample data. Current HorseParser float conversion and `0.0`
+fallback are not approved WIN-odds evidence. Past races use canonical zero-based order by
+`(race_date, source_id)` ascending, and `/none` requires exact source evidence.
+
+The V3c field-level source matrix has 64 rows covering every V3a scalar/normalized value, with JRA and NAR
+origin or explicit current unsupported state for each. The current support matrix makes both source families
+fail closed: no official historical snapshot is constructible until a future capture implementation obeys
+this policy. V3b DDL is unchanged.
+
+V3c self-review:
+
+1. PASS — exact source-system and organization derivation.
+2. PASS — exact NAR race and entry IDs; `external_horse_id` excluded from identity.
+3. PASS — complete source-ID/digest/URL contract and forbidden-ID policy.
+4. PASS — exact available/observed/captured timestamp origins.
+5. PASS — every source-relevant V3a value has one of 64 matrix rows.
+6. PASS — legacy, v008, and `horses.odds` policies fail closed.
+7. PASS — V3b DDL unchanged; V3d unstarted.
+8. PASS — overall 1i6a remains `REVISION_REQUIRED`.
+
+V3a status: `APPROVED`.
+
+V3b status: `APPROVED`.
+
+V3c status: `READY_FOR_REVIEW`.
+
+Overall 1i6a status: `REVISION_REQUIRED`.
+
+Overall approval disposition: `NOT_APPROVED`.
+
+Production, tests, README, migration, schema, database files, logs, and the original workspace remain
+unchanged.
+
+blocker: V3c review and V3d consolidation remain incomplete
