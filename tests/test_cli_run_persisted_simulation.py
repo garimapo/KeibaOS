@@ -333,6 +333,17 @@ class PersistedSimulationCliTests(unittest.TestCase):
     def test_empty_file_backed_request_writes_success_to_stdout_only(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             directory = Path(temporary_directory)
+            database_path = directory / "simulation.db"
+            connection = sqlite3.connect(database_path)
+            try:
+                connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY)")
+                connection.execute(
+                    "CREATE TABLE horses ("
+                    "id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL, horse_no INTEGER NOT NULL)",
+                )
+                connection.commit()
+            finally:
+                connection.close()
             request_path = directory / "request.json"
             request_path.write_text(json.dumps(_request()), encoding="utf-8")
             stdout, stderr = io.StringIO(), io.StringIO()
@@ -355,8 +366,8 @@ class PersistedSimulationCliTests(unittest.TestCase):
                 ),
                 (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, None, None, None, 0, {}),
             )
-            self.assertTrue((directory / "simulation.db").is_file())
-            connection = sqlite3.connect(directory / "simulation.db")
+            self.assertTrue(database_path.is_file())
+            connection = sqlite3.connect(database_path)
             try:
                 self.assertIsNotNone(connection.execute(
                     "SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_migrations'",

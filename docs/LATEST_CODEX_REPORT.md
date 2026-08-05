@@ -1690,4 +1690,195 @@ Related: 41 passed, 332 subtests passed
 Full suite: 2390 passed, 2 skipped, 1317 subtests passed
 ```
 
+## Phase 4C-2d3b1i6b2 Preparation
+
+Status: `PHASE_4C_2D3B1I6B2_PREPARED`.
+
+Formal base is `c031008c5ecc34dfb90b541a8c686b0868084709` on `feature/ver0.8-simulator`; the canonical
+workspace is `C:\Users\garim\Desktop\KeibaAI-review-1i5b2b`. The original workspace remains unchanged.
+
+Migration infrastructure inspection found `scripts/migrations/versions/` with v008 and v009, explicit
+registration in `scripts/migrations/runner.py`, and the existing runner-owned `schema_migrations` flow.
+The planned module is
+`scripts/migrations/versions/v010_historical_input_snapshot_schema.py`; `runner.py` must explicitly import
+and append it after v009. `versions/__init__.py` has no discovery role.
+
+The runner enables and verifies foreign keys, rejects an active transaction, owns `BEGIN IMMEDIATE`, commit,
+rollback, and migration-record insertion. v010 must use only `connection.execute()` over
+`STATEMENTS + INDEXES + TRIGGERS`; it cannot own transaction SQL, commit, rollback, `executescript`, or a
+connection lifecycle.
+
+Read-only legacy-schema inspection found `races.id INTEGER PRIMARY KEY AUTOINCREMENT`,
+`horses.id INTEGER PRIMARY KEY AUTOINCREMENT`, and `horses.race_id` as the parent linkage. The current
+legacy index is only `idx_horses_race_id ON horses(race_id)`; no equivalent
+`ux_horses_race_id_id` exists. The planned unique composite helper is valid because `horses.id` already
+makes each `(race_id, id)` pair unique, and it makes the V3b composite parent FK executable.
+
+The approved future migration scope is exactly eight tables:
+
+- `historical_input_source_identities`
+- `historical_input_external_races`
+- `historical_input_external_entries`
+- `historical_input_snapshots`
+- `historical_input_snapshot_races`
+- `historical_input_snapshot_entries`
+- `historical_input_snapshot_past_races`
+- `historical_input_snapshot_provenance`
+
+It contains exactly four indexes — `ux_horses_race_id_id`, `idx_his_external_races_internal`,
+`idx_his_external_entries_internal`, and `idx_his_snapshots_latest_eligible` — and exactly five linkage
+triggers — `trg_his_snapshot_entry_mapping_insert`, `trg_his_snapshot_entry_mapping_update`,
+`trg_his_snapshot_header_mapping_update`, `trg_his_external_entry_referenced_update`, and
+`trg_his_external_entry_referenced_delete`.
+
+The proposed dedicated test is `tests/test_historical_input_snapshot_migration.py`. Registration of v010
+also requires minimal exact-version expectation updates in `tests/test_simulation_migrations.py`,
+`tests/test_simulation_bet_plan_migration.py`, and
+`tests/test_sqlite_persisted_simulation_application.py`; no production behavior outside registry inclusion
+changes. Related verification will use those tests plus
+`tests/test_sqlite_simulation_bet_plan_snapshot_repository.py` and
+`tests/test_historical_input_snapshots.py`, then the full suite.
+
+No contract conflict was identified. The approved V3b DDL is executable against a clean legacy parent
+schema, preserves nullable `/none` provenance linkage, and leaves all historical tables empty after
+migration. The preparation documents define the exact DDL/no-backfill/transaction boundaries and test
+matrix; no production, test, migration, database, or log file was changed in this preparation activity.
+
+`git diff --check`, `git diff --name-status`, and `git status --short` are recorded after the document
+update. No stage, commit, or push is performed.
+
+## Phase 4C-2d3b1i6b2 Preparation Approval
+
+Status: `PHASE_4C_2D3B1I6B2_APPROVED_FOR_CODEX`.
+
+ChatGPT preparation review: `APPROVED`.
+
+Contract corrections: `NONE`.
+
+Scope clarification: the exact existing migration tests
+`tests/test_simulation_migrations.py`, `tests/test_simulation_bet_plan_migration.py`, and
+`tests/test_sqlite_persisted_simulation_application.py` may change only for v010
+registration/discovery expectations. Their unrelated migration behavior must not be refactored or broadened.
+
+The approved future implementation remains restricted to the v010 module, its explicit runner registration,
+one dedicated v010 migration test module, those three registration-expectation test updates, and the phase
+documents. No production, test, or migration implementation has been changed during approval.
+
+## Phase 4C-2d3b1i6b2 Execution Blocker
+
+Status: `PHASE_4C_2D3B1I6B2_REVISION_REQUIRED`.
+
+The dedicated v010 migration suite passed, as did the approved migration-related suite and the frozen
+historical-input domain suite. The full suite exposed an out-of-scope runtime contract conflict:
+`tests/test_cli_run_persisted_simulation.py` and
+`tests/test_persisted_simulation_request_application.py` create a file-backed database without legacy
+`races`/`horses` parent tables, then invoke the default migration runner. The approved v010 helper
+`CREATE UNIQUE INDEX ux_horses_race_id_id ON horses(race_id, id)` correctly fails there with
+`sqlite3.OperationalError: no such table: main.horses`.
+
+V3b explicitly requires the legacy composite-parent helper index and describes v010 as executable against a
+required legacy parent schema. The current phase allowlist forbids changing the request-application/CLI
+bootstrap path and excludes both failing test modules. Skipping v010, conditionally suppressing the helper
+index, creating legacy parent tables in v010, or changing migration-runner transaction/bootstrap behavior
+would violate the approved V3b contract or phase scope.
+
+Required design decision: define which existing application/bootstrap boundary owns provisioning the legacy
+`races` and `horses` parent schema before the default runner applies v010, then explicitly authorize the
+necessary production and test files in a revised phase contract. No out-of-scope file was changed.
+
+Observed verification:
+
+```text
+Dedicated v010 migration: 5 passed
+Migration-related: 52 passed, 78 subtests passed
+Historical domain: 16 passed, 3 subtests passed
+Full suite: 2 failed, 2393 passed, 2 skipped, 1317 subtests passed
+```
+
+The reported full-suite blocker was resolved by the approved test-fixture scope extension described below.
+
+## Phase 4C-2d3b1i6b2 Blocker Resolution and Execution
+
+Status: `PHASE_4C_2D3B1I6B2_READY_FOR_REVIEW`.
+
+ChatGPT blocker disposition: `RESOLVED_BY_TEST_FIXTURE_SCOPE_EXTENSION`.
+
+Design decision: the legacy `races`/`horses` schema is a prerequisite for v010; no production bootstrap
+change is authorized. v010 remains an overlay migration over the existing KeibaOS legacy race/horse schema.
+Before the default migration chain reaches v010, the target database must already contain `races` and
+`horses`. v010 does not create, repair, or infer those parent tables. The migration runner, file-backed
+persisted-simulation application, request application, and CLI do not own legacy-schema bootstrap.
+
+Newly authorized test files:
+
+- `tests/test_cli_run_persisted_simulation.py`
+- `tests/test_persisted_simulation_request_application.py`
+
+Only their blank file-backed real-chain success fixtures changed: each now creates, commits, and closes the
+minimal real SQLite `races` and `horses` parent tables at the request-resolved database path before the
+existing application chain applies its default migrations. Neither fixture calls `apply_migrations()`
+manually, and their real request/CLI chain, output, migration, and persistence assertions remain intact.
+
+The v010 migration path is
+`scripts/migrations/versions/v010_historical_input_snapshot_schema.py`; it is registered once after v009 in
+`scripts/migrations/runner.py`. The implementation creates the approved eight historical tables, four
+indexes, and five linkage triggers.
+
+Codex local verification:
+
+```text
+Dedicated v010 migration: 5 passed
+Migration-related: 52 passed, 78 subtests passed
+Higher-level request/CLI regression: 13 passed, 6 subtests passed
+Historical domain: 16 passed, 3 subtests passed
+Full suite: 2395 passed, 2 skipped, 1317 subtests passed
+git diff --check: success
+```
+
+`docs/CURRENT_PHASE.md` is now `READY_FOR_REVIEW`. No production bootstrap change was made; the historical
+domain module and suite are unchanged, and `scripts/database.py` is unchanged. `database/keiba.db`, `logs/`,
+and the original workspace remain untouched. No stage, commit, or push was performed. Implementation
+deviations: none.
+
+## Phase 4C-2d3b1i6b2 ChatGPT DDL Review Correction
+
+- exact `observed_at_utc` UTC suffix CHECK restored
+- dedicated test locks all five UTC suffix clauses
+- direct positive-range SQL coverage added
+- dedicated runner idempotency coverage added
+- stale natural-identity test wording corrected
+- no runner/trigger/fixture/domain redesign
+
+Codex local correction verification:
+
+```text
+Dedicated v010 migration: 6 passed
+Migration-related: 53 passed, 78 subtests passed
+Higher-level request/CLI regression: 13 passed, 6 subtests passed
+Historical domain: 16 passed, 3 subtests passed
+Full suite: 2396 passed, 2 skipped, 1317 subtests passed
+git diff --check: success
+```
+
+## Phase 4C-2d3b1i6b2 ChatGPT Final Review
+
+Result: `APPROVED_FOR_COMMIT`
+
+V3b DDL: `APPROVED`
+
+Tables: `8`
+
+Indexes: `4`
+
+Triggers: `5`
+
+```text
+Dedicated: 6 passed
+Migration-related: 53 passed, 78 subtests passed
+Higher-level: 13 passed, 6 subtests passed
+Historical domain: 16 passed, 3 subtests passed
+Full suite: 2396 passed, 2 skipped, 1317 subtests passed
+git diff --check: PASS
+```
+
 blocker: none

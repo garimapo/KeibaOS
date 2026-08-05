@@ -21,7 +21,7 @@ class MigrationTests(unittest.TestCase):
     def test_getter_has_no_side_effect(self):
         c=self.db(); self.assertEqual(get_applied_versions(c),{}); self.assertIsNone(c.execute("SELECT 1 FROM sqlite_master WHERE name='schema_migrations'").fetchone())
     def test_apply_idempotent_and_utc_history(self):
-        c=self.migrated(); apply_migrations(c); self.assertEqual(get_applied_versions(c),{8:'v008_simulation_schema',9:'v009_simulation_bet_plan_schema'}); self.assertTrue(c.execute("SELECT applied_at FROM schema_migrations").fetchone()[0].endswith('+00:00'))
+        c=self.migrated(); apply_migrations(c); self.assertEqual(get_applied_versions(c),{8:'v008_simulation_schema',9:'v009_simulation_bet_plan_schema',10:'v010_historical_input_snapshot_schema'}); self.assertTrue(c.execute("SELECT applied_at FROM schema_migrations").fetchone()[0].endswith('+00:00'))
     def test_foreign_keys_and_active_transaction_rejected(self):
         c=self.db(); c.execute('BEGIN');
         with self.assertRaises(RuntimeError): apply_migrations(c)
@@ -79,7 +79,7 @@ class MigrationTests(unittest.TestCase):
         self.assertTrue({'race_results','race_result_entries','odds_snapshot_batches','odds_snapshots','odds_snapshot_selections','payout_publications','payouts','payout_selections','simulation_bet_plans','simulation_bet_plan_bets','simulation_bet_plan_bet_selections','rre_entry_race_insert','rre_entry_race_update','odds_snapshot_batch_race_update','payout_publication_race_update','sbpbs_entry_race_insert','sbpbs_entry_race_update','sbpb_plan_race_update'} <= names)
     def test_expected_trigger_set(self):
         c=self.migrated(); actual={row[0] for row in c.execute("SELECT name FROM sqlite_master WHERE type='trigger'")}
-        expected={'rre_entry_race_insert','rre_entry_race_update','oss_entry_race_insert','oss_entry_race_update','ps_entry_race_insert','ps_entry_race_update','odds_type_insert','odds_type_update','payout_type_insert','payout_type_update','odds_snapshot_batch_race_update','payout_publication_race_update','sbpbs_entry_race_insert','sbpbs_entry_race_update','sbpb_plan_race_update'}
+        expected={'rre_entry_race_insert','rre_entry_race_update','oss_entry_race_insert','oss_entry_race_update','ps_entry_race_insert','ps_entry_race_update','odds_type_insert','odds_type_update','payout_type_insert','payout_type_update','odds_snapshot_batch_race_update','payout_publication_race_update','sbpbs_entry_race_insert','sbpbs_entry_race_update','sbpb_plan_race_update','trg_his_snapshot_entry_mapping_insert','trg_his_snapshot_entry_mapping_update','trg_his_snapshot_header_mapping_update','trg_his_external_entry_referenced_update','trg_his_external_entry_referenced_delete'}
         self.assertEqual(actual,expected)
     def test_all_update_triggers_preserve_rows(self):
         c=self.migrated(); b1=self.batch(c); s=self.snap(c,b1); c.execute("INSERT INTO odds_snapshot_selections VALUES(?,?,?)",(s,1,1)); b2=self.batch(c,2)

@@ -415,7 +415,7 @@ class SQLitePersistedSimulationApplicationTests(unittest.TestCase):
         self.addCleanup(verification.close)
         self.assertEqual(
             dict(verification.execute("SELECT version, name FROM schema_migrations")),
-            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema"},
+            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema"},
         )
         self.assertIsNotNone(
             verification.execute(
@@ -542,7 +542,7 @@ class SQLitePersistedSimulationApplicationTests(unittest.TestCase):
         )
         self.assertEqual(
             dict(verification.execute("SELECT version, name FROM schema_migrations")),
-            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema"},
+            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema"},
         )
         self.assertFalse(verification.in_transaction)
         self.assertEqual(verification.execute("SELECT 1").fetchone(), (1,))

@@ -2,9 +2,17 @@
 from datetime import datetime, timezone
 import sqlite3
 from typing import Iterable
-from .versions import v008_simulation_schema, v009_simulation_bet_plan_schema
+from .versions import (
+    v008_simulation_schema,
+    v009_simulation_bet_plan_schema,
+    v010_historical_input_snapshot_schema,
+)
 
-MIGRATIONS = (v008_simulation_schema, v009_simulation_bet_plan_schema)
+MIGRATIONS = (
+    v008_simulation_schema,
+    v009_simulation_bet_plan_schema,
+    v010_historical_input_snapshot_schema,
+)
 
 def _enable_foreign_keys(connection: sqlite3.Connection) -> None:
     connection.execute("PRAGMA foreign_keys = ON")
