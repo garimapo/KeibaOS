@@ -2,15 +2,15 @@
 
 ## Status
 
-WAITING_FOR_PHASE_INSTRUCTION
+READY_FOR_REVIEW
 
 ## Current Phase
 
-Phase 4C-2d3b1i6a — Historical input snapshot and audit persistence gap design
+Phase 4C-2d3b1i6b1 — Historical input snapshot domain implementation
 
-Base commit: `430add64f96c52db8d8cf86f86ea08fd1b7caac0 docs: finalize v3c past-race absence scope`
+Base commit: `0ab53e57adaf4971cd8c576024d90647a6d1bf09 docs: approve historical input snapshot v3 contract`
 
-Branch: `review/4c-2d3b1i6a-v3d-consolidation`
+Branch: `feature/ver0.8-simulator`
 
 ## Preparation and Approval
 
@@ -1540,4 +1540,154 @@ Next phase candidate: Phase 4C-2d3b1i6b1 — Historical input snapshot domain im
 
 Production implementation has not started in this integration commit.
 
-blocker: none for Phase 4C-2d3b1i6a
+## Phase 4C-2d3b1i6b1 Preparation
+
+Status: `PHASE_4C_2D3B1I6B1_PREPARED`.
+
+Formal base is `0ab53e57adaf4971cd8c576024d90647a6d1bf09` on
+`feature/ver0.8-simulator`. The canonical workspace is
+`C:\Users\garim\Desktop\KeibaAI-review-1i5b2b`; the original workspace remains untouched.
+
+Inspected: `AGENTS.md`, `docs/CURRENT_PHASE.md`, `docs/LATEST_CODEX_REPORT.md`,
+`docs/VER0.8_SIMULATOR_DESIGN.md`, `scripts/simulation/models.py`,
+`scripts/simulation/validation.py`, `scripts/simulation/selection_resolver.py`,
+`tests/test_simulation_models.py`, `tests/test_persisted_simulation_race_inputs.py`,
+`tests/test_prediction_input_contracts.py`, and
+`tests/test_race_entry_selection_resolver_contract.py`.
+
+The proposed implementation files are
+`scripts/simulation/historical_input_snapshots.py` and
+`tests/test_historical_input_snapshots.py`; the only accompanying documentation files are
+`docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`. The proposed module has exactly 13 public API
+members: nine dataclasses, two Protocols, and two public functions. It has no package-root export.
+
+The implementation contract carries forward V3a/V3d's exact frozen/slotted values, natural identity,
+metadata equality/hash exclusions, strict NFC/UTC/date/Decimal rules, `passing_order=""` compatibility,
+provenance compatibility with `InputAuditEntry`, structural/audit/causal invariants, private construction-time
+digest derivation, canonical payload ordering, and the exact keyword-only source/repository Protocols.
+The current `InputAuditEntry` field shape and the existing resolver Protocol test style are compatible with the
+approved single-module V3a contract.
+
+Proposed verification commands after implementation:
+
+```powershell
+& "C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" -m pytest tests/test_historical_input_snapshots.py -q
+& "C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" -m pytest tests/test_simulation_models.py tests/test_persisted_simulation_race_inputs.py tests/test_race_entry_selection_resolver_contract.py -q
+& "C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" -m pytest -q
+git diff --check
+git status --short
+```
+
+Identified conflicts: none. `docs/CURRENT_PHASE.md` is `DRAFT_FOR_REVIEW`; production and tests remain
+unchanged. `database/keiba.db` and `logs/` remain untouched. No stage, commit, or push was performed.
+
+## Phase 4C-2d3b1i6b1 Preparation Approval
+
+Status: `PHASE_4C_2D3B1I6B1_APPROVED_FOR_CODEX`.
+
+ChatGPT preparation review result: `APPROVED`. No preparation corrections were required. The approved
+implementation contract remains exactly as prepared: the formal base is
+`0ab53e57adaf4971cd8c576024d90647a6d1bf09`, the branch is `feature/ver0.8-simulator`, and
+`docs/CURRENT_PHASE.md` is `APPROVED_FOR_CODEX`. Implementation has not started.
+
+Production, tests, `database/keiba.db`, and `logs/` remain untouched. No stage, commit, or push was
+performed.
+
+## Phase 4C-2d3b1i6b1 Execution
+
+Status: `PHASE_4C_2D3B1I6B1_READY_FOR_REVIEW`.
+
+Implemented the approved V3a/V3d domain contract from formal base
+`0ab53e57adaf4971cd8c576024d90647a6d1bf09` on `feature/ver0.8-simulator` in the canonical workspace.
+
+Created:
+
+- `scripts/simulation/historical_input_snapshots.py`
+- `tests/test_historical_input_snapshots.py`
+
+The production module defines exactly 13 public API members: nine frozen, slotted domain dataclasses, two
+keyword-only Protocols, and two public canonical payload/digest functions. It retains the approved natural
+identity and metadata equality/hash exclusions; applies strict exact-type, NFC, UTC, date, Decimal, numeric,
+provenance, child-completeness, causal-time, and past-race absence-XOR validation; and derives
+`content_sha256` from the private canonical UTF-8 JSON payload. It has no package-root export, concrete
+repository, SQLite, provider, parser, CLI, filesystem, clock, network, cache, or retry dependency.
+
+Codex local verification with
+`C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe`:
+
+```text
+Dedicated: 13 passed, 3 subtests passed
+Related: 41 passed, 332 subtests passed
+  tests/test_simulation_models.py
+  tests/test_persisted_simulation_race_inputs.py
+  tests/test_race_entry_selection_resolver_contract.py
+Full suite: 2387 passed, 2 skipped, 1317 subtests passed
+```
+
+The dedicated suite covers public surface and field contracts, frozen/slotted behavior, metadata identity
+exclusions, strict validation, `passing_order=""`, provenance/InputAuditEntry compatibility, structural and
+causal fail-closed boundaries, canonical ordering and digest sensitivity, public APIs, Protocol signatures,
+and source/AST exclusions. `pytest` was installed into the approved bundled runtime because it was initially
+absent; no repository dependency file was changed.
+
+`git diff --check` succeeded. Production and tests outside the two new phase files are unchanged.
+`database/keiba.db`, `logs/`, the original workspace, migrations, schema, repository implementations, and
+package exports remain untouched. No stage, commit, or push was performed.
+
+## Phase 4C-2d3b1i6b1 Test Coverage Correction
+
+ChatGPT production review: `APPROVED`.
+
+Review correction: dedicated test hardening only.
+
+Production file modified during correction: `NO`.
+
+The dedicated contract suite now directly verifies approved dataclass defaults; duplicate `entry_order` and
+past-race identity rejection; both numbered-past versus `/none` audit XOR failures; complete nested payload
+key orders; canonical payload-only ordering for past races and provenance; complete Source and Repository
+Protocol hints plus structural ellipsis bodies; and the absence of all 13 API names from the package root.
+
+`docs/CURRENT_PHASE.md` remains `READY_FOR_REVIEW`. No production behavior was changed.
+
+## Phase 4C-2d3b1i6b1 Final Test-contract Correction
+
+- HistoricalInputProvenance defaults explicitly verified.
+- Past-race canonical ordering now verifies both `race_entry_id` and `past_race_index`.
+- Production file unchanged.
+
+Codex local verification after the final test-contract correction:
+
+```text
+Dedicated: 16 passed, 3 subtests passed
+Related: 41 passed, 332 subtests passed
+Full suite: 2390 passed, 2 skipped, 1317 subtests passed
+```
+
+Codex local verification with
+`C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe`:
+
+```text
+Dedicated: 16 passed, 3 subtests passed
+Related: 41 passed, 332 subtests passed
+Full suite: 2390 passed, 2 skipped, 1317 subtests passed
+git diff --check: success
+```
+
+## Phase 4C-2d3b1i6b1 ChatGPT Final Review
+
+Production review: `APPROVED`.
+
+Test contract review: `APPROVED`.
+
+Phase result: `APPROVED_FOR_COMMIT`.
+
+Approved production SHA-256:
+`E251E449E271944B609D1E81CE643BA51DCC37B94A89C061D26D548DAC2FADFE`
+
+```text
+Dedicated: 16 passed, 3 subtests passed
+Related: 41 passed, 332 subtests passed
+Full suite: 2390 passed, 2 skipped, 1317 subtests passed
+```
+
+blocker: none
