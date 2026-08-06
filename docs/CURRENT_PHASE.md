@@ -6,11 +6,11 @@ APPROVED_FOR_COMMIT
 
 ## Phase
 
-Phase 4C-2d3b1i6b2 — Historical input snapshot SQLite DDL implementation
+Phase 4C-2d3b1i6b3a — Historical input snapshot SQLite repository atomic save path
 
 ## Base Commit
 
-`c031008c5ecc34dfb90b541a8c686b0868084709 feat: add historical input snapshot domain`
+`95d8c8e123828935c8283109fef80b86b8a3eb88 feat: add historical input snapshot schema`
 
 ## Branch
 
@@ -24,131 +24,93 @@ The original workspace, `C:\Users\garim\Desktop\KeibaAI`, is not a modification 
 
 ## Objective
 
-Implement only approved V3b executable SQLite DDL as migration identity
-`v010_historical_input_snapshot_schema`. The phase creates the historical-input schema, its approved
-indexes and linkage triggers, and registers the migration with the existing runner. It does not implement a
-historical snapshot writer, reader, `save_snapshot`, `load_latest_snapshot`, collector, provider, parser,
-source-record digest, import/backfill, `SimulationRaceInput` reconstruction, CLI, or any V3c policy.
-
-V3a domain values are already implemented by Phase 4C-2d3b1i6b1. V3b is the only storage contract in
-scope; V3c source policy and V3d repository semantics remain design-only context.
+Implement only the atomic save side of the approved V3d concrete SQLite repository contract for an already
+valid V3a `HistoricalInputSnapshot` and the committed V3b v010 schema. Phase 4C-2d3b1i6b3b, eligible latest
+load and full reconstruction, is deferred and remains unimplemented.
 
 ## Completed Dependencies
 
-- Phase 4C-2d3b1i6a V3a/V3b/V3c/V3d design is approved in
-  `docs/VER0.8_SIMULATOR_DESIGN.md`.
-- Phase 4C-2d3b1i6b1 committed the V3a historical snapshot domain at the formal base.
-- Existing migrations are v008 (`v008_simulation_schema`) and v009
-  (`v009_simulation_bet_plan_schema`).
-- The existing runner and its `schema_migrations` contract are reused unchanged except for explicit v010
-  registration.
-
-## Migration Infrastructure Findings
-
-Migration modules live in `scripts/migrations/versions/`; the future module path is exactly
-`scripts/migrations/versions/v010_historical_input_snapshot_schema.py`. Existing migrations expose
-`VERSION`, `NAME`, `STATEMENTS`, optional `TRIGGERS`, and `apply(connection)`. The identity is fixed:
-
-```text
-VERSION = 10
-NAME = "v010_historical_input_snapshot_schema"
-```
-
-`scripts/migrations/runner.py` explicitly imports version modules and declares the tuple
-`MIGRATIONS = (v008_simulation_schema, v009_simulation_bet_plan_schema)`. It must import v010 and append it
-once, yielding ordered versions `(8, 9, 10)`. `scripts/migrations/versions/__init__.py` has no registration
-role and must remain unchanged.
-
-The runner owns all transaction and migration-record work:
-
-- it enables and verifies `PRAGMA foreign_keys = ON`;
-- it rejects an already-active transaction;
-- it creates `schema_migrations` in its own transaction when needed;
-- for each pending migration, it issues `BEGIN IMMEDIATE`, calls `migration.apply(connection)`, inserts the
-  `(version, name, applied_at)` record, then commits;
-- on error it rolls back and re-raises.
-
-`v010.apply(connection)` is transaction-neutral and must do only:
-
-```python
-for statement in STATEMENTS + INDEXES + TRIGGERS:
-    connection.execute(statement)
-```
-
-It must not issue `BEGIN`, `BEGIN IMMEDIATE`, `COMMIT`, or `ROLLBACK`; call `connection.commit()` or
-`connection.rollback()`; use `connection.executescript()`; open another connection; or insert migration
-records.
-
-Existing migration tests use in-memory SQLite with a minimal manually-created parent schema. The primary
-conventions are `tests/test_simulation_migrations.py` and
-`tests/test_simulation_bet_plan_migration.py`.
-
-## Legacy Parent Findings
-
-`scripts/database.py` defines `races.id INTEGER PRIMARY KEY AUTOINCREMENT` and
-`horses.id INTEGER PRIMARY KEY AUTOINCREMENT` with `horses.race_id` as the legacy internal-race linkage.
-The existing legacy helper index is `idx_horses_race_id ON horses(race_id)`. It is not equivalent to
-`ux_horses_race_id_id`; no existing exact composite unique index is declared.
-
-The required parent key is executable: `horses.id` is already unique as the primary key, so
-`CREATE UNIQUE INDEX ux_horses_race_id_id ON horses(race_id, id)` cannot encounter duplicate pairs on a
-clean parent schema. It supplies SQLite's required unique parent key for the V3b composite FK from an
-external entry to `horses(race_id, id)`. `races(id)` supplies the external-race parent FK. No legacy table
-definition changes are permitted.
+- V3a domain/Protocols are committed at `c031008`.
+- V3b eight-table schema, four indexes, five triggers, and v010 registration are committed at `95d8c8e`.
+- Existing immutable SQLite snapshot repositories establish the connection-injected write convention.
 
 ## Allowed Files
 
-- `scripts/migrations/versions/v010_historical_input_snapshot_schema.py`
-- `scripts/migrations/runner.py` — explicit v010 import and one registry entry only.
-- `tests/test_historical_input_snapshot_migration.py`
-- `tests/test_simulation_migrations.py` — update the exact applied-version expectation to include v010.
-- `tests/test_simulation_bet_plan_migration.py` — update exact registry/applied-version expectations to
-  include v010 without changing v009 contract coverage.
-- `tests/test_sqlite_persisted_simulation_application.py` — update its two exact applied-version mappings
-  to include v010.
+- `scripts/simulation/repositories/sqlite_historical_input_snapshot_repository.py`
+- `tests/test_sqlite_historical_input_snapshot_repository.py`
 - `docs/CURRENT_PHASE.md`
 - `docs/LATEST_CODEX_REPORT.md`
 
-Additionally, the following two existing real-chain success tests may change only to create and commit the
-minimal `races` and `horses` parent-schema fixture at their resolved temporary request database path before
-the existing application chain invokes default migrations:
-
-- `tests/test_cli_run_persisted_simulation.py`
-- `tests/test_persisted_simulation_request_application.py`
-
-The three existing test updates are required only because their assertions enumerate the complete default
-migration registry as v008/v009. No unrelated test behavior may change.
-
-## Legacy Schema Prerequisite
-
-v010 is an overlay migration over the existing KeibaOS legacy race/horse schema. Before the default chain
-reaches v010, a database must have `races` and `horses`. v010 does not create, repair, or infer parents.
-The migration runner does not own legacy bootstrap. The file-backed persisted-simulation application,
-request application, and CLI do not gain bootstrap responsibility in this phase. The two authorized
-real-chain success tests prepare the minimal real SQLite parent fixture at the resolved request database
-path; they do not call `apply_migrations()` manually.
+No other file is authorized. If another file is necessary, set `REVISION_REQUIRED` in the report and stop.
 
 ## Forbidden Files
 
-- `scripts/simulation/historical_input_snapshots.py` and every other domain/production module outside the
-  one migration module and explicit runner registration.
-- `scripts/migrations/versions/__init__.py`, `scripts/database.py`, schema/bootstrap code, repositories,
-  providers, parsers, services, composition, runner behavior other than registration, CLI, README, and
-  package-root exports.
-- All database files including `database/keiba.db`, and `logs/`.
-- Any repository writer/reader, save/load API, source implementation, V3c source mapping/digest, legacy
-  data backfill, external-identity inference, synthetic provenance, or historical snapshot reconstruction.
-- Any ninth historical table, `is_complete`, repository metadata table, completeness/digest/backfill trigger,
-  or migration-owned transaction control.
+- `scripts/migrations/versions/v010_historical_input_snapshot_schema.py`, `scripts/migrations/runner.py`,
+  `scripts/database.py`, package `__init__.py` files, composition, services, CLI, README, and all unrelated
+  production/tests.
+- `database/keiba.db`, `logs/`, schema/bootstrap changes, package-root exports, and runtime Protocol checks.
+- V3c collection/parsing/mapping, source-record digests, external-ID construction, legacy conversion,
+  `past_races`/`horses.odds` use, fetch, backfill, or raw-input snapshot construction.
+- b3b `load_latest_snapshot`, eligibility/latest queries, reconstruction, DB Decimal/date/datetime parsing,
+  digest verification on load, and malformed-latest fallback logic.
 
-## Migration Identity
+## Concrete Repository API
 
-The only migration identity is `v010_historical_input_snapshot_schema` with version `10`. It is appended
-after v009 through `runner.MIGRATIONS`; discovery is not dynamic.
+Create exactly one concrete class in the allowed module:
 
-## Exact Eight Tables
+```python
+class SQLiteHistoricalInputSnapshotRepository:
+    def __init__(self, *, connection: sqlite3.Connection) -> None: ...
 
-The migration creates exactly these eight historical-input tables and no other historical table:
+    def save_snapshot(
+        self,
+        *,
+        snapshot: HistoricalInputSnapshot,
+    ) -> None: ...
+```
+
+The method matches `HistoricalInputSnapshotRepository.save_snapshot` structurally. Do not inherit from the
+Protocol, implement load, add a load stub, add runtime-checkable behavior, or add public list/get/delete/
+update/upsert APIs. The constructor is keyword-only, retains the exact injected connection, and enables/
+verifies foreign keys. Invalid connection or caller snapshot is `RepositoryValidationError`.
+
+## Natural Identity and Save Precedence
+
+Exact natural identity is:
+
+```text
+(dataset_id, organization, source_system, external_race_id, captured_at_utc)
+```
+
+`content_sha256`, `information_cutoff_utc`, `internal_race_id`, and `source_url` are not identity.
+`content_sha256` is derived by the V3a snapshot; the repository never accepts a separate caller digest.
+
+1. No matching identity: insert one complete snapshot atomically.
+2. Matching identity and same stored `content_sha256`: successful no-op; no header, child, or mapping mutation.
+3. Matching identity and different digest: roll back and raise unchanged `RepositoryConflictError`.
+
+The identity lookup reads only the minimum header values needed to find the identity and digest. Multiple
+matching rows are `RepositoryDataIntegrityError`; full existing snapshot reconstruction/digest verification is
+b3b responsibility.
+
+## Transaction Boundary
+
+Follow the existing connection-injected immutable SQLite convention:
+
+- reject an active caller transaction before writing with `RepositoryValidationError`, without committing it;
+- verify foreign keys, issue `BEGIN IMMEDIATE`, then perform the complete save;
+- commit only after every row succeeds;
+- on `sqlite3.IntegrityError`, roll back and raise `RepositoryDataIntegrityError` with the original exception
+  chained;
+- on `RepositoryConflictError` or other exception, roll back and propagate the same exception object;
+- keep the connection usable after failure; do not use context-manager transaction magic or another connection.
+
+The migration runner owns migration transactions; this repository never applies migrations, bootstraps legacy
+parents, manages paths, retries, caches, or opens/closes the connection.
+
+## Mapping and Insert Rules
+
+Use deterministic parent-first insertion across all eight V3b tables:
 
 1. `historical_input_source_identities`
 2. `historical_input_external_races`
@@ -159,138 +121,72 @@ The migration creates exactly these eight historical-input tables and no other h
 7. `historical_input_snapshot_past_races`
 8. `historical_input_snapshot_provenance`
 
-There are exactly eight `CREATE TABLE` statements, four `CREATE INDEX`/`CREATE UNIQUE INDEX` statements,
-and five `CREATE TRIGGER` statements in V3b migration scope.
+Reuse only compatible existing source, external-race, and external-entry mappings. Incompatible existing
+mapping fails closed under the repository error contract; never use `INSERT OR REPLACE` or mutate a mapping
+to fit a new snapshot. Source identity is `(organization, source_system)` only; source URL is header content.
+External-entry identity excludes `external_horse_id`, which is nullable entry content.
 
-## Indexes
+## Mapping Conflict Error Classification
 
-The exact four index names are:
+`historical_input_source_identities` has no mapping payload beyond its natural identity
+`(organization, source_system)`: an absent row is inserted and an existing exact row is reused. It has no
+content-mismatch conflict case. An impossible stored state or unexpected SQLite integrity failure is
+`RepositoryDataIntegrityError`.
 
-1. `ux_horses_race_id_id` — `UNIQUE horses(race_id, id)` legacy composite-parent helper.
-2. `idx_his_external_races_internal`
-3. `idx_his_external_entries_internal`
-4. `idx_his_snapshots_latest_eligible`
+For `historical_input_external_races`, a row with the same forward identity
+`(organization, source_system, external_race_id)` but a different `internal_race_id` is an immutable forward
+mapping conflict and raises `RepositoryConflictError`. A row with the same
+`(organization, source_system, internal_race_id)` but a different `external_race_id` is an immutable reverse
+mapping conflict and also raises `RepositoryConflictError`. Compatible exact mappings are reused.
 
-No duplicate index is added for primary keys or existing unique constraints. In particular, entry ordering,
-past-race identity, and provenance identity use table primary/unique keys rather than redundant explicit
-indexes.
+For `historical_input_external_entries`, a row with the same forward identity
+`(organization, source_system, external_race_id, external_entry_id)` but a different `internal_race_id` or
+`race_entry_id` is an immutable forward mapping conflict and raises `RepositoryConflictError`. A row with the
+same `(organization, source_system, internal_race_id, race_entry_id)` but a different `external_entry_id` is
+an immutable reverse mapping conflict and also raises `RepositoryConflictError`. Compatible exact mappings are
+reused.
 
-## Triggers
+All explicit immutable mapping conflicts are detected inside the repository-owned `BEGIN IMMEDIATE`
+transaction, rolled back, and propagated unchanged without mutation or partial snapshot persistence.
+`RepositoryDataIntegrityError` is reserved for unrelated storage integrity failures, including an
+unidentified `sqlite3.IntegrityError`, missing or mismatched legacy parents, CHECK/FK/trigger failures,
+impossible duplicate/stored states, or malformed values read by the repository. Caller/boundary failures
+(invalid connection or snapshot, active caller transaction, or foreign-key enable/verification failure) are
+`RepositoryValidationError`, not mapping conflicts.
 
-The exact five linkage-only trigger names are:
-
-1. `trg_his_snapshot_entry_mapping_insert`
-2. `trg_his_snapshot_entry_mapping_update`
-3. `trg_his_snapshot_header_mapping_update`
-4. `trg_his_external_entry_referenced_update`
-5. `trg_his_external_entry_referenced_delete`
-
-They protect mapping drift that cannot be represented by a direct FK. No trigger proves completeness,
-requires future child rows during parent insertion, calculates a digest, repairs data, or backfills rows.
-
-## Natural Identity
-
-`historical_input_snapshots` uses exactly:
-
-```sql
-UNIQUE (
-    dataset_id,
-    organization,
-    source_system,
-    external_race_id,
-    captured_at_utc
-)
-```
-
-It does not include `snapshot_id`, `source_url`, `internal_race_id`, `information_cutoff_utc`, or
-`content_sha256`. `source_url` is snapshot content on `historical_input_snapshots`; `external_horse_id` is
-snapshot-entry content on `historical_input_snapshot_entries`. Neither belongs to the external natural
-identity key.
-
-## Foreign Keys
-
-All V3b new-table foreign keys explicitly use `ON DELETE RESTRICT ON UPDATE RESTRICT`. The external-race
-mapping references `races(id)`. The external-entry mapping references
-`horses(race_id, id)` through the helper unique index. Snapshot header, race, entry, past-race, and
-provenance linkage follows the exact approved V3b DDL.
-
-Provenance preserves nullable linkage: a `past_race/{entry}/none` record has `input_type = 'past_race'`, a
-non-null `race_entry_id`, and `past_race_index = NULL`. The nullable composite FK must not make that valid
-absence record impossible. Numbered past-race provenance uses a non-null index. SQL permits both structural
-forms without independently enforcing domain-level past-versus-`/none` XOR.
-
-## Storage Types
-
-Approved Decimal columns are `TEXT`: `win_odds_text`, `margin_text`, `weight_text`,
-`weight_diff_text`, and `odds_text`. No Decimal field uses `REAL`, `FLOAT`, `DOUBLE`, or SQL coercion.
-
-Dates use shaped `TEXT` `YYYY-MM-DD`; UTC datetimes use shaped 32-character `TEXT`
-`YYYY-MM-DDTHH:MM:SS.ffffff+00:00`. Required text checks use exactly
-`typeof(value) = 'text' AND value <> ''`; they do not use `trim`. Optional text is `NULL` or exact nonempty
-`TEXT`. `passing_order` is `TEXT NOT NULL` with a type check only, so `''` is valid and `NULL` is rejected.
-
-`entry_order`, `past_race_index`, `fourth_corner_position`, and `popularity` are non-negative integer
-columns. Approved IDs and positive numeric fields remain positive. Provenance input types are exactly
-`track`, `entry`, `odds`, `jockey`, and `past_race`.
-
-## DDL Validation Boundary
-
-V3b enforces storage type/nullability, coarse ranges, nonempty required text, UTC/date shape, key/unique
-constraints, provenance structural shapes, foreign keys, and linkage triggers. It deliberately does not
-enforce NFC, Decimal canonicality, calendar validity, contiguous orders, full audit-key completeness,
-past-race versus `/none` XOR, full digest reconstruction, causal time ordering, or source/provenance
-semantic consistency. Those remain V3a domain and later repository responsibilities.
-
-## Migration Transaction Boundary
-
-The runner owns foreign-key verification, transaction start, commit, rollback, and `schema_migrations`
-insertion. v010 performs DDL only through `connection.execute()` and has no retry, fallback, connection
-lifecycle, database-path, or backfill responsibility.
-
-## No-Backfill Rule
-
-v010 must not read legacy rows to construct historical snapshots, copy `horses.odds`, trust v008 odds,
-populate historical rows, infer external identities, or synthesize provenance. After successful migration,
-all eight historical-input tables may be empty.
+Persist the exact V3a snapshot: canonical six-microsecond `+00:00` UTC text, canonical date, fixed Decimal
+text (never float), header source URL, nullable external horse ID, exact entry order/past index, empty
+`passing_order` as `''` not NULL, and each provenance timestamp/index/audit key. Do not infer/default,
+reorder/reindex, synthesize `/none`, or partially persist children.
 
 ## Required Tests
 
-The new dedicated in-memory migration suite must verify:
+The new dedicated real-SQLite test module must cover:
 
-- v010 identity, import, registration after v009, and idempotent one-time application;
-- exactly eight historical table names, exactly four index names, and exactly five trigger names;
-- `PRAGMA foreign_keys` remains enabled, `foreign_key_check` is clean, and runner ownership remains intact;
-- `apply()` has no begin/commit/rollback/`executescript` behavior and the runner inserts the migration record;
-- snapshot natural identity rejects an exact duplicate; changing only `information_cutoff_utc` or
-  `content_sha256` does not create a distinct identity, while changing `captured_at_utc` does;
-- external-race FK; external-entry composite FK to `horses(race_id,id)`; and all RESTRICT/update/delete
-  linkage behavior including each of the five triggers;
-- source URL/header storage and external horse ID/snapshot-entry storage;
-- accepted empty `passing_order`, rejected NULL passing order, all four zero-based fields accepting zero,
-  positive ID/range rejection, and provenance input-type/shape matrix including nullable `/none`;
-- Decimal `TEXT` storage, date/UTC shape checks, required text without trim rejection, and no historical
-  backfill on an upgraded database.
+- class path/API/type hints; keyword-only constructor; invalid connection/snapshot;
+  `RepositoryValidationError`; foreign-key enablement; no package-root export;
+- successful complete save and expected rows in every V3b table; exact header/source URL/external horse ID;
+  canonical UTC/date/Decimal text; empty passing order; entry/past/provenance ordering and nullable values;
+- same identity/same digest no-op without duplicate headers/children/mappings; distinct digest conflict without
+  mutation; cutoff/digest/source URL are not identity;
+- active transaction rejection, `BEGIN IMMEDIATE` ownership, success commit, conflict rollback, child failure
+  rollback/no partial rows, and reusable connection;
+- source identity exact reuse; external-race forward and reverse mapping conflicts;
+  external-entry forward and reverse mapping conflicts; each explicit immutable conflict as unchanged
+  `RepositoryConflictError`; and mapping identity excluding source URL/external horse ID;
+- a genuine unrelated SQLite/FK/storage integrity failure as `RepositoryDataIntegrityError`;
+- source/AST boundaries: no load implementation, migration/schema modification, DB file, V3c logic, or
+  package-root export.
 
-Existing exact default-registry expectations must be updated only in:
-`tests/test_simulation_migrations.py`, `tests/test_simulation_bet_plan_migration.py`, and
-`tests/test_sqlite_persisted_simulation_application.py`. The historical domain suite remains unchanged.
+Use real `:memory:` SQLite, explicit legacy `races` / `horses` parents, and the committed migration chain.
 
 ## Verification Commands
 
-Use the repository-approved Python runtime:
-
-```powershell
-& "C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" -m pytest tests/test_historical_input_snapshot_migration.py -q
-& "C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" -m pytest tests/test_simulation_migrations.py tests/test_simulation_bet_plan_migration.py tests/test_sqlite_persisted_simulation_application.py tests/test_sqlite_simulation_bet_plan_snapshot_repository.py tests/test_historical_input_snapshots.py -q
-& "C:\Users\garim\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" -m pytest -q
-git diff --check
-git status --short
-```
-
-No test may use `database/keiba.db`; use `:memory:` or temporary SQLite fixtures following existing
-migration-test conventions.
+The implementation must run the dedicated suite, relevant v010/migration and existing immutable-repository
+regressions, the full suite, `git diff --check`, and `git status --short`; exact commands and expected counts
+must be recorded before stopping `READY_FOR_REVIEW`.
 
 ## Stop Condition
 
-Preparation only. Do not modify production, tests, migration modules, runner, registry, README, database, or
-logs beyond these two preparation documents. Do not stage, commit, or push. Stop for ChatGPT review.
+Implement only the allowed b3a files after a separate `EXECUTE_APPROVED_PHASE` command. Otherwise do not
+create production/test code, stage, commit, or push. Stop for review at `READY_FOR_REVIEW`.

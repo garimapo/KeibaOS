@@ -2,13 +2,13 @@
 
 ## Status
 
-READY_FOR_REVIEW
+APPROVED_FOR_COMMIT
 
 ## Current Phase
 
-Phase 4C-2d3b1i6b1 — Historical input snapshot domain implementation
+Phase 4C-2d3b1i6b3a — Historical input snapshot SQLite repository atomic save path
 
-Base commit: `0ab53e57adaf4971cd8c576024d90647a6d1bf09 docs: approve historical input snapshot v3 contract`
+Base commit: `95d8c8e123828935c8283109fef80b86b8a3eb88 feat: add historical input snapshot schema`
 
 Branch: `feature/ver0.8-simulator`
 
@@ -1880,5 +1880,173 @@ Historical domain: 16 passed, 3 subtests passed
 Full suite: 2396 passed, 2 skipped, 1317 subtests passed
 git diff --check: PASS
 ```
+
+## Phase 4C-2d3b1i6b3 Preparation
+
+Status: `PHASE_4C_2D3B1I6B3_PREPARED`.
+
+Formal base: `95d8c8e123828935c8283109fef80b86b8a3eb88` on `feature/ver0.8-simulator`; canonical workspace:
+`C:\Users\garim\Desktop\KeibaAI-review-1i5b2b`. The original workspace remains unchanged.
+
+Inspected existing repository boundaries:
+
+- `scripts/simulation/repositories/sqlite_bet_plan_snapshot_repository.py`
+- `scripts/simulation/repositories/sqlite.py`
+- `scripts/simulation/repositories/sqlite_race_entry_source.py`
+- `scripts/simulation/repositories/errors.py`
+- `scripts/simulation/repositories/interfaces.py`
+- `scripts/simulation/historical_input_snapshots.py`
+- `scripts/migrations/versions/v010_historical_input_snapshot_schema.py`
+- `scripts/migrations/runner.py`
+- their SQLite repository, migration, and historical-domain test conventions.
+
+`RepositoryValidationError`, `RepositoryConflictError`, and `RepositoryDataIntegrityError` are defined in
+`scripts/simulation/repositories/errors.py`. Existing immutable SQLite repositories use a keyword-only,
+connection-injected constructor, enable/verify foreign keys, reject active caller write transactions, own
+`BEGIN IMMEDIATE` / commit / rollback for save, and reconstruct malformed stored rows fail-closed. Read-only
+sources do not own a transaction. No package-root export is required by current conventions.
+
+The proposed concrete module is
+`scripts/simulation/repositories/sqlite_historical_input_snapshot_repository.py`, with dedicated test
+`tests/test_sqlite_historical_input_snapshot_repository.py`. The proposed implementation set is those two
+files plus the two phase documents; no migration, runner, schema, package registration, or V3c source file is
+proposed.
+
+Phase-size decision: split before implementation. Proposed b3a owns the atomic immutable save path across all
+eight V3b tables; proposed b3b owns exact eligible latest selection, full V3a reconstruction, digest
+verification, and malformed-latest fail-closed behavior. Combining both is not sufficiently small for one
+reviewable phase.
+
+The draft preserves V3d natural identity `(dataset_id, organization, source_system, external_race_id,
+captured_at)`: same digest is a no-op, different digest is `RepositoryConflictError`, and content digest is
+never a separate caller input. Proposed load selection has exact dataset/race/source/cutoff predicates and
+`captured_at DESC` only, with no older/cross-source fallback on malformed latest data.
+
+No production, test, migration, schema, database, or log file was modified in this preparation. `git diff
+--check`, `git diff --name-status`, and `git status --short` were run after the documentation update. No
+stage, commit, or push was performed.
+
+## Phase 4C-2d3b1i6b3a Approval
+
+Status: `PHASE_4C_2D3B1I6B3A_APPROVED_FOR_CODEX`.
+
+ChatGPT preparation review: `APPROVED_WITH_SPLIT`.
+
+The original b3 umbrella is split: b3a is the atomic save path now approved for implementation; b3b is the
+eligible-latest load and full reconstruction phase, deferred and unimplemented. b3a has exactly four future
+allowed files: the direct concrete repository module
+`scripts/simulation/repositories/sqlite_historical_input_snapshot_repository.py`, its dedicated test
+`tests/test_sqlite_historical_input_snapshot_repository.py`, and the two phase documents.
+
+The approved save contract uses the existing connection-injected convention: keyword-only connection,
+foreign-key enable/verification, active caller transaction rejection, repository-owned `BEGIN IMMEDIATE`,
+commit on complete save, rollback on failure, reusable connection, and repository error classes from
+`scripts/simulation/repositories/errors.py`.
+
+Natural identity is exactly `(dataset_id, organization, source_system, external_race_id, captured_at_utc)`.
+Same identity and digest is an idempotent no-op; same identity and different digest is unchanged
+`RepositoryConflictError`. Content digest, cutoff, internal race ID, and source URL are not identity. b3b
+load/reconstruction, eligible cutoff selection, stored digest verification, and malformed-latest handling
+remain excluded.
+
+## Phase 4C-2d3b1i6b3a Contract Correction and Reapproval
+
+Status: `PHASE_4C_2D3B1I6B3A_APPROVED_FOR_CODEX`.
+
+The mapping error classification is now explicit in `docs/CURRENT_PHASE.md`:
+
+- source identity has no content-mismatch case; its exact key is reused;
+- external-race forward mismatch is `RepositoryConflictError`;
+- external-race reverse immutable mapping mismatch is `RepositoryConflictError`;
+- external-entry forward mismatch is `RepositoryConflictError`;
+- external-entry reverse immutable mapping mismatch is `RepositoryConflictError`;
+- unrelated SQLite or stored-data integrity failures are `RepositoryDataIntegrityError`; and
+- caller/boundary validation is `RepositoryValidationError`.
+
+Production, tests, migration, and schema remain unimplemented or unchanged for this documentation-only
+correction. Execution remains separately authorized after this reapproval.
+
+## Phase 4C-2d3b1i6b3a Implementation
+
+Status: `PHASE_4C_2D3B1I6B3A_READY_FOR_REVIEW`.
+
+Implemented `SQLiteHistoricalInputSnapshotRepository` in
+`scripts/simulation/repositories/sqlite_historical_input_snapshot_repository.py`. Its only public persistence
+method is `save_snapshot(*, snapshot)`: it uses the injected connection, verifies foreign keys, owns
+`BEGIN IMMEDIATE` / commit / rollback, and persists the complete V3a snapshot across all eight committed v010
+tables in parent-first order. `load_latest_snapshot` remains unimplemented; b3b and V3c are unstarted.
+
+Natural identity is `(dataset_id, organization, source_system, external_race_id, captured_at_utc)`. A same
+digest is an idempotent no-op; a different digest under that identity is an unchanged
+`RepositoryConflictError`. Source identity is reused. Explicit external-race and external-entry forward and
+reverse mapping mismatches raise unchanged `RepositoryConflictError`; unrelated SQLite FK/CHECK/storage
+failures raise `RepositoryDataIntegrityError`; invalid connection/snapshot or a caller-owned active
+transaction raises `RepositoryValidationError`.
+
+The dedicated real-`:memory:` SQLite tests cover all eight table row counts and exact header, race, entry,
+past-race, and provenance fields; canonical six-microsecond UTC/date/fixed Decimal TEXT persistence; empty
+`passing_order`; idempotency; mapping reuse/conflicts; and rollback/reusable-connection behavior. No package
+root export was added. A real SQLite provenance-child trigger failure proves the rollback removes mappings,
+header, and every child row. The migration runner, v010 schema, and frozen V3a domain were unchanged.
+
+Verification (Codex local):
+
+- Dedicated: `9 passed, 4 subtests passed`.
+- Historical domain / v010 migration: `22 passed, 3 subtests passed`.
+- Existing SQLite repository / migration regressions: `63 passed, 70 subtests passed`.
+- Full suite: `2405 passed, 2 skipped, 1321 subtests passed`.
+
+`database/keiba.db`, `logs/`, and the original workspace remain untouched. No stage, commit, or push was
+performed.
+
+## Phase 4C-2d3b1i6b3a ChatGPT Final Review
+
+Result: `APPROVED_FOR_COMMIT`.
+
+- Production review: APPROVED.
+- Atomic save: APPROVED.
+- Natural identity / idempotency: APPROVED.
+- Mapping conflict classification: APPROVED.
+- Transaction rollback: APPROVED.
+- Canonical persistence: APPROVED.
+
+Verification (Codex local):
+
+- Dedicated: `9 passed, 4 subtests passed`.
+- Historical domain / v010 migration: `22 passed, 3 subtests passed`.
+- Existing SQLite repository / migration: `63 passed, 70 subtests passed`.
+- Full suite: `2405 passed, 2 skipped, 1321 subtests passed`.
+
+`load_latest_snapshot` is NOT IMPLEMENTED and deferred to b3b. b3b and V3c remain unimplemented.
+
+## Phase 4C-2d3b1i6b3a Commit Verification Runtime Blocker
+
+The isolated Windows TEMP venv now has Python 3.14.5, pytest 8.3.5, and verification-only `tzdata 2026.3`.
+`ZoneInfo("Asia/Tokyo")` resolves successfully. The required existing SQLite repository / migration regression
+set passed (`63 passed`); dedicated verification passed (`9 passed`); and historical domain / v010 migration
+verification passed (`22 passed`). Requirements files were not changed.
+
+The full suite then reported three pre-existing Python 3.14 runtime incompatibilities: tests that expect
+`TypeError` for adding an attribute to frozen slotted dataclasses receive `dataclasses.FrozenInstanceError`
+instead. The affected tests are in `test_persisted_settlement_contract.py`, `test_settlement_contract.py`, and
+`test_simulation_bet_plan_identity.py`, outside b3a's allowed files. The full result is
+`3 failed, 2404 passed`.
+
+No stage, commit, or push was performed after this environment failure.
+
+## Phase 4C-2d3b1i6b3a Python 3.14 Baseline Acceptance
+
+ChatGPT final commit decision: `APPROVED_FOR_COMMIT`.
+
+The Python 3.14.5 full-suite result is `3 failed, 2404 passed`. The only accepted environmental compatibility
+failures are `PersistedRaceSettlementDataTests.test_uses_slots`, `RaceSettlementDataTests.test_uses_slots`,
+and `SimulationBetPlanIdentityTest.test_uses_slots_and_rejects_new_attributes`. Each is the pre-existing
+expectation of `TypeError` versus Python 3.14 `FrozenInstanceError` for unknown attribute assignment on a
+frozen slotted dataclass. Those tests and their production dataclasses are outside b3a and were not modified.
+
+The b3a results remain: dedicated `9 passed`; historical domain / v010 migration `22 passed`; and existing
+SQLite repository / migration `63 passed`. Verification used a Windows isolated TEMP venv with Python 3.14.5,
+pytest 8.3.5, and verification-only tzdata 2026.3. `requirements.txt` and `requirements-dev.txt` remain
+unchanged.
 
 blocker: none
