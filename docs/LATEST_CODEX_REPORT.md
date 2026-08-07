@@ -2,7 +2,7 @@
 
 ## Status
 
-PHASE_4C_2D3B1I6B3B_READY_FOR_REVIEW
+PHASE_4C_2D3B1I6C1_PREPARED
 
 ## Current Phase
 
@@ -2287,4 +2287,99 @@ Dedicated coverage adds a custom `tzinfo` whose `utcoffset()` raises. The load c
 cutoff representing the requested instant loads normally. The phase remains `READY_FOR_REVIEW`; scope, save
 behavior, and all non-approved files remain unchanged.
 
-blocker: none
+## Phase 4C-2d3b1i6c1 Preparation
+
+Status: `PHASE_4C_2D3B1I6C1_PREPARED`.
+
+The preparation used formal base `038130c9d84a082107e351e545c167a9019e7b3a` on
+`feature/ver0.8-simulator`. V3a domain, v010 schema, and V3d SQLite save/load are complete and frozen. The
+existing providers, parsers, fetchers, legacy database boundary, migrations, tests, and simulator design were
+inspected without changing them.
+
+The resulting policy is fail closed. Legacy race/horse IDs and horse number are linkage-only; legacy descriptive
+fields/URLs are not provenance; `horses.odds` is forbidden; legacy past races, v008 odds, and result/settlement
+data are untrusted or forbidden. NAR live parsing is only partial because it does not retain immutable raw
+official records, complete official identities, or causal timestamps. The JRA fetcher is a static placeholder;
+all JRA record kinds are unsupported/deferred.
+
+Future NAR raw records use only official keys:
+`nar:{YYYYMMDD}:{k_babaCode}:{k_raceNo}` and
+`nar:{YYYYMMDD}:{k_babaCode}:{k_raceNo}:entry:{horseNum}`. Date is canonically validated; official key spelling is
+preserved without place-name inference or synthetic zero-padding. Existing legacy rows alone cannot supply them.
+
+The proposed frozen source-record domain permits exactly `track`, `entry`, `jockey`, `odds_win`, `past_race`, and
+`past_race_absence`. Its source-ID envelope is `his-v1:{record_kind}:{sha256}` over canonical NFC UTF-8 JSON
+with sorted keys, finite Decimal text, the canonical official URL, and explicit nulls; capture timestamps are
+source evidence and are not source-ID members. The V2 refinement below freezes each exact payload key.
+`odds_win` maps to provenance `odds`; `past_race_absence` maps to `past_race` with the `/none` audit key; neither
+is a new provenance input type.
+
+Past races sort `race_date DESC, source_id ASC`, then receive contiguous indexes. Missing/same-day/future dates,
+duplicate source IDs, duplicate official identities, and malformed records fail closed. A no-history entry needs
+one auditable zero-result absence search record whose exact `query_scope` is external entry ID, target race date,
+and `strictly_before_target_race=True`, with exact zero count, canonical official URL, and time evidence; an empty
+parser output is not proof.
+
+`available_at` is optional and accepts only official publication time; `observed_at` is required and accepts only
+an immutable capture-boundary response observation. Each must satisfy the later causal order. Current stored data
+has neither trusted identity nor required observation evidence, so retrospective construction is intentionally
+unavailable. This is an explicit gap, not a fallback opportunity.
+
+The recommended sequence is (1) source-record domain/digest, (2) NAR supplied-raw normalization, (3) pure V3a
+snapshot builder, and later (4) JRA normalization after a real official adapter exists. Candidate new files are
+`historical_input_source_records.py`, `nar_historical_input_source.py`, and
+`historical_input_snapshot_builder.py`, each with a dedicated deterministic test. Existing provider/parser changes
+are not pre-authorized. The pure builder must not fetch, mutate/read a database, inspect settlement, infer
+provenance, repair input, or invoke the repository.
+
+Future tests require deterministic fixtures: canonical source digests, record-kind/mapping rules, NAR key
+validation, duplicate conflicts, ordering, absence proof, future-leakage rejection, V3a builder digest stability,
+no legacy fallback/result leakage, JRA unsupported behavior, and a focused repository round trip. No live network
+calls are permitted.
+
+Only `docs/CURRENT_PHASE.md` and this report changed. Production, tests, migrations, schema, database, logs, and
+the original workspace remain untouched. No stage, commit, or push was performed.
+
+## Phase 4C-2d3b1i6c1 Preparation Contract Refinement V2
+
+Status remains `PHASE_4C_2D3B1I6C1_PREPARED`; this is a PREPARE-only contract refinement, not source-domain,
+normalizer, builder, or repository implementation. The authoritative V3c envelope is now explicit: every c1a
+source record has `schema_version`, `record_kind`, `organization`, `source_system`, `external_race_id`,
+`external_entry_id`, `canonical_source_url`, `provider_record_id`, `record_values`, `available_at`, and
+`observed_at`. The source-ID digest includes exactly the V3c nine-member JSON envelope through `record_values`;
+it deliberately excludes `available_at` and `observed_at`, which remain immutable causal evidence rather than
+logical-record identity.
+
+The six exact per-kind payloads are frozen: complete track metadata; official entry identity, optional horse
+identity, and horse number; entry-scoped jockey; entry-scoped positive Decimal win odds; every V3a past-race
+scalar; and the three-key, zero-result past-race absence proof. Nullable values remain explicit JSON `null`.
+`passing_order` is NFC-normalized and may be the empty string. A past race must carry a non-null opaque official
+`provider_record_id`; the tuple `(source_system, external_race_id, external_entry_id, provider_record_id)` is
+the future official-past-race conflict primitive. Same-source duplication is exact `source_id` equality.
+
+Local `race_id` and `race_entry_id` are not c1a fields and never participate in a source ID. Future V3a assembly
+uses a separate official-entry-to-local-entry mapping, while `entry_order` and `past_race_index` remain derived
+only after complete trusted source validation. IDs use SHA-256 over canonical NFC UTF-8 JSON bytes with
+`ensure_ascii=False`, `sort_keys=True`, compact separators, and `allow_nan=False`; the lowercase hexadecimal
+digest is then placed in `his-v1:{record_kind}:{sha256}`.
+
+Timestamp semantics were reconciled without changing V3a/V3c: `available_at` is optional and only an official
+provider publication instant; `observed_at` is required and only the immutable response-receipt boundary prior to
+parsing. A record lacking provider `available_at` is usable only when its valid immutable `observed_at` satisfies
+the downstream causal order. Existing NAR rows lack that evidence, so NAR remains partial. JRA remains
+unsupported/deferred. Legacy linkage-only data, `horses.odds`, legacy past races, results, and settlement remain
+untrusted or forbidden.
+
+The proposed exact c1a surface is the frozen/slotted `HistoricalInputSourceRecord`, `SourceRecordKind`, three
+minimal source exceptions (`HistoricalInputSourceError`, `HistoricalInputSourceValidationError`, and
+`HistoricalInputSourceConflictError`), canonical payload/ID functions, and one record-set conflict validator.
+Its future allowed files are exactly `scripts/simulation/historical_input_source_records.py`,
+`tests/test_historical_input_source_records.py`, and the two phase documents. The expanded deterministic test
+matrix covers the exact field API, all payload schemas, nulls, canonical scalars, digest behavior, no local-ID
+dependence, conflict primitives, strict absence proof, temporal validation, and no DB/network/filesystem or
+package-root work.
+
+Production, tests, migrations, schema, database, logs, and the original workspace remain unchanged. No stage,
+commit, or push was performed.
+
+blocker: no persisted official raw source corpus with immutable identity and causal availability evidence; JRA is unsupported/deferred
