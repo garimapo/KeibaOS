@@ -2,13 +2,21 @@
 
 ## Status
 
-PHASE_4C_2D3B1I6C1A_APPROVED_FOR_COMMIT
+PHASE_4C_2D3B1I6C1B_DRAFT_FOR_REVIEW
 
-## Current Phase
+## Previous Formal Phase
 
 Phase 4C-2d3b1i6c1a — Historical input source-record domain and deterministic IDs
 
 Base commit: `038130c9d84a082107e351e545c167a9019e7b3a feat: load historical input snapshots from sqlite`
+
+Branch: `feature/ver0.8-simulator`
+
+## Current Preparation
+
+Phase 4C-2d3b1i6c1b — NAR supplied-raw historical source normalization preparation
+
+Base commit: `96e70d17f66f85689f568c7603977afdb508e31b feat: add historical input source record domain`
 
 Branch: `feature/ver0.8-simulator`
 
@@ -2498,4 +2506,68 @@ Full suite: 2424 passed, 0 failed
 Production and test content are retained unchanged from the approved review commit. c1b is not started;
 NAR remains PARTIAL and JRA remains UNSUPPORTED / DEFERRED.
 
-blocker: none
+## Phase 4C-2d3b1i6c1b Preparation
+
+Status: `PHASE_4C_2D3B1I6C1B_DRAFT_FOR_REVIEW`.
+
+Preparation used formal base `96e70d17f66f85689f568c7603977afdb508e31b` on
+`feature/ver0.8-simulator`. The committed c1a source-record domain is frozen. c1b is proposed as the smallest
+supplied-raw NAR-only normalizer: it receives one already successful official response and returns only validated
+`HistoricalInputSourceRecord` values. It owns neither HTTP, raw persistence, a database, legacy parsing, snapshot
+assembly, migration, repository behavior, nor JRA.
+
+The tracked NAR `horse_page.html` fixture supplies the concrete initial evidence. It declares UTF-8 and shows
+`https://www.keiba.go.jp/KeibaWeb/TodayRaceInfo/DebaTable` with exactly `k_raceDate`, `k_babaCode`, and
+`k_raceNo`. Its race header/data area and `horseNum`, `jockeyName`, and `odds_weight` markup can provide a complete
+track/entry/jockey/win-odds tuple. Existing `NARProvider` and legacy parsers are not reused: they fetch live data,
+guess decoding, log responses, discard official keys/timestamps, and use float/zero fallback behavior.
+
+The proposed frozen input is a slotted/frozen `NarSuppliedOfficialResponse(response_url, response_body: bytes,
+charset: Literal["utf-8"], observed_at)`. Bytes plus an exact UTF-8 declaration preserve deterministic decoding;
+the supplied response receipt instant is the only `observed_at`. No provider publication instant is evidenced, so
+all c1b records have `available_at=None`. No local path, file mtime, database time, response-time guess, or parser
+runtime can become source evidence.
+
+The only initially supported official page is `DebaTable` on HTTPS `www.keiba.go.jp`, exact-case path
+`/KeibaWeb/TodayRaceInfo/DebaTable`, no credentials/fragment/trailing slash, and exactly one of each required
+query key. It canonicalizes the output query as `k_babaCode`, `k_raceDate`, `k_raceNo`, preserving validated
+canonical decimal tokens and encoding date slashes as `%2F`. Unknown/duplicate keys, ambiguous percent encoding,
+noncanonical date/decimal text, and URL/content race mismatch fail closed.
+
+Support is `SUPPORTED` for `track`, `entry`, `jockey`, and `odds_win`; it is `UNSUPPORTED` for `past_race` and
+`past_race_absence`. The existing past links cannot prove the complete c1a payload or a stable official
+`provider_record_id`, and no complete successful scoped zero-result official search is available. Neither an
+official past-race URL nor empty parser output may be substituted for those requirements.
+
+NAR external identities remain exact:
+
+```text
+nar:{YYYYMMDD}:{k_babaCode}:{k_raceNo}
+{external_race_id}:entry:{horseNum}
+```
+
+The normalizer derives no local identity. `horseNum` is direct official positive decimal content; duplicate or
+conflicting values fail closed. The horse-detail href is not a stable provider horse identity, so
+`external_horse_id=None`. Text cleanup is explicit NFC plus collapsed HTML whitespace; Decimal odds are parsed from
+one positive official decimal span without float conversion. Unavailable, cancelled, zero, or non-numeric odds are
+not silently omitted.
+
+The proposed public module is `scripts/simulation/nar_historical_input_source.py`, exporting only the supplied
+response dataclass, a minimal NAR source-error hierarchy, and
+`normalize_nar_historical_input_source_records(*, response) -> tuple[HistoricalInputSourceRecord, ...]`.
+Its output is one `track`, then per horse number ascending `entry`, `jockey`, and `odds_win`; it must pass the c1a
+record-set validator. The candidate future scope is that one new module, one new dedicated test file, and the two
+phase documents. Existing providers/parsers, migration/schema, repositories, package root, CLI, README, database,
+and logs remain forbidden.
+
+Required future tests are deterministic supplied UTF-8 HTML fixtures only: public API, input immutability, URL
+policy, page dispatch, external IDs, selectors, Japanese whitespace, Decimal odds, observed/available timestamps,
+canonical output ordering/IDs, c1a integration, and all missing/ambiguous/cancellation/unsupported/legacy-access
+fail-closed boundaries. No live HTTP, raw persistence, or snapshot builder test is authorized.
+
+NAR remains PARTIAL; JRA remains UNSUPPORTED / DEFERRED. c1c snapshot construction is unstarted. No production,
+test, migration, database, or log file was modified in this preparation; no test was run because this is
+documentation-only investigation.
+
+blocker: no persisted supplied NAR raw/capture corpus exists; c1b is limited to caller-supplied DebaTable responses
+and cannot create past-race or past-race-absence records.
