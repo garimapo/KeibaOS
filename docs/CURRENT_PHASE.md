@@ -48,7 +48,8 @@ https://www.keiba.go.jp/KeibaWeb/TodayRaceInfo/OddsTanFuku
 ```
 
 The DebaTable fixture exposes `h4` target-date/place/race-number/start-time text,
-`section.raceTitle h3`, `p.subTitle`, and `ul.dataArea > li:first-child` race facts. Its entry table uses
+`section.raceTitle h3`, and `ul.dataArea > li:first-child` race facts. Its `p.subTitle` is promotional display
+text, not a race classification, and is not a source fact. Its entry table uses
 `td.horseNum`, `a.horseName`, `a.jockeyName`, and `td.odds_weight > span.odds_*`; it also contains a horse-detail
 href and past `RaceMarkTable` links. It does **not** provide a complete past-race payload, a stable official
 past-race record ID, a completed scoped zero-result search response, or provider publication time.
@@ -143,17 +144,20 @@ validation error; c1b never silently omits a required record.
 
 ## Exact DebaTable Extraction Policy
 
-All display text is obtained from the prescribed node, NFC-normalized, all Unicode whitespace runs collapsed to one
-ASCII space, then stripped. This is c1b-owned HTML-display cleanup; no NFKC conversion, case folding, inferred
-value, or c1a trimming is used. Required normalized text must be non-empty. Japanese text is retained as supplied.
+Ordinary display text is obtained from the prescribed node, HTML-entity decoded by parsing, NFC-normalized, all
+Unicode whitespace runs collapsed to one ASCII space, then stripped. This is c1b-owned HTML-display cleanup; no
+NFKC conversion, case folding, inferred value, or c1a trimming is used. Required normalized text must be non-empty.
+Japanese text is retained as supplied. Provider-specific structural fields may use a narrower rule only where the
+official HTML inserts layout whitespace. The only approved special case is the place cross-check below; it does not
+alter ordinary-field normalization.
 
 | c1a field | Required official source | Rule |
 | --- | --- | --- |
 | `target_race_date` | canonical URL `k_raceDate` and `article.raceCard h4` | both parse to the same real date; URL supplies the date value. |
 | `scheduled_start_at` | `article.raceCard h4` target `HH:MM発走` | exact 24-hour `HH:MM`; combine with target date as `Asia/Tokyo`, preserving an aware instant. |
-| `place` | `article.raceCard h4` | the normalized target-place segment between date and race number. |
+| `place` | `article.raceCard .chartNavi.trackNameNavi a.cNaviBtn.courseBtn.active` and target `h4` | require exactly one active course node; its ordinary-normalized non-empty text is the semantic place. Independently parse the h4 target-place segment, remove Unicode layout whitespace from that segment only, and require equality with the active-course text. |
 | `race_name` | `section.raceTitle h3` | normalized non-empty text; c1a optional field receives text when present, otherwise `None`. |
-| `race_class` | `section.raceTitle p.subTitle` | normalized text or `None`; no classification inference. |
+| `race_class` | no proven official class field in the initial fixture | exact `None`. `p.subTitle`, race name, data-area leftovers, legacy rows, and place/race number must not be used or inferred. |
 | `distance_m`, `track`, `weather`, `track_condition` | `section.raceTitle ul.dataArea > li:first-child` | require exactly one target distance token and one each of official course, `天候：`, and `馬場：` token; distance is positive integer metres. |
 | `horse_no` | row's direct `td.horseNum` | exact positive decimal; no display-order fallback. |
 | `jockey` | row's one `a.jockeyName` direct text nodes excluding `span.jockeyarea` | normalized non-empty official rider text. |
@@ -162,8 +166,9 @@ value, or c1a trimming is used. Required normalized text must be non-empty. Japa
 `entry` records use `external_horse_id=None`; `jockey` and `odds_win` repeat the exact external entry ID. The
 page's race/horse/detail links, trainer, popularity, weight, result tables, and prior-race snippets do not become
 source records. Any missing or multiple required selector/value, malformed Japanese race header, missing required
-track token, unsupported cancellation marker, URL/content race mismatch, horse-number mismatch, duplicate entry,
-or invalid odds fails closed.
+track token, missing/duplicate active course selector, active-course/compact-h4-place mismatch, unsupported
+cancellation marker, URL/content race mismatch, horse-number mismatch, duplicate entry, or invalid odds fails
+closed.
 
 ## Temporal Evidence, Determinism, and Errors
 
@@ -214,7 +219,10 @@ strict URL canonicalization; required/duplicate/unknown query keys; page dispatc
 track/entry/jockey/Decimal odds extraction; Japanese whitespace cleanup; complete tuple ordering; observed-at
 propagation; `available_at is None`; c1a record/set validation and deterministic IDs; missing/ambiguous selectors;
 URL/content and horse-number conflicts; cancellation/unavailable/zero/non-numeric odds; unsupported page,
-past-race, and absence behavior; no DB/network/filesystem/legacy fallback; and no package-root export.
+past-race, and absence behavior; no DB/network/filesystem/legacy fallback; and no package-root export. Fixtures
+must also prove that promotional `p.subTitle` never populates `race_class` (which is exactly `None`), that active
+course text is the semantic place despite h4 layout whitespace, and that missing, duplicate, or conflicting active
+course/h4 place evidence raises the c1b validation error.
 
 One integration fixture must produce track plus at least two entries, jockeys, and odds records in deliberately
 noncanonical HTML row order, then prove the canonical tuple passes the c1a set validator. No live HTTP test and no

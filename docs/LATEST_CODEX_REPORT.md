@@ -2569,5 +2569,27 @@ NAR remains PARTIAL; JRA remains UNSUPPORTED / DEFERRED. c1c snapshot constructi
 test, migration, database, or log file was modified in this preparation; no test was run because this is
 documentation-only investigation.
 
+## Phase 4C-2d3b1i6c1b Preparation Review Revision
+
+GitHub design review of `419c85e83e47cb22be8f16fd7a0f18ed97993d4c` returned `REVISION_REQUIRED` for two
+DebaTable source-semantic issues only. The supplied-bytes contract, strict UTF-8, response-receipt `observed_at`,
+`available_at=None`, DebaTable-only support, URL/identity rules, Decimal odds, no legacy fallback, and unsupported
+past-race/absence policy remain unchanged.
+
+First, `section.raceTitle p.subTitle` is promotional display text in the tracked official fixture and is not a
+race-class source. The initial normalizer now sets `track.record_values["race_class"]` to exact `None`; it must not
+derive a class from subtitle, race name, data-area leftovers, legacy values, or place/race-number information.
+
+Second, the semantic racecourse comes from exactly one active course node selected by
+`article.raceCard .chartNavi.trackNameNavi a.cNaviBtn.courseBtn.active`. Its ordinary NFC/whitespace-normalized
+text becomes `place`. The target h4 place segment remains an independent check only: c1b removes Unicode layout
+whitespace from that segment alone and requires equality with the active course text. A missing, duplicate, empty,
+or mismatching source fails closed. No global whitespace-compaction rule or NFKC normalization was introduced.
+
+Future fixtures must prove promotional-subtitle exclusion, `race_class is None`, Japanese h4 layout spacing with an
+active-course semantic value, active/h4 place conflict, and missing/duplicate active-course selector failures.
+This remains a documentation-only PREPARE revision; production, tests, migrations, database, logs, package exports,
+and the original workspace are unchanged.
+
 blocker: no persisted supplied NAR raw/capture corpus exists; c1b is limited to caller-supplied DebaTable responses
 and cannot create past-race or past-race-absence records.
