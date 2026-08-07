@@ -1,0 +1,368 @@
+from __future__ import annotations
+
+import ast
+from dataclasses import FrozenInstanceError, fields, replace
+from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
+import inspect
+from types import MappingProxyType
+from typing import get_type_hints
+import unittest
+
+import scripts.simulation as simulation_package
+from scripts.simulation.historical_input_source_records import (
+    HistoricalInputSourceConflictError,
+    HistoricalInputSourceError,
+    HistoricalInputSourceRecord,
+    HistoricalInputSourceValidationError,
+    SourceRecordKind,
+    build_historical_input_source_id,
+    canonical_historical_input_source_payload,
+    validate_historical_input_source_record_set,
+)
+
+
+UTC = timezone.utc
+OBSERVED = datetime(2026, 8, 5, 9, 30, 1, 123456, tzinfo=UTC)
+AVAILABLE = OBSERVED - timedelta(minutes=1)
+
+
+def _values(kind: str, *, entry_id: str = "nar:20260805:1:1:entry:1") -> dict[str, object]:
+    if kind == "track":
+        return {
+            "target_race_date": date(2026, 8, 5),
+            "scheduled_start_at": datetime(2026, 8, 5, 15, 30, tzinfo=UTC),
+            "place": "Tokyo",
+            "distance_m": 1600,
+            "track": "turf",
+            "track_condition": "good",
+            "race_name": None,
+            "race_class": None,
+            "weather": None,
+        }
+    if kind == "entry":
+        return {"external_entry_id": entry_id, "external_horse_id": None, "horse_no": 1}
+    if kind == "jockey":
+        return {"external_entry_id": entry_id, "jockey": "Jockey"}
+    if kind == "odds_win":
+        return {"external_entry_id": entry_id, "horse_no": 1, "win_odds": Decimal("2.00")}
+    if kind == "past_race":
+        return {
+            "race_date": date(2026, 8, 1),
+            "place": "Tokyo",
+            "race_name": "Prior Race",
+            "race_class": "Open",
+            "distance_m": 1600,
+            "track": "turf",
+            "weather": "sunny",
+            "track_condition": "good",
+            "finish": 1,
+            "margin": Decimal("-0.00"),
+            "race_time": "1:32.0",
+            "weight": Decimal("480.0"),
+            "weight_diff": Decimal("0.0"),
+            "jockey": "Jockey",
+            "popularity": 0,
+            "odds": Decimal("2.0"),
+            "passing_order": "",
+            "fourth_corner_position": 0,
+        }
+    if kind == "past_race_absence":
+        return {
+            "external_entry_id": entry_id,
+            "query_scope": {
+                "external_entry_id": entry_id,
+                "target_race_date": date(2026, 8, 5),
+                "strictly_before_target_race": True,
+            },
+            "result_count": 0,
+        }
+    raise AssertionError(kind)
+
+
+def _record(
+    kind: SourceRecordKind = "track",
+    *,
+    record_values: dict[str, object] | None = None,
+    external_entry_id: str | None = None,
+    canonical_source_url: str | None = None,
+    provider_record_id: str | None = None,
+    available_at: datetime | None = AVAILABLE,
+    observed_at: datetime = OBSERVED,
+) -> HistoricalInputSourceRecord:
+    entry_id = "nar:20260805:1:1:entry:1"
+    if kind != "track" and external_entry_id is None:
+        external_entry_id = entry_id
+    if kind == "past_race" and provider_record_id is None:
+        provider_record_id = "official-past-race-1"
+    if kind == "past_race_absence" and canonical_source_url is None:
+        canonical_source_url = "https://EXAMPLE.test/history?z=2&a=1"
+    return HistoricalInputSourceRecord(
+        record_kind=kind,
+        organization="NAR",
+        source_system="nar_official",
+        external_race_id="nar:20260805:1:1",
+        external_entry_id=external_entry_id,
+        canonical_source_url=canonical_source_url,
+        provider_record_id=provider_record_id,
+        record_values=_values(kind, entry_id=entry_id) if record_values is None else record_values,
+        available_at=available_at,
+        observed_at=observed_at,
+    )
+
+
+class HistoricalInputSourceRecordsTest(unittest.TestCase):
+    def test_public_api_field_contract_and_no_package_export(self) -> None:
+        import scripts.simulation.historical_input_source_records as module
+
+        self.assertTrue(hasattr(HistoricalInputSourceRecord, "__slots__"))
+        self.assertEqual(
+            tuple(item.name for item in fields(HistoricalInputSourceRecord)),
+            (
+                "schema_version",
+                "record_kind",
+                "organization",
+                "source_system",
+                "external_race_id",
+                "external_entry_id",
+                "canonical_source_url",
+                "provider_record_id",
+                "record_values",
+                "available_at",
+                "observed_at",
+                "source_id",
+            ),
+        )
+        field_map = {item.name: item for item in fields(HistoricalInputSourceRecord)}
+        self.assertEqual(field_map["schema_version"].default, 1)
+        self.assertFalse(field_map["schema_version"].init)
+        self.assertFalse(field_map["source_id"].init)
+        hints = get_type_hints(HistoricalInputSourceRecord)
+        self.assertIs(hints["schema_version"], int)
+        self.assertIs(hints["source_id"], str)
+        self.assertEqual(SourceRecordKind.__args__, ("track", "entry", "jockey", "odds_win", "past_race", "past_race_absence"))
+        self.assertEqual(
+            {name for name, value in inspect.getmembers(module, inspect.isclass) if not name.startswith("_")},
+            {
+                "HistoricalInputSourceError",
+                "HistoricalInputSourceValidationError",
+                "HistoricalInputSourceConflictError",
+                "HistoricalInputSourceRecord",
+            },
+        )
+        self.assertEqual(
+            {name for name, value in inspect.getmembers(module, inspect.isfunction) if not name.startswith("_")},
+            {
+                "canonical_historical_input_source_payload",
+                "build_historical_input_source_id",
+                "validate_historical_input_source_record_set",
+            },
+        )
+        self.assertTrue(issubclass(HistoricalInputSourceValidationError, HistoricalInputSourceError))
+        self.assertTrue(issubclass(HistoricalInputSourceConflictError, HistoricalInputSourceError))
+        for name in (
+            "HistoricalInputSourceRecord",
+            "canonical_historical_input_source_payload",
+            "build_historical_input_source_id",
+            "validate_historical_input_source_record_set",
+        ):
+            self.assertFalse(hasattr(simulation_package, name))
+
+    def test_six_exact_schemas_nullable_payloads_and_defensive_freeze(self) -> None:
+        expected_keys = {
+            "track": {"target_race_date", "scheduled_start_at", "place", "distance_m", "track", "track_condition", "race_name", "race_class", "weather"},
+            "entry": {"external_entry_id", "external_horse_id", "horse_no"},
+            "jockey": {"external_entry_id", "jockey"},
+            "odds_win": {"external_entry_id", "horse_no", "win_odds"},
+            "past_race": {"race_date", "place", "race_name", "race_class", "distance_m", "track", "weather", "track_condition", "finish", "margin", "race_time", "weight", "weight_diff", "jockey", "popularity", "odds", "passing_order", "fourth_corner_position"},
+            "past_race_absence": {"external_entry_id", "query_scope", "result_count"},
+        }
+        for kind, keys in expected_keys.items():
+            with self.subTest(kind=kind):
+                original = _values(kind)
+                record = _record(kind, record_values=original)
+                payload = canonical_historical_input_source_payload(record=record)
+                self.assertEqual(set(record.record_values), keys)
+                self.assertEqual(set(payload["record_values"]), keys)
+                self.assertEqual(
+                    set(payload),
+                    {
+                        "schema_version", "source_system", "record_kind", "organization", "external_race_id",
+                        "external_entry_id", "canonical_source_url", "provider_record_id", "record_values",
+                    },
+                )
+                self.assertNotIn("available_at", payload)
+                self.assertNotIn("observed_at", payload)
+                self.assertNotIn("race_id", payload)
+                self.assertNotIn("race_entry_id", payload)
+                self.assertIsInstance(record.record_values, MappingProxyType)
+                if kind == "track":
+                    self.assertIsNone(payload["external_entry_id"])
+                    self.assertEqual(payload["record_values"]["race_name"], None)
+                if kind == "past_race_absence":
+                    self.assertIsInstance(record.record_values["query_scope"], MappingProxyType)
+        absence_values = _values("past_race_absence")
+        absence = _record("past_race_absence", record_values=absence_values)
+        before = absence.source_id
+        absence_values["result_count"] = 4
+        absence_values["query_scope"]["strictly_before_target_race"] = False
+        self.assertEqual(absence.source_id, before)
+        self.assertEqual(absence.record_values["result_count"], 0)
+        with self.assertRaises(TypeError):
+            absence.record_values["result_count"] = 1
+        with self.assertRaises(TypeError):
+            absence.record_values["query_scope"]["result_count"] = 1
+
+    def test_schema_type_key_and_scalar_validation(self) -> None:
+        for kind in ("track", "entry", "jockey", "odds_win", "past_race", "past_race_absence"):
+            with self.subTest(kind=kind, case="missing"):
+                values = _values(kind)
+                values.pop(next(iter(values)))
+                with self.assertRaises(HistoricalInputSourceValidationError):
+                    _record(kind, record_values=values)
+            with self.subTest(kind=kind, case="extra"):
+                values = _values(kind)
+                values["unexpected"] = "x"
+                with self.assertRaises(HistoricalInputSourceValidationError):
+                    _record(kind, record_values=values)
+        for invalid_kind in ("unknown", 1, True):
+            with self.subTest(invalid_kind=invalid_kind):
+                with self.assertRaises(HistoricalInputSourceValidationError):
+                    HistoricalInputSourceRecord(
+                        record_kind=invalid_kind,  # type: ignore[arg-type]
+                        organization="NAR",
+                        source_system="nar_official",
+                        external_race_id="nar:20260805:1:1",
+                        external_entry_id=None,
+                        canonical_source_url=None,
+                        provider_record_id=None,
+                        record_values=_values("track"),
+                        available_at=AVAILABLE,
+                        observed_at=OBSERVED,
+                    )
+        values = _values("track"); values["distance_m"] = True
+        with self.assertRaises(HistoricalInputSourceValidationError): _record("track", record_values=values)
+        values = _values("track"); values["target_race_date"] = datetime(2026, 8, 5, tzinfo=UTC)
+        with self.assertRaises(HistoricalInputSourceValidationError): _record("track", record_values=values)
+        values = _values("odds_win"); values["win_odds"] = 2.0
+        with self.assertRaises(HistoricalInputSourceValidationError): _record("odds_win", record_values=values)
+        values = _values("odds_win"); values["win_odds"] = Decimal("0")
+        with self.assertRaises(HistoricalInputSourceValidationError): _record("odds_win", record_values=values)
+        for bad in (Decimal("NaN"), Decimal("Infinity"), Decimal("-Infinity")):
+            with self.subTest(decimal=bad):
+                values = _values("past_race"); values["margin"] = bad
+                with self.assertRaises(HistoricalInputSourceValidationError): _record("past_race", record_values=values)
+        values = _values("past_race_absence"); values["result_count"] = False
+        with self.assertRaises(HistoricalInputSourceValidationError): _record("past_race_absence", record_values=values)
+        values = _values("past_race_absence"); values["query_scope"]["strictly_before_target_race"] = 1
+        with self.assertRaises(HistoricalInputSourceValidationError): _record("past_race_absence", record_values=values)
+
+    def test_text_decimal_datetime_and_temporal_contract(self) -> None:
+        values = _values("past_race")
+        values["passing_order"] = ""
+        record = _record("past_race", record_values=values)
+        self.assertEqual(record.record_values["passing_order"], "")
+        self.assertEqual(record.record_values["margin"], Decimal("0"))
+        self.assertEqual(record.record_values["weight"], Decimal("480"))
+        self.assertEqual(canonical_historical_input_source_payload(record=record)["record_values"]["margin"], "0")
+        normalized = _record("jockey", record_values={"external_entry_id": "nar:20260805:1:1:entry:1", "jockey": "Cafe\u0301"})
+        self.assertEqual(normalized.record_values["jockey"], "Café")
+        tokyo = timezone(timedelta(hours=9))
+        observed = OBSERVED.astimezone(tokyo)
+        shifted = _record("track", observed_at=observed)
+        self.assertEqual(shifted.observed_at, OBSERVED)
+        with self.assertRaises(HistoricalInputSourceValidationError): _record("track", observed_at=OBSERVED.replace(tzinfo=None))
+        with self.assertRaises(HistoricalInputSourceValidationError): _record("track", available_at=OBSERVED + timedelta(seconds=1))
+
+    def test_url_validation_policy_and_byte_for_byte_retention(self) -> None:
+        valid = "https://EXAMPLE.test/Path/%7e?z=2&a=1"
+        record = _record("track", canonical_source_url=valid)
+        self.assertEqual(record.canonical_source_url, valid)
+        self.assertEqual(canonical_historical_input_source_payload(record=record)["canonical_source_url"], valid)
+        for invalid in (
+            1,
+            "",
+            "https://example.test/Cafe\u0301",
+            " http://example.test ",
+            "http://example.test/path",
+            "/relative",
+            "https:///missing-host",
+            "https://user:password@example.test/path",
+            "https://example.test/path#fragment",
+            "https://example.test/\x01path",
+            " https://example.test/path",
+        ):
+            with self.subTest(url=invalid):
+                with self.assertRaises(HistoricalInputSourceValidationError):
+                    _record("track", canonical_source_url=invalid)  # type: ignore[arg-type]
+        self.assertIsNone(_record("track").canonical_source_url)
+        self.assertIsNone(_record("entry").canonical_source_url)
+        self.assertIsNone(_record("jockey").canonical_source_url)
+        self.assertIsNone(_record("odds_win").canonical_source_url)
+        self.assertIsNone(_record("past_race").canonical_source_url)
+        with self.assertRaises(HistoricalInputSourceValidationError):
+            HistoricalInputSourceRecord(
+                record_kind="past_race_absence", organization="NAR", source_system="nar_official",
+                external_race_id="nar:20260805:1:1", external_entry_id="nar:20260805:1:1:entry:1",
+                canonical_source_url=None, provider_record_id=None, record_values=_values("past_race_absence"),
+                available_at=AVAILABLE, observed_at=OBSERVED,
+            )
+        with self.assertRaises(HistoricalInputSourceValidationError):
+            HistoricalInputSourceRecord(
+                record_kind="past_race", organization="NAR", source_system="nar_official",
+                external_race_id="nar:20260805:1:1", external_entry_id="nar:20260805:1:1:entry:1",
+                canonical_source_url=None, provider_record_id=None, record_values=_values("past_race"),
+                available_at=AVAILABLE, observed_at=OBSERVED,
+            )
+
+    def test_deterministic_payload_id_and_timestamp_exclusion(self) -> None:
+        one = _record("odds_win")
+        two = _record("odds_win", observed_at=OBSERVED + timedelta(days=1), available_at=AVAILABLE + timedelta(days=1))
+        self.assertEqual(canonical_historical_input_source_payload(record=one), canonical_historical_input_source_payload(record=two))
+        self.assertEqual(one.source_id, two.source_id)
+        self.assertEqual(one.source_id, build_historical_input_source_id(record=one))
+        changed_values = _values("odds_win"); changed_values["win_odds"] = Decimal("3")
+        changed = _record("odds_win", record_values=changed_values)
+        self.assertNotEqual(one.source_id, changed.source_id)
+        self.assertTrue(one.source_id.startswith("his-v1:odds_win:"))
+        self.assertEqual(len(one.source_id.rsplit(":", 1)[1]), 64)
+
+    def test_conflicts_and_set_order(self) -> None:
+        track = _record("track")
+        entry = _record("entry")
+        self.assertEqual(validate_historical_input_source_record_set(records=[entry, track]), (entry, track))
+        with self.assertRaises(HistoricalInputSourceConflictError):
+            validate_historical_input_source_record_set(records=(track, track))
+        first = _record("past_race")
+        values = _values("past_race"); values["finish"] = 2
+        second = _record("past_race", record_values=values, provider_record_id=first.provider_record_id)
+        self.assertNotEqual(first.source_id, second.source_id)
+        with self.assertRaises(HistoricalInputSourceConflictError):
+            validate_historical_input_source_record_set(records=(first, second))
+        with self.assertRaises(HistoricalInputSourceValidationError):
+            validate_historical_input_source_record_set(records="not-records")  # type: ignore[arg-type]
+
+    def test_frozen_slots_and_no_side_effect_dependencies(self) -> None:
+        record = _record("track")
+        self.assertFalse(hasattr(record, "__dict__"))
+        with self.assertRaises((FrozenInstanceError, AttributeError, TypeError)):
+            record.organization = "other"
+        import scripts.simulation.historical_input_source_records as module
+
+        source = inspect.getsource(module)
+        tree = ast.parse(source)
+        self.assertNotIn("sqlite3", source)
+        self.assertNotIn("requests", source)
+        self.assertNotIn("urllib.request", source)
+        self.assertNotIn("open(", source)
+        imported_roots = {
+            alias.name.split(".", 1)[0]
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Import)
+            for alias in node.names
+        }
+        self.assertFalse({"sqlite3", "requests", "socket"} & imported_roots)
+
+
+if __name__ == "__main__":
+    unittest.main()
