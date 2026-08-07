@@ -130,7 +130,7 @@ class SimulationBetPlanIdentityTest(unittest.TestCase):
     def test_uses_slots_and_rejects_new_attributes(self) -> None:
         value = identity()
         self.assertFalse(hasattr(value, "__dict__"))
-        with self.assertRaises(TypeError):
+        with self.assertRaises((TypeError, FrozenInstanceError)):
             value.extra = "forbidden"  # type: ignore[attr-defined]
 
     def test_field_order_matches_contract(self) -> None:

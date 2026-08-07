@@ -2,13 +2,13 @@
 
 ## Status
 
-APPROVED_FOR_COMMIT
+PHASE_4C_2D3B1I6B3A1_APPROVED_FOR_COMMIT
 
 ## Current Phase
 
-Phase 4C-2d3b1i6b3a — Historical input snapshot SQLite repository atomic save path
+Phase 4C-2d3b1i6b3a1 — Python 3.14 / Windows verification compatibility
 
-Base commit: `95d8c8e123828935c8283109fef80b86b8a3eb88 feat: add historical input snapshot schema`
+Base commit: `12ff00b45e2e4a8bc5761f3210fd45685a2a3dbb feat: add historical input snapshot save repository`
 
 Branch: `feature/ver0.8-simulator`
 
@@ -2048,5 +2048,138 @@ The b3a results remain: dedicated `9 passed`; historical domain / v010 migration
 SQLite repository / migration `63 passed`. Verification used a Windows isolated TEMP venv with Python 3.14.5,
 pytest 8.3.5, and verification-only tzdata 2026.3. `requirements.txt` and `requirements-dev.txt` remain
 unchanged.
+
+## Phase 4C-2d3b1i6b3a1 Preparation
+
+Status: `DRAFT_FOR_REVIEW`.
+
+Formal base is `12ff00b45e2e4a8bc5761f3210fd45685a2a3dbb` on
+`feature/ver0.8-simulator`. The canonical workspace is
+`C:\Users\garim\Desktop\KeibaAI-review-1i5b2b`; the original workspace remains unchanged.
+
+The completed b3a save repository remains unchanged. Its dedicated verification passed (`9 passed`), as did
+historical domain/v010 migration (`22 passed, 3 subtests passed`) and existing SQLite repository/migration
+regressions (`63 passed, 70 subtests passed`). Under a Windows Python 3.14.5 TEMP venv with pytest 8.3.5 and
+manually installed verification-only `tzdata 2026.3`, the full suite reported `3 failed, 2404 passed`.
+
+Preparation found two independent compatibility causes:
+
+- `requirements.txt` declares only Beautiful Soup and requests, while `requirements-dev.txt` declares only
+  pytest. A fresh Windows development/test venv cannot resolve `ZoneInfo("Asia/Tokyo")` without manual IANA
+  time-zone data. The observed `ZoneInfo` import is test-only; no production module imports `ZoneInfo`.
+- Three slots tests expect `TypeError` from unknown-attribute assignment. Python 3.14.5 raises
+  `FrozenInstanceError` for the same rejected operation. This does not change the frozen/slotted/no-arbitrary-
+  attribute contract, and the existing declared-field frozen tests still require `FrozenInstanceError`.
+
+The recommended future dependency is the exact Windows-only PEP 508 development marker
+`tzdata==2026.3; sys_platform == "win32"` in `requirements-dev.txt`. Exact pins are the existing requirements
+convention; Windows-only dev scope is sufficient and avoids an unsupported production dependency expansion.
+
+The recommended future test-only correction adds direct no-`__dict__` assertions to the persisted and regular
+settlement slots tests, then accepts `(TypeError, FrozenInstanceError)` for unknown attributes. The identity
+test already asserts no `__dict__`; it needs only the accepted-exception tuple. No dataclass or other
+production change is proposed.
+
+GitHub Actions currently tests only Ubuntu Python 3.12; README documents Python 3.12 or later. This phase
+does not expand CI, README, production requirements, b3a, historical snapshot domain, v010, migration runner,
+or b3b. The proposed future allowed files are `requirements-dev.txt`, the three named contract test modules,
+and the two phase documents.
+
+Future acceptance requires a fresh outside-repository Windows Python 3.14.5 venv installed solely from both
+requirements files, successful `ZoneInfo("Asia/Tokyo")`, the three corrected contracts, b3a dedicated,
+historical domain/migration, existing SQLite repository/migration regressions, and a zero-failure full suite.
+
+No production, test, requirements, migration, schema, database, or log file was changed in this preparation.
+Phase 4C-2d3b1i6b3b remains deferred and unimplemented. No stage, commit, or push was performed.
+
+## Phase 4C-2d3b1i6b3a1 Approval
+
+Status: `PHASE_4C_2D3B1I6B3A1_APPROVED_FOR_CODEX`.
+
+ChatGPT design review approved Phase 4C-2d3b1i6b3a1 for Codex implementation at formal base
+`12ff00b45e2e4a8bc5761f3210fd45685a2a3dbb` on `feature/ver0.8-simulator`.
+
+The approved declarative development/test dependency is exactly:
+
+```text
+tzdata==2026.3; sys_platform == "win32"
+```
+
+It is not a production dependency and must not be unconditional. The approved portable Python 3.14 test rule is
+`(TypeError, FrozenInstanceError)` only for unknown/new attributes on the three frozen slotted dataclasses. The
+two settlement tests must explicitly prove no `__dict__`; the identity test already does so. Declared-field
+mutation assertions remain `FrozenInstanceError` assertions.
+
+The exact future allowed files are:
+
+- `requirements-dev.txt`
+- `tests/test_persisted_settlement_contract.py`
+- `tests/test_settlement_contract.py`
+- `tests/test_simulation_bet_plan_identity.py`
+- `docs/CURRENT_PHASE.md`
+- `docs/LATEST_CODEX_REPORT.md`
+
+No production change is required or authorized. Future verification must use a fresh outside-repository Windows
+Python 3.14.5 TEMP venv, install only both repository requirements files, resolve `ZoneInfo("Asia/Tokyo")`,
+report pytest `8.3.5` and tzdata `2026.3`, and finish the complete required regression matrix with zero failures.
+No Python 3.14 baseline exception is pre-approved after this phase. Phase 4C-2d3b1i6b3b remains deferred.
+
+No production, test, requirements, database, or log file was changed for approval. No stage, commit, or push was
+performed.
+
+## Phase 4C-2d3b1i6b3a1 Execution
+
+Status: `PHASE_4C_2D3B1I6B3A1_READY_FOR_REVIEW`.
+
+The Windows-only development/test marker
+`tzdata==2026.3; sys_platform == "win32"` was added to `requirements-dev.txt`; the existing
+`pytest==8.3.5` pin is unchanged. No production requirement was added.
+
+The only test changes are the three approved unknown-attribute portability assertions:
+
+- `PersistedRaceSettlementDataTests.test_uses_slots` now explicitly asserts no `__dict__` and accepts
+  `(TypeError, FrozenInstanceError)` for the rejected new attribute.
+- `RaceSettlementDataTests.test_uses_slots` has the same structural and portable-exception assertions.
+- `SimulationBetPlanIdentityTest.test_uses_slots_and_rejects_new_attributes` retained its existing no-
+  `__dict__` assertion and accepts the same exception tuple.
+
+Declared-field frozen tests remain unchanged and still require `FrozenInstanceError`. No production file,
+dataclass implementation, migration, schema, database, or log file changed.
+
+Fresh verification used this newly created outside-repository TEMP venv:
+
+```text
+C:\Users\garim\AppData\Local\Temp\keibaos-verify-1i6b3a1-767d4bfb71874ea88a1d55e75e671e91
+```
+
+It used Python `3.14.5`, installed only `-r requirements.txt -r requirements-dev.txt`, and reported pytest
+`8.3.5`, tzdata `2026.3`, and `ZoneInfo("Asia/Tokyo")` as `Asia/Tokyo`. No separate tzdata install occurred.
+
+Codex local verification:
+
+```text
+Targeted compatibility: 96 passed
+b3a dedicated: 9 passed
+Historical snapshot / v010 migration: 22 passed
+Existing SQLite repository / migration: 63 passed
+Full suite: 2407 passed
+git diff --check: success
+```
+
+Phase 4C-2d3b1i6b3b remains deferred and unimplemented. No stage, commit, or push was performed.
+
+## Phase 4C-2d3b1i6b3a1 Commit Approval
+
+ChatGPT final review result: `APPROVED_FOR_COMMIT`. The approved six-file change preserves production behavior,
+the existing pytest pin, and the completed Windows Python 3.14.5 verification results: pytest `8.3.5`, tzdata
+`2026.3`, `ZoneInfo("Asia/Tokyo")` success, targeted compatibility `96 passed`, b3a `9 passed`, historical
+snapshot/v010 `22 passed`, existing SQLite repository/migration `63 passed`, and full suite `2407 passed`.
+
+## Phase 4C-2d3b1i6b3a1 Review Metadata Correction
+
+ChatGPT approved the implementation, the three test changes, and the Windows-only requirements change. The
+documentation review required only state wording cleanup: the phase is implemented and remains
+`READY_FOR_REVIEW` awaiting ChatGPT commit review. No dependency, test, or production file changed during this
+correction.
 
 blocker: none

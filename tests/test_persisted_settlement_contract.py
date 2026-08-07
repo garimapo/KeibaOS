@@ -154,7 +154,8 @@ class PersistedRaceSettlementDataTests(unittest.TestCase):
 
     def test_uses_slots(self) -> None:
         value = settlement_data()
-        with self.assertRaises(TypeError):
+        self.assertFalse(hasattr(value, "__dict__"))
+        with self.assertRaises((TypeError, FrozenInstanceError)):
             value.unexpected = "value"  # type: ignore[attr-defined]
 
     def test_copies_bets_to_tuple(self) -> None:
