@@ -2,13 +2,13 @@
 
 ## Status
 
-PHASE_4C_2D3B1I6B3A1_APPROVED_FOR_COMMIT
+PHASE_4C_2D3B1I6B3B_READY_FOR_REVIEW
 
 ## Current Phase
 
-Phase 4C-2d3b1i6b3a1 — Python 3.14 / Windows verification compatibility
+Phase 4C-2d3b1i6b3b — Historical input snapshot SQLite repository eligible latest load and reconstruction
 
-Base commit: `12ff00b45e2e4a8bc5761f3210fd45685a2a3dbb feat: add historical input snapshot save repository`
+Base commit: `6c844e943b408074e6269858887846ff31233661 test: support Python 3.14 verification`
 
 Branch: `feature/ver0.8-simulator`
 
@@ -2181,5 +2181,110 @@ ChatGPT approved the implementation, the three test changes, and the Windows-onl
 documentation review required only state wording cleanup: the phase is implemented and remains
 `READY_FOR_REVIEW` awaiting ChatGPT commit review. No dependency, test, or production file changed during this
 correction.
+
+## Phase 4C-2d3b1i6b3b Preparation
+
+Status: `PHASE_4C_2D3B1I6B3B_PREPARED`.
+
+Formal base is `6c844e943b408074e6269858887846ff31233661` on `feature/ver0.8-simulator`. The committed b3a
+repository already saves a complete V3a `HistoricalInputSnapshot`; b3b is limited to its eligible-latest load
+and reconstruction method. V3c remains deferred.
+
+The prepared API is `load_latest_snapshot(*, dataset_id, race_id, information_cutoff, source_identity)` with
+return type `HistoricalInputSnapshot | None`. Caller invalidity is `RepositoryValidationError`; selected stored
+data, joins, parsers, constructor failures, and digest mismatch are `RepositoryDataIntegrityError`.
+
+Selection is exact by dataset ID, internal race ID, organization, source system, and external race ID, with both
+`captured_at_utc <= requested_cutoff` and `information_cutoff_utc <= requested_cutoff`, then only
+`ORDER BY captured_at_utc DESC`. The v010 natural identity makes an equal-captured-at tie impossible. No
+eligible result returns `None`; a malformed selected latest result never falls back to an older snapshot.
+
+The draft requires exact canonical UTC microsecond `+00:00` text, canonical dates, canonical finite Decimal
+TEXT with no float conversion, exact SQLite value types, NFC text, and final V3a constructor validation. It
+reconstructs every V3a child in entry-order, race-entry/past-index, and audit-key order, verifies the exact
+external-race and external-entry mappings needed to bind the selected snapshot, then verifies the recomputed
+canonical digest against `content_sha256`.
+
+Load is read-only: it allows an active caller transaction and never begins, commits, rolls back, applies a
+migration, opens a connection, or repairs data. The b3a save path is frozen.
+
+The proposed future scope is exactly the repository module, its existing dedicated test module, and the two
+phase documents. Dedicated coverage will include API, eligibility/no-fallback, full reconstruction, canonical
+stored parsing, mapping/cardinality corruption, digest mismatch, caller validation, read-only transaction
+behavior, and save regression. Regression uses the current Windows Python 3.14.5 / pytest 8.3.5 / tzdata 2026.3
+baseline and targets zero full-suite failures.
+
+No production, test, migration, schema, database, or log file was modified in preparation. No stage, commit,
+or push was performed.
+
+## Phase 4C-2d3b1i6b3b Approval
+
+Status: `PHASE_4C_2D3B1I6B3B_APPROVED_FOR_CODEX`.
+
+ChatGPT approved the b3b eligible-latest load and reconstruction contract. The critical frozen clarification is
+that the latest eligible header is selected from `historical_input_snapshots` alone before any child or mapping
+query. Missing/corrupt children or mappings therefore fail the selected latest snapshot with
+`RepositoryDataIntegrityError`; they cannot suppress it in SQL or expose an older eligible snapshot.
+
+The contract retains both eligibility predicates, exactly `ORDER BY captured_at_utc DESC`, no secondary key,
+strict canonical datetime/date/Decimal/text parsing, exact mapping reconstruction, V3a constructor and digest
+verification, and read-only transaction ownership. The approved active-transaction tests prove that both a
+successful load and a data-integrity failure leave caller uncommitted work neither committed nor rolled back.
+
+The exact future scope remains the existing concrete repository module, its dedicated test module, and the two
+phase documents. No migration, schema, production module outside that repository, or additional test file is
+authorized. V3c remains deferred and unimplemented. No stage, commit, or push was performed.
+
+## Phase 4C-2d3b1i6b3b Implementation
+
+Status: `PHASE_4C_2D3B1I6B3B_READY_FOR_REVIEW`.
+
+Implemented the exact keyword-only `SQLiteHistoricalInputSnapshotRepository.load_latest_snapshot()` read API.
+It validates exact caller dataset/race/cutoff/source inputs as `RepositoryValidationError`, selects one binding
+latest header from `historical_input_snapshots` only, and applies both eligibility predicates with the sole
+ordering `captured_at_utc DESC`. It returns `None` only when no eligible header exists; it never joins children
+or mappings for selection and never falls back after selecting a header.
+
+The selected header and every child value are reconstructed through strict stored UTC datetime, ISO date,
+finite canonical Decimal, exact integer, NFC text, nullable-field, external-race mapping, and external-entry
+mapping checks. The resulting V3a object graph is constructed in deterministic entry, past-race, and provenance
+order. Its recomputed canonical digest must equal stored `content_sha256`; malformed data, mapping failures,
+domain constructor failures, and digest mismatch fail closed as `RepositoryDataIntegrityError` without retry or
+older-snapshot fallback.
+
+Load is read-only: it neither begins, commits, nor rolls back transactions; it does not mutate PRAGMAs, apply
+migrations, write data, alter mappings, or open another connection. Dedicated coverage proves successful and
+integrity-failure loads preserve active caller transactions and uncommitted caller work. The frozen b3a save
+path remains green.
+
+Fresh outside-repository Windows TEMP verification used
+`C:\Users\garim\AppData\Local\Temp\keibaos-verify-1i6b3b-70dc2c943d6441e0875c209b29da5d34` with Python
+`3.14.5`, pytest `8.3.5`, and tzdata `2026.3`; `ZoneInfo("Asia/Tokyo")` succeeded.
+
+Codex local verification:
+
+```text
+Dedicated repository: 17 passed
+Historical domain / v010 migration: 22 passed
+Existing SQLite repository / migration regressions: 63 passed
+Full suite: 2415 passed
+git diff --check: success
+```
+
+Only the approved repository module, dedicated test module, and phase documents changed. Migration, runner,
+historical domain, database, logs, and the original workspace remain untouched. V3c remains deferred and
+unimplemented. No stage, commit, or push was performed.
+
+## Phase 4C-2d3b1i6b3b Review Correction
+
+The datetime caller-validation boundary now catches `ValueError`, `TypeError`, and `OverflowError` raised while
+evaluating an exact `datetime` timezone offset or converting it to UTC, translating them to
+`RepositoryValidationError`. Naive values remain invalid, valid non-UTC aware values remain accepted and are
+normalized to UTC, and stored-data parser classification remains unchanged.
+
+Dedicated coverage adds a custom `tzinfo` whose `utcoffset()` raises. The load call raises
+`RepositoryValidationError` before issuing a database query; the same test proves a valid Asia/Tokyo-offset
+cutoff representing the requested instant loads normally. The phase remains `READY_FOR_REVIEW`; scope, save
+behavior, and all non-approved files remain unchanged.
 
 blocker: none

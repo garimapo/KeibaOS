@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from dataclasses import replace
+from datetime import date, datetime, timedelta, timezone, tzinfo
 from decimal import Decimal
 import ast
 import inspect
 import sqlite3
+from typing import get_type_hints
 import unittest
 
 import scripts.simulation.repositories as repositories
@@ -137,13 +139,24 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
         repository = SQLiteHistoricalInputSnapshotRepository(connection=connection)
         self.assertEqual(connection.execute("PRAGMA foreign_keys").fetchone()[0], 1)
         self.assertTrue(callable(repository.save_snapshot))
-        self.assertFalse(hasattr(repository, "load_latest_snapshot"))
+        self.assertTrue(callable(repository.load_latest_snapshot))
+        load_signature = inspect.signature(repository.load_latest_snapshot)
+        self.assertEqual(
+            tuple(load_signature.parameters),
+            ("dataset_id", "race_id", "information_cutoff", "source_identity"),
+        )
+        self.assertTrue(all(parameter.kind is inspect.Parameter.KEYWORD_ONLY for parameter in load_signature.parameters.values()))
+        load_hints = get_type_hints(SQLiteHistoricalInputSnapshotRepository.load_latest_snapshot)
+        self.assertIs(load_hints["dataset_id"], str)
+        self.assertIs(load_hints["race_id"], int)
+        self.assertIs(load_hints["information_cutoff"], datetime)
+        self.assertIs(load_hints["source_identity"], HistoricalExternalRaceIdentity)
+        self.assertEqual(load_hints["return"], HistoricalInputSnapshot | None)
         self.assertFalse(hasattr(repositories, "SQLiteHistoricalInputSnapshotRepository"))
         source = inspect.getsource(inspect.getmodule(SQLiteHistoricalInputSnapshotRepository))
         tree = ast.parse(source)
         self.assertNotIn("sqlite3.connect", source)
         self.assertNotIn("INSERT OR REPLACE", source)
-        self.assertNotIn("load_latest_snapshot", source)
         self.assertNotIn("UPDATE historical_input_external", source)
         self.assertFalse(any(isinstance(node, ast.ImportFrom) and node.module and "migration" in node.module for node in ast.walk(tree)))
         self.assertFalse(any(isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "connect" for node in ast.walk(tree)))
@@ -317,6 +330,283 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
         self.assertEqual(connection.execute("SELECT id FROM races WHERE id=3").fetchone(), (3,))
         connection.rollback()
         self.assertIsNone(connection.execute("SELECT id FROM races WHERE id=3").fetchone())
+
+    @staticmethod
+    def lookup_source(*, external_race_id: str = "race-1") -> HistoricalExternalRaceIdentity:
+        return HistoricalExternalRaceIdentity("NAR", "nar_official", external_race_id)
+
+    def load(
+        self,
+        repository: SQLiteHistoricalInputSnapshotRepository,
+        *,
+        dataset_id: str = "dataset-1",
+        race_id: int = 1,
+        cutoff: datetime = CUTOFF,
+        external_race_id: str = "race-1",
+    ) -> HistoricalInputSnapshot | None:
+        return repository.load_latest_snapshot(
+            dataset_id=dataset_id,
+            race_id=race_id,
+            information_cutoff=cutoff,
+            source_identity=self.lookup_source(external_race_id=external_race_id),
+        )
+
+    def save_older_and_newer(
+        self,
+        repository: SQLiteHistoricalInputSnapshotRepository,
+    ) -> tuple[HistoricalInputSnapshot, HistoricalInputSnapshot]:
+        older = self.snapshot(captured_at=CAPTURED, source_url="https://example.test/older")
+        newer = self.snapshot(
+            captured_at=CAPTURED + timedelta(seconds=1),
+            source_url="https://example.test/newer",
+        )
+        repository.save_snapshot(snapshot=older)
+        repository.save_snapshot(snapshot=newer)
+        return older, newer
+
+    def snapshot_id_for(self, connection: sqlite3.Connection, captured_at: datetime) -> int:
+        return connection.execute(
+            "SELECT snapshot_id FROM historical_input_snapshots WHERE captured_at_utc=?",
+            (captured_at.isoformat(timespec="microseconds"),),
+        ).fetchone()[0]
+
+    def test_load_returns_none_and_validates_exact_callers(self) -> None:
+        connection, repository = self.repository()
+        self.assertIsNone(self.load(repository))
+        invalid_cases = (
+            {"dataset_id": ""},
+            {"dataset_id": 1},
+            {"race_id": True},
+            {"race_id": 0},
+            {"cutoff": datetime(2026, 8, 5, 10, 30)},
+            {"external_race_id": "other"},
+        )
+        for values in invalid_cases[:-1]:
+            with self.subTest(values=values), self.assertRaises(RepositoryValidationError):
+                self.load(repository, **values)
+        with self.assertRaises(RepositoryValidationError):
+            repository.load_latest_snapshot(
+                dataset_id="dataset-1",
+                race_id=1,
+                information_cutoff=CUTOFF,
+                source_identity=object(),
+            )
+        self.assertFalse(connection.in_transaction)
+
+    def test_load_validates_failing_timezone_and_accepts_non_utc_cutoff(self) -> None:
+        class FailingTimezone(tzinfo):
+            def utcoffset(self, dt: datetime | None) -> timedelta | None:
+                raise ValueError("invalid timezone offset")
+
+            def dst(self, dt: datetime | None) -> timedelta | None:
+                return None
+
+            def tzname(self, dt: datetime | None) -> str | None:
+                return "failing"
+
+        connection, repository = self.repository()
+        saved = self.snapshot()
+        repository.save_snapshot(snapshot=saved)
+        queried: list[str] = []
+        connection.set_trace_callback(queried.append)
+        bad_cutoff = datetime(2026, 8, 5, 10, 30, tzinfo=FailingTimezone())
+        with self.assertRaises(RepositoryValidationError):
+            self.load(repository, cutoff=bad_cutoff)
+        connection.set_trace_callback(None)
+        self.assertEqual(queried, [])
+
+        tokyo_cutoff = CUTOFF.astimezone(timezone(timedelta(hours=9)))
+        loaded = self.load(repository, cutoff=tokyo_cutoff)
+        self.assertIsNotNone(loaded)
+        self.assertEqual(loaded.identity.captured_at, saved.identity.captured_at)
+
+    def test_load_selects_only_latest_dual_eligible_header_with_exact_isolation(self) -> None:
+        connection, repository = self.repository()
+        older, newer = self.save_older_and_newer(repository)
+        self.assertEqual(self.load(repository, cutoff=CUTOFF).identity.captured_at, newer.identity.captured_at)
+        self.assertIsNone(self.load(repository, dataset_id="other"))
+        self.assertIsNone(self.load(repository, race_id=2))
+        self.assertIsNone(self.load(repository, external_race_id="other"))
+        future_cutoff = self.snapshot(captured_at=CAPTURED, cutoff=CUTOFF + timedelta(seconds=1))
+        connection2, repository2 = self.repository()
+        repository2.save_snapshot(snapshot=future_cutoff)
+        self.assertIsNone(self.load(repository2, cutoff=CUTOFF))
+        future_capture = self.snapshot(captured_at=CUTOFF + timedelta(seconds=1), cutoff=CUTOFF + timedelta(seconds=2))
+        connection3, repository3 = self.repository()
+        repository3.save_snapshot(snapshot=future_capture)
+        self.assertIsNone(self.load(repository3, cutoff=CUTOFF))
+        self.assertEqual(connection.execute("SELECT count(*) FROM historical_input_snapshots").fetchone(), (2,))
+        self.assertEqual(older.identity.captured_at, CAPTURED)
+
+    def test_load_fully_reconstructs_canonical_snapshot(self) -> None:
+        connection, repository = self.repository()
+        saved = self.snapshot()
+        repository.save_snapshot(snapshot=saved)
+        loaded = self.load(repository)
+        self.assertEqual(loaded.content_sha256, saved.content_sha256)
+        self.assertEqual(loaded.identity, saved.identity)
+        self.assertEqual(loaded.race, saved.race)
+        self.assertEqual(loaded.entries, saved.entries)
+        self.assertEqual(loaded.past_races, saved.past_races)
+        self.assertEqual(
+            tuple(item.audit_key for item in loaded.provenance),
+            (
+                "entry/11",
+                "jockey/11",
+                "odds/11",
+                "past_race/11/0",
+                "track",
+            ),
+        )
+        self.assertEqual(loaded.identity.source_identity.source_url, "https://example.test/race-1")
+        self.assertEqual(loaded.entries[0].external_entry_identity.external_horse_id, "horse-11")
+        self.assertEqual(loaded.entries[0].win_odds, Decimal("2.5"))
+        self.assertEqual(loaded.past_races[0].margin, Decimal("0"))
+        self.assertEqual(loaded.past_races[0].passing_order, "")
+        self.assertEqual(loaded.provenance[0].audit_key, "entry/11")
+        self.assertEqual(loaded.provenance[-1].audit_key, "track")
+        self.assertEqual(loaded.identity.captured_at, CAPTURED)
+        self.assertEqual(loaded.information_cutoff, CUTOFF)
+        self.assertFalse(connection.in_transaction)
+
+    def test_load_reconstructs_entries_past_races_and_provenance_in_canonical_order(self) -> None:
+        connection, repository = self.repository()
+        base = self.snapshot()
+        entry_11 = base.entries[0]
+        entry_12 = HistoricalRaceEntrySnapshot(
+            12,
+            HistoricalExternalEntryIdentity(
+                entry_11.external_entry_identity.external_race_identity,
+                "entry-12",
+                "horse-12",
+            ),
+            2,
+            "Second Jockey",
+            Decimal("3"),
+            1,
+        )
+        past_11_0 = base.past_races[0]
+        past_11_1 = replace(past_11_0, past_race_index=1, race_date=date(2026, 8, 3))
+        past_12_0 = replace(past_11_0, race_entry_id=12)
+        provenance = (
+            HistoricalInputProvenance("track", "track", "nar", "track-1", None, observed_at=CAPTURED),
+            HistoricalInputProvenance("entry", "entry/12", "nar", "entry-12", 12, observed_at=CAPTURED),
+            HistoricalInputProvenance("odds", "odds/12", "nar", "odds-12", 12, available_at=CAPTURED),
+            HistoricalInputProvenance("jockey", "jockey/12", "nar", "jockey-12", 12, observed_at=CAPTURED),
+            HistoricalInputProvenance("past_race", "past_race/12/0", "nar", "past-12-0", 12, observed_at=CAPTURED, past_race_index=0),
+            HistoricalInputProvenance("entry", "entry/11", "nar", "entry-11", 11, observed_at=CAPTURED),
+            HistoricalInputProvenance("odds", "odds/11", "nar", "odds-11", 11, available_at=CAPTURED),
+            HistoricalInputProvenance("jockey", "jockey/11", "nar", "jockey-11", 11, observed_at=CAPTURED),
+            HistoricalInputProvenance("past_race", "past_race/11/1", "nar", "past-11-1", 11, observed_at=CAPTURED, past_race_index=1),
+            HistoricalInputProvenance("past_race", "past_race/11/0", "nar", "past-11-0", 11, observed_at=CAPTURED, past_race_index=0),
+        )
+        saved = HistoricalInputSnapshot(
+            base.identity,
+            base.internal_race_id,
+            base.information_cutoff,
+            base.race,
+            (entry_12, entry_11),
+            (past_12_0, past_11_1, past_11_0),
+            provenance,
+        )
+        repository.save_snapshot(snapshot=saved)
+
+        loaded = self.load(repository)
+        self.assertEqual(tuple(item.race_entry_id for item in loaded.entries), (11, 12))
+        self.assertEqual(
+            tuple((item.race_entry_id, item.past_race_index) for item in loaded.past_races),
+            ((11, 0), (11, 1), (12, 0)),
+        )
+        self.assertEqual(
+            tuple(item.audit_key for item in loaded.provenance),
+            tuple(sorted(item.audit_key for item in provenance)),
+        )
+        self.assertEqual(loaded.content_sha256, saved.content_sha256)
+
+    def test_load_rejects_malformed_selected_values_and_digest_without_fallback(self) -> None:
+        for table, column, value in (
+            ("historical_input_snapshot_races", "scheduled_start_at_utc", "2026-08-05T12:00:00+00:00"),
+            ("historical_input_snapshot_races", "target_race_date", "20260805"),
+            ("historical_input_snapshot_entries", "win_odds_text", "2.50"),
+            ("historical_input_snapshots", "content_sha256", "0" * 64),
+        ):
+            with self.subTest(table=table, column=column):
+                connection, repository = self.repository()
+                older, newer = self.save_older_and_newer(repository)
+                snapshot_id = self.snapshot_id_for(connection, newer.identity.captured_at)
+                connection.execute("PRAGMA ignore_check_constraints=ON")
+                connection.execute(f"UPDATE {table} SET {column}=? WHERE snapshot_id=?", (value, snapshot_id))
+                connection.commit()
+                connection.execute("PRAGMA ignore_check_constraints=OFF")
+                with self.assertRaises(RepositoryDataIntegrityError):
+                    self.load(repository)
+                self.assertEqual(older.identity.captured_at, CAPTURED)
+
+    def test_load_latest_incomplete_or_mapping_corruption_never_falls_back(self) -> None:
+        connection, repository = self.repository()
+        _older, newer = self.save_older_and_newer(repository)
+        snapshot_id = self.snapshot_id_for(connection, newer.identity.captured_at)
+        connection.execute("PRAGMA foreign_keys=OFF")
+        connection.execute("DELETE FROM historical_input_snapshot_races WHERE snapshot_id=?", (snapshot_id,))
+        connection.commit()
+        connection.execute("PRAGMA foreign_keys=ON")
+        with self.assertRaises(RepositoryDataIntegrityError):
+            self.load(repository)
+
+        connection, repository = self.repository()
+        older = self.snapshot(captured_at=CAPTURED)
+        newer = self.snapshot(
+            entry_id=12,
+            external_entry_id="entry-12",
+            external_horse_id="horse-12",
+            captured_at=CAPTURED + timedelta(seconds=1),
+        )
+        repository.save_snapshot(snapshot=older)
+        repository.save_snapshot(snapshot=newer)
+        snapshot_id = self.snapshot_id_for(connection, newer.identity.captured_at)
+        connection.execute("DROP TRIGGER trg_his_external_entry_referenced_delete")
+        connection.execute("PRAGMA foreign_keys=OFF")
+        connection.execute(
+            "DELETE FROM historical_input_external_entries WHERE external_entry_id=?",
+            ("entry-12",),
+        )
+        connection.commit()
+        connection.execute("PRAGMA foreign_keys=ON")
+        with self.assertRaises(RepositoryDataIntegrityError):
+            self.load(repository)
+
+    def test_load_preserves_active_caller_transaction_without_writes_or_rollback(self) -> None:
+        connection, repository = self.repository()
+        repository.save_snapshot(snapshot=self.snapshot())
+        connection.execute("BEGIN")
+        connection.execute("INSERT INTO races(id) VALUES(3)")
+        loaded = self.load(repository)
+        self.assertIsNotNone(loaded)
+        self.assertTrue(connection.in_transaction)
+        self.assertEqual(connection.execute("SELECT id FROM races WHERE id=3").fetchone(), (3,))
+        connection.rollback()
+        self.assertIsNone(connection.execute("SELECT id FROM races WHERE id=3").fetchone())
+
+        repository.save_snapshot(snapshot=self.snapshot(captured_at=CAPTURED + timedelta(seconds=1)))
+        newest_id = self.snapshot_id_for(connection, CAPTURED + timedelta(seconds=1))
+        connection.execute("UPDATE historical_input_snapshots SET content_sha256=? WHERE snapshot_id=?", ("0" * 64, newest_id))
+        connection.commit()
+        connection.execute("BEGIN")
+        connection.execute("INSERT INTO races(id) VALUES(4)")
+        with self.assertRaises(RepositoryDataIntegrityError):
+            self.load(repository)
+        self.assertTrue(connection.in_transaction)
+        self.assertEqual(connection.execute("SELECT id FROM races WHERE id=4").fetchone(), (4,))
+        connection.rollback()
+
+    def test_load_source_has_no_transaction_or_bootstrap_behavior(self) -> None:
+        source = inspect.getsource(SQLiteHistoricalInputSnapshotRepository.load_latest_snapshot)
+        self.assertNotIn("BEGIN", source)
+        self.assertNotIn("commit", source)
+        self.assertNotIn("rollback", source)
+        self.assertNotIn("PRAGMA", source)
+        self.assertNotIn("apply_migrations", source)
+        self.assertNotIn("sqlite3.connect", source)
 
 
 if __name__ == "__main__":
