@@ -2382,4 +2382,30 @@ package-root work.
 Production, tests, migrations, schema, database, logs, and the original workspace remain unchanged. No stage,
 commit, or push was performed.
 
+## Phase 4C-2d3b1i6c1 Preparation URL Contract Refinement V3
+
+ChatGPT accepted the V2 source-record/domain design except that a generic `url-v1` normalization algorithm had
+not been formally frozen. V3 removes that implication. URL canonicalization belongs exclusively to c1b/c1d
+source-family normalizers; they provide an already-canonical `canonical_source_url`. c1a only validates its
+already-canonical representation and includes that exact supplied string byte-for-byte in the existing digest.
+
+For a non-null URL, c1a requires exact `str`, non-empty NFC text without leading/trailing whitespace, an absolute
+`https` URL with a non-empty host, no credentials, no fragment, and no control character. It rejects invalid text
+instead of normalizing it. It does not alter query ordering/content, ports, percent encoding, trailing slash,
+`www`, path/query case, relative URLs, or tracking parameters. Canonical host spelling is therefore upstream
+normalizer responsibility.
+
+The per-kind policy is explicit: `track`, `entry`, `jockey`, `odds_win`, and `past_race` URL evidence are
+optional; `past_race` still requires a non-null independent `provider_record_id`. `past_race_absence` requires a
+non-null canonical successful-search response URL and does not require a provider record ID. URL and provider
+record ID are independent and c1a must not synthesize either from the other.
+
+The c1a future matrix now covers invalid URL types and syntax, NFC/whitespace, exact valid HTTPS retention without
+transformation, per-kind required/optional policy, and rejection of missing absence-proof URL. The exact six
+record kinds, payload schemas, timestamps, conflict rules, JSON/ID algorithm, exception API, c1a file scope,
+JRA-deferred state, and NAR-partial state remain unchanged. This remains documentation preparation only.
+
+Production, tests, migrations, schema, database, logs, and the original workspace remain unchanged. No stage,
+commit, or push has occurred for this V3 refinement.
+
 blocker: no persisted official raw source corpus with immutable identity and causal availability evidence; JRA is unsupported/deferred

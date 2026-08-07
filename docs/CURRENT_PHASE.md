@@ -104,7 +104,7 @@ are never trimmed or case-folded. A required text field rejects the empty string
 | `source_system` | `str`, required | Non-empty NFC source-family label, e.g. `nar_official`; supplied by the future source normalizer. | yes |
 | `external_race_id` | `str`, required | Non-empty NFC official **target** race identity. For NAR it is exactly `nar:{YYYYMMDD}:{k_babaCode}:{k_raceNo}` under the already-approved NAR rule. | yes |
 | `external_entry_id` | `str | None` | NFC non-empty official target-entry identity when the kind is entry-scoped; JSON `null` only for `track`. NAR is exactly `{external_race_id}:entry:{horseNum}`. | yes |
-| `canonical_source_url` | `str | None` | NFC URL after the approved `url-v1` HTTPS canonicalization; it is the one official primary response/record URL. `null` is retained where no official URL is available. There is no separate `source_url` or `response_url` alias. | yes |
+| `canonical_source_url` | `str | None` | Already-canonical official primary response/record URL supplied by c1b/c1d, or `null` only where the record-kind URL policy below permits it. c1a validates it but does not canonicalize it. There is no separate `source_url` or `response_url` alias. | yes |
 | `provider_record_id` | `str | None` | NFC non-empty opaque official provider record identity when supplied. It is never a local row ID, path, inferred URL fragment, or generated value. | yes |
 | `available_at` | `datetime | None` | Official provider publication/availability time only; an aware instant normalized to UTC with exactly six fractional digits when rendered. Receipt time, mtime, insertion time, race start, and page date are forbidden substitutes. | no |
 | `observed_at` | `datetime`, required | Immutable capture-boundary timestamp recorded immediately after successful official response-byte receipt and before parsing; aware and normalized to UTC with exactly six fractional digits when rendered. | no |
@@ -132,6 +132,34 @@ as `"0"`; input must be `Decimal`, finite, and never `float`. Exact `int` exclud
 | `past_race` | `race_date: date`; `place: str`; `race_name: str`; `race_class: str`; `distance_m: int` (> 0); `track: str`; `weather: str`; `track_condition: str`; `finish: int` (> 0); `margin: Decimal` (finite, signed permitted); `race_time: str`; `weight: Decimal` (finite and >= 0); `weight_diff: Decimal` (finite, signed permitted); `jockey: str`; `popularity: int` (>= 0); `odds: Decimal` (finite and >= 0); `passing_order: str` (NFC; the empty string is valid and remains `""`); `fourth_corner_position: int` (>= 0). Every text field except `passing_order` is non-empty. The common `external_entry_id` is the target official entry. The common `provider_record_id` is required and non-empty for this kind and is the opaque official past-race record identity; no local row ID is used. |
 | `past_race_absence` | `external_entry_id: str` (must equal the common envelope field); `query_scope: Mapping[str, object]` with exactly `external_entry_id: str` (equal to the common field), `target_race_date: date`, and `strictly_before_target_race: bool` (exactly `True`); `result_count: int` (exactly `0`, with `bool` rejected). The common `canonical_source_url` is the successful official search response URL. It is one complete official zero-result search proof, never parser emptiness and never an open-ended endpoint parameter bag. |
 
+### Exact canonical-source-URL ownership and validation
+
+c1b/c1d source normalizers own provider-family URL normalization. They canonicalize a provider URL under that
+source family's separately approved policy and supply the resulting `canonical_source_url`. c1a never sorts or
+drops query parameters, infers a default port, changes percent encoding, removes a trailing slash, adds/removes
+`www`, lowercases a path or query, resolves a relative URL, strips tracking parameters, or otherwise transforms a
+URL. Host-case canonical spelling is also c1b/c1d responsibility; c1a retains the supplied host spelling exactly.
+
+When non-null, `canonical_source_url` must be an exact `str`, non-empty, already NFC-normalized, and have neither
+leading nor trailing whitespace. c1a rejects (rather than trims) a value needing NFC or whitespace normalization.
+It parses only to validate that it is an absolute URL with scheme exactly `https`, a non-empty host, no username,
+no password, no fragment, and no control character. It performs no further canonicalization and puts the validated
+string byte-for-byte into the digest envelope.
+
+| Record kind | `canonical_source_url` policy | Evidence rule |
+| --- | --- | --- |
+| `track` | OPTIONAL | A future normalizer may establish this record by official provider record ID without one primary URL. |
+| `entry` | OPTIONAL | A future normalizer may establish this record by official provider record ID without one primary URL. |
+| `jockey` | OPTIONAL | A future normalizer may establish this record by official provider record ID without one primary URL. |
+| `odds_win` | OPTIONAL | A future normalizer may establish this record by official provider record ID without one primary URL. |
+| `past_race` | OPTIONAL | Its non-null `provider_record_id` remains the required official past-race identity; c1a never synthesizes a URL from it. |
+| `past_race_absence` | REQUIRED | The non-null URL is the auditable anchor for one successful complete official zero-result search scope. |
+
+`canonical_source_url` and `provider_record_id` are independent evidence/identity fields. c1a never derives,
+synthesizes, or cross-fills either value from the other. `past_race` retains its non-null `provider_record_id`
+requirement. `past_race_absence` does not require `provider_record_id`; its required complete scoped response URL
+is the proof anchor.
+
 For `past_race`, the future set validator uses
 `(source_system, external_race_id, external_entry_id, provider_record_id)` as the official conflict primitive.
 Two records with that primitive and different canonical payloads are a conflict; two identical canonical payloads
@@ -151,7 +179,7 @@ or absent nullable key is permitted:
   "organization": "<NFC non-empty str>",
   "external_race_id": "<NFC non-empty str>",
   "external_entry_id": "<NFC non-empty str or null>",
-  "canonical_source_url": "<canonical HTTPS str or null>",
+  "canonical_source_url": "<validated upstream HTTPS str or null by kind policy>",
   "provider_record_id": "<NFC non-empty str or null>",
   "record_values": { "<the complete exact kind-specific key set above>" }
 }
@@ -160,7 +188,8 @@ or absent nullable key is permitted:
 `available_at` and `observed_at` are immutable source-record evidence fields but are intentionally excluded from
 the source-ID digest: the ID identifies normalized official record content, not the collector/capture event.
 They remain mandatory downstream causal evidence. The JSON projection converts dates, datetimes, and Decimals as
-specified above, NFC-normalizes every string, uses explicit `null`, then calls exactly
+specified above, validates but never changes `canonical_source_url`, NFC-normalizes every other allowed string,
+uses explicit `null`, then calls exactly
 `json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")`.
 SHA-256 is computed over those encoded bytes; only its 64-character hexadecimal result is lowercase. The complete
 ID is exactly `his-v1:{record_kind}:{lowercase_sha256_hex}`. `repr()`, mapping insertion order, HTML order,
@@ -302,7 +331,10 @@ float rejection; bool-versus-int rejection; deterministic IDs; ID independence f
 construction producing the same ID; one canonical-content change producing a different ID; external identity
 validation; positive odds; `passing_order == ""`; duplicate and official-conflict primitives; the exact absence
 `query_scope`; exact zero result count; malformed absence rejection; temporal ordering; no DB/network/filesystem
-access; and no package-root export. NAR-key and JRA-normalizer behavior are c1b/c1d tests, not c1a behavior.
+access; and no package-root export. URL tests additionally cover non-`str`, empty, non-NFC, `http`, relative,
+missing-host, credential-bearing, fragment-bearing, and control-character URLs; a valid HTTPS URL is retained
+byte-for-byte without query/path/host transformation; `past_race_absence` rejects `None`; and every per-kind
+required/optional URL policy is enforced. NAR-key and JRA-normalizer behavior are c1b/c1d tests, not c1a behavior.
 
 ## Allowed Files
 
