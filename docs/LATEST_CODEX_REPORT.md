@@ -2655,3 +2655,34 @@ Changed files are limited to the new normalizer, its new dedicated test module, 
 existing provider, parser, test, migration, schema, repository, database file, log, package export, CLI, README,
 or original workspace file was changed. The remaining blocker is unchanged: no persisted supplied official NAR
 capture corpus exists, so past-race and past-race-absence remain unsupported.
+
+## Phase 4C-2d3b1i6c1b GitHub Implementation Review Correction
+
+GitHub review of `cccacac2e2f1b532200b2e4c2196cf2ffe9916c7` found a structural mismatch: the tracked official
+DebaTable has a header `article.raceCard` and a separate card-table `article.raceCard`. The correction extracts
+header facts only from one exact header region and entry/jockey/odds facts only from one independently exact
+supported entry table. No whole-document first-match selection or invented cross-page join was added.
+
+HTML IDs and classes no longer re-dispatch a page kind. The canonical URL path is the sole page-kind boundary:
+RaceMarkTable and other unsupported paths fail in URL validation, while a DebaTable URL with malformed structure
+fails as normal c1b validation. The dedicated deterministic byte fixture now uses the official split-card shape,
+including two horse rows in noncanonical source order and canonical output ordering.
+
+Expanded coverage explicitly includes invalid host, required query-key absence, malformed percent escapes,
+leading-zero baba code, missing active course selector, missing/duplicate UTF-8 meta declaration, missing odds,
+missing/duplicate jockey selectors, exact wrong response type, Japanese place layout, package-root non-export, and
+absence of `float(` source conversion.
+
+Codex local rerun with Python 3.14.5 / pytest 8.3.5:
+
+```text
+Dedicated c1b: 8 passed
+c1a source records: 8 passed
+Historical snapshot / SQLite / migration related: 62 passed
+Full suite: 2432 passed
+Forbidden dependency source/AST check: passed
+git diff --check: success
+```
+
+Status remains `PHASE_4C_2D3B1I6C1B_READY_FOR_REVIEW`. The only remaining blocker is unchanged: no persisted
+supplied official NAR capture corpus exists, so c1b cannot create past-race or past-race-absence records.

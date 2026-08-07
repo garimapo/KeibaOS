@@ -207,14 +207,10 @@ def _require_utf8_document(response: NarSuppliedOfficialResponse) -> _BeautifulS
     ]
     if len(declarations) != 1:
         raise _validation("document must declare exactly one utf-8 charset")
-    if soup.select("#RaceMarkTable"):
-        raise NarHistoricalInputSourceUnsupportedError(
-            "NAR race-mark page is unsupported",
-        )
     return soup
 
 
-def _target_card(soup: _BeautifulSoup) -> _Tag:
+def _header_card(soup: _BeautifulSoup) -> _Tag:
     cards = [
         card
         for card in soup.select("article.raceCard")
@@ -224,10 +220,11 @@ def _target_card(soup: _BeautifulSoup) -> _Tag:
             ),
         )
         == 1
-        and card.find("td", class_="horseNum") is not None
+        and len(card.find_all("h4", recursive=True)) == 1
+        and len(card.select("section.raceTitle ul.dataArea > li:first-child")) == 1
     ]
     if len(cards) != 1:
-        raise _validation("target race card is missing or ambiguous")
+        raise _validation("target header race card is missing or ambiguous")
     return cards[0]
 
 
@@ -337,12 +334,12 @@ def _direct_text(node: _Tag) -> str:
     return _required_text(" ".join(values), "jockey")
 
 
-def _horse_rows(card: _Tag) -> tuple[_Tag, ...]:
-    tables = [
-        table
-        for table in card.select("section.cardTable table")
-        if table.find("td", class_="horseNum") is not None
-    ]
+def _horse_rows(soup: _BeautifulSoup) -> tuple[_Tag, ...]:
+    tables = []
+    for card in soup.select("article.raceCard"):
+        for table in card.select("section.cardTable table"):
+            if table.find("td", class_="horseNum") is not None:
+                tables.append(table)
     table = _one(tables, "entry table")
     rows = tuple(
         row
@@ -412,7 +409,7 @@ def normalize_nar_historical_input_source_records(
         response.response_url,
     )
     soup = _require_utf8_document(response)
-    card = _target_card(soup)
+    card = _header_card(soup)
     external_race_id = f"nar:{race_date:%Y%m%d}:{baba_code}:{race_no}"
     track = _HistoricalInputSourceRecord(
         record_kind="track",
@@ -428,7 +425,7 @@ def normalize_nar_historical_input_source_records(
     )
     parsed_rows = tuple(
         _row_values(row, external_race_id)
-        for row in _horse_rows(card)
+        for row in _horse_rows(soup)
     )
     if len({item[0] for item in parsed_rows}) != len(parsed_rows):
         raise _validation("duplicate horseNum")

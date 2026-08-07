@@ -240,3 +240,24 @@ migration/schema work, and all database use remain out of scope.
 
 blocker: no persisted supplied NAR raw/capture corpus exists; initial c1b is limited to caller-supplied DebaTable
 responses and cannot construct past-race or absence records.
+
+## GitHub Implementation Review Correction
+
+GitHub review of `cccacac2e2f1b532200b2e4c2196cf2ffe9916c7` found that the tracked official DebaTable layout
+separates target header facts and the horse-entry table into distinct `article.raceCard` regions. The c1b
+normalizer now identifies exactly one header card by its active course, h4, and race facts, then independently
+identifies exactly one supported entry table from a race-card card-table region. Required header and entry evidence
+remains exact and ambiguous or absent regions fail closed.
+
+The normalizer no longer dispatches page kind from HTML IDs or classes. Page-kind support is determined only by the
+already validated canonical URL path: a DebaTable URL is validated as supplied DebaTable content, while RaceMark,
+odds, and other recognized paths are rejected at URL validation.
+
+Dedicated fixtures now mirror the split official structure and pin successful canonical output for two
+non-canonical-order horse rows. They also pin URL host/key/percent/leading-zero boundaries, charset-declaration
+absence/duplication, response exact type, missing/duplicate selectors, missing odds and jockey evidence, Japanese
+place layout, package-root non-export, and no `float(` source conversion.
+
+Correction verification: dedicated 8 passed; c1a source records 8 passed; historical snapshot/SQLite/migration
+related 62 passed; full suite 2432 passed; forbidden-dependency source/AST checks passed; `git diff --check`
+passed. Status remains `READY_FOR_REVIEW`.

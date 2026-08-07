@@ -67,6 +67,8 @@ def _body(
           <li>{TRACK} 1400m \u5929\u5019\uff1a{WEATHER} \u99ac\u5834\uff1a{CONDITION}</li>
         </ul>
       </section>
+    </div></article>
+    <article class="raceCard"><div class="innerWrapper">
       <section class="cardTable"><table><tbody>{rows}</tbody></table></section>
     </div></article></body></html>
     """.encode("utf-8")
@@ -125,9 +127,15 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
                 values[field] = value
                 with self.assertRaises(NarHistoricalInputSourceValidationError):
                     NarSuppliedOfficialResponse(**values)
+        with self.assertRaises(NarHistoricalInputSourceValidationError):
+            normalize_nar_historical_input_source_records(response=object())
 
-    def test_complete_tuple_is_canonical_and_c1a_valid(self) -> None:
-        result = normalize_nar_historical_input_source_records(response=_response())
+    def test_split_race_cards_are_canonical_and_c1a_valid(self) -> None:
+        body = _body()
+        self.assertEqual(body.count(b'<article class="raceCard">'), 2)
+        result = normalize_nar_historical_input_source_records(
+            response=_response(response_body=body),
+        )
         self.assertEqual(
             [record.record_kind for record in result],
             [
@@ -181,6 +189,7 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
         for active, h4, expected in (
             ("Caf\u00e9", "C a f e\u0301", "Caf\u00e9"),
             (PLACE, PLACE, PLACE),
+            ("\u4f50\u8cc0", "\u4f50\u3000\u8cc0", "\u4f50\u8cc0"),
         ):
             with self.subTest(active=active):
                 body = _body(active_place=active, h4_place=h4)
@@ -191,6 +200,7 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
         bad_bodies = (
             _body(active_place=PLACE, h4_place="\u5927\u4e8c"),
             _body(active_place="", h4_place=""),
+            _body().replace(b"courseBtn active", b"courseBtn inactive"),
             _body().replace(
                 f">{PLACE}</a>".encode(),
                 f">{PLACE}</a><a class=\"cNaviBtn courseBtn active\">\u5927\u4e8c</a>".encode(),
@@ -208,12 +218,16 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
             "http": URL.replace("https:", "http:"),
             "credentials": URL.replace("https://", "https://x:y@"),
             "fragment": URL + "#x",
+            "host": URL.replace("WWW.KEIBA.GO.JP", "example.test"),
             "trailing": URL.replace("DebaTable?", "DebaTable/?"),
             "unknown": URL + "&extra=1",
             "duplicate": URL + "&k_raceNo=11",
+            "missing": URL.replace("&k_babaCode=32", ""),
             "blank": URL.replace("k_raceNo=10", "k_raceNo="),
+            "bad-percent": URL.replace("2026/07/16", "2026%2G07%2F16"),
             "plus": URL.replace("2026/07/16", "2026+07+16"),
             "leading": URL.replace("k_raceNo=10", "k_raceNo=010"),
+            "leading-baba": URL.replace("k_babaCode=32", "k_babaCode=032"),
             "date": URL.replace("2026/07/16", "2026/02/30"),
         }
         for name, url in cases.items():
@@ -225,7 +239,7 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
         with self.assertRaises(NarHistoricalInputSourceUnsupportedError):
             normalize_nar_historical_input_source_records(
                 response=_response(
-                    response_url=URL.replace("DebaTable", "OddsTanFuku"),
+                    response_url=URL.replace("DebaTable", "RaceMarkTable"),
                 ),
             )
 
@@ -233,6 +247,18 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
         invalids = (
             _response(response_body=b"\xff"),
             _response(response_body=_body(charset="UTF-8")),
+            _response(
+                response_body=_body().replace(
+                    b'<meta charset="utf-8">',
+                    b"",
+                ),
+            ),
+            _response(
+                response_body=_body().replace(
+                    b"</head>",
+                    b'<meta charset="utf-8"></head>',
+                ),
+            ),
             _response(
                 response_body=_body().replace(
                     "\u7b2c10\u7af6\u8d70".encode(),
@@ -262,6 +288,15 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
             _body(rows=_row(1, "Rider", "2") + _row(1, "Other", "3")),
             _body(rows=malformed_odds),
             _body(rows=_row(1, "Rider \u53d6\u6d88", "2")),
+            _body(rows=_row(1, "Rider", "2").replace("odds_Black", "price_Black")),
+            _body(rows=_row(1, "Rider", "2").replace("jockeyName", "riderName")),
+            _body(
+                rows=_row(1, "Rider", "2").replace(
+                    "</td>\n      <td class=\"odds_weight\">",
+                    "</td><td><a class=\"jockeyName\">Other</a></td>"
+                    "<td class=\"odds_weight\">",
+                ),
+            ),
         )
         for body in bodies:
             with self.subTest(body=body[:40]):
@@ -276,13 +311,20 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
             {"past_race", "past_race_absence"}
             & {record.record_kind for record in result},
         )
+        response = _response(
+            response_body=_body().replace(
+                b"</body>",
+                b'<section id="RaceMarkTable"></section></body>',
+            ),
+        )
+        self.assertEqual(
+            normalize_nar_historical_input_source_records(response=response)[0].record_kind,
+            "track",
+        )
         with self.assertRaises(NarHistoricalInputSourceUnsupportedError):
             normalize_nar_historical_input_source_records(
                 response=_response(
-                    response_body=_body().replace(
-                        b"</body>",
-                        b'<section id="RaceMarkTable"></section></body>',
-                    ),
+                    response_url=URL.replace("DebaTable", "RaceMarkTable"),
                 ),
             )
 
@@ -300,6 +342,11 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
             for alias in node.names
         }
         self.assertFalse({"Any", "cast", "runtime_checkable"} & imported)
+        import scripts.simulation as simulation
+
+        self.assertFalse(
+            hasattr(simulation, "normalize_nar_historical_input_source_records"),
+        )
         for forbidden in (
             "sqlite3",
             "database",
@@ -314,6 +361,7 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
             "nar_provider",
             "horse_parser",
             "payout_provider",
+            "float(",
         ):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, source)
