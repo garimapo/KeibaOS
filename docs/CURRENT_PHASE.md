@@ -6,7 +6,7 @@ DRAFT_FOR_REVIEW
 
 ## Phase
 
-Phase 4C-2d3b1i6c1d3a — Historical past-race field-domain contract preparation
+Phase 4C-2d3b1i6c1d3a - Historical past-race field-domain contract preparation
 
 ## Base Commit
 
@@ -24,127 +24,166 @@ The original workspace, C:\Users\garim\Desktop\KeibaAI, is read-only for this ph
 
 ## Objective and Scope
 
-d3a is PREPARE / design only. It freezes the minimum field-domain contract needed before a future NAR historical
-RaceMarkTable normalizer can emit a semantically valid past_race source record. It changes documentation only.
-Production code, tests, schema, migrations, repositories, database, providers, parsers, README, CLI, package
-exports, logs, and the original workspace are read-only.
+d3a is PREPARE / design only. It freezes the minimum field-domain contract required before a future official NAR
+historical normalizer can emit a semantically valid c1a past_race record. It changes documentation only. Production
+code, tests, schema, migrations, repositories, database, providers, parsers, README, CLI, package exports, logs, and
+the original workspace are read-only.
 
-The field-domain correction is exact: replace the historic past-race field named margin with
-reference_time_difference_seconds. This phase does not implement that replacement and does not normalize any official
-response.
+The exact field-domain correction is to replace the ambiguous historic past-race field margin with
+reference_time_difference_seconds. d3a does not implement the replacement or normalize any official response.
 
-## Investigated Official Semantics
+## Approved Official Field Semantics
 
 Official NAR HorseMarkInfo history displays a separate column named 差. Official CompeteTable describes that value as
-the time difference from the winner, or for the winner, the time difference to the second horse. This is a direct
-official time-difference display, not a horse-length margin, not a signed deficit, not a RaceMarkTable 着差 label, and
-not a value inferred from race times. Historical HorseMarkInfo also exposes separate official 競走名 and 格組 values.
-
-Therefore the required field is:
+the time difference from the winner, or for the winner, the time difference to second. The required field is:
 
     reference_time_difference_seconds: Decimal
 
-Its unit is seconds. For a nonwinner it is the provider-displayed difference to first; for a winner it is the
-provider-displayed difference to second. The name deliberately states the unit and avoids the ambiguous legacy term
-margin.
+It is the direct official time difference in seconds: nonwinner to first and winner to second. It is not a
+horse-length margin, a signed deficit, RaceMarkTable 着差, or a value inferred from race times. HorseMarkInfo
+separately provides the required official 競走名 (race_name) and 格組 (race_class).
 
 ## Exact Decimal Contract
 
-The field accepts only a direct provider value parsed as a finite Decimal. It is nonnegative; zero is permitted when
-the official display directly supplies zero. It must reject int, float, bool, NaN, infinity, blank text, dash or
-unavailable display markers, negative values, inferred values, and values derived from winner or race times. No
-float conversion is permitted. Canonical Decimal text must use the committed canonical formatting rules.
+Only a direct provider value parsed as a finite Decimal is permitted. It is nonnegative; zero is valid only when
+the official display directly supplies zero. int, float, bool, NaN, infinity, blank text, dash/unavailable display
+markers, negatives, aliases, inferred values, legacy-parser mappings, and derived time differences fail closed. No
+float conversion is permitted. Canonical Decimal formatting remains the committed canonical formatting rule.
 
-Normal completed-row support remains conditional on every other required c1a past-race field being directly proven.
-Abnormal, unavailable, or nonnumeric official values remain unsupported rather than being converted to 0, None, an
-empty string, or a guessed number.
+Normal completed-row support remains conditional on direct official evidence for every other required c1a past-race
+field. Abnormal, unavailable, or nonnumeric official displays are unsupported and are never converted to 0, None, an
+empty string, or a guess.
 
-## Frozen Field-Domain Decision
+## Frozen Field Contract
 
 | Concern | Frozen decision |
 | --- | --- |
 | New field | reference_time_difference_seconds: Decimal |
-| Meaning | direct official time difference in seconds; nonwinner-to-winner and winner-to-second according to NAR display |
-| Legacy margin | Removed from the new c1a, snapshot, SQLite, and canonical-payload contracts; no compatibility alias |
-| Alias behavior | Passing margin, passing both names, or relying on a default fails validation; no dual-read or dual-write path |
-| race_name | Unchanged: required nonempty official HorseMarkInfo 競走名 text |
-| race_class | Unchanged: required nonempty official HorseMarkInfo 格組 text; never a subtitle substitute |
-| passing_order | Unchanged in this phase |
-| fourth_corner_position | Unchanged in this phase |
+| Meaning | direct official NAR time difference in seconds |
+| Legacy margin | removed from new c1a, snapshot, SQLite, and canonical-payload contracts |
+| Alias behavior | margin, both names, a default, dual-read, and dual-write are rejected |
+| race_name | unchanged required nonempty HorseMarkInfo 競走名 |
+| race_class | unchanged required nonempty HorseMarkInfo 格組; never RaceMarkTable h3 or a subtitle |
+| passing_order | unchanged in d3a |
+| fourth_corner_position | unchanged in d3a |
 
-## Domain, Source-ID, and Snapshot-Version Contract
+## Global c1a Union-schema Versioning
 
-HistoricalInputSourceRecord past_race record_values will replace the margin key with
-reference_time_difference_seconds at the same logical field position. This is a schema-breaking c1a payload change.
-HistoricalInputSourceRecord.schema_version must change from 1 to 2, and the source-ID namespace must change from
-his-v1 to his-v2. The record identity must be recomputed by the committed c1a canonical-payload algorithm; old source
-IDs are intentionally not preserved.
+HistoricalInputSourceRecord has one public schema_version field, one canonical payload shape, and one globally
+hardcoded his-v1 source-ID namespace across the union of track, entry, jockey, odds_win, past_race, and
+past_race_absence. The incompatible past_race record_values change therefore versions the complete c1a union
+contract, not an individual provider page or record kind.
 
-HistoricalPastRaceSnapshot will replace its margin: Decimal field with
-reference_time_difference_seconds: Decimal. HistoricalInputSnapshot canonical content payload will emit the new key
-and must change its payload schema_version from 1 to 2. The snapshot domain, not the builder, continues to calculate
-content_sha256. A new snapshot digest must never be presented as equivalent to a v1 payload.
+The frozen decision is:
 
-## SQLite v011 Strategy and Old-row Policy
+    GLOBAL_C1A_SCHEMA_VERSION = 2
 
-v010 currently persists margin_text TEXT NOT NULL in historical_input_snapshot_past_races and has no margin index.
-The repository writes and reads that column directly. SQLite 3.50.4 supports ALTER TABLE RENAME COLUMN, but a rename
-alone would falsely reinterpret old length/legacy-margin semantics as seconds.
+After d3a implementation every newly constructed c1a record is version 2:
 
-The future v011 migration is therefore append-only and fail-closed:
+    track.schema_version == 2
+    entry.schema_version == 2
+    jockey.schema_version == 2
+    odds_win.schema_version == 2
+    past_race.schema_version == 2
+    past_race_absence.schema_version == 2
 
-1. Before altering the child column, it must reject migration when historical_input_snapshots contains any row.
-2. Only an empty snapshot store may rename margin_text to reference_time_difference_seconds_text.
-3. The migration registry appends version 11 after v010. Existing v010 history is not rewritten.
-4. A nonempty-store rejection must be atomic: v011 is not recorded and the pre-v011 schema remains intact.
+Every v2 source ID uses:
 
-No old margin value is copied, converted, deleted, silently invalidated, or interpreted as seconds. The guard applies
-to any snapshot row, including snapshots without past-race children, because the snapshot canonical payload itself
-changes from schema version 1 to 2.
+    his-v2:{record_kind}:{sha256}
 
-## Repository and Builder Impact
+Consequently even semantically unchanged track, entry, jockey, odds_win, and past_race_absence records have new v2
+canonical payloads and source IDs relative to v1. This is intentional version identity, not accidental hash churn.
+Mixed record versions such as track v1 and past_race v2 are forbidden.
 
-The future builder maps only the renamed c1a record value into the renamed historical snapshot field. It does not
-derive a time difference or change past-race ordering, source grouping, mapping, provenance, captured_at, or cutoff
-semantics. The SQLite repository changes only its exact child-column serialization/deserialization and keeps its
-immutable save/load and identity guarantees.
+The earlier d1 source-ID isolation rule remains true within a single schema version: changing only one entry lineage
+changes only that entry payload/source ID. The one-time his-v1 to his-v2 transition is separate and intentionally
+changes every newly emitted c1a record kind.
 
-The current legacy models, database, old past-race parser, fetch path, and persisted simulation adapters contain
-legacy margin behavior. They are out of scope and untrusted for this contract. They must not be used as a fallback
-or a source of conversion rules.
+Future d3a tests must prove all six kinds have schema_version 2; every source ID has the matching his-v2 kind prefix;
+canonical payloads contain schema_version 2; deterministic rebuilding is stable; no v2 record uses his-v1; a
+past-race-only content mutation still leaves unrelated v2 records unchanged; and existing record-set conflict
+behavior is unchanged. The existing public-contract assertion of default schema_version 1 changes intentionally.
 
-## Ability Engine Boundary
+## Snapshot Contract Versioning
 
-The legacy AbilityEngine reads legacy PastRace.margin as a float and applies legacy margin scoring. It does not
-consume HistoricalPastRaceSnapshot directly. reference_time_difference_seconds must not be wired into AbilityEngine,
-mapped to its legacy margin input, or interpreted as a performance score in this phase.
+HistoricalPastRaceSnapshot replaces margin: Decimal with reference_time_difference_seconds: Decimal. The
+HistoricalInputSnapshot canonical content payload replaces the past_races key and changes its hardcoded
+schema_version from 1 to 2. All new snapshots after d3a are v2 payloads and use the committed snapshot-domain
+content_sha256 calculation. No v1 digest is represented as equivalent to a v2 payload.
 
-Ability Engine change required: LATER_FEATURE_PHASE. Such a phase needs its own approved feature semantics, score
-formula, temporal evidence policy, regression plan, and compatibility decision.
+## SQLite v011 Strategy and Old-data Policy
 
-## Exact Future Implementation Impact
+v010 contains historical_input_snapshot_past_races.margin_text TEXT NOT NULL and no margin index. The future v011
+migration is append-only and fail-closed:
+
+1. It first checks SELECT COUNT(*) FROM historical_input_snapshots.
+2. If the count is nonzero, it aborts before every schema mutation and v011 is not recorded.
+3. If the count is zero, it may rename margin_text to reference_time_difference_seconds_text.
+4. Dedicated migration tests must prove empty-store success and nonempty-store atomic failure.
+
+No old margin value is copied, converted, deleted, silently invalidated, or reinterpreted as seconds. The guard is
+against historical_input_snapshots rows because they carry v1 snapshot semantic payload/digest contracts, including
+snapshots with no past-race child rows.
+
+Existing rows in historical_input_source_identities, historical_input_external_races, and
+historical_input_external_entries are allowed when historical_input_snapshots is empty. They are provider
+identity/linkage mappings, not persisted v1 snapshot semantic payloads; v011 neither rewrites nor destroys them.
+
+## Builder, Repository, and Ability Boundaries
+
+The future builder maps only the renamed c1a record value into the renamed snapshot field. It does not derive a time
+difference or change source grouping, mapping, ordering, provenance, captured_at, or cutoff semantics. The SQLite
+repository changes only its child-column serialization/deserialization while preserving immutable save/load behavior.
+
+Legacy models, database, parser, fetch path, and persisted simulation adapters still use legacy margin semantics.
+They are untrusted and out of scope; they provide no fallback or conversion rule.
+
+AbilityEngine consumes only legacy PastRace.margin float and does not receive HistoricalPastRaceSnapshot directly.
+ABILITY_ENGINE_CHANGE_REQUIRED = LATER_FEATURE_PHASE. d3a must not wire seconds into legacy margin scoring, change
+coefficients, or adapt seconds to old semantics.
+
+## Multi-source Evidence Prerequisite
+
+d3 established SINGLE_RESPONSE_COMPLETE_SOURCE = NO, MULTI_RESPONSE_EVIDENCE_REQUIRED = YES, and
+C1A_PROVENANCE_EXTENSION_REQUIRED = YES. d3a does not reopen a single-response RaceMarkTable design.
+
+The currently required logical factual evidence set is HorseMarkInfo plus RaceMarkTable. HorseMarkInfo and
+RaceMarkTable roles, immutable evidence references, evidence ordering, per-response observed_at/available_at, cutoff
+eligibility, provider_record_id, post-extension canonical_source_url semantics, persistence, and source-ID impact
+belong to d3b. CompeteTable was semantic-reference evidence only and must not become a required factual evidence
+reference or digest input merely for that reason.
+
+## Remaining Provider-normalizer Evidence Work
+
+race_name and race_class are already frozen to HorseMarkInfo and are not remaining RaceMarkTable blockers.
+FOURTH_CORNER_CHANGE = NO. Remaining future provider-normalizer evidence work includes exact result-state support;
+HorseMarkInfo historical-row identity linkage; historical odds; passing order; corner-label mapping; supported
+weight/time/popularity variants; abnormal-state rejection; and historical race-identity cross-check. Pagination and
+past_race_absence remain separate fail-closed work; past_race_absence is UNSUPPORTED.
+
+## Future Implementation Impact
 
 | Area | Required future change |
 | --- | --- |
-| c1a source-record domain | rename past_race key, enforce direct finite nonnegative Decimal, bump record schema/source-ID namespace |
-| historical snapshot domain | rename HistoricalPastRaceSnapshot field and canonical payload key, bump payload schema version |
+| c1a source-record domain | global v2, his-v2 namespace, renamed past_race key, direct Decimal validation |
+| historical snapshot domain | renamed field/key and canonical content payload v2 |
 | c1c builder | direct renamed-value mapping only |
-| SQLite repository | renamed text column read/write only |
-| migration | new guarded v011 rename migration and runner registration |
-| dedicated tests | update field/payload/source-ID/version, builder, repository, v011 and migration-registry contracts |
-| AbilityEngine | no change; explicitly deferred |
+| SQLite repository | renamed text-column read/write only |
+| migration | guarded append-only v011 and runner registration |
+| dedicated tests | global c1a v2, snapshot v2, builder, repository, v011 and registry contracts |
+| AbilityEngine | no change; deferred feature phase |
 
 ## Future Dedicated Test Plan
 
-The future phase must prove exact public dataclass/API fields; rejection of margin and aliases; Decimal direct parsing
-without float; finite/nonnegative/zero semantics; c1a v2 source-ID behavior; snapshot payload v2 key and digest
-behavior; unchanged race_name/race_class requirements; unchanged passing_order/fourth_corner behavior; direct builder
-mapping; repository round trip; exact v011 registration/order; empty-store rename success; nonempty-store atomic
-failure; and no migration of historical rows.
+The future phase must prove exact public fields; rejection of margin/aliases; direct finite/nonnegative Decimal
+semantics without float; all-six-kind global c1a v2 schema/payload/source-ID behavior; within-v2 record isolation;
+unchanged record-set conflicts; snapshot payload v2; unchanged race_name/race_class; unchanged passing/fourth-corner;
+builder mapping; repository round trip; v011 order; empty-store rename; nonempty snapshot atomic failure; and
+retention of identity/linkage rows when no snapshots exist.
 
-It must also retain existing source-set validation, provenance, temporal eligibility, canonical entry/past-race/
-provenance ordering, c1b-only incomplete-source rejection, SQLite atomic-save behavior, and unrelated migration
-regressions. It must assert that AbilityEngine is not imported or modified as part of this domain/storage phase.
+It must retain existing source-set, provenance, temporal eligibility, canonical ordering, c1b-only incomplete-source,
+SQLite atomic-save, and unrelated migration regressions. It must assert that AbilityEngine is neither imported nor
+modified by this domain/storage phase.
 
 ## Future Allowed Files
 
@@ -163,27 +202,24 @@ regressions. It must assert that AbilityEngine is not imported or modified as pa
     docs/CURRENT_PHASE.md
     docs/LATEST_CODEX_REPORT.md
 
-No other production, test, migration, parser, provider, repository, package-root, database, log, or README file is
-authorized. Any need to expand this list is REVISION_REQUIRED.
+No c1b production change is required. No other production, test, migration, parser, provider, package-root,
+database, log, or README file is authorized. A scope expansion is REVISION_REQUIRED.
 
 ## Public Break and Follow-on Order
 
-This is an intentional public domain break for callers that construct c1a past_race records or
-HistoricalPastRaceSnapshot directly: margin is replaced by reference_time_difference_seconds. There is no runtime
-compatibility mode. Stored v010 snapshots are intentionally ineligible for a semantic in-place conversion.
+This is an intentional public break: margin becomes reference_time_difference_seconds with no compatibility mode.
+Stored v010 snapshots are ineligible for semantic in-place conversion.
 
-The recommended next phase after approval is Phase 4C-2d3b1i6c1d3b — historical past-race provenance contract
-preparation. It must decide how a RaceMarkTable record can prove a single-response fact provenance, provider record
-identity, and source URL without weakening the c1a model. d3a does not start d3b.
+The exact next phase after d3a implementation is Phase 4C-2d3b1i6c1d3b - Historical multi-source
+evidence/provenance contract preparation. It does not implement a single-response provenance path and d3a does not
+start it.
 
 ## Blockers and Stop Condition
 
-c1d past-race implementation remains blocked by three independent prerequisites: d3a field-domain approval and
-implementation; d3b provenance/identity approval; and the remaining official RaceMarkTable field evidence including
-race_class, result-state, passing/corner variants, and pagination/absence proof. past_race_absence remains
-UNSUPPORTED.
+Historical NAR past-race normalization remains blocked by d3a implementation, d3b multi-source provenance/identity
+design, and provider-normalizer evidence work listed above. past_race_absence remains UNSUPPORTED.
 
-Stop after design review. Do not implement, stage, commit, or push without a separate explicit instruction.
+Stop after independent design review. Do not implement d3a.
 
-blocker: historical NAR past-race normalization cannot begin until the field-domain and provenance prerequisites are
-separately approved and implemented.
+blocker: historical NAR past-race normalization awaits approved field-domain implementation and multi-source
+evidence/provenance design.

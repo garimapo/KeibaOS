@@ -2930,6 +2930,38 @@ No production or test changes were made; no tests were run during PREPARE.
 blocker: historical NAR past-race normalization awaits separately approved field-domain implementation and
 provenance/identity design.
 
+## Phase 4C-2d3b1i6c1d3a PREPARE Review Revision
+
+GitHub design review of `70a0e5f1231ebaeca34e37c1e3af34cc48c5a010` approved the central field-domain decision and
+required two scope corrections. `HistoricalInputSourceRecord.schema_version` and its `his-v1` namespace are one
+union-contract mechanism, not past-race-only mechanics. d3a now freezes `GLOBAL_C1A_SCHEMA_VERSION = 2`: every
+newly created track, entry, jockey, odds_win, past_race, and past_race_absence record has schema_version 2 and an
+`his-v2:{record_kind}:...` source ID. The new IDs for non-past records are intentional version identity; d1
+selective source-ID isolation still applies within the same schema version.
+
+The snapshot content payload remains independently versioned and changes from schema version 1 to 2 with the renamed
+past-race key. v011 remains append-only and rejects any `historical_input_snapshots` row before mutation. If that
+table is empty, pre-existing `historical_input_source_identities`, `historical_input_external_races`, and
+`historical_input_external_entries` rows remain valid and may stay because they are identity/linkage mappings, not
+v1 snapshot semantic payloads.
+
+The follow-on phase is fixed as `Phase 4C-2d3b1i6c1d3b — Historical multi-source evidence/provenance contract
+preparation`. d3 already established `SINGLE_RESPONSE_COMPLETE_SOURCE = NO`,
+`MULTI_RESPONSE_EVIDENCE_REQUIRED = YES`, and `C1A_PROVENANCE_EXTENSION_REQUIRED = YES`. The logical factual
+evidence set remains HorseMarkInfo plus RaceMarkTable; CompeteTable remains semantic-reference evidence only and
+does not enter record digest participation.
+
+`race_name` and `race_class` remain required official HorseMarkInfo values, so race_class is removed from the
+remaining RaceMarkTable evidence blockers. Remaining work includes result states, HorseMarkInfo row linkage, odds,
+passing order, corner labels, weight/time/popularity variants, abnormal rejection, and historical race identity.
+`fourth_corner_position` is unchanged, `past_race_absence` remains UNSUPPORTED, and AbilityEngine remains a later
+feature phase.
+
+No production, test, or migration changes were made during this documentation-only correction.
+
+blocker: d3a implementation and the separate d3b multi-source evidence/provenance contract remain required before
+historical NAR past-race normalization.
+
 ## Phase 4C-2d3b1i6c1d1 Source-ID Isolation Review Correction
 
 GitHub implementation review of `86c26816d894fbee98691c9c8f231dee2129503e` approved the d1 production module,
