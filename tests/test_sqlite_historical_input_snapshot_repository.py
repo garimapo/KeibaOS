@@ -202,7 +202,7 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
         self.assertEqual(
             connection.execute(
                 """SELECT race_entry_id,past_race_index,race_date,place,race_name,race_class,distance_m,track,
-                          weather,track_condition,finish,margin_text,race_time,weight_text,weight_diff_text,
+                          weather,track_condition,finish,reference_time_difference_seconds_text,race_time,weight_text,weight_diff_text,
                           jockey,popularity,odds_text,passing_order,fourth_corner_position
                    FROM historical_input_snapshot_past_races"""
             ).fetchone(),
@@ -461,7 +461,7 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
         self.assertEqual(loaded.identity.source_identity.source_url, "https://example.test/race-1")
         self.assertEqual(loaded.entries[0].external_entry_identity.external_horse_id, "horse-11")
         self.assertEqual(loaded.entries[0].win_odds, Decimal("2.5"))
-        self.assertEqual(loaded.past_races[0].margin, Decimal("0"))
+        self.assertEqual(loaded.past_races[0].reference_time_difference_seconds, Decimal("0"))
         self.assertEqual(loaded.past_races[0].passing_order, "")
         self.assertEqual(loaded.provenance[0].audit_key, "entry/11")
         self.assertEqual(loaded.provenance[-1].audit_key, "track")
