@@ -1,8 +1,8 @@
-# Latest Codex Report
+﻿# Latest Codex Report
 
 ## Status
 
-PHASE_4C_2D3B1I6C1B_READY_FOR_REVIEW
+PHASE_4C_2D3B1I6C1C_READY_FOR_REVIEW
 
 ## Previous Formal Phase
 
@@ -2715,3 +2715,111 @@ git diff --check: success
 
 Status remains `PHASE_4C_2D3B1I6C1B_READY_FOR_REVIEW`. The remaining blocker is unchanged: no persisted supplied
 official NAR capture corpus exists, so c1b cannot create past-race or past-race-absence records.
+
+## Phase 4C-2d3b1i6c1c Preparation
+
+Phase c1b is formally complete at `f6a72be9e9a6934cfa48c6b0ff41954fb7d51de1` on
+`feature/ver0.8-simulator`. c1c is `DRAFT_FOR_REVIEW` and is documentation-only: no production, test, migration,
+schema, repository, database, log, README, CLI, or original-workspace file changed.
+
+Read-only investigation confirms that c1a validates individual immutable source records and source IDs, while the
+existing historical snapshot domain owns the immutable output schema, audit-key completeness, and content digest.
+The new proposed boundary is a single pure keyword-only builder from an exact tuple of c1a records plus explicit
+dataset/race/cutoff/capture inputs and an explicit external-entry to local-race-entry mapping.
+
+The preparation freezes these design decisions for review:
+
+- call the c1a set validator first and propagate its validation/conflict errors unchanged;
+- require one source family, one track, full entry/jockey/odds triples, and exactly one form of past evidence per entry;
+- select the sole track URL as the snapshot-level source URL only when it is present, otherwise preserve None, without requiring non-track URL equality;
+- require a complete, exact, positive, unique caller mapping rather than DB lookup or horse-number fallback;
+- order entries by horse number ascending and past races by strictly unique race date descending;
+- map each immutable source record one-to-one to the established provenance key shape and preserve its exact source ID/timestamps;
+- require every source stamp to be no later than both captured_at and information_cutoff;
+- reject c1b DebaTable-only output because missing history is not absence proof.
+
+The proposed implementation remains one new module, `historical_input_snapshot_builder.py`, one dedicated test
+module, and the two phase documents. It has no repository/schema/migration or package-export change. The single
+open blocker is complete official past-race or valid c1a absence evidence for every entry; c1c must not fabricate it.
+
+blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
+assembled from its DebaTable-only output.
+
+## Phase 4C-2d3b1i6c1c Implementation
+
+The approved PREPARE contract from `20b7fb24c4772d7a12e5d8d6356000a3331f5d56` was materialized on
+`review/4c-2d3b1i6c1c-implementation`, based directly on formal commit
+`f6a72be9e9a6934cfa48c6b0ff41954fb7d51de1`. The implementation adds only the pure
+`build_historical_input_snapshot` keyword-only boundary and its one assembler-owned
+`HistoricalInputSnapshotAssemblyError`.
+
+The builder first delegates c1a record-set validation and propagates its validation/conflict errors unchanged. It
+then enforces one source family, one track, complete entry/jockey/odds triples, exact external-to-local mapping,
+one past-evidence form per entry, track-only race facts, and causal capture/cutoff/start eligibility. It never reads
+SQLite, calls a provider/parser, accesses files or the clock, saves a snapshot, or exports from the package root.
+
+Track `canonical_source_url` remains provider-neutral: a non-null track URL is selected exactly, and a None track URL
+is preserved as None. Non-track URLs are never selected or synthesized and remain represented through each exact c1a
+source ID in provenance. c1b DebaTable-only source tuples are rejected because they lack both past-race records and
+valid absence proof.
+
+Entries are emitted by horse number with contiguous entry order. Per-entry past chronology is race date descending,
+same-date ambiguity fails closed, and final snapshot tuples are canonicalized as `(race_entry_id, past_race_index)`
+ascending for past races and `audit_key` ascending for provenance. The dedicated permutation case proves exact
+snapshot equality and equal content digest despite materially different input tuple ordering.
+
+Codex local verification using temporary Python 3.14.5 / pytest 8.3.5 / tzdata 2026.3:
+
+```text
+Dedicated c1c: 11 passed
+Historical source/snapshot/SQLite repository/migration regressions: 70 passed
+Full suite: 2444 passed
+Forbidden dependency/source/AST check: passed
+git diff --check: success
+```
+
+Status is `READY_FOR_REVIEW`. The only remaining blocker is unchanged: c1b supplies no past-race or
+past-race-absence evidence, so a complete snapshot still requires a later supplied-source phase.
+
+blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
+assembled from its DebaTable-only output.
+
+## Phase 4C-2d3b1i6c1c Source URL Policy Revision
+
+GitHub design review of `3c64a809bc015bee494dd4c97a6cdc67f4ffb8a2` found that c1c must preserve the committed
+provider-neutral optionality of the sole track record's `canonical_source_url`. The corrected policy is exact:
+when the track URL is non-null, `HistoricalSourceIdentity.source_url` is that exact URL; when it is None, snapshot
+construction remains valid and `HistoricalSourceIdentity.source_url` is None. A missing track URL is not a failure.
+
+c1c must not synthesize a snapshot URL from a non-track record, provider_record_id, source_id, external_race_id,
+local data, or legacy URLs, and it must not select a non-track URL. Differing non-track URLs remain immutable c1a
+record payload and participate through their exact c1a `source_id`; provenance continues to reference the exact
+source ID without duplicating canonical URLs. The existing c1a non-null URL rule for `past_race_absence` remains
+unchanged and is merely consumed by c1c.
+
+The dedicated c1c plan now explicitly covers both valid track-source-identity cases, including a non-null track URL
+and a None track URL, plus non-track URL nonselection, invariance under differing non-track URLs, and exact c1a
+source-ID provenance propagation. Status remains `DRAFT_FOR_REVIEW`; implementation has not started.
+
+blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
+assembled from its DebaTable-only output.
+
+## Phase 4C-2d3b1i6c1c Snapshot Child Ordering Revision
+
+GitHub design re-review of `731e6849be675612d58a060d80009195ade31c6e` approved the source URL policy and required
+only explicit final child-tuple ordering. Entries remain sorted by `horse_no` ascending and receive contiguous
+zero-based `entry_order` values. Per-entry past-race chronology remains `race_date` descending with same-date
+ambiguity rejected and contiguous zero-based `past_race_index` values.
+
+After those indexes are assigned, the final snapshot `past_races` tuple is sorted globally by exactly
+`(race_entry_id, past_race_index)` ascending. The final snapshot `provenance` tuple is sorted globally by exactly
+canonical `audit_key` ascending using normal Python string ordering. Neither final tuple may depend on supplied source
+tuple order, horse number, external entry ID, source ID, record kind, insertion order, database rows, provider IDs,
+or hash/random order.
+
+The future dedicated suite now includes a materially noncanonical source-record permutation with two entries and
+multiple past races. It must prove exact snapshot equality and equal `content_sha256`, plus exact final entry,
+past-race, and provenance tuple orders. Status remains `DRAFT_FOR_REVIEW`; implementation has not started.
+
+blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
+assembled from its DebaTable-only output.
