@@ -2984,3 +2984,39 @@ Status: `DRAFT_FOR_REVIEW`.
 
 blocker: current c1a past_race requires semantic race_name, Decimal margin, and fourth_corner_position values that a
 normal RaceMarkTable cannot universally prove without an approved field-contract decision.
+
+## Phase 4C-2d3b1i6c1d2 PREPARE Field-Semantics Revision
+
+GitHub design review of `b9b851a9abbe87d40555474298b3b09f318d1323` required documentation-only correction. No
+production, test, fixture, schema, migration, database, provider, parser, CLI, or original-workspace file changed.
+
+`section.raceTitle > h3` is not a one-to-one field source. Observed flat-page forms include a class-only expression,
+an eligibility/condition expression, and a combined named-race plus class/condition expression. Sponsor/prize text
+above the h3 is not automatically a race name. Thus `RACE_NAME_STATUS = CONTRACT_GAP` and
+`RACE_CLASS_STATUS = CONTRACT_GAP`; no guessed split, class-code regex, or subtitle substitution is approved. This
+matters downstream because both strings are required immutable c1a/snapshot payload and persisted-input values, and the
+existing ability engine uses `race_class` for class scoring. No direct feature-engine consumer of `race_name` was found,
+but it remains persisted and digest-relevant content.
+
+`passing_order` remains exact NFC row-local `td.n.corner_position` display text. `FOURTH_CORNER_STATUS =
+NOT_YET_PROVEN`: a later contract must prove the correspondence between its positions and same-page
+`section.cornerPassTable` labels such as `全馬コーナー通過順`, `3コーナー`, and `4コーナー`. Two displayed positions
+may be enough only when labels prove `[3, 4]`; four may be enough only when labels prove `[1, 2, 3, 4]`. Missing,
+mismatched, or ambiguous labels fail closed. The final token, row length, distance/course lookup, and legacy behavior
+are forbidden substitutes. `CORNER_LABEL_MAPPING = NOT_YET_PROVEN`.
+
+`MARGIN_STATUS = CONTRACT_GAP`. `SINGLE_RESPONSE_SOURCE_EVIDENCE = SUFFICIENT_FOR_OBSERVED_FACTS`, while
+`CURRENT_C1A_RECORD_COMPLETENESS = NOT_YET_PROVEN` because of field semantics rather than a second factual page.
+`C1A_PROVENANCE_EXTENSION_REQUIRED = NO`; RaceMarkTable response-level identity and observed facts remain
+single-response evidence, but not yet a complete current c1a record.
+
+The recommended next design-only phase is **Phase 4C-2d3b1i6c1d3 — Historical past-race result-field contract
+preparation**. It must decide exactly: race-name/race-class semantic separation, margin domain representation, and the
+page corner-label-to-row-position mapping for `fourth_corner_position`. It must not implement parsing, add past-race
+extraction, or extend provenance. `past_race` remains `PREREQUISITE_REQUIRED`; `past_race_absence` remains
+`UNSUPPORTED`.
+
+Status: `DRAFT_FOR_REVIEW`.
+
+blocker: race_name/race_class semantic separation, margin domain representation, and exact corner-label-to-row-position
+mapping for fourth_corner_position remain unresolved.
