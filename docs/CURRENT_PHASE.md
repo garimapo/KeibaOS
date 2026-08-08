@@ -2,208 +2,193 @@
 
 ## Status
 
-READY_FOR_REVIEW
+DRAFT_FOR_REVIEW
 
 ## Phase
 
-Phase 4C-2d3b1i6c1d1 — NAR target horse identity preparation
+Phase 4C-2d3b1i6c1d2 — NAR historical RaceMarkTable field semantics preparation
 
 ## Base Commit
 
-960c3419e52205cbfd94c3466eaabbb85d14e6ba feat: assemble historical input snapshots
+2b6d389b4296be2f6749b71fc4ed827f244ce570 feat: preserve NAR target horse identity
 
 ## Branch and Workspace
 
-Formal branch: feature/ver0.8-simulator
+Formal branch: `feature/ver0.8-simulator`
 
-Preparation review branch: review/4c-2d3b1i6c1d1-prepare
+Preparation review branch: `review/4c-2d3b1i6c1d2-prepare`
 
-Canonical workspace: C:\Users\garim\Desktop\KeibaAI-review-1i5b2b
+Canonical workspace: `C:\Users\garim\Desktop\KeibaAI-review-1i5b2b`
 
-The original workspace, C:\Users\garim\Desktop\KeibaAI, is read-only for this phase.
+The original workspace, `C:\Users\garim\Desktop\KeibaAI`, is read-only for this phase.
 
-## Objective and Scope
+## Objective and Boundary
 
-d1 designs the smallest c1b extension that preserves a verified provider-native target-horse identity from the same
-supplied official DebaTable row that already supplies horse number, jockey, and win odds. It changes no historical
-past-race behavior and does not fetch HorseMarkInfo. The only future output evolution is entry
-external_horse_id from None to a validated official identity.
+d2 investigates whether one caller-supplied official NAR RaceMarkTable response can independently prove one c1a
+`HistoricalInputSourceRecord(record_kind="past_race")` after the caller has supplied the frozen d1 target identity
+`nar:horse:{k_lineageLoginCode}`. This is field-semantics and provenance design only. It does not normalize a page,
+fetch HTTP, follow a horse link, inspect SQLite, alter c1a/c1b/c1c, or create past-race/absence records.
 
-This is PREPARE only. It changes documentation only and creates a docs-only review commit. Production, tests, fixtures,
-providers, parsers, database, schema, migration, README, CLI, package exports, and the original workspace are
-read-only.
+The investigation separates navigation evidence from normalized fact evidence. HorseMarkInfo may help a caller find a
+historical page, but a future record may use the canonical historical RaceMarkTable URL as its sole fact provenance
+only if that response itself proves the historical race, the exact horse, and every emitted value.
 
-## Read-only Investigation Findings
+## Official Pages Inspected
 
-The committed c1b entry parser currently returns only horse_no, external_entry_id, jockey, and odds; entry records
-deliberately contain external_horse_id=None. Its inline dedicated fixture has a horseName anchor without href, so it
-cannot prove the new identity contract. This is Outcome C: the current fixture is incomplete/sanitized for d1 proof.
+Only official `https://www.keiba.go.jp` material was inspected. Representative completed pages were:
 
-Official supplied-page inspection of the NAR DebaTable for 2026-07-04 Funabashi race 11 proved that the horse anchor
-is in the same visible target entry row as horse number, jockey, and odds. Two observed anchors resolve to:
+* `RaceMarkTable?k_babaCode=10&k_raceDate=2026%2F07%2F26&k_raceNo=8` (Morioka B2, dirt, numeric and textual
+  margins, corner order present).
+* `RaceMarkTable?k_babaCode=36&k_raceDate=2026%2F06%2F30&k_raceNo=2` (Monbetsu, 2-year maiden, fractions and
+  `ハナ` margins).
+* `RaceMarkTable?k_babaCode=3&k_raceDate=2026%2F07%2F26&k_raceNo=12` (Ban'ei variant, used only to establish
+  unsupported variance).
 
-    /KeibaWeb/DataRoom/HorseMarkInfo?k_lineageLoginCode=30036406666
-    /KeibaWeb/DataRoom/HorseMarkInfo?k_lineageLoginCode=30038401876
+The official HorseMarkInfo page for lineage `30077409996` links to the exact Morioka RaceMarkTable URL above. The
+RaceMarkTable row itself contains the same official HorseMarkInfo lineage anchor; this is discovery evidence only and
+is not proposed as additional provenance for normalized past-race facts.
 
-The second response resolves to the official horse page. The first was a supplied-link observation whose target returned
-404 during later retrieval; d1 treats link syntax and row-local evidence as the contract, not successful HTTP retrieval.
-The previously inspected current and historical RaceMarkTable rows use the same HorseMarkInfo path and lineage-code
-form. No target horse name is required or used as identity.
+## Historical Race URL and Identity Contract
 
-Observed lineage values are ASCII positive canonical decimal tokens: digits only, no sign, no whitespace, no leading
-zero, and no non-ASCII digit. They are provider identifiers, not arithmetic values, so future c1b preserves their
-validated lexical text and never converts untrusted arbitrary-length text with int().
+The only candidate supported page kind is the exact path:
 
-## Exact Future Horse-anchor Contract
+`/KeibaWeb/TodayRaceInfo/RaceMarkTable`
 
-Within each selected supported entry-table row, future c1b must require exactly one row-local:
+Its canonical URL must be absolute HTTPS on `www.keiba.go.jp`, with no credentials, fragment, control character, or
+port other than absent/443. Its query is exactly one each of `k_babaCode`, `k_raceDate`, and `k_raceNo`; unknown,
+duplicate, blank, plus-ambiguous, and malformed-percent values fail closed. `k_raceDate` is an actual canonical
+`YYYY/MM/DD` date. `k_babaCode` and `k_raceNo` are lexical ASCII positive canonical decimal tokens
+`[1-9][0-9]*`, without integer conversion or invented range limits. Canonical query order is:
 
-    a.horseName[href]
+`k_babaCode={code}&k_raceDate=YYYY%2FMM%2FDD&k_raceNo={number}`.
 
-The anchor must be part of that same tr as the already selected horseNum, jockeyName, and odds weight nodes. c1b must
-not locate horse links globally by display name, and must not combine cells across rows.
+The canonical identity candidate is `nar:{YYYYMMDD}:{k_babaCode}:{k_raceNo}`. The future normalizer must cross-check
+the URL date/race number with the one visible result `h4`; it must obtain semantic place from exactly one active course
+selector and reject an h4 place mismatch. It must not infer place from a hard-coded baba-code table.
 
-The href may be a relative path or an absolute URL. After NFC validation it must canonicalize only to:
+## Row-local Horse Identity
 
-    https://www.keiba.go.jp/KeibaWeb/DataRoom/HorseMarkInfo?k_lineageLoginCode=<token>
+In normal completed result tables, each horse cell is `td.d.horseName` containing a HorseMarkInfo anchor. The exact
+official link form observed is:
 
-The anchor URL rules are exact:
+`/KeibaWeb/DataRoom/HorseMarkInfo?k_lineageLoginCode=30077409996`.
 
-| Component | Required rule |
-| --- | --- |
-| scheme / host | Relative is accepted then anchored to https://www.keiba.go.jp. Absolute form must be exact https and www.keiba.go.jp. |
-| port | None or explicit default 443 only; any other port fails. |
-| path | Exact /KeibaWeb/DataRoom/HorseMarkInfo; no trailing slash or alternate path. |
-| query keys | Exactly one k_lineageLoginCode; unknown, duplicate, blank, and missing keys fail. |
-| fragments / credentials / control text | Forbidden. |
-| percent encoding | Malformed escapes fail. The decoded lineage token must still meet the exact ASCII lexical grammar; encoding may not conceal a changed token. |
-| Unicode | href and decoded token are NFC-normalized for validation; non-ASCII digits remain rejected. |
-| canonical spelling | Output always uses the one canonical absolute URL form above, with the lexical token unchanged. |
+A future boundary must require exactly one row-local HorseMarkInfo anchor with the already-frozen d1 path/query/token
+contract, derive `nar:horse:{k_lineageLoginCode}`, and require exactly one result row equal to the caller-supplied
+target `external_horse_id`. No matching row, multiple matching rows, malformed link, horse-name match, horse-number
+match, or globally selected anchor fails closed. The row's identity therefore is independently present on the factual
+RaceMarkTable response.
 
-The token grammar is ASCII [1-9][0-9]* as text. It rejects sign, decimal point, scientific notation, whitespace,
-Unicode digits, empty text, and leading zeros. No numeric conversion or numeric range is performed.
+## Field Evidence Matrix
 
-## Exact Output and Compatibility
+| c1a field | official RaceMarkTable evidence | status | frozen initial policy |
+| --- | --- | --- | --- |
+| `race_date` | canonical URL plus result `h4` | PROVEN | exact date, cross-checked; later require strictly before target date |
+| `place` | active course selector plus compact h4 place cross-check | PROVEN | NFC display text; no baba-code lookup |
+| `race_name` | no dedicated, nonempty semantic name node is present on ordinary B2 pages; `p.subTitle` can be empty/sponsorship text | CONTRACT_GAP | do not substitute subtitle or reuse class text |
+| `race_class` | exactly one nonempty `section.raceTitle > h3` such as `Ｂ２` or `２歳牝馬　未勝利` | PROVEN for flat pages | preserve exact NFC structured class/condition text; never use `subTitle` |
+| `distance_m` | first `dataArea` fact, surface plus `NNNm` | PROVEN for flat dirt/turf | positive lexical decimal to guarded int; no target-distance fallback |
+| `track` | same data-area surface | PROVEN for `ダート`/`芝` | Ban'ei/other variant not coerced into this contract |
+| `weather` | `天候：` in same facts node | PROVEN when present | required nonempty value; no default |
+| `track_condition` | `馬場：` in same facts node | PROVEN when present | required nonempty value; no default |
+| `finish` | row-local `td.a` | PROVEN for positive numeric completed result | 取消/除外/競走中止/失格/取止/blank/non-numeric are UNSUPPORTED |
+| `margin` | row-local `td.l` | CONTRACT_GAP | winner is blank; other rows include numeric text, fractions, `ハナ`, `クビ`, and `大差`; no numeric mapping is frozen |
+| `race_time` | row-local `td.k` | PROVEN for nonempty normal result | preserve required official text; no-time/abnormal row unsupported |
+| `weight` / `weight_diff` | row-local `td.j.horseWeight`, observed `473(-1)` | PROVEN for exact `digits(sign?digits)` form | parse directly to Decimal; `計不`, `－`, blank, or a different grammar unsupported |
+| `jockey` | row-local `td.h.jockeyName` anchor | PROVEN | direct rider text excluding affiliation span, matching committed NAR convention |
+| `popularity` | row-local `td.o` | PROVEN for numeric completed result | exact nonnegative integer only; missing/abnormal unsupported |
+| `odds` | row-local `td.p` | PROVEN for canonical numeric completed result | direct Decimal; historical row only, never target odds or legacy DB |
+| `passing_order` | row-local `td.n.corner_position` | PROVEN when present | preserve exact NFC official sequence; no commentary/global-order synthesis |
+| `fourth_corner_position` | no universal row-local fourth-corner value | CONTRACT_GAP | only a future exact four-position syntax may prove its final component; two-corner/absent variants are unsupported |
 
-The future entry record remains:
+`race_name`, `margin`, and `fourth_corner_position` block a valid current c1a `past_race` even though the remaining
+normal flat-race values are locally evidenced. c1a requires all three as nonempty text, Decimal, and nonnegative int
+respectively. No production fallback, fabricated zero, symbolic-margin conversion, or title/class duplication is
+authorized.
 
-    external_entry_id = nar:{YYYYMMDD}:{k_babaCode}:{k_raceNo}:entry:{horseNum}
-    external_horse_id = nar:horse:{k_lineageLoginCode}
-    horse_no = existing positive horse number
+## Abnormal, Weight, Odds, and Corner Policy
 
-This namespaced external_horse_id is deterministic, stable, unambiguous, directly reconstructable from the official
-anchor, and distinct from a local database ID or target-race entry ID. external_entry_id and external_horse_id coexist;
-neither replaces the other. No horse name, horse number, target entry ID, URL hash, source ID, or local ID is used.
+The initial eventual normalizer may support only a completed flat result row with a positive numeric finish, nonempty
+time, exact body-weight grammar, numeric popularity/odds, and a row-local HorseMarkInfo identity. It must reject
+cancelled, excluded, stopped, disqualified, no-time, missing-weight, or ambiguous-column rows; it must not create
+fake numeric finish, weight, weight difference, popularity, odds, or corner values.
 
-No c1a change is required. HistoricalInputSourceRecord already accepts optional external_horse_id text. Changing None to
-the proven namespaced value intentionally changes the entry record content and hence its deterministic c1a source_id;
-backward source-id preservation is neither possible nor desired.
+Literal decimal-looking margins are provider text and are not an approved universal semantic conversion. Fractions,
+`ハナ`, `アタマ`, `クビ`, and `大差` likewise remain unrepresented by the current Decimal contract. Passing order is
+not a substitute for a fourth-corner value: a two-position sequence such as `9-6` proves only those displayed
+positions. A future support subset may require exactly four explicit positive positions before taking the fourth;
+otherwise it must fail closed.
 
-No c1c change is required. The committed builder already copies entry external_horse_id into
-HistoricalExternalEntryIdentity.external_horse_id. c1d may later compare a historical row's independently verified
-provider identity with that target identity, but d1 itself does not parse historical results.
+Ban'ei remains UNSUPPORTED: its result pages use a different race model and omit the required flat-race corner and
+margin semantics. Same-day multiple starts remain UNSUPPORTED for snapshot assembly because c1c orders only by
+`race_date` and deliberately rejects same-date chronological ambiguity; provider race identity must not silently
+become a chronology tie-breaker.
 
-## Error Policy and Determinism
+## Provider Record and Provenance Decision
 
-A selected supported row missing horseNum, exactly one valid official horse anchor, jockey, or valid positive win odds
-raises NarHistoricalInputSourceValidationError. These are malformed/ambiguous supplied DebaTable bytes at the existing
-c1b validation boundary, not recognized page kinds outside support. Cancellation behavior remains c1b's existing
-fail-closed validation behavior. No row may fall back to external_horse_id=None after d1.
+The historical URL identity plus exactly one matching official horse identity is sufficient to identify one provider
+horse-result row. Subject to later field-contract approval, the deterministic provider-record-ID candidate is:
 
-Same supplied bytes, response URL, and observed_at must yield equal records and source IDs. A different validated lineage
-token changes only the corresponding entry record source_id because only that entry payload changes; track, jockey, and
-odds record payloads and source IDs remain unchanged. HTML outside a selected target row must not affect another row.
+`nar:result:{YYYYMMDD}:{k_babaCode}:{k_raceNo}:horse:{k_lineageLoginCode}`
 
-## Fixture Decision
+It is based only on provider-native race identity and the row's validated provider-native horse identity. It is not a
+URL alone, horse number, name, local ID, source ID, hash, or UUID. Duplicate matching rows or a URL/h4 disagreement
+must fail closed.
 
-A new authentic immutable official fixture is required for the future positive test because the current inline fixture
-contains a horseName anchor with no href. The implementation phase must add exactly one fixture:
+SINGLE_RESPONSE_FACT_PROVENANCE is **INSUFFICIENT for a current c1a past_race**, but the insufficiency is field-domain
+semantics (`race_name`, `margin`, and universal `fourth_corner_position`), not a second-page fact-provenance need.
+The RaceMarkTable itself independently proves its URL race identity, matching lineage identity, and all values it
+actually displays. Therefore `C1A_PROVENANCE_EXTENSION_REQUIRED = NO`: no multi-response provenance extension is
+proposed. `observed_at` must remain the caller-supplied response timestamp; `available_at` is `None` unless an official
+publication timestamp is separately proven. Past-race absence remains UNSUPPORTED because one result page cannot prove
+complete zero-history/pagination scope.
 
-    tests/fixtures/nar/deba_table_target_horse_identity.html
+## Support Matrix
 
-It must be captured from an official NAR DebaTable response, retain at least two horse rows with their official
-HorseMarkInfo anchors and pinned lineage codes, and be used as the positive source-contract proof. It may be minimized
-only by removing unrelated document regions without changing the selected official row structure or hrefs. A
-hand-invented href fixture alone is forbidden.
+| Case | status | reason |
+| --- | --- | --- |
+| normal completed flat RaceMarkTable identity and displayed row facts | NOT_PROVEN as a complete c1a record | three current field-contract gaps remain |
+| positive numeric finish | SUPPORTED evidence | direct `td.a` only |
+| abnormal finish/cancelled state | UNSUPPORTED | no fake positive integer |
+| exact `weight(diff)` display | SUPPORTED evidence | Decimal grammar is direct |
+| 計不 / － / missing weight | UNSUPPORTED | current c1a values cannot be inferred |
+| simple decimal/integer-looking margin | NOT_PROVEN | no universal semantic mapping has been approved |
+| ハナ / アタマ / クビ / fraction / 大差 margin | CONTRACT_GAP | current Decimal domain cannot preserve official semantic form |
+| passing order with explicit four positions | NOT_PROVEN | future exact grammar still needs a dedicated contract decision |
+| passing order absent or fewer than four positions | UNSUPPORTED | no provable `fourth_corner_position` |
+| Ban'ei result | UNSUPPORTED | incompatible corner/margin race variant |
+| same-date multiple start | UNSUPPORTED | c1c chronological ambiguity remains fail-closed |
+| h3 race class/condition on flat page | SUPPORTED evidence | structured nonempty h3, not subtitle |
+| dedicated nonempty race name on ordinary B2 page | CONTRACT_GAP | none was observed |
+| `past_race_absence` | UNSUPPORTED | no complete official zero-history proof |
 
-## Public API and Future Allowed Files
+## Future API, Allowed Files, and Test Plan
 
-Public API change: NO. c1b must retain exactly:
+No c1d production API, implementation module, or implementation Allowed Files are authorized while the three field
+contracts remain unresolved. `NarSuppliedOfficialResponse` is not yet approved for reuse merely by convenience; any
+later response type must make its RaceMarkTable page-kind semantics explicit. No package-root export is proposed.
 
-    NarSuppliedOfficialResponse
-    NarHistoricalInputSourceError
-    NarHistoricalInputSourceValidationError
-    NarHistoricalInputSourceUnsupportedError
-    normalize_nar_historical_input_source_records
+After a field-contract decision, a future supplied-response normalizer must test exact response types/UTF-8, URL-only
+page dispatch, URL/h4/place cross-checks, exactly one matching lineage row, provider-record-ID determinism, row-local
+field ownership, historical-date-before-target enforcement, observed_at preservation, absence rejection, and source
+purity (no HTTP, DB, filesystem, clock, legacy provider/parser, or package-root export). It must also test numeric and
+abnormal finish, all supported/unsupported margin forms, weight grammar, odds/popularity, passing/fourth-corner
+variants, same-day ambiguity, row permutation determinism, and unchanged c1a validation propagation.
 
-All anchor parsing/canonicalization helpers are private. c1b still receives one caller-supplied DebaTable response and
-does no HTTP, urllib, filesystem, database, or legacy provider/parser work.
+## Recommended Next Phase and Stop Condition
 
-Future Allowed Files are exactly:
+Recommend **Phase 4C-2d3b1i6c1d3 — Historical past-race result-field contract preparation**. Its sole purpose is to
+decide the provider-neutral representation/eligibility rules for `race_name`, official margin semantics, and
+`fourth_corner_position`; it must not implement parsing, change provenance, or add past-race extraction. A later c1d
+implementation PREPARE is blocked until that decision is approved.
 
-    scripts/simulation/nar_historical_input_source.py
-    tests/test_nar_historical_input_source.py
-    tests/fixtures/nar/deba_table_target_horse_identity.html
-    docs/CURRENT_PHASE.md
-    docs/LATEST_CODEX_REPORT.md
+Allowed Files for this PREPARE are exactly:
 
-No historical_input_source_records.py, historical_input_snapshot_builder.py, repository, migration, schema, database,
-provider/parser, CLI, package root, or README change is authorized. Any need for another file is REVISION_REQUIRED.
+* `docs/CURRENT_PHASE.md`
+* `docs/LATEST_CODEX_REPORT.md`
 
-## Future Dedicated Test Plan
+No production, test, fixture, migration, schema, database, provider, parser, CLI, README, package export, or original
+workspace change is authorized. Stop at `DRAFT_FOR_REVIEW` for independent design review.
 
-The future test module must prove unchanged public API; a valid official target anchor; exact lexical lineage extraction;
-exact external_horse_id; intentional entry source_id change; unchanged external_entry_id/jockey/odds behavior; multiple
-rows with distinct lineage values; and row-local association between horseNum, anchor, jockey, and odds.
-
-It must reject zero/multiple anchors, wrong HorseMarkInfo path, wrong host, credentials, fragment, unsupported port,
-unknown/missing/duplicate lineage query, blank token, malformed percent escape, sign, whitespace, leading zero,
-non-ASCII digits, scientific notation, and an absolute nonofficial URL. It must cover relative canonicalization and
-official absolute form if the authentic fixture supplies it; it must prove c1a set validation still succeeds, c1c
-propagates the new external_horse_id without c1c modification, no package-root export, and no HTTP/DB/filesystem/
-current-time dependency. The authentic fixture is mandatory for the positive source-contract case.
-
-## Blockers and Stop Condition
-
-d1 implementation is complete and remains unapproved pending independent code review. The only d1 responsibility is target-row
-official horse-identity preservation. It does not solve historical field mapping, race_class, Decimal margins,
-passing/fourth-corner variants, provider-record-ID syntax, past-race normalization, pagination, or absence proof.
-
-blocker: d1 must be approved before c1d can bind a historical RaceMarkTable horse identity to a target external entry;
-past_race_absence remains UNSUPPORTED.
-
-## Implementation Result
-
-The d1 implementation requires one row-local a.horseName[href] for every supported c1b entry row and canonicalizes
-only relative or official absolute HorseMarkInfo URLs to the validated lexical identity
-nar:horse:{k_lineageLoginCode}. The lineage token is never converted to int. Entry records now carry that identity;
-the existing target external_entry_id, track, jockey, and odds payloads remain unchanged. The committed c1a validator
-continues to build source IDs, so entry source IDs intentionally change while non-entry source IDs remain stable.
-
-The positive regression uses the approved official-derived fixture
-tests/fixtures/nar/deba_table_target_horse_identity.html with two official rows and pinned lineage values. Dedicated
-negative cases cover missing/multiple anchors and strict link/token rejection. A c1c regression uses explicit valid
-absence evidence only to prove that external_horse_id propagates unchanged; it does not weaken c1c's normal past-
-evidence requirement.
-
-Verification runtime recovery used the external Python 3.14.5 venv at
-C:\\Users\\garim\\.cache\\keibaos-verification\\d1-py314 with pytest 8.3.5 and tzdata 2026.3. All required pytest
-verification passed: dedicated c1b 11, c1a 8, c1c 12, related historical snapshot/migration/SQLite repository 40,
-and full suite 2447. The forbidden dependency/source/AST check and git diff --check also passed. Status remains
-READY_FOR_REVIEW pending independent review.
-
-## GitHub Review Correction: Source-ID Isolation
-
-GitHub review of d1 implementation commit `86c26816d894fbee98691c9c8f231dee2129503e` approved production,
-the authentic fixture, and horse-identity parsing. No production or fixture change is required. The dedicated suite
-now pins deterministic selective c1a source-ID isolation: changing only entry 1's valid
-`k_lineageLoginCode` changes only that entry record's `external_horse_id` and `source_id`.
-
-The regression proves that the track record, entry 1's jockey and odds-win records, and every entry/jockey/odds
-record for untouched entry 2 retain exactly equal record payloads and source IDs. It also proves the selected
-entry's `external_entry_id` remains unchanged and that the sole changed committed record payload value is
-`external_horse_id`. It does not reintroduce `external_horse_id=None` output or alter c1a/c1c behavior.
-
-Verification with external Python 3.14.5 / pytest 8.3.5 / tzdata 2026.3 passed: d1 dedicated 12, c1a 8, c1c 12,
-historical snapshot/migration/SQLite repository regressions 40, full suite 2448, and the forbidden
-dependency/source/AST check. `git diff --check` passed. Status remains READY_FOR_REVIEW pending independent review.
+blocker: current c1a past_race requires semantic race_name, Decimal margin, and fourth_corner_position values that a
+normal RaceMarkTable cannot universally prove without an approved field-contract decision.

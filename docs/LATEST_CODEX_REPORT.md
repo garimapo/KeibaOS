@@ -2950,3 +2950,37 @@ past-race, and provenance tuple orders. Status remains `DRAFT_FOR_REVIEW`; imple
 
 blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
 assembled from its DebaTable-only output.
+
+## Phase 4C-2d3b1i6c1d2 PREPARE — NAR Historical RaceMarkTable Field Semantics
+
+Formal d1 is complete at `2b6d389b4296be2f6749b71fc4ed827f244ce570`. d2 is documentation-only and investigates
+whether one supplied official NAR RaceMarkTable response can independently yield a current c1a `past_race` record.
+No production, test, fixture, schema, migration, database, provider, parser, CLI, or original-workspace file changed.
+
+Official NAR RaceMarkTable pages for Morioka, Monbetsu, and Ban'ei were inspected. The flat-race page URL has the
+exact `k_babaCode`, `k_raceDate`, and `k_raceNo` identity grammar; the result h4 and active course cross-check the
+race. A row-local `td.d.horseName` HorseMarkInfo anchor supplies the same `k_lineageLoginCode` frozen by d1, so exactly
+one matching `nar:horse:{code}` can independently bind the historical result row to the target horse without name or
+horse-number matching.
+
+The page directly evidences race date/place, h3 class/condition, distance/surface/weather/condition, numeric completed
+finish, time, exact `weight(diff)`, jockey, popularity, odds, and present passing-order text. It does not universally
+provide a distinct nonempty `race_name`; winner/other margin cells can be blank, numeric, fraction, or Japanese
+semantic labels; and a row with fewer than four displayed corner positions cannot prove c1a's
+`fourth_corner_position`.
+
+Therefore `RACE_CLASS_STATUS = PROVEN` for normal flat page h3 content, while `race_name`, `margin`, and universal
+`fourth_corner_position` are current field-contract gaps. The proposed provider-native identity is
+`nar:result:{YYYYMMDD}:{k_babaCode}:{k_raceNo}:horse:{k_lineageLoginCode}`, contingent on later field-contract
+approval. `SINGLE_RESPONSE_FACT_PROVENANCE = INSUFFICIENT` for the current c1a schema only because of those field
+semantics; it does not establish a need for another fact page. `C1A_PROVENANCE_EXTENSION_REQUIRED = NO`.
+
+Ban'ei, abnormal result/weight states, absent or non-four-position corner order, same-day multiple starts, and
+past-race absence remain unsupported. The recommended next phase is `Phase 4C-2d3b1i6c1d3 — Historical past-race
+result-field contract preparation`, limited to race-name, margin, and fourth-corner contract decisions before any
+c1d normalizer can be authorized.
+
+Status: `DRAFT_FOR_REVIEW`.
+
+blocker: current c1a past_race requires semantic race_name, Decimal margin, and fourth_corner_position values that a
+normal RaceMarkTable cannot universally prove without an approved field-contract decision.
