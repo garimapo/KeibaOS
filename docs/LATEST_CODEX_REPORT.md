@@ -2,7 +2,7 @@
 
 ## Status
 
-PHASE_4C_2D3B1I6C1B_READY_FOR_REVIEW
+PHASE_4C_2D3B1I6C1C_DRAFT_FOR_REVIEW
 
 ## Previous Formal Phase
 
@@ -2715,3 +2715,32 @@ git diff --check: success
 
 Status remains `PHASE_4C_2D3B1I6C1B_READY_FOR_REVIEW`. The remaining blocker is unchanged: no persisted supplied
 official NAR capture corpus exists, so c1b cannot create past-race or past-race-absence records.
+
+## Phase 4C-2d3b1i6c1c Preparation
+
+Phase c1b is formally complete at `f6a72be9e9a6934cfa48c6b0ff41954fb7d51de1` on
+`feature/ver0.8-simulator`. c1c is `DRAFT_FOR_REVIEW` and is documentation-only: no production, test, migration,
+schema, repository, database, log, README, CLI, or original-workspace file changed.
+
+Read-only investigation confirms that c1a validates individual immutable source records and source IDs, while the
+existing historical snapshot domain owns the immutable output schema, audit-key completeness, and content digest.
+The new proposed boundary is a single pure keyword-only builder from an exact tuple of c1a records plus explicit
+dataset/race/cutoff/capture inputs and an explicit external-entry to local-race-entry mapping.
+
+The preparation freezes these design decisions for review:
+
+- call the c1a set validator first and propagate its validation/conflict errors unchanged;
+- require one source family, one track, full entry/jockey/odds triples, and exactly one form of past evidence per entry;
+- use the sole track URL as snapshot-level primary source URL without requiring non-track URL equality;
+- require a complete, exact, positive, unique caller mapping rather than DB lookup or horse-number fallback;
+- order entries by horse number ascending and past races by strictly unique race date descending;
+- map each immutable source record one-to-one to the established provenance key shape and preserve its exact source ID/timestamps;
+- require every source stamp to be no later than both captured_at and information_cutoff;
+- reject c1b DebaTable-only output because missing history is not absence proof.
+
+The proposed implementation remains one new module, `historical_input_snapshot_builder.py`, one dedicated test
+module, and the two phase documents. It has no repository/schema/migration or package-export change. The single
+open blocker is complete official past-race or valid c1a absence evidence for every entry; c1c must not fabricate it.
+
+blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
+assembled from its DebaTable-only output.
