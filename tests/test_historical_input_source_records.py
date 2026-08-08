@@ -333,6 +333,44 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
         self.assertTrue(one.source_id.startswith("his-v2:odds_win:"))
         self.assertEqual(len(one.source_id.rsplit(":", 1)[1]), 64)
 
+    def test_v2_past_race_factual_change_isolated_to_its_source_id(self) -> None:
+        baseline = (
+            _record("track"),
+            _record("entry"),
+            _record("jockey"),
+            _record("odds_win"),
+            _record("past_race"),
+        )
+        changed_values = _values("past_race")
+        changed_values["reference_time_difference_seconds"] = Decimal("0.2")
+        changed_past_race = _record("past_race", record_values=changed_values)
+        changed = baseline[:-1] + (changed_past_race,)
+
+        self.assertEqual(validate_historical_input_source_record_set(records=baseline), baseline)
+        self.assertEqual(validate_historical_input_source_record_set(records=changed), changed)
+        for record in baseline + changed:
+            self.assertEqual(record.schema_version, 2)
+            self.assertTrue(record.source_id.startswith(f"his-v2:{record.record_kind}:"))
+
+        for original, replacement in zip(baseline[:-1], changed[:-1], strict=True):
+            self.assertEqual(original.source_id, replacement.source_id)
+            self.assertEqual(
+                canonical_historical_input_source_payload(record=original),
+                canonical_historical_input_source_payload(record=replacement),
+            )
+
+        baseline_past = baseline[-1]
+        self.assertNotEqual(baseline_past.source_id, changed_past_race.source_id)
+        before = canonical_historical_input_source_payload(record=baseline_past)
+        after = canonical_historical_input_source_payload(record=changed_past_race)
+        self.assertEqual({key: value for key, value in before.items() if key != "record_values"}, {key: value for key, value in after.items() if key != "record_values"})
+        self.assertEqual(
+            {key: value for key, value in before["record_values"].items() if key != "reference_time_difference_seconds"},
+            {key: value for key, value in after["record_values"].items() if key != "reference_time_difference_seconds"},
+        )
+        self.assertEqual(before["record_values"]["reference_time_difference_seconds"], "0")
+        self.assertEqual(after["record_values"]["reference_time_difference_seconds"], "0.2")
+
     def test_conflicts_and_set_order(self) -> None:
         track = _record("track")
         entry = _record("entry")

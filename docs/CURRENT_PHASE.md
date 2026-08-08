@@ -233,7 +233,14 @@ store before mutation, while preserving identity/linkage rows when that snapshot
 The builder and SQLite repository use only the renamed exact Decimal field. No legacy margin fallback, source
 parser, provider, network, filesystem, clock, AbilityEngine, PaceEngine, or fourth-corner behavior was changed.
 
+The final review correction adds two test-only contract regressions without production changes: within schema v2, a
+change only to one past-race reference_time_difference_seconds changes only that past-race source ID and canonical
+record payload; and HistoricalPastRaceSnapshot itself accepts Decimal zero but rejects int, bool, float, negative,
+NaN, and infinite values. The public snapshot field remains reference_time_difference_seconds and has no margin
+attribute or compatibility path.
+
 The explicitly approved scope extension updated only the two stale global migration-registry expectation test files.
 External Python 3.14.5 / pytest 8.3.5 verification now passes: added bet-plan regression 17, added persisted
-application regression 8, d3a targeted suites 96, and full suite 2450. Status is READY_FOR_REVIEW pending
+application regression 8, final c1a regression 9, final snapshot-domain regression 16, d3a targeted suites 97, and
+full suite 2451. Status is READY_FOR_REVIEW pending
 independent ChatGPT code review.

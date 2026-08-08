@@ -2917,6 +2917,24 @@ passed. The forbidden dependency/source check passed and `git diff --check` pass
 
 blocker: none for d3a implementation verification; d3b multi-source evidence/provenance work remains unstarted.
 
+## Phase 4C-2d3b1i6c1d3a Final Regression Correction
+
+GitHub implementation review of `001c2e77b759fa7c420f38176abd3fea8c9ce82c` approved production and required two
+test-only contract pins. The c1a suite now proves within-v2 past-race-only source isolation: changing only
+`reference_time_difference_seconds` changes only that past-race source ID/payload; track, entry, jockey, and odds
+records retain equal v2 payloads and source IDs, and both record sets validate independently.
+
+The snapshot-domain suite now independently proves that `HistoricalPastRaceSnapshot` accepts Decimal zero and rejects
+int, bool, float, negative Decimal, NaN, and infinities at its own dataclass boundary. It also pins the public new
+field and absence of a `margin` compatibility attribute. No production, migration, fixture, or scope-extension test
+changed in this correction.
+
+External Python 3.14.5 / pytest 8.3.5 verification passed: c1a 9, snapshot domain 16, complete d3a targeted set 97,
+and full suite 2451. Forbidden dependency/source checking and `git diff --check` passed. Status remains
+`PHASE_4C_2D3B1I6C1D3A_READY_FOR_REVIEW` pending independent ChatGPT re-review.
+
+blocker: none for d3a implementation verification; d3b remains unstarted.
+
 ## Phase 4C-2d3b1i6c1d1 Source-ID Isolation Review Correction
 
 GitHub implementation review of `86c26816d894fbee98691c9c8f231dee2129503e` approved the d1 production module,

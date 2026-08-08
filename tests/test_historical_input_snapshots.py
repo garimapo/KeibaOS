@@ -243,6 +243,11 @@ class HistoricalInputSnapshotsTest(unittest.TestCase):
         past = _past(passing_order="")
         self.assertEqual(past.passing_order, "")
         self.assertEqual(past.reference_time_difference_seconds, Decimal("0"))
+        self.assertFalse(hasattr(past, "margin"))
+        for invalid in (0, True, 0.0, Decimal("-0.01"), Decimal("NaN"), Decimal("Infinity"), Decimal("-Infinity")):
+            with self.subTest(reference_time_difference_seconds=invalid):
+                with self.assertRaises(ValueError):
+                    replace(past, reference_time_difference_seconds=invalid)
         self.assertEqual(past.weight, Decimal("480"))
 
     def test_provenance_shape_timestamp_and_input_audit_compatibility(self) -> None:
