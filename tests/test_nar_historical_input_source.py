@@ -4,10 +4,15 @@ import ast
 from datetime import datetime, timezone
 from decimal import Decimal
 import inspect
+from pathlib import Path
 import unittest
 
 from scripts.simulation.historical_input_source_records import (
+    HistoricalInputSourceRecord,
     validate_historical_input_source_record_set,
+)
+from scripts.simulation.historical_input_snapshot_builder import (
+    build_historical_input_snapshot,
 )
 from scripts.simulation.nar_historical_input_source import (
     NarHistoricalInputSourceError,
@@ -33,11 +38,18 @@ WEATHER = "\u6674"
 CONDITION = "\u826f"
 
 
-def _row(horse_no: int, jockey: str, odds: str) -> str:
+def _row(
+    horse_no: int,
+    jockey: str,
+    odds: str,
+    lineage_code: str | None = None,
+) -> str:
+    if lineage_code is None:
+        lineage_code = f"3000000000{horse_no}"
     return f"""
     <tr>
       <td class="horseNum">{horse_no}</td>
-      <td><a class="horseName">Horse</a></td>
+      <td><a class="horseName" href="../DataRoom/HorseMarkInfo?k_lineageLoginCode={lineage_code}">Horse</a></td>
       <td><a class="jockeyName">{jockey}<span class="jockeyarea">Team</span></a></td>
       <td class="odds_weight"><span class="odds_Black">{odds}</span></td>
     </tr>
@@ -83,6 +95,25 @@ def _response(**changes: object) -> NarSuppliedOfficialResponse:
     }
     values.update(changes)
     return NarSuppliedOfficialResponse(**values)
+
+
+FIXTURE_PATH = Path(__file__).parent / "fixtures" / "nar" / "deba_table_target_horse_identity.html"
+FIXTURE_URL = (
+    "https://www.keiba.go.jp/KeibaWeb/TodayRaceInfo/DebaTable?"
+    "k_babaCode=19&k_raceDate=2026%2F07%2F04&k_raceNo=11"
+)
+
+
+def _fixture_response(
+    *,
+    observed_at: datetime = datetime(2026, 7, 4, 10, 0, tzinfo=timezone.utc),
+) -> NarSuppliedOfficialResponse:
+    return NarSuppliedOfficialResponse(
+        response_url=FIXTURE_URL,
+        response_body=FIXTURE_PATH.read_bytes(),
+        charset="utf-8",
+        observed_at=observed_at,
+    )
 
 
 class NarHistoricalInputSourceTests(unittest.TestCase):
@@ -169,7 +200,7 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
         self.assertEqual(track.available_at, None)
         self.assertEqual(track.observed_at, OBSERVED)
         self.assertEqual(result[1].external_entry_id, "nar:20260716:32:10:entry:1")
-        self.assertEqual(result[1].record_values["external_horse_id"], None)
+        self.assertEqual(result[1].record_values["external_horse_id"], "nar:horse:30000000001")
         self.assertEqual(result[2].record_values["jockey"], "Rider One")
         self.assertEqual(result[3].record_values["win_odds"], Decimal("2"))
         self.assertEqual(result[6].record_values["win_odds"], Decimal("3.5"))
@@ -178,6 +209,155 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
         self.assertEqual(
             [item.source_id for item in result],
             [item.source_id for item in repeated],
+        )
+
+    def test_authentic_target_horse_fixture_is_row_local_and_propagates_to_c1c(self) -> None:
+        response = _fixture_response()
+        result = normalize_nar_historical_input_source_records(response=response)
+        entries = tuple(record for record in result if record.record_kind == "entry")
+        jockeys = tuple(record for record in result if record.record_kind == "jockey")
+        odds = tuple(record for record in result if record.record_kind == "odds_win")
+        self.assertEqual(
+            [
+                (
+                    record.record_values["horse_no"],
+                    record.external_entry_id,
+                    record.record_values["external_horse_id"],
+                )
+                for record in entries
+            ],
+            [
+                (1, "nar:20260704:19:11:entry:1", "nar:horse:30036406666"),
+                (2, "nar:20260704:19:11:entry:2", "nar:horse:30038401876"),
+            ],
+        )
+        self.assertEqual(
+            [record.record_values["jockey"] for record in jockeys],
+            ["野畑凌", "實川純"],
+        )
+        self.assertEqual(
+            [record.record_values["win_odds"] for record in odds],
+            [Decimal("39.2"), Decimal("213.1")],
+        )
+        old_entry = HistoricalInputSourceRecord(
+            record_kind="entry",
+            organization=entries[0].organization,
+            source_system=entries[0].source_system,
+            external_race_id=entries[0].external_race_id,
+            external_entry_id=entries[0].external_entry_id,
+            canonical_source_url=entries[0].canonical_source_url,
+            provider_record_id=None,
+            record_values={
+                "external_entry_id": entries[0].external_entry_id,
+                "external_horse_id": None,
+                "horse_no": 1,
+            },
+            available_at=None,
+            observed_at=response.observed_at,
+        )
+        self.assertNotEqual(entries[0].source_id, old_entry.source_id)
+        absence_records = tuple(
+            HistoricalInputSourceRecord(
+                record_kind="past_race_absence",
+                organization=entry.organization,
+                source_system=entry.source_system,
+                external_race_id=entry.external_race_id,
+                external_entry_id=entry.external_entry_id,
+                canonical_source_url=entry.canonical_source_url,
+                provider_record_id=None,
+                record_values={
+                    "external_entry_id": entry.external_entry_id,
+                    "query_scope": {
+                        "external_entry_id": entry.external_entry_id,
+                        "target_race_date": result[0].record_values["target_race_date"],
+                        "strictly_before_target_race": True,
+                    },
+                    "result_count": 0,
+                },
+                available_at=None,
+                observed_at=response.observed_at,
+            )
+            for entry in entries
+        )
+        snapshot = build_historical_input_snapshot(
+            dataset_id="fixture-dataset",
+            internal_race_id=1,
+            captured_at=datetime(2026, 7, 4, 10, 30, tzinfo=timezone.utc),
+            information_cutoff=datetime(2026, 7, 4, 10, 45, tzinfo=timezone.utc),
+            source_records=result + absence_records,
+            race_entry_id_by_external_entry_id={
+                "nar:20260704:19:11:entry:1": 101,
+                "nar:20260704:19:11:entry:2": 102,
+            },
+        )
+        self.assertEqual(
+            [entry.external_entry_identity.external_horse_id for entry in snapshot.entries],
+            ["nar:horse:30036406666", "nar:horse:30038401876"],
+        )
+        self.assertEqual(
+            result,
+            normalize_nar_historical_input_source_records(response=_fixture_response()),
+        )
+
+    def test_horse_anchor_href_contract_fails_closed_and_keeps_lexical_tokens(self) -> None:
+        default_href = "../DataRoom/HorseMarkInfo?k_lineageLoginCode=30000000001"
+        invalid_hrefs = (
+            "../DataRoom/HorseMarkInfo",
+            "../DataRoom/HorseMarkInfo?k_other=1",
+            "../DataRoom/HorseMarkInfo?k_lineageLoginCode=1&k_lineageLoginCode=2",
+            "../DataRoom/HorseMarkInfo?k_lineageLoginCode=",
+            "../DataRoom/HorseMarkInfo?k_lineageLoginCode=0",
+            "../DataRoom/HorseMarkInfo?k_lineageLoginCode=01",
+            "../DataRoom/HorseMarkInfo?k_lineageLoginCode=+1",
+            "../DataRoom/HorseMarkInfo?k_lineageLoginCode=-1",
+            "../DataRoom/HorseMarkInfo?k_lineageLoginCode=1%202",
+            "../DataRoom/HorseMarkInfo?k_lineageLoginCode=%EF%BC%91",
+            "../DataRoom/HorseMarkInfo?k_lineageLoginCode=1.0",
+            "../DataRoom/HorseMarkInfo?k_lineageLoginCode=1e2",
+            "../DataRoom/HorseMarkInfo?k_lineageLoginCode=1%2G",
+            "../DataRoom/Other?k_lineageLoginCode=1",
+            "https://example.test/KeibaWeb/DataRoom/HorseMarkInfo?k_lineageLoginCode=1",
+            "http://www.keiba.go.jp/KeibaWeb/DataRoom/HorseMarkInfo?k_lineageLoginCode=1",
+            "https://x:y@www.keiba.go.jp/KeibaWeb/DataRoom/HorseMarkInfo?k_lineageLoginCode=1",
+            "https://www.keiba.go.jp:444/KeibaWeb/DataRoom/HorseMarkInfo?k_lineageLoginCode=1",
+            "https://www.keiba.go.jp/KeibaWeb/DataRoom/HorseMarkInfo?k_lineageLoginCode=1#fragment",
+        )
+        for href in invalid_hrefs:
+            with self.subTest(href=href):
+                body = _body(rows=_row(1, "Rider", "2").replace(default_href, href))
+                with self.assertRaises(NarHistoricalInputSourceValidationError):
+                    normalize_nar_historical_input_source_records(response=_response(response_body=body))
+        no_anchor = _body(
+            rows=_row(1, "Rider", "2").replace(f' href="{default_href}"', ""),
+        )
+        multiple_anchors = _body(
+            rows=_row(1, "Rider", "2").replace(
+                "</a></td>",
+                f'</a><a class="horseName" href="{default_href}">Other</a></td>',
+                1,
+            ),
+        )
+        for body in (no_anchor, multiple_anchors):
+            with self.subTest(body=body[:40]):
+                with self.assertRaises(NarHistoricalInputSourceValidationError):
+                    normalize_nar_historical_input_source_records(response=_response(response_body=body))
+        absolute = _body(
+            rows=_row(1, "Rider", "2").replace(
+                default_href,
+                "https://www.keiba.go.jp/KeibaWeb/DataRoom/HorseMarkInfo?k_lineageLoginCode=30000000001",
+            ),
+        )
+        self.assertEqual(
+            normalize_nar_historical_input_source_records(response=_response(response_body=absolute))[1]
+            .record_values["external_horse_id"],
+            "nar:horse:30000000001",
+        )
+        huge = "9" * 10000
+        huge_body = _body(rows=_row(1, "Rider", "2", huge))
+        self.assertEqual(
+            normalize_nar_historical_input_source_records(response=_response(response_body=huge_body))[1]
+            .record_values["external_horse_id"],
+            f"nar:horse:{huge}",
         )
 
     def test_subtitle_never_becomes_race_class_and_place_cross_checks(self) -> None:
