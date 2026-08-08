@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import ast
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone, tzinfo
 from decimal import Decimal
 import inspect
 from typing import get_type_hints
@@ -28,6 +28,14 @@ CUTOFF = datetime(2026, 8, 5, 12, 0, tzinfo=UTC)
 START = datetime(2026, 8, 5, 15, 30, tzinfo=UTC)
 RACE_DATE = date(2026, 8, 5)
 RACE_ID = "nar:20260805:1:1"
+
+
+class _ValueErrorTimezone(tzinfo):
+    def utcoffset(self, value: datetime | None) -> timedelta:
+        raise ValueError("malformed timezone")
+
+    def dst(self, value: datetime | None) -> timedelta:
+        return timedelta(0)
 
 
 def _track_values() -> dict[str, object]:
@@ -231,7 +239,7 @@ class HistoricalInputSnapshotBuilderTests(unittest.TestCase):
     def test_exact_tuple_c1a_error_and_top_level_validation(self) -> None:
         records = _complete_records()
         with self.assertRaises(HistoricalInputSnapshotAssemblyError):
-            _build(records) if False else build_historical_input_snapshot(
+            build_historical_input_snapshot(
                 dataset_id="dataset", internal_race_id=1, information_cutoff=CUTOFF, captured_at=CAPTURED,
                 source_records=list(records), race_entry_id_by_external_entry_id={"entry-a": 20, "entry-b": 10},
             )
@@ -243,6 +251,15 @@ class HistoricalInputSnapshotBuilderTests(unittest.TestCase):
                     _build(**{name: value})
         with self.assertRaises(HistoricalInputSnapshotAssemblyError):
             _build(mapping={"entry-a": True, "entry-b": 10})
+        for mapping in (
+            "not-a-mapping",
+            {1: 20, "entry-b": 10},
+            {"entry-a": 0, "entry-b": 10},
+            {"entry-a": -1, "entry-b": 10},
+        ):
+            with self.subTest(mapping=mapping):
+                with self.assertRaises(HistoricalInputSnapshotAssemblyError):
+                    _build(mapping=mapping)
         bad = tuple(object() if index == 0 else record for index, record in enumerate(records))
         with self.assertRaises(HistoricalInputSourceValidationError):
             build_historical_input_snapshot(
@@ -253,6 +270,14 @@ class HistoricalInputSnapshotBuilderTests(unittest.TestCase):
                 source_records=bad,
                 race_entry_id_by_external_entry_id={"entry-a": 20, "entry-b": 10},
             )
+
+    def test_malformed_timezone_is_assembler_error_for_both_caller_timestamps(self) -> None:
+        malformed = datetime(2026, 8, 5, 10, 0, tzinfo=_ValueErrorTimezone())
+        for name in ("captured_at", "information_cutoff"):
+            with self.subTest(name=name):
+                with self.assertRaises(HistoricalInputSnapshotAssemblyError) as context:
+                    _build(**{name: malformed})
+                self.assertIs(type(context.exception), HistoricalInputSnapshotAssemblyError)
 
     def test_grouping_mapping_and_horse_number_fail_closed(self) -> None:
         records = _complete_records()
@@ -302,6 +327,8 @@ class HistoricalInputSnapshotBuilderTests(unittest.TestCase):
     def test_temporal_past_evidence_and_absence_rules_fail_closed(self) -> None:
         with self.assertRaises(HistoricalInputSnapshotAssemblyError):
             _build(information_cutoff=CAPTURED - timedelta(seconds=1))
+        with self.assertRaises(HistoricalInputSnapshotAssemblyError):
+            _build(information_cutoff=START + timedelta(seconds=1))
         late = tuple(
             _record(
                 record.record_kind,
@@ -396,6 +423,13 @@ class HistoricalInputSnapshotBuilderTests(unittest.TestCase):
         }
         for fragment in forbidden:
             self.assertNotIn(fragment, source)
+        handlers = [node for node in ast.walk(tree) if isinstance(node, ast.ExceptHandler)]
+        self.assertEqual(len(handlers), 1)
+        self.assertIsInstance(handlers[0].type, ast.Tuple)
+        self.assertEqual(
+            {item.id for item in handlers[0].type.elts if isinstance(item, ast.Name)},
+            {"TypeError", "ValueError", "OverflowError"},
+        )
 
 
 if __name__ == "__main__":

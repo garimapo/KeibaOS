@@ -236,3 +236,15 @@ provides complete official past-race records or exact c1a absence proof for ever
 
 blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
 assembled from its DebaTable-only output.
+
+## Implementation Review Validation-boundary Correction
+
+The shared caller-datetime awareness helper now guards `tzinfo.utcoffset()` only for `TypeError`, `ValueError`, and
+`OverflowError`. Such malformed caller-supplied timezone implementations now raise exact
+`HistoricalInputSnapshotAssemblyError` for both `captured_at` and `information_cutoff`; UTC is not substituted and no
+broad exception handling is used. Dedicated regressions also pin cutoff later than scheduled start, a non-Mapping
+mapping, non-string mapping keys, and zero/negative mapping values.
+
+Codex local verification with Python 3.14.5 / pytest 8.3.5 / tzdata 2026.3: dedicated c1c 12 passed; c1a 8 passed;
+snapshot domain 16 passed; SQLite/migration regression 46 passed; full suite 2445 passed; forbidden source/AST check
+passed; `git diff --check` passed. Status remains `READY_FOR_REVIEW` pending independent GitHub re-review.

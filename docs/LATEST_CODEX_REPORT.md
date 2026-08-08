@@ -2745,6 +2745,36 @@ open blocker is complete official past-race or valid c1a absence evidence for ev
 blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
 assembled from its DebaTable-only output.
 
+## Phase 4C-2d3b1i6c1c Implementation Review Validation-boundary Correction
+
+GitHub implementation review of `64865f2ec62a54c424fedfc16bde7e16cf679552` required one fail-closed caller
+datetime correction. The shared exact-datetime helper now catches only `TypeError`, `ValueError`, and `OverflowError`
+raised while evaluating `tzinfo.utcoffset()`, then raises exact `HistoricalInputSnapshotAssemblyError`. The existing
+exact-type and awareness requirements are retained; no UTC substitution, current time, repair, or broad exception
+handler was added. Dedicated regressions cover a deterministic custom `tzinfo` raising `ValueError` for both
+`captured_at` and `information_cutoff`.
+
+The correction also explicitly pins `information_cutoff > scheduled_start_at`, non-Mapping mappings, non-string
+mapping keys, and zero/negative local race-entry IDs. All source grouping, completeness, source URL, provenance,
+past evidence, and deterministic ordering contracts remain unchanged.
+
+Codex local verification with Python 3.14.5 / pytest 8.3.5 / tzdata 2026.3:
+
+```text
+Dedicated c1c: 12 passed
+c1a source records: 8 passed
+Snapshot domain: 16 passed
+SQLite/migration regression: 46 passed
+Full suite: 2445 passed
+Forbidden dependency/source/AST check: passed
+git diff --check: success
+```
+
+Status remains `READY_FOR_REVIEW`; formal integration has not occurred.
+
+blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
+assembled from its DebaTable-only output.
+
 ## Phase 4C-2d3b1i6c1c Implementation
 
 The approved PREPARE contract from `20b7fb24c4772d7a12e5d8d6356000a3331f5d56` was materialized on

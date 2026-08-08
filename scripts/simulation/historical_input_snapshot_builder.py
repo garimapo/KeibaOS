@@ -45,7 +45,11 @@ def _require_positive_int(value: object, name: str) -> int:
 def _require_aware_datetime(value: object, name: str) -> _datetime:
     if type(value) is not _datetime:
         raise _error(f"{name} must be datetime")
-    if value.tzinfo is None or value.utcoffset() is None:
+    try:
+        aware = value.tzinfo is not None and value.utcoffset() is not None
+    except (TypeError, ValueError, OverflowError) as error:
+        raise _error(f"{name} must be timezone-aware") from error
+    if not aware:
         raise _error(f"{name} must be timezone-aware")
     return value
 
