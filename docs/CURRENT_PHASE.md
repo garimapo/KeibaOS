@@ -84,10 +84,18 @@ external_race_id)` across every record and exactly one `track` record. It constr
     HistoricalExternalEntryIdentity(external_race_identity, external_entry_id, external_horse_id)
     HistoricalInputSnapshotIdentity(dataset_id, source_identity, captured_at)
 
-`source_url` is exactly the non-null canonical URL of the sole track record: it is the primary target-race source
-URL. Non-track records are not required to share that URL and no non-track URL is discarded or rewritten; their own
-immutable c1a `source_id` remains the provenance reference. A missing track URL fails closed because c1c cannot
-construct a target-race snapshot source identity.
+The sole track record determines the snapshot-level source URL without adding a provider-neutral URL requirement:
+
+    track.canonical_source_url is non-null -> HistoricalSourceIdentity.source_url is that exact URL
+    track.canonical_source_url is None     -> HistoricalSourceIdentity.source_url is None
+
+Both forms are valid; c1c must not fail solely because the track record has no canonical source URL. It must never
+synthesize a URL from non-track records, provider_record_id, source_id, external_race_id, local database rows, or
+legacy race URLs. Non-track records are not required to share the track URL. Their canonical_source_url values remain
+in their immutable c1a payloads and therefore participate in each exact c1a `source_id`; provenance continues to
+carry that exact `source_id`, not a duplicated URL. The committed c1a requirement that a past_race_absence record has
+its own non-null canonical_source_url is unchanged; c1c consumes that already-validated record and adds no absence
+URL validation algorithm.
 
 ## Complete Source-set Policy
 
@@ -194,7 +202,8 @@ main/CLI, and package exports are forbidden. A required change outside these fou
 
 The dedicated suite must cover the exact public surface/type hints; complete valid source set; caller tuple-order
 independence; exactly one track; family/race consistency; full entry/jockey/odds triples; horse-number consistency;
-mapping completeness/type/uniqueness; canonical entry order; exact source URL policy; exact provenance keys/source
+mapping completeness/type/uniqueness; canonical entry order; track source URL selection with both a non-null URL and
+None as valid outcomes; non-track URL nonselection and differing non-track URL invariance; exact provenance keys/source
 IDs/timestamps; track/entry/past field mapping; captured/cutoff/start causal rules; multiple past races; valid absence;
 past-and-absence conflict; missing evidence; same-date past ambiguity; c1b-only DebaTable rejection; deterministic
 content hash; no DB/network/filesystem/clock/legacy dependency; and package-root non-export.
