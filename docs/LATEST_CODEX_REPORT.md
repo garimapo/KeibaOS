@@ -2884,6 +2884,33 @@ past-race-absence evidence, so a complete snapshot still requires a later suppli
 blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
 assembled from its DebaTable-only output.
 
+## Phase 4C-2d3b1i6c1d1 Source-ID Isolation Review Correction
+
+GitHub implementation review of `86c26816d894fbee98691c9c8f231dee2129503e` approved the d1 production module,
+authentic official fixture, and HorseMarkInfo parsing. The sole required correction is a dedicated deterministic
+source-ID isolation regression; production and the fixture remain unchanged.
+
+Starting with a valid two-entry supplied DebaTable response, the regression changes only entry 1's valid
+`k_lineageLoginCode` from `30000000001` to `30000000999`. It proves that only entry 1's c1a entry payload
+`external_horse_id` and entry `source_id` change. The target-race URL, horse number, jockey, odds, track facts,
+entry 2 identity, and observed_at remain unchanged. It explicitly proves equal track source ID, equal selected-entry
+jockey and odds-win source IDs, and equal entry/jockey/odds payloads and source IDs for entry 2.
+
+Verification using external Python 3.14.5 / pytest 8.3.5 / tzdata 2026.3:
+
+```text
+Dedicated d1: 12 passed
+c1a: 8 passed
+c1c: 12 passed
+Historical snapshot/migration/SQLite repository regressions: 40 passed
+Full suite: 2448 passed
+Forbidden dependency/source/AST check: passed
+git diff --check: success
+```
+
+Status remains `PHASE_4C_2D3B1I6C1D1_READY_FOR_REVIEW`; the correction is pending independent ChatGPT review and
+must not be integrated into the formal branch.
+
 ## Phase 4C-2d3b1i6c1c Source URL Policy Revision
 
 GitHub design review of `3c64a809bc015bee494dd4c97a6cdc67f4ffb8a2` found that c1c must preserve the committed

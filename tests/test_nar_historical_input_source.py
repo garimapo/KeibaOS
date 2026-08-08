@@ -299,6 +299,100 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
             normalize_nar_historical_input_source_records(response=_fixture_response()),
         )
 
+    def test_lineage_change_isolates_only_the_selected_entry_source_id(self) -> None:
+        baseline = normalize_nar_historical_input_source_records(response=_response())
+        changed = normalize_nar_historical_input_source_records(
+            response=_response(
+                response_body=_body(
+                    rows=(
+                        _row(2, "Rider Two", "3.5")
+                        + _row(1, "Rider One", "2.0", "30000000999")
+                    ),
+                ),
+            ),
+        )
+
+        def records_by_kind_and_entry(
+            records: tuple[HistoricalInputSourceRecord, ...],
+        ) -> dict[tuple[str, str | None], HistoricalInputSourceRecord]:
+            return {
+                (record.record_kind, record.external_entry_id): record
+                for record in records
+            }
+
+        baseline_by_key = records_by_kind_and_entry(baseline)
+        changed_by_key = records_by_kind_and_entry(changed)
+        selected_entry_id = "nar:20260716:32:10:entry:1"
+        untouched_entry_id = "nar:20260716:32:10:entry:2"
+        selected_key = ("entry", selected_entry_id)
+
+        self.assertEqual(
+            baseline_by_key[selected_key].record_values["external_entry_id"],
+            selected_entry_id,
+        )
+        self.assertEqual(
+            changed_by_key[selected_key].record_values["external_entry_id"],
+            selected_entry_id,
+        )
+        self.assertEqual(
+            baseline_by_key[selected_key].record_values["external_horse_id"],
+            "nar:horse:30000000001",
+        )
+        self.assertEqual(
+            changed_by_key[selected_key].record_values["external_horse_id"],
+            "nar:horse:30000000999",
+        )
+        self.assertNotEqual(
+            baseline_by_key[selected_key].source_id,
+            changed_by_key[selected_key].source_id,
+        )
+
+        self.assertEqual(
+            baseline_by_key[("track", None)].record_values,
+            changed_by_key[("track", None)].record_values,
+        )
+        self.assertEqual(
+            baseline_by_key[("track", None)].source_id,
+            changed_by_key[("track", None)].source_id,
+        )
+        for record_kind in ("jockey", "odds_win"):
+            selected_key = (record_kind, selected_entry_id)
+            self.assertEqual(
+                baseline_by_key[selected_key].record_values,
+                changed_by_key[selected_key].record_values,
+            )
+            self.assertEqual(
+                baseline_by_key[selected_key].source_id,
+                changed_by_key[selected_key].source_id,
+            )
+        for record_kind in ("entry", "jockey", "odds_win"):
+            untouched_key = (record_kind, untouched_entry_id)
+            self.assertEqual(
+                baseline_by_key[untouched_key].record_values,
+                changed_by_key[untouched_key].record_values,
+            )
+            self.assertEqual(
+                baseline_by_key[untouched_key].source_id,
+                changed_by_key[untouched_key].source_id,
+            )
+
+        self.assertEqual(
+            [
+                key
+                for key in baseline_by_key
+                if baseline_by_key[key].record_values != changed_by_key[key].record_values
+            ],
+            [("entry", "nar:20260716:32:10:entry:1")],
+        )
+        self.assertEqual(
+            [
+                key
+                for key in baseline_by_key
+                if baseline_by_key[key].source_id != changed_by_key[key].source_id
+            ],
+            [("entry", "nar:20260716:32:10:entry:1")],
+        )
+
     def test_horse_anchor_href_contract_fails_closed_and_keeps_lexical_tokens(self) -> None:
         default_href = "../DataRoom/HorseMarkInfo?k_lineageLoginCode=30000000001"
         invalid_hrefs = (

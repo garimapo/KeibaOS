@@ -191,3 +191,19 @@ C:\\Users\\garim\\.cache\\keibaos-verification\\d1-py314 with pytest 8.3.5 and t
 verification passed: dedicated c1b 11, c1a 8, c1c 12, related historical snapshot/migration/SQLite repository 40,
 and full suite 2447. The forbidden dependency/source/AST check and git diff --check also passed. Status remains
 READY_FOR_REVIEW pending independent review.
+
+## GitHub Review Correction: Source-ID Isolation
+
+GitHub review of d1 implementation commit `86c26816d894fbee98691c9c8f231dee2129503e` approved production,
+the authentic fixture, and horse-identity parsing. No production or fixture change is required. The dedicated suite
+now pins deterministic selective c1a source-ID isolation: changing only entry 1's valid
+`k_lineageLoginCode` changes only that entry record's `external_horse_id` and `source_id`.
+
+The regression proves that the track record, entry 1's jockey and odds-win records, and every entry/jockey/odds
+record for untouched entry 2 retain exactly equal record payloads and source IDs. It also proves the selected
+entry's `external_entry_id` remains unchanged and that the sole changed committed record payload value is
+`external_horse_id`. It does not reintroduce `external_horse_id=None` output or alter c1a/c1c behavior.
+
+Verification with external Python 3.14.5 / pytest 8.3.5 / tzdata 2026.3 passed: d1 dedicated 12, c1a 8, c1c 12,
+historical snapshot/migration/SQLite repository regressions 40, full suite 2448, and the forbidden
+dependency/source/AST check. `git diff --check` passed. Status remains READY_FOR_REVIEW pending independent review.
