@@ -2,7 +2,7 @@
 
 ## Status
 
-PHASE_4C_2D3B1I6C1C_READY_FOR_REVIEW
+PHASE_4C_2D3B1I6C1D_DRAFT_FOR_REVIEW
 
 ## Previous Formal Phase
 
@@ -14,9 +14,9 @@ Branch: `feature/ver0.8-simulator`
 
 ## Current Preparation
 
-Phase 4C-2d3b1i6c1b — NAR supplied-raw historical source normalization preparation
+Phase 4C-2d3b1i6c1d — NAR official past-race source evidence preparation
 
-Base commit: `96e70d17f66f85689f568c7603977afdb508e31b feat: add historical input source record domain`
+Base commit: `960c3419e52205cbfd94c3466eaabbb85d14e6ba feat: assemble historical input snapshots`
 
 Branch: `feature/ver0.8-simulator`
 
@@ -2742,8 +2742,69 @@ The proposed implementation remains one new module, `historical_input_snapshot_b
 module, and the two phase documents. It has no repository/schema/migration or package-export change. The single
 open blocker is complete official past-race or valid c1a absence evidence for every entry; c1c must not fabricate it.
 
-blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
-assembled from its DebaTable-only output.
+
+## Phase 4C-2d3b1i6c1d Preparation — NAR Official Past-race Source Evidence
+
+Status: `DRAFT_FOR_REVIEW`.
+
+Formal c1c is complete at `960c3419e52205cbfd94c3466eaabbb85d14e6ba`. This is a docs-only,
+review-branch PREPARE; no production, test, migration, schema, fixture, provider/parser, database, CLI, README, or
+package-export change is authorized.
+
+Codex performed read-only repository inspection of c1a, c1b, c1c, their dedicated tests, legacy NAR parsing paths,
+and the official `https://www.keiba.go.jp` navigation. Official RaceMarkTable was observed at
+`/KeibaWeb/TodayRaceInfo/RaceMarkTable?k_babaCode=...&k_raceDate=...&k_raceNo=...`. A HorseMarkInfo history page
+was observed at `/KeibaWeb/DataRoom/HorseMarkInfo?k_lineageLoginCode=<decimal>`, and a history race link led to its
+official RaceMarkTable. The normal result table visibly includes finished-race facts, horse link/number, body
+weight/increase-decrease, time, margin, passing order, popularity, and odds.
+
+This does **not** prove a usable c1d identity today. c1b deliberately emits
+`entry.record_values["external_horse_id"] = None` and does not retain the target-row official horse href. Therefore
+a HorseMarkInfo `k_lineageLoginCode` seen independently cannot be bound to the committed target
+`external_entry_id`; horse-name, jockey, cross-race number, list position, local IDs, and legacy IDs remain
+forbidden linkage mechanisms.
+
+The candidate official chain is target DebaTable row -> validated official horse identity -> supplied HorseMarkInfo
+history link -> exact supplied RaceMarkTable result row. Target identity evidence and result facts occur on different
+official responses. Current c1a carries only one canonical URL and observed timestamp per record, so choosing either
+page alone would make a `past_race` record's provenance incomplete or misleading. Both a c1b target-link identity
+prerequisite and a provider-neutral multi-response evidence/provenance decision are required before c1d implementation.
+
+Initial support decision:
+
+| Capability | Decision |
+| --- | --- |
+| Stable horse identity under committed c1b | NOT_PROVEN |
+| c1b contract extension | PREREQUISITE_REQUIRED |
+| normal RaceMarkTable past-race normalization | PREREQUISITE_REQUIRED |
+| past_race_absence | UNSUPPORTED |
+| abnormal/non-numeric result states | UNSUPPORTED |
+| ばんえい variant | UNSUPPORTED |
+| provider_record_id syntax | NOT_FROZEN |
+| pagination completeness | NOT_PROVEN |
+
+A RaceMarkTable URL alone is a race-page identity, not a unique horse-result identity. A possible eventual key would
+need a canonical historical race identity plus a target-bound official lineage identity, but that representation is not
+approved. The current API candidate
+`scripts/simulation/nar_historical_past_race_source.py` is also not frozen. No implementation Allowed Files are
+authorized until the prerequisite contract is separately designed.
+
+For an eventual boundary, page kind must be selected from strict canonical official URL paths, never HTML markers; all
+responses must be caller-supplied with exact observed timestamps and no clock fallback; available_at is None unless
+official publication evidence exists. c1a's required Decimal and race-result values remain fail-closed: non-decimal
+Japanese margins, missing/inapplicable corner data, unavailable body weight, and non-semantic race-class text cannot be
+guessed. A zero-history record remains forbidden unless a complete official pagination/count/terminal-page proof exists
+for the exact target entry and strictly-before-target-date scope.
+
+Future tests must pin response/bundle types, strict bytes/UTF-8, URL-only dispatch, verified target horse linkage,
+rejection of name-only linkage, deterministic provider record identity, complete field mapping, no float, temporal
+stamps, all incomplete/ambiguous pagination and absence states, c1a propagation, source permutation determinism, and
+no network/DB/filesystem/legacy dependency.
+
+blocker: c1b does not retain a verified target-row-to-official-horse identity, and current c1a single-record
+canonical URL/timestamp fields cannot faithfully represent the multi-response official identity-and-result evidence
+chain. past_race is PREREQUISITE_REQUIRED and past_race_absence is UNSUPPORTED pending separate approved contracts.
+
 
 ## Phase 4C-2d3b1i6c1c Implementation Review Validation-boundary Correction
 

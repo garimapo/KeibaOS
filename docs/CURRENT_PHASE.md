@@ -1,250 +1,213 @@
-﻿# Current Phase
+# Current Phase
 
 ## Status
 
-READY_FOR_REVIEW
+DRAFT_FOR_REVIEW
 
 ## Phase
 
-Phase 4C-2d3b1i6c1c - Historical input source-record to snapshot assembly
+Phase 4C-2d3b1i6c1d — NAR official past-race source evidence preparation
 
 ## Base Commit
 
-`f6a72be9e9a6934cfa48c6b0ff41954fb7d51de1 feat: normalize NAR historical source records`
+`960c3419e52205cbfd94c3466eaabbb85d14e6ba feat: assemble historical input snapshots`
 
 ## Branch and Workspace
 
 Formal branch: `feature/ver0.8-simulator`
 
+Preparation review branch: `review/4c-2d3b1i6c1d-prepare`
+
 Canonical workspace: `C:\Users\garim\Desktop\KeibaAI-review-1i5b2b`
 
 The original workspace, `C:\Users\garim\Desktop\KeibaAI`, is read-only for this phase.
 
-## Objective and Responsibility Boundary
+## Objective and Boundary
 
-c1c implements the smallest pure, fail-closed assembler from a caller-supplied, already validated
-tuple of `HistoricalInputSourceRecord` values plus caller-owned local identity and cutoff inputs to one immutable
-`HistoricalInputSnapshot`. It owns source-record grouping, external-to-internal entry mapping, deterministic child
-construction, provenance construction, and source-set temporal eligibility only.
+c1d investigates the smallest fail-closed *supplied official NAR evidence* boundary that could emit committed c1a
+`HistoricalInputSourceRecord(record_kind="past_race")` values for target-race entries. It may support
+`past_race_absence` only if supplied official evidence proves the complete zero-result query scope. The question is
+identity and causal provenance, not whether historical rows can be scraped.
 
-It must not fetch HTTP, decode provider HTML, query or write SQLite, call a repository, access a file or the clock,
-use legacy race/horse/odds/past-race data, infer a missing source fact, or construct a simulation request. c1b keeps
-normalizing supplied DebaTable bytes; later phases own provider collection, complete past-race capture, persistence,
-and snapshot loading.
+This PREPARE changes documentation only. It must not fetch, parse, save, query SQLite, use a clock, add an API,
+modify c1a/c1b/c1c, or implement tests. A later normalizer, if approved, must accept only caller-supplied immutable
+official responses and must never perform HTTP, filesystem, database, provider, parser, or legacy-data work.
 
-## Investigation Findings
+## Read-only Investigation Findings
 
-`HistoricalInputSourceRecord` already validates individual schemas and deterministic `source_id` values. Its
-`validate_historical_input_source_record_set()` is called first by the assembler and remains the sole
-owner of duplicate-source-ID and conflicting official past-race identity checks. It does not establish a complete
-race snapshot, local race-entry mapping, snapshot-level temporal eligibility, or past-race sequence.
+Committed c1a requires a `past_race` record to contain a non-null provider record ID and all race-result values:
+race date, place, race name, race class, distance, surface, weather, condition, finish, Decimal margin, race time,
+Decimal weight and weight difference, jockey, popularity, Decimal odds, passing order, and fourth-corner position.
+It permits no made-up defaults. `past_race_absence` separately requires a non-null canonical source URL and an exact
+zero-result scope for one external entry and target date. c1a owns source-ID construction and duplicate/conflicting
+provider-record detection through `validate_historical_input_source_record_set()`.
 
-`HistoricalInputSnapshot` requires nonempty entries, contiguous entry orders, complete and unique provenance keys,
-causal `captured_at <= information_cutoff <= scheduled_start_at`, and complete past-race evidence per entry. It also
-requires source stamps no later than `captured_at`. c1c must apply the stricter prediction rule that no record used
-by the snapshot may be later than the caller's `information_cutoff`.
+Committed c1b accepts only one supplied DebaTable response and emits track, entry, jockey, and odds-win records. Its
+entry contract deliberately emits `external_horse_id = None`; its deterministic external entry ID is target-race plus
+horse number. The reviewed fixture contains no official horse `href`, and c1b retains neither a horse-detail URL nor
+an immutable target-row-to-horse linkage artifact. Therefore a c1b tuple cannot bind a historical row to a target
+external entry and remains intentionally incomplete for c1c.
 
-c1b currently emits only `track`, `entry`, `jockey`, and `odds_win`. It deliberately emits neither `past_race` nor
-`past_race_absence`; therefore a c1b DebaTable tuple alone is insufficient and must fail closed. Missing past-race
-records never mean a scoped zero-result search occurred.
+Read-only inspection of official `https://www.keiba.go.jp` pages found these observed navigation forms:
 
-## Proposed Future Public API
+* `/KeibaWeb/TodayRaceInfo/RaceMarkTable` uses the same target-race query family observed by c1b:
+  `k_babaCode`, `k_raceDate`, and `k_raceNo`; its normal completed-race table exposes a horse row plus race
+  facts and result columns.
+* An official horse-history page was observed at
+  `/KeibaWeb/DataRoom/HorseMarkInfo?k_lineageLoginCode=<decimal>` and its historical-race title links led to an
+  official RaceMarkTable page. The exact `k_lineageLoginCode` appears provider-native, but this observation alone
+  does not prove that a c1b target row refers to that code.
+* The normal RaceMarkTable result table visibly has finish, horse number, horse link, body weight/increase-decrease,
+  time, margin, corner passing order, popularity, and win odds. It also demonstrates non-decimal display margins
+  such as `ハナ`, `クビ`, and `大差` alongside decimal-like values. Those cannot become a required c1a Decimal margin
+  without a separately approved semantic conversion contract.
+* The observed ばんえい result layout does not provide the normal corner-passing representation required to prove
+  c1a `fourth_corner_position`; it is not a supported variant for the initial boundary.
 
-Future module: `scripts/simulation/historical_input_snapshot_builder.py`
+Existing legacy `HorseParser`, `PastRaceParser`, and `fetch_past_races` are read-only historical code only. They use
+HTTP/DB or heuristic/defaulting behavior, including legacy table fallbacks and inferred fields, and are not trusted or
+reusable as c1d evidence semantics.
 
-The module will expose only:
+## Identity and Contract Decision
 
-    HistoricalInputSnapshotAssemblyError
-    build_historical_input_snapshot
+### Stable Official Horse Identity
 
-The implemented keyword-only API is:
+**NOT_PROVEN in the committed c1b contract.** Official HorseMarkInfo URLs expose a plausible provider-side
+`k_lineageLoginCode`, but current c1b neither extracts nor verifies a target DebaTable horse anchor nor preserves the
+code in `external_horse_id`. Horse name, jockey, horse number across races, list position, local IDs, and legacy
+parser identifiers are forbidden substitutes.
 
-    build_historical_input_snapshot(
-        *,
-        dataset_id: str,
-        internal_race_id: int,
-        information_cutoff: datetime,
-        captured_at: datetime,
-        source_records: tuple[HistoricalInputSourceRecord, ...],
-        race_entry_id_by_external_entry_id: Mapping[str, int],
-    ) -> HistoricalInputSnapshot
+The desired proof chain is:
 
-No bundle/dataclass, database connection, repository, URL, provider, optional clock, or fallback parameter is
-implemented. `source_records` must be an exact tuple and every item an exact committed c1a record. The mapping must be
-a `Mapping`; it is caller-owned input, is copied only as needed for validation, and is never resolved from a local
-database or from `horse_no`.
+    target DebaTable row / target external_entry_id
+    -> exact official horse anchor and validated provider horse identity
+    -> supplied official HorseMarkInfo history link
+    -> exact supplied historical RaceMarkTable row for that same official horse identity
 
-## Source Family, Snapshot Identity, and URL Policy
+The historical race page must remain enveloped by the *target* `external_race_id` and target `external_entry_id`; it
+must never replace them with the historical race identity.
 
-After the committed c1a set validator succeeds, c1c requires exactly one common `(organization, source_system,
-external_race_id)` across every record and exactly one `track` record. It constructs:
+### Required Prerequisites
 
-    HistoricalSourceIdentity(organization, source_system, external_race_id, source_url)
-    HistoricalExternalRaceIdentity(organization, source_system, external_race_id)
-    HistoricalExternalEntryIdentity(external_race_identity, external_entry_id, external_horse_id)
-    HistoricalInputSnapshotIdentity(dataset_id, source_identity, captured_at)
+**C1B contract change required: YES.** A prerequisite phase must decide and review exact extraction, canonicalization,
+and immutable preservation of the official target horse-link identity from a DebaTable row. c1d must not silently
+reparse a target page and duplicate c1b's target-row boundary merely to recover discarded identity.
 
-The sole track record determines the snapshot-level source URL without adding a provider-neutral URL requirement:
+**Single-record provenance prerequisite required: YES.** The target-row/horse-history pages prove target-horse
+linkage, while RaceMarkTable supplies the historical result facts. A single c1a record presently has only one
+`canonical_source_url` and one observed stamp. Selecting only the result URL would omit the identity evidence; using
+only the history URL would misrepresent the fact source. Before c1d can combine pages, ChatGPT must approve a
+provider-neutral immutable evidence-chain/provenance representation or prove that the committed c1a model can record
+the chain without misleading a record's canonical source URL and timestamps. This PREPARE does not change c1a.
 
-    track.canonical_source_url is non-null -> HistoricalSourceIdentity.source_url is that exact URL
-    track.canonical_source_url is None     -> HistoricalSourceIdentity.source_url is None
+Consequently, c1d is **PREREQUISITE_REQUIRED**, not an implementation-ready four-file phase.
 
-Both forms are valid; c1c must not fail solely because the track record has no canonical source URL. It must never
-synthesize a URL from non-track records, provider_record_id, source_id, external_race_id, local database rows, or
-legacy race URLs. Non-track records are not required to share the track URL. Their canonical_source_url values remain
-in their immutable c1a payloads and therefore participate in each exact c1a `source_id`; provenance continues to
-carry that exact `source_id`, not a duplicated URL. The committed c1a requirement that a past_race_absence record has
-its own non-null canonical_source_url is unchanged; c1c consumes that already-validated record and adds no absence
-URL validation algorithm.
+## Supported-page and URL Findings
 
-## Complete Source-set Policy
-
-| Scope | Required records and rule |
-| --- | --- |
-| Race | Exactly one track record and one common source family/race identity. |
-| External entry | Exactly one entry, one jockey, and one odds_win record. Their envelope external entry ID must agree. |
-| Entry values | Entry and odds_win horse number must agree; entry external horse identity comes only from entry values. |
-| Past evidence | Either one or more past_race records, or exactly one past_race_absence record, never both and never neither. |
-| Absence proof | The c1a absence query scope must name the same external entry, have exact zero result count, and target the track target-race date with strictly-before-target behavior. |
-| Unknown/incompatible | An unknown kind, duplicate required record, inconsistent family/race/entry, extra mapping key, or unsupported record grouping raises an assembler error. |
-
-All entry-scoped records are grouped by their envelope `external_entry_id`, never by source tuple order or local
-horse identity. The committed c1a validator remains responsible for source-ID and provider-record conflicts; c1c
-does not reimplement its digest or conflict algorithm.
-
-## Explicit External-to-internal Mapping Contract
-
-`race_entry_id_by_external_entry_id` must have a key set exactly equal to the complete external-entry set produced
-from entry records. Each key must be exact `str`; every value must be an exact positive `int`, not `bool`; and mapped
-internal IDs must be unique. Missing keys, extra keys, duplicate internal IDs, a nonpositive ID, or a type mismatch
-fails closed before snapshot construction. There is no local lookup, no guessed ID, and no fallback from horse number.
-
-Complete entries are sorted by `horse_no` ascending. c1c assigns contiguous zero-based `entry_order` from that sort,
-independent of caller tuple order or local race-entry ID order.
-
-## Field and Provenance Mapping
-
-The sole track record maps its exact committed c1a values to `HistoricalRaceSnapshot`:
-
-    target_race_date, scheduled_start_at, place, distance_m, track,
-    track_condition, race_name, race_class, weather
-
-No entry, jockey, odds, or past record may overwrite a track field. Each entry/jockey/odds triple maps to one
-`HistoricalRaceEntrySnapshot` using the explicit internal race-entry ID, entry `external_horse_id`, entry and odds
-horse-number agreement, direct jockey text, direct Decimal win odds, and canonical entry order.
-
-Provenance is one-to-one with source records and always preserves exact `source_id`, `available_at`, and `observed_at`:
-
-| c1a record kind | HistoricalInputProvenance input_type | audit_key |
+| Page / variant | State | Reason |
 | --- | --- | --- |
-| track | track | `track` |
-| entry | entry | `entry/{race_entry_id}` |
-| jockey | jockey | `jockey/{race_entry_id}` |
-| odds_win | odds | `odds/{race_entry_id}` |
-| past_race | past_race | `past_race/{race_entry_id}/{past_race_index}` |
-| past_race_absence | past_race | `past_race/{race_entry_id}/none` |
+| Target DebaTable horse-link extraction | PREREQUISITE_REQUIRED | c1b currently discards the official horse anchor. |
+| Horse detail/profile / HorseMarkInfo | DEFERRED | Provider-native lineage query was observed, but raw target-link compatibility, canonical URL grammar, and pagination proof are not frozen. |
+| Normal completed RaceMarkTable row | PREREQUISITE_REQUIRED | Result facts are available, but target identity and multi-response provenance are not representable yet. |
+| Abnormal/cancelled/removed/disqualified row | UNSUPPORTED | c1a strict numeric/result fields cannot receive invented values. |
+| Same-date multiple starts | UNSUPPORTED | c1c rejects unprovable same-date chronology; provider ID/list order is not a tie-breaker. |
+| ばんえい RaceMarkTable | UNSUPPORTED | Required corner/fourth-corner evidence is not uniformly present. |
+| `past_race` output | PREREQUISITE_REQUIRED | Requires both identity and provenance prerequisites. |
+| `past_race_absence` output | UNSUPPORTED | Complete official zero-history/pagination proof has not been established. |
 
-`HistoricalInputProvenance.source` is the exact record `source_system`; its source ID is the exact c1a `source_id`.
-c1c does not create `InputAuditEntry`, `InputSnapshotAudit`, or `SimulationRaceInput`; it only obeys the same
-canonical audit-key shape already enforced by `HistoricalInputSnapshot`.
+No HTML ID or class may dispatch a future page kind. Each supported kind must be selected from a strict canonical URL:
+`https`, exact `www.keiba.go.jp` host, no credentials/fragment/control characters, no unsupported port, exact path,
+and an exact page-specific query-key set with duplicate/unknown keys rejected. Percent-escape, date, and numeric
+spelling rules must be frozen from supplied official examples before implementation. RaceMarkTable is an observed
+separate path (`/KeibaWeb/TodayRaceInfo/RaceMarkTable`); its path, rather than a marker in its HTML, determines kind.
+The canonical HorseMarkInfo URL policy is intentionally not frozen yet.
 
-## Temporal Eligibility Policy
+## Candidate Field Evidence and Fail-closed Policy
 
-All six API inputs are caller supplied; c1c never calls the clock. `captured_at` and `information_cutoff` must be
-exact aware datetimes. Every used source record already has an aware `observed_at`; when present, `available_at` must
-remain no later than its observed time. c1c requires every used temporal chain to satisfy:
+The future normalizer may use only an exact normal completed RaceMarkTable row after raw supplied-byte selectors have
+been independently frozen. The following is an investigation map, not an implementation authorization.
 
-    available_at <= observed_at <= captured_at <= information_cutoff <= scheduled_start_at
+| c1a value | Official evidence candidate | Initial policy |
+| --- | --- | --- |
+| race_date, place, race_name, distance_m, track, weather, track_condition | RaceMarkTable race heading/facts | Must have distinct validated nodes; missing/ambiguous fails. |
+| race_class | Official result-page class/condition element | DEFERRED until a semantic element distinct from promotional subtitle text is proven. |
+| finish, race_time, jockey, popularity, odds | Exact completed-result row columns | Only strict committed type forms; cancellation/non-numeric state fails. |
+| margin | Exact result-row margin | Only an approved direct Decimal spelling could be supported. `ハナ`, `クビ`, `大差`, fractions, or blank are unsupported until separately designed. |
+| weight, weight_diff | Exact body-weight display such as `513(3)` or `459(-1)` | Only an exact validated numeric parenthetical form; `計不`/missing fails. |
+| passing_order, fourth_corner_position | Exact row corner-passing column | Only a validated complete official passing form with a provable fourth component; no heuristic inference. |
 
-with the optional `available_at` term omitted only when it is `None`. Both available and observed stamps must also be
-no later than the information cutoff. A newer source, an invalid ordering, or a stamp missing from a record fails
-closed; captured_at is never derived from DB insertion, filesystem metadata, race start, maximum source timestamp,
-or current time.
+No field may come from target odds, legacy DB values, another horse, a name match, a default zero/empty value, or a
+guess. Target-race inclusion, a historical date not strictly before the target date, duplicate official history links,
+duplicate historical identities, or incompatible result rows must fail closed.
 
-## Past-race Construction and Ordering
+## Provider Record Identity and Response Provenance
 
-For each external entry with past-race records, c1c maps every c1a past-race value directly into
-`HistoricalPastRaceSnapshot`. Each past date must be strictly earlier than the target race date. It sorts the entry's
-past races by `race_date` descending (most recent first) and assigns contiguous zero-based `past_race_index` values.
+No provider-record-ID representation is frozen. A RaceMarkTable URL alone identifies a race page, not necessarily one
+horse's result. A possible future identity would need the exact canonical historical RaceMarkTable race identity plus
+the validated official `k_lineageLoginCode` bound through the target and history chain. That pair cannot be adopted
+until the prerequisites establish its canonical syntax, target linkage, one-row uniqueness, and immutable provenance.
+It must never be a source ID, URL alone, Python hash, random UUID, local ID, target horse number, or horse name.
 
-Two past-race records for the same external entry with the same `race_date` fail closed. c1a supplies no proven
-time-of-day chronology, and c1c must not use caller tuple order, database order, hash order, or lexical
-`provider_record_id` as invented chronology. A valid c1a absence record yields no past snapshot and exactly the
-`past_race/{race_entry_id}/none` provenance key. No record means neither history nor absence proof.
+Every future raw response needs caller-supplied exact bytes, strict UTF-8 policy where applicable, a canonical official
+response URL, and an explicit aware `observed_at`; no current-time fallback is permitted. `available_at` remains
+`None` unless an official page itself exposes defensible publication-time evidence. It must not be derived from race
+date, result time, HTTP Date, file metadata, crawl time, or a clock.
 
-After each entry has received its chronology-derived `past_race_index`, the final
-`HistoricalInputSnapshot.past_races` tuple is sorted globally by exactly `(race_entry_id, past_race_index)` ascending.
-This is a serialization and object-level canonicalization rule, distinct from the within-entry `race_date` descending
-chronology. It must not use horse number, external entry ID, caller source tuple order, database row order,
-provider-record ID, or hash/random order.
+An eventual bundle must preserve all official pages needed for the identity proof and reject missing, duplicate, or
+incompatible links. Reusing `NarSuppliedOfficialResponse` is not approved merely because it is convenient: it models
+one response, while the required relation is multi-response. The evidence-chain prerequisite must first decide whether
+a new frozen/slotted bundle and a c1a-compatible immutable chain representation are sufficient.
 
-The final `HistoricalInputSnapshot.provenance` tuple is sorted globally by exactly `audit_key` ascending using normal
-Python string ordering over the already-constructed canonical keys. Every source record still maps one-to-one to its
-exact provenance entry; only the final tuple ordering is canonicalized. It must not use source tuple order, source ID,
-record kind, horse number, or insertion order.
+## Temporal and Pagination Policy
 
-## Error Ownership
+For eventual snapshot use, every response whose evidence contributes to a record must have
+`observed_at <= information_cutoff`; the normalizer preserves the exact caller-supplied stamp rather than deriving it.
+A past race occurring before the target race does not itself prove that the result was available before prediction.
 
-The module has one assembler-owned `HistoricalInputSnapshotAssemblyError(ValueError)`. It owns exact input
-type/container failures, incomplete/duplicate grouping, source-family disagreement, mapping violations, field
-disagreement, temporal ineligibility, missing past evidence, and ambiguous past-race ordering. Committed c1a
-`HistoricalInputSourceValidationError` and `HistoricalInputSourceConflictError` from the mandatory set validator
-propagate unchanged. Direct `HistoricalInputSnapshot` domain `ValueError` values are not broadly wrapped. No
-`except Exception`, retry, repair, or fallback is allowed.
+Absence is deliberately unsupported. An empty first page, no link, failed parse, missing pagination response, or
+history page with no visible row is not zero-history evidence. Support would require an official, supplied,
+complete query proof scoped exactly to `(external_entry_id, target_race_date, strictly_before_target_race=True)` with
+zero results, including all pages or a validated official count/terminal-page proof. Unknown pagination state,
+missing page, or duplicate page must fail closed. No bounded first-page window is authorized.
 
-## Determinism and Side-effect Boundary
+## Future Public API and Allowed Files
 
-The same source records, mapping, dataset ID, internal race ID, captured_at, and information cutoff must produce the
-same snapshot and `content_sha256` irrespective of source tuple order. c1c freezes grouping and horse-number/past-date
-ordering before constructing immutable snapshot children: entries remain horse-number ascending with contiguous
-`entry_order`; final past races are `(race_entry_id, past_race_index)` ascending; final provenance is `audit_key`
-ascending. It has no HTTP, parser, filesystem, database, repository, environment, random, UUID, or current-time
-dependency and adds no package-root export.
+No c1d production public API is frozen, because the identity and provenance prerequisites are unresolved. The
+candidate module name `scripts/simulation/nar_historical_past_race_source.py`, an associated dedicated test module,
+and a small supplied-response bundle/error/normalizer surface are **not authorized** until ChatGPT decides the
+prerequisite contract extension.
 
-## Allowed Files
+Accordingly, no c1d implementation Allowed Files are approved. A later prerequisite may need to change the c1b target
+identity contract and/or the c1a provenance model; it must be separately designed and phased. c1d must not silently
+broaden a nominal four-file scope to change `historical_input_source_records.py`,
+`nar_historical_input_source.py`, or `historical_input_snapshot_builder.py`.
 
-    scripts/simulation/historical_input_snapshot_builder.py
-    tests/test_historical_input_snapshot_builder.py
+## Future Dedicated Test Plan
+
+After a prerequisite is approved, dedicated tests must cover exact public API; exact supplied response/bundle types;
+strict UTF-8; URL-path-only dispatch; canonical URL rejection; target horse identity linkage; rejection of horse-name
+matching; target external-entry envelope binding; historical race identity; deterministic provider-record identity;
+full required field mapping; direct Decimal parsing with no float; target/future-date exclusion; abnormal states;
+missing columns; duplicate history links/identities; identity mismatch; response permutation determinism; exact
+observed-at preservation; no clock/network/DB/filesystem/legacy parser/provider dependency; c1a validation/conflict
+propagation; and package-root non-export.
+
+If absence is ever proposed, tests must prove full pagination/count/terminal-page coverage and reject every incomplete
+or ambiguous zero-result case. Tests must also prove that c1b DebaTable-only records remain insufficient until actual
+past evidence is supplied.
+
+## Allowed Files for this PREPARE
+
     docs/CURRENT_PHASE.md
     docs/LATEST_CODEX_REPORT.md
 
-Existing production and tests, providers/parsers, migrations, schema, repositories, database files, logs, README,
-main/CLI, and package exports are forbidden. A required change outside these four files is `REVISION_REQUIRED`.
+Production, tests, migration/schema, repositories, providers/parsers, fixtures, database files, logs, README, CLI,
+main, and package exports are forbidden. This PREPARE creates a documentation-only review commit and stops for
+independent design review; it does not authorize c1d implementation, c1a/c1b extension, stage/commit to the formal
+branch, or merge.
 
-## Implemented Tests and Verification
+## Blockers
 
-The dedicated suite covers the exact public surface/type hints; complete valid source set; caller tuple-order
-independence; exactly one track; family/race consistency; full entry/jockey/odds triples; horse-number consistency;
-mapping completeness/type/uniqueness; canonical entry order; track source URL selection with both a non-null URL and
-None as valid outcomes; non-track URL nonselection and differing non-track URL invariance; exact provenance keys/source
-IDs/timestamps; track/entry/past field mapping; captured/cutoff/start causal rules; multiple past races; valid absence;
-past-and-absence conflict; missing evidence; same-date past ambiguity; c1b-only DebaTable rejection; deterministic
-snapshot equality and content hash across materially different source-record tuple permutations; exact entries
-`entry_order` ascending, global past-race `(race_entry_id, past_race_index)` ascending, and global provenance
-`audit_key` ascending with two entries and multiple past races; no DB/network/filesystem/clock/legacy dependency; and
-package-root non-export.
-
-Verification runs the dedicated suite, source-record and snapshot regressions, SQLite snapshot repository and
-migration regressions, full pytest, source/AST dependency checks, `git diff --check`, and `git status --short`.
-
-## Stop Conditions and Blockers
-
-This implementation changes only the four Allowed Files and stops at `READY_FOR_REVIEW` awaiting independent code
-review and explicit commit approval. It does not authorize source collection, provider/parser changes, persistence,
-or formal integration. Current c1b-only tuples are intentionally rejected as incomplete until a future source phase
-provides complete official past-race records or exact c1a absence proof for every entry.
-
-blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
-assembled from its DebaTable-only output.
-
-## Implementation Review Validation-boundary Correction
-
-The shared caller-datetime awareness helper now guards `tzinfo.utcoffset()` only for `TypeError`, `ValueError`, and
-`OverflowError`. Such malformed caller-supplied timezone implementations now raise exact
-`HistoricalInputSnapshotAssemblyError` for both `captured_at` and `information_cutoff`; UTC is not substituted and no
-broad exception handling is used. Dedicated regressions also pin cutoff later than scheduled start, a non-Mapping
-mapping, non-string mapping keys, and zero/negative mapping values.
-
-Codex local verification with Python 3.14.5 / pytest 8.3.5 / tzdata 2026.3: dedicated c1c 12 passed; c1a 8 passed;
-snapshot domain 16 passed; SQLite/migration regression 46 passed; full suite 2445 passed; forbidden source/AST check
-passed; `git diff --check` passed. Status remains `READY_FOR_REVIEW` pending independent GitHub re-review.
+blocker: c1b does not retain a verified target-row-to-official-horse identity, and current c1a single-record
+canonical URL/timestamp fields cannot faithfully represent the multi-response official identity-and-result evidence
+chain. `past_race` is PREREQUISITE_REQUIRED and `past_race_absence` is UNSUPPORTED pending separate approved contracts.
