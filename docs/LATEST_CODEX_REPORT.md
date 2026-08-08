@@ -2,13 +2,21 @@
 
 ## Status
 
-PHASE_4C_2D3B1I6C1A_APPROVED_FOR_COMMIT
+PHASE_4C_2D3B1I6C1B_READY_FOR_REVIEW
 
-## Current Phase
+## Previous Formal Phase
 
 Phase 4C-2d3b1i6c1a — Historical input source-record domain and deterministic IDs
 
 Base commit: `038130c9d84a082107e351e545c167a9019e7b3a feat: load historical input snapshots from sqlite`
+
+Branch: `feature/ver0.8-simulator`
+
+## Current Preparation
+
+Phase 4C-2d3b1i6c1b — NAR supplied-raw historical source normalization preparation
+
+Base commit: `96e70d17f66f85689f568c7603977afdb508e31b feat: add historical input source record domain`
 
 Branch: `feature/ver0.8-simulator`
 
@@ -2498,4 +2506,212 @@ Full suite: 2424 passed, 0 failed
 Production and test content are retained unchanged from the approved review commit. c1b is not started;
 NAR remains PARTIAL and JRA remains UNSUPPORTED / DEFERRED.
 
-blocker: none
+## Phase 4C-2d3b1i6c1b Preparation
+
+Status: `PHASE_4C_2D3B1I6C1B_DRAFT_FOR_REVIEW`.
+
+Preparation used formal base `96e70d17f66f85689f568c7603977afdb508e31b` on
+`feature/ver0.8-simulator`. The committed c1a source-record domain is frozen. c1b is proposed as the smallest
+supplied-raw NAR-only normalizer: it receives one already successful official response and returns only validated
+`HistoricalInputSourceRecord` values. It owns neither HTTP, raw persistence, a database, legacy parsing, snapshot
+assembly, migration, repository behavior, nor JRA.
+
+The tracked NAR `horse_page.html` fixture supplies the concrete initial evidence. It declares UTF-8 and shows
+`https://www.keiba.go.jp/KeibaWeb/TodayRaceInfo/DebaTable` with exactly `k_raceDate`, `k_babaCode`, and
+`k_raceNo`. Its race header/data area and `horseNum`, `jockeyName`, and `odds_weight` markup can provide a complete
+track/entry/jockey/win-odds tuple. Existing `NARProvider` and legacy parsers are not reused: they fetch live data,
+guess decoding, log responses, discard official keys/timestamps, and use float/zero fallback behavior.
+
+The proposed frozen input is a slotted/frozen `NarSuppliedOfficialResponse(response_url, response_body: bytes,
+charset: Literal["utf-8"], observed_at)`. Bytes plus an exact UTF-8 declaration preserve deterministic decoding;
+the supplied response receipt instant is the only `observed_at`. No provider publication instant is evidenced, so
+all c1b records have `available_at=None`. No local path, file mtime, database time, response-time guess, or parser
+runtime can become source evidence.
+
+The only initially supported official page is `DebaTable` on HTTPS `www.keiba.go.jp`, exact-case path
+`/KeibaWeb/TodayRaceInfo/DebaTable`, no credentials/fragment/trailing slash, and exactly one of each required
+query key. It canonicalizes the output query as `k_babaCode`, `k_raceDate`, `k_raceNo`, preserving validated
+canonical decimal tokens and encoding date slashes as `%2F`. Unknown/duplicate keys, ambiguous percent encoding,
+noncanonical date/decimal text, and URL/content race mismatch fail closed.
+
+Support is `SUPPORTED` for `track`, `entry`, `jockey`, and `odds_win`; it is `UNSUPPORTED` for `past_race` and
+`past_race_absence`. The existing past links cannot prove the complete c1a payload or a stable official
+`provider_record_id`, and no complete successful scoped zero-result official search is available. Neither an
+official past-race URL nor empty parser output may be substituted for those requirements.
+
+NAR external identities remain exact:
+
+```text
+nar:{YYYYMMDD}:{k_babaCode}:{k_raceNo}
+{external_race_id}:entry:{horseNum}
+```
+
+The normalizer derives no local identity. `horseNum` is direct official positive decimal content; duplicate or
+conflicting values fail closed. The horse-detail href is not a stable provider horse identity, so
+`external_horse_id=None`. Text cleanup is explicit NFC plus collapsed HTML whitespace; Decimal odds are parsed from
+one positive official decimal span without float conversion. Unavailable, cancelled, zero, or non-numeric odds are
+not silently omitted.
+
+The proposed public module is `scripts/simulation/nar_historical_input_source.py`, exporting only the supplied
+response dataclass, a minimal NAR source-error hierarchy, and
+`normalize_nar_historical_input_source_records(*, response) -> tuple[HistoricalInputSourceRecord, ...]`.
+Its output is one `track`, then per horse number ascending `entry`, `jockey`, and `odds_win`; it must pass the c1a
+record-set validator. The candidate future scope is that one new module, one new dedicated test file, and the two
+phase documents. Existing providers/parsers, migration/schema, repositories, package root, CLI, README, database,
+and logs remain forbidden.
+
+Required future tests are deterministic supplied UTF-8 HTML fixtures only: public API, input immutability, URL
+policy, page dispatch, external IDs, selectors, Japanese whitespace, Decimal odds, observed/available timestamps,
+canonical output ordering/IDs, c1a integration, and all missing/ambiguous/cancellation/unsupported/legacy-access
+fail-closed boundaries. No live HTTP, raw persistence, or snapshot builder test is authorized.
+
+NAR remains PARTIAL; JRA remains UNSUPPORTED / DEFERRED. c1c snapshot construction is unstarted. No production,
+test, migration, database, or log file was modified in this preparation; no test was run because this is
+documentation-only investigation.
+
+## Phase 4C-2d3b1i6c1b Preparation Review Revision
+
+GitHub design review of `419c85e83e47cb22be8f16fd7a0f18ed97993d4c` returned `REVISION_REQUIRED` for two
+DebaTable source-semantic issues only. The supplied-bytes contract, strict UTF-8, response-receipt `observed_at`,
+`available_at=None`, DebaTable-only support, URL/identity rules, Decimal odds, no legacy fallback, and unsupported
+past-race/absence policy remain unchanged.
+
+First, `section.raceTitle p.subTitle` is promotional display text in the tracked official fixture and is not a
+race-class source. The initial normalizer now sets `track.record_values["race_class"]` to exact `None`; it must not
+derive a class from subtitle, race name, data-area leftovers, legacy values, or place/race-number information.
+
+Second, the semantic racecourse comes from exactly one active course node selected by
+`article.raceCard .chartNavi.trackNameNavi a.cNaviBtn.courseBtn.active`. Its ordinary NFC/whitespace-normalized
+text becomes `place`. The target h4 place segment remains an independent check only: c1b removes Unicode layout
+whitespace from that segment alone and requires equality with the active course text. A missing, duplicate, empty,
+or mismatching source fails closed. No global whitespace-compaction rule or NFKC normalization was introduced.
+
+Future fixtures must prove promotional-subtitle exclusion, `race_class is None`, Japanese h4 layout spacing with an
+active-course semantic value, active/h4 place conflict, and missing/duplicate active-course selector failures.
+This remains a documentation-only PREPARE revision; production, tests, migrations, database, logs, package exports,
+and the original workspace are unchanged.
+
+## Phase 4C-2d3b1i6c1b Design Approval
+
+ChatGPT approved the corrected PREPARE design at review commit
+`3e2d373aa73fb5a1e9d9212968ca7ef325d52034` for implementation from formal base
+`96e70d17f66f85689f568c7603977afdb508e31b`.
+
+The active phase status is `APPROVED_FOR_CODEX`. The approved implementation scope remains exactly the new NAR
+normalizer, its dedicated test module, and these two phase documents. The review branch is an immutable design
+artifact and is not merged or otherwise modified.
+
+blocker: no persisted supplied NAR raw/capture corpus exists; c1b is limited to caller-supplied DebaTable responses
+and cannot create past-race or past-race-absence records.
+
+## Phase 4C-2d3b1i6c1b Implementation
+
+The supplied-response NAR normalizer is complete and `READY_FOR_REVIEW` from formal base
+`96e70d17f66f85689f568c7603977afdb508e31b`.
+
+Implemented public API:
+
+```text
+NarSuppliedOfficialResponse
+NarHistoricalInputSourceError
+NarHistoricalInputSourceValidationError
+NarHistoricalInputSourceUnsupportedError
+normalize_nar_historical_input_source_records(*, response)
+```
+
+`NarSuppliedOfficialResponse` is frozen and slotted, accepts only exact UTF-8 bytes plus an aware supplied
+observation timestamp, and the normalizer never performs HTTP, filesystem, database, current-time, or legacy
+provider/parser work. It canonicalizes the exact DebaTable URL and constructs c1a records through
+`HistoricalInputSourceRecord`, followed by the committed c1a record-set validator.
+
+Support matrix:
+
+```text
+track: SUPPORTED
+entry: SUPPORTED
+jockey: SUPPORTED
+odds_win: SUPPORTED
+past_race: UNSUPPORTED
+past_race_absence: UNSUPPORTED
+```
+
+The deterministic output is one track record, then `entry`, `jockey`, and `odds_win` records for each direct
+official horse number in ascending numeric order. It stores no horse-detail identity, treats promotional subtitle
+content as non-schema content, fixes `race_class` to `None`, receives `observed_at` from the supplied response,
+and uses `available_at=None`.
+
+Codex local verification with Python 3.14.5 / pytest 8.3.5:
+
+```text
+Dedicated c1b: 8 passed
+c1a source records: 8 passed
+Historical snapshot / SQLite / migration related: 62 passed
+Full suite: 2432 passed
+Forbidden dependency source/AST check: included in dedicated suite
+git diff --check: success
+```
+
+Changed files are limited to the new normalizer, its new dedicated test module, and the two phase documents. No
+existing provider, parser, test, migration, schema, repository, database file, log, package export, CLI, README,
+or original workspace file was changed. The remaining blocker is unchanged: no persisted supplied official NAR
+capture corpus exists, so past-race and past-race-absence remain unsupported.
+
+## Phase 4C-2d3b1i6c1b GitHub Implementation Review Correction
+
+GitHub review of `cccacac2e2f1b532200b2e4c2196cf2ffe9916c7` found a structural mismatch: the tracked official
+DebaTable has a header `article.raceCard` and a separate card-table `article.raceCard`. The correction extracts
+header facts only from one exact header region and entry/jockey/odds facts only from one independently exact
+supported entry table. No whole-document first-match selection or invented cross-page join was added.
+
+HTML IDs and classes no longer re-dispatch a page kind. The canonical URL path is the sole page-kind boundary:
+RaceMarkTable and other unsupported paths fail in URL validation, while a DebaTable URL with malformed structure
+fails as normal c1b validation. The dedicated deterministic byte fixture now uses the official split-card shape,
+including two horse rows in noncanonical source order and canonical output ordering.
+
+Expanded coverage explicitly includes invalid host, required query-key absence, malformed percent escapes,
+leading-zero baba code, missing active course selector, missing/duplicate UTF-8 meta declaration, missing odds,
+missing/duplicate jockey selectors, exact wrong response type, Japanese place layout, package-root non-export, and
+absence of `float(` source conversion.
+
+Codex local rerun with Python 3.14.5 / pytest 8.3.5:
+
+```text
+Dedicated c1b: 8 passed
+c1a source records: 8 passed
+Historical snapshot / SQLite / migration related: 62 passed
+Full suite: 2432 passed
+Forbidden dependency source/AST check: passed
+git diff --check: success
+```
+
+Status remains `PHASE_4C_2D3B1I6C1B_READY_FOR_REVIEW`. The only remaining blocker is unchanged: no persisted
+supplied official NAR capture corpus exists, so c1b cannot create past-race or past-race-absence records.
+
+## Phase 4C-2d3b1i6c1b GitHub Re-review Validation-boundary Correction
+
+GitHub re-review of `8f758d33a615495cae3fe50616afd9e7687366fa` required two error-boundary corrections without
+changing the approved split-card extraction or URL support semantics. `_canonical_url` now performs its sole
+`urlsplit` call inside the validation-owned `ValueError` boundary before accessing `parsed.query`; malformed
+bracketed-netloc input therefore raises exact `NarHistoricalInputSourceValidationError`.
+
+The normalizer now uses a private guarded positive-decimal integer conversion helper for untrusted `horseNum` and
+`distance_m`. It preserves arbitrary-length canonical positive decimal acceptance at the lexical level, but converts
+Python's long-integer conversion `ValueError` to `NarHistoricalInputSourceValidationError`. No artificial provider
+range, `sys.set_int_max_str_digits`, or broad exception handling was added.
+
+Dedicated regressions cover malformed URL parser failure, a 10,000-digit horse number, and a 10,000-digit distance
+token, each asserting the exact NAR validation exception type.
+
+Codex local rerun with Python 3.14.5 / pytest 8.3.5:
+
+```text
+Dedicated c1b: 9 passed
+c1a source records: 8 passed
+Historical snapshot / SQLite / migration related: 62 passed
+Full suite: 2433 passed
+Forbidden dependency source/AST check: passed
+git diff --check: success
+```
+
+Status remains `PHASE_4C_2D3B1I6C1B_READY_FOR_REVIEW`. The remaining blocker is unchanged: no persisted supplied
+official NAR capture corpus exists, so c1b cannot create past-race or past-race-absence records.
