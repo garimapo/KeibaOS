@@ -8,7 +8,7 @@ from decimal import Decimal as _Decimal, InvalidOperation as _InvalidOperation
 import re as _re
 from typing import Literal as _Literal
 from unicodedata import normalize as _normalize
-from urllib.parse import parse_qsl as _parse_qsl, urlsplit as _urlsplit
+from urllib.parse import parse_qsl as _parse_qsl, urljoin as _urljoin, urlsplit as _urlsplit
 from zoneinfo import ZoneInfo as _ZoneInfo
 
 from bs4 import BeautifulSoup as _BeautifulSoup
@@ -83,6 +83,8 @@ class NarSuppliedOfficialResponse:
 _HOST = "www.keiba.go.jp"
 _PATH = "/KeibaWeb/TodayRaceInfo/DebaTable"
 _QUERY_KEYS = frozenset({"k_babaCode", "k_raceDate", "k_raceNo"})
+_HORSE_PATH = "/KeibaWeb/DataRoom/HorseMarkInfo"
+_HORSE_QUERY_KEY = "k_lineageLoginCode"
 _DECIMAL_TOKEN = _re.compile(r"[1-9][0-9]*\Z")
 _DATE_TOKEN = _re.compile(r"[0-9]{4}/[0-9]{2}/[0-9]{2}\Z")
 _PERCENT_ESCAPE = _re.compile(r"%(?:[0-9A-Fa-f]{2})")
@@ -200,6 +202,67 @@ def _canonical_url(value: str) -> tuple[str, _date, str, str]:
         f"&k_raceDate={race_date_text.replace('/', '%2F')}&k_raceNo={race_no}"
     )
     return canonical, race_date, baba_code, race_no
+
+
+def _canonical_horse_identity(value: object) -> str:
+    if type(value) is not str:
+        raise _validation("horse href must be str")
+    if value != _normalize("NFC", value) or value != value.strip():
+        raise _validation("horse href must already be NFC-normalized without whitespace")
+    if any(character.isspace() or ord(character) < 32 for character in value):
+        raise _validation("horse href contains whitespace or control characters")
+    try:
+        raw = _urlsplit(value)
+        raw_port = raw.port
+    except ValueError as error:
+        raise _validation("horse href is invalid") from error
+    if raw.username is not None or raw.password is not None or raw.fragment:
+        raise _validation("horse href must not contain credentials or fragment")
+    if raw.scheme:
+        if raw.scheme.lower() != "https" or (raw.hostname or "").lower() != _HOST:
+            raise _validation("horse href host or scheme is invalid")
+        if raw_port not in (None, 443):
+            raise _validation("horse href port is invalid")
+        candidate = value
+    else:
+        if raw.netloc:
+            raise _validation("horse href host is invalid")
+        candidate = _urljoin(f"https://{_HOST}{_PATH}", value)
+    try:
+        parsed = _urlsplit(candidate)
+        port = parsed.port
+    except ValueError as error:
+        raise _validation("horse href is invalid") from error
+    if "+" in parsed.query or _has_bad_percent_encoding(parsed.query):
+        raise _validation("horse href query encoding is ambiguous or malformed")
+    if (
+        parsed.scheme != "https"
+        or parsed.hostname != _HOST
+        or port not in (None, 443)
+        or parsed.path != _HORSE_PATH
+        or not parsed.query
+    ):
+        raise _validation("horse href is invalid")
+    try:
+        pairs = _parse_qsl(
+            parsed.query,
+            keep_blank_values=True,
+            strict_parsing=True,
+            encoding="utf-8",
+            errors="strict",
+        )
+    except ValueError as error:
+        raise _validation("horse href query is invalid") from error
+    if len(pairs) != 1:
+        raise _validation("horse href query is invalid")
+    key, token = pairs[0]
+    if (
+        key != _HORSE_QUERY_KEY
+        or token != _normalize("NFC", token)
+        or _DECIMAL_TOKEN.fullmatch(token) is None
+    ):
+        raise _validation("horse lineage identity is invalid")
+    return f"nar:horse:{token}"
 
 
 def _require_utf8_document(response: NarSuppliedOfficialResponse) -> _BeautifulSoup:
@@ -362,7 +425,7 @@ def _horse_rows(soup: _BeautifulSoup) -> tuple[_Tag, ...]:
 def _row_values(
     row: _Tag,
     external_race_id: str,
-) -> tuple[int, str, str, _Decimal]:
+) -> tuple[int, str, str, str, _Decimal]:
     row_text = _display_text(row.get_text(" ", strip=True))
     if any(marker in row_text for marker in _CANCELLATION_MARKERS):
         raise NarHistoricalInputSourceUnsupportedError(
@@ -376,6 +439,8 @@ def _row_values(
         _required_text(horse_cell.get_text(" ", strip=True), "horseNum"),
         "horseNum",
     )
+    horse_anchor = _one(row.select("a.horseName[href]"), "horseName")
+    external_horse_id = _canonical_horse_identity(horse_anchor.get("href"))
     jockey = _direct_text(_one(row.select("a.jockeyName"), "jockeyName"))
     odds_spans = [
         span
@@ -401,7 +466,13 @@ def _row_values(
         raise NarHistoricalInputSourceUnsupportedError(
             "win odds must be positive",
         )
-    return horse_no, f"{external_race_id}:entry:{horse_no}", jockey, odds
+    return (
+        horse_no,
+        f"{external_race_id}:entry:{horse_no}",
+        external_horse_id,
+        jockey,
+        odds,
+    )
 
 
 def normalize_nar_historical_input_source_records(
@@ -437,7 +508,7 @@ def normalize_nar_historical_input_source_records(
     if len({item[0] for item in parsed_rows}) != len(parsed_rows):
         raise _validation("duplicate horseNum")
     records: list[_HistoricalInputSourceRecord] = [track]
-    for horse_no, entry_id, jockey, odds in sorted(parsed_rows):
+    for horse_no, entry_id, external_horse_id, jockey, odds in sorted(parsed_rows):
         common = {
             "organization": "NAR",
             "source_system": "nar_official",
@@ -454,7 +525,7 @@ def normalize_nar_historical_input_source_records(
                     record_kind="entry",
                     record_values={
                         "external_entry_id": entry_id,
-                        "external_horse_id": None,
+                        "external_horse_id": external_horse_id,
                         "horse_no": horse_no,
                     },
                     **common,

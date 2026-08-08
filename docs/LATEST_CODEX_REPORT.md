@@ -2,7 +2,7 @@
 
 ## Status
 
-PHASE_4C_2D3B1I6C1C_READY_FOR_REVIEW
+PHASE_4C_2D3B1I6C1D1_READY_FOR_REVIEW
 
 ## Previous Formal Phase
 
@@ -14,9 +14,9 @@ Branch: `feature/ver0.8-simulator`
 
 ## Current Preparation
 
-Phase 4C-2d3b1i6c1b — NAR supplied-raw historical source normalization preparation
+Phase 4C-2d3b1i6c1d1 — NAR target horse identity preparation
 
-Base commit: `96e70d17f66f85689f568c7603977afdb508e31b feat: add historical input source record domain`
+Base commit: `960c3419e52205cbfd94c3466eaabbb85d14e6ba feat: assemble historical input snapshots`
 
 Branch: `feature/ver0.8-simulator`
 
@@ -2742,8 +2742,49 @@ The proposed implementation remains one new module, `historical_input_snapshot_b
 module, and the two phase documents. It has no repository/schema/migration or package-export change. The single
 open blocker is complete official past-race or valid c1a absence evidence for every entry; c1c must not fabricate it.
 
-blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
-assembled from its DebaTable-only output.
+
+## Phase 4C-2d3b1i6c1d1 Preparation — NAR Target Horse Identity
+
+Status: DRAFT_FOR_REVIEW.
+
+d1 is a docs-only prerequisite from formal base 960c341. It designs the smallest c1b entry-payload evolution and does
+not implement it. Official target DebaTable inspection found row-local horse links in the same row as horse number,
+jockey, and odds. Observed official link forms include:
+
+    /KeibaWeb/DataRoom/HorseMarkInfo?k_lineageLoginCode=30036406666
+    /KeibaWeb/DataRoom/HorseMarkInfo?k_lineageLoginCode=30038401876
+
+The latter resolves to the official horse page. The code is treated as an official provider identifier based on supplied
+anchor bytes; no HTTP result is needed or used by future c1b. The prior inline c1b fixture has a horseName anchor without
+href, so it is insufficient as the positive contract fixture.
+
+The frozen future row-local contract is exactly one a.horseName[href] in every selected entry tr. Relative links are
+anchored to https://www.keiba.go.jp; absolute links must be https://www.keiba.go.jp. The path is exactly
+/KeibaWeb/DataRoom/HorseMarkInfo and the sole query key is exactly k_lineageLoginCode. Unknown/duplicate/missing/blank
+keys, malformed percent escapes, non-default ports, credentials, fragments, controls, wrong paths/hosts, and zero or
+multiple row-local anchors fail at the existing validation boundary.
+
+The lineage code is preserved lexically as ASCII [1-9][0-9]*: no leading zero, sign, whitespace, Unicode digit,
+scientific notation, or int conversion. The future entry value is exactly:
+
+    external_horse_id = nar:horse:{k_lineageLoginCode}
+
+external_entry_id remains the target-race entry ID. c1a already accepts external_horse_id and will intentionally give
+the more-complete entry record a new source_id. c1c already propagates the value into HistoricalExternalEntryIdentity.
+No c1a or c1c change is required.
+
+A new authentic fixture is required for the positive implementation test:
+tests/fixtures/nar/deba_table_target_horse_identity.html. It must contain at least two official rows and pinned lineage
+codes. Future scope is limited to c1b production/test, that fixture, and the two phase docs. Public API remains
+unchanged; all helper parsing remains private.
+
+The dedicated future tests will pin positive row-local mapping, deterministic identity/source IDs, distinct multi-row
+codes, malformed link grammar, no fallback to None/name/horse number, no HTTP/DB/filesystem, c1a validation, c1c
+propagation, and package-root non-export.
+
+blocker: d1 must be independently approved before c1d can bind historical official rows to target entries; absence,
+historical field mapping, and historical provenance remain out of scope.
+
 
 ## Phase 4C-2d3b1i6c1c Implementation Review Validation-boundary Correction
 
@@ -2772,8 +2813,37 @@ git diff --check: success
 
 Status remains `READY_FOR_REVIEW`; formal integration has not occurred.
 
-blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
-assembled from its DebaTable-only output.
+
+## Phase 4C-2d3b1i6c1d1 Implementation
+
+Status: READY_FOR_REVIEW.
+
+Implemented the approved c1b-only target horse identity boundary. Every selected horse row now requires exactly one
+row-local a.horseName[href]. The private validator accepts only relative or official absolute HTTPS HorseMarkInfo links,
+with exact path /KeibaWeb/DataRoom/HorseMarkInfo and exactly one k_lineageLoginCode query value. It rejects malformed
+URL parsing, fragments, credentials, unsupported port, foreign host, wrong path, unknown/duplicate/missing/blank key,
+plus ambiguity, malformed percent encoding, and noncanonical lineage text.
+
+The identity is lexical ASCII [1-9][0-9]* and the exact entry value is nar:horse:{k_lineageLoginCode}; no untrusted
+integer conversion, HTTP request, filesystem access, DB access, legacy parser/provider, or public API was added.
+external_entry_id remains unchanged. c1a is unchanged and intentionally recomputes entry source IDs from the new
+entry payload; track/jockey/odds payloads are unchanged. c1c is unchanged and the dedicated regression proves its
+existing external_horse_id propagation with explicit valid absence evidence.
+
+Added official-derived immutable test fixture:
+tests/fixtures/nar/deba_table_target_horse_identity.html. It contains two actual NAR DebaTable row structures and
+pinned official HorseMarkInfo lineage links 30036406666 and 30038401876. Dedicated coverage includes row-local
+association, deterministic output, source-ID evolution, strict anchor/token mutations, accepted relative/official
+absolute links, huge lexical token behavior, c1a set validation, c1c propagation, package-root non-export, and existing
+c1b source/AST boundary coverage.
+
+Verification runtime recovery created the external Python 3.14.5 venv
+`C:\\Users\\garim\\.cache\\keibaos-verification\\d1-py314` with system site packages, pytest 8.3.5, and tzdata
+2026.3. The project import smoke check passed. Required pytest verification then passed: dedicated d1 11, c1a 8,
+c1c 12, related historical snapshot/migration/SQLite repository 40, and full suite 2447. The forbidden
+dependency/source/AST check and git diff --check passed. The runtime blocker is resolved; implementation remains
+READY_FOR_REVIEW pending independent ChatGPT review and must not be integrated.
+
 
 ## Phase 4C-2d3b1i6c1c Implementation
 
@@ -2813,6 +2883,33 @@ past-race-absence evidence, so a complete snapshot still requires a later suppli
 
 blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
 assembled from its DebaTable-only output.
+
+## Phase 4C-2d3b1i6c1d1 Source-ID Isolation Review Correction
+
+GitHub implementation review of `86c26816d894fbee98691c9c8f231dee2129503e` approved the d1 production module,
+authentic official fixture, and HorseMarkInfo parsing. The sole required correction is a dedicated deterministic
+source-ID isolation regression; production and the fixture remain unchanged.
+
+Starting with a valid two-entry supplied DebaTable response, the regression changes only entry 1's valid
+`k_lineageLoginCode` from `30000000001` to `30000000999`. It proves that only entry 1's c1a entry payload
+`external_horse_id` and entry `source_id` change. The target-race URL, horse number, jockey, odds, track facts,
+entry 2 identity, and observed_at remain unchanged. It explicitly proves equal track source ID, equal selected-entry
+jockey and odds-win source IDs, and equal entry/jockey/odds payloads and source IDs for entry 2.
+
+Verification using external Python 3.14.5 / pytest 8.3.5 / tzdata 2026.3:
+
+```text
+Dedicated d1: 12 passed
+c1a: 8 passed
+c1c: 12 passed
+Historical snapshot/migration/SQLite repository regressions: 40 passed
+Full suite: 2448 passed
+Forbidden dependency/source/AST check: passed
+git diff --check: success
+```
+
+Status remains `PHASE_4C_2D3B1I6C1D1_READY_FOR_REVIEW`; the correction is pending independent ChatGPT review and
+must not be integrated into the formal branch.
 
 ## Phase 4C-2d3b1i6c1c Source URL Policy Revision
 
