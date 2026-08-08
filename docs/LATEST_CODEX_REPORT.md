@@ -2884,6 +2884,52 @@ past-race-absence evidence, so a complete snapshot still requires a later suppli
 blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
 assembled from its DebaTable-only output.
 
+## Phase 4C-2d3b1i6c1d3a PREPARE — Historical Past-race Field-domain Contract
+
+Status: DRAFT_FOR_REVIEW
+
+Formal base: `2b6d389b4296be2f6749b71fc4ed827f244ce570`.
+
+Read-only investigation of the committed c1a source-record domain, historical snapshot domain, c1c builder, SQLite
+repository, v010 migration/runner, legacy scoring boundary, and official NAR HorseMarkInfo/CompeteTable semantics
+freezes the following design decision: historical past-race `margin` is semantically ambiguous and must be replaced
+by `reference_time_difference_seconds: Decimal`.
+
+The value means the direct provider-displayed NAR time difference in seconds: nonwinner to first and winner to second.
+It is not a horse-length margin, signed deficit, RaceMarkTable `着差`, or a value derived from race times. Only direct
+finite nonnegative Decimal provider values are acceptable; zero is permitted only when directly supplied. Floats,
+integers, bools, NaN, infinity, blank/unavailable markers, negatives, aliases, and inferred values are rejected.
+
+`race_name` and `race_class` remain their existing required nonempty official HorseMarkInfo values. This preparation
+does not alter `passing_order` or `fourth_corner_position`.
+
+The field replacement is a breaking canonical-contract change. c1a source records move from schema version 1 /
+`his-v1` source-ID namespace to version 2 / `his-v2`; `HistoricalPastRaceSnapshot` and the historical snapshot
+canonical content payload replace the key and the payload schema version moves from 1 to 2. Old IDs and digests are
+not preserved, and no `margin` alias or dual-read/write behavior is allowed.
+
+v010 stores `margin_text`. The proposed append-only v011 migration first fails closed if *any*
+`historical_input_snapshots` row exists. Only an empty snapshot store may rename the child column to
+`reference_time_difference_seconds_text`; v011 then records normally. No historic value is copied, converted,
+deleted, or reinterpreted as seconds. The all-snapshot guard is required because even snapshots without child rows
+use the old canonical payload version.
+
+AbilityEngine still consumes only legacy `PastRace.margin` float and applies legacy margin scoring. It does not consume
+the historical snapshot domain. No AbilityEngine change is authorized here; connecting time difference to a score is
+deferred to a separately designed feature phase.
+
+Future implementation scope is limited to c1a, historical snapshot, c1c mapping, SQLite repository, new guarded
+v011 and migration runner registration, their dedicated tests, and these two documents. It excludes legacy parser/
+provider/database paths, AbilityEngine, README, package exports, and all external state.
+
+Recommended order after d3a: `Phase 4C-2d3b1i6c1d3b` must freeze historical past-race single-response provenance
+and provider-record identity. c1d normalizer implementation remains blocked; `past_race_absence` remains UNSUPPORTED.
+
+No production or test changes were made; no tests were run during PREPARE.
+
+blocker: historical NAR past-race normalization awaits separately approved field-domain implementation and
+provenance/identity design.
+
 ## Phase 4C-2d3b1i6c1d1 Source-ID Isolation Review Correction
 
 GitHub implementation review of `86c26816d894fbee98691c9c8f231dee2129503e` approved the d1 production module,
