@@ -243,6 +243,28 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
                 ),
             )
 
+    def test_url_parser_and_integer_conversion_failures_are_validation_errors(self) -> None:
+        malformed_url = URL.replace("WWW.KEIBA.GO.JP:443", "[::1")
+        with self.assertRaises(NarHistoricalInputSourceValidationError) as caught:
+            normalize_nar_historical_input_source_records(
+                response=_response(response_url=malformed_url),
+            )
+        self.assertIs(type(caught.exception), NarHistoricalInputSourceValidationError)
+        huge_token = "9" * 10000
+        for name, body in (
+            ("horseNum", _body(rows=_row(huge_token, "Rider", "2"))),
+            ("distance_m", _body().replace(b"1400m", f"{huge_token}m".encode())),
+        ):
+            with self.subTest(name=name):
+                with self.assertRaises(NarHistoricalInputSourceValidationError) as caught:
+                    normalize_nar_historical_input_source_records(
+                        response=_response(response_body=body),
+                    )
+                self.assertIs(
+                    type(caught.exception),
+                    NarHistoricalInputSourceValidationError,
+                )
+
     def test_utf8_html_and_h4_identity_boundaries(self) -> None:
         invalids = (
             _response(response_body=b"\xff"),

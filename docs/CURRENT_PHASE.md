@@ -261,3 +261,20 @@ place layout, package-root non-export, and no `float(` source conversion.
 Correction verification: dedicated 8 passed; c1a source records 8 passed; historical snapshot/SQLite/migration
 related 62 passed; full suite 2432 passed; forbidden-dependency source/AST checks passed; `git diff --check`
 passed. Status remains `READY_FOR_REVIEW`.
+
+## GitHub Re-review Validation-boundary Correction
+
+GitHub re-review of `8f758d33a615495cae3fe50616afd9e7687366fa` found two fail-closed exception
+classification gaps only. `_canonical_url` now calls `urlsplit` exactly once inside its validation-owned
+`ValueError` boundary before consulting the parsed query. A malformed netloc such as an invalid bracketed IPv6
+host therefore raises exact `NarHistoricalInputSourceValidationError`, rather than leaking `urllib.parse`'s raw
+`ValueError`.
+
+The new private positive-decimal integer helper preserves the unlimited positive canonical-decimal source contract
+while converting Python's arbitrary-length `int` conversion failure into the same validation error. It is used for
+untrusted `horseNum` and `distance_m`; no provider range limit or global integer-digit setting was introduced.
+
+Dedicated regressions pin the malformed-URL parser failure plus pathological decimal horse number and distance
+tokens. Correction verification: dedicated 9 passed; c1a source records 8 passed; historical
+snapshot/SQLite/migration related 62 passed; full suite 2433 passed; forbidden-dependency source/AST checks passed;
+`git diff --check` passed. Status remains `READY_FOR_REVIEW`.

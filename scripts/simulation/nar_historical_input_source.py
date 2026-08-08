@@ -135,18 +135,26 @@ def _parse_decimal_token(value: str, name: str) -> str:
     return value
 
 
+def _parse_positive_int(value: str, name: str) -> int:
+    token = _parse_decimal_token(value, name)
+    try:
+        return int(token)
+    except ValueError as error:
+        raise _validation(f"{name} is invalid") from error
+
+
 def _canonical_url(value: str) -> tuple[str, _date, str, str]:
     if value != _normalize("NFC", value) or value != value.strip():
         raise _validation("response_url must already be NFC-normalized without whitespace")
     if any(character.isspace() or ord(character) < 32 for character in value):
         raise _validation("response_url contains whitespace or control characters")
-    if "+" in _urlsplit(value).query or _has_bad_percent_encoding(value):
-        raise _validation("response_url query encoding is ambiguous or malformed")
     try:
         parsed = _urlsplit(value)
         port = parsed.port
     except ValueError as error:
         raise _validation("response_url is invalid") from error
+    if "+" in parsed.query or _has_bad_percent_encoding(parsed.query):
+        raise _validation("response_url query encoding is ambiguous or malformed")
     if parsed.scheme.lower() != "https":
         raise _validation("response_url must use https")
     if parsed.username is not None or parsed.password is not None or parsed.fragment:
@@ -316,7 +324,7 @@ def _track_values(
         "target_race_date": race_date,
         "scheduled_start_at": scheduled_start_at,
         "place": place,
-        "distance_m": int(_parse_decimal_token(distance[0], "distance_m")),
+        "distance_m": _parse_positive_int(distance[0], "distance_m"),
         "track": surfaces[0],
         "track_condition": _required_text(condition[0], "track_condition"),
         "race_name": race_name,
@@ -364,11 +372,10 @@ def _row_values(
         row.find_all("td", class_="horseNum", recursive=False),
         "horseNum",
     )
-    horse_token = _parse_decimal_token(
+    horse_no = _parse_positive_int(
         _required_text(horse_cell.get_text(" ", strip=True), "horseNum"),
         "horseNum",
     )
-    horse_no = int(horse_token)
     jockey = _direct_text(_one(row.select("a.jockeyName"), "jockeyName"))
     odds_spans = [
         span

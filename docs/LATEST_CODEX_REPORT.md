@@ -2686,3 +2686,32 @@ git diff --check: success
 
 Status remains `PHASE_4C_2D3B1I6C1B_READY_FOR_REVIEW`. The only remaining blocker is unchanged: no persisted
 supplied official NAR capture corpus exists, so c1b cannot create past-race or past-race-absence records.
+
+## Phase 4C-2d3b1i6c1b GitHub Re-review Validation-boundary Correction
+
+GitHub re-review of `8f758d33a615495cae3fe50616afd9e7687366fa` required two error-boundary corrections without
+changing the approved split-card extraction or URL support semantics. `_canonical_url` now performs its sole
+`urlsplit` call inside the validation-owned `ValueError` boundary before accessing `parsed.query`; malformed
+bracketed-netloc input therefore raises exact `NarHistoricalInputSourceValidationError`.
+
+The normalizer now uses a private guarded positive-decimal integer conversion helper for untrusted `horseNum` and
+`distance_m`. It preserves arbitrary-length canonical positive decimal acceptance at the lexical level, but converts
+Python's long-integer conversion `ValueError` to `NarHistoricalInputSourceValidationError`. No artificial provider
+range, `sys.set_int_max_str_digits`, or broad exception handling was added.
+
+Dedicated regressions cover malformed URL parser failure, a 10,000-digit horse number, and a 10,000-digit distance
+token, each asserting the exact NAR validation exception type.
+
+Codex local rerun with Python 3.14.5 / pytest 8.3.5:
+
+```text
+Dedicated c1b: 9 passed
+c1a source records: 8 passed
+Historical snapshot / SQLite / migration related: 62 passed
+Full suite: 2433 passed
+Forbidden dependency source/AST check: passed
+git diff --check: success
+```
+
+Status remains `PHASE_4C_2D3B1I6C1B_READY_FOR_REVIEW`. The remaining blocker is unchanged: no persisted supplied
+official NAR capture corpus exists, so c1b cannot create past-race or past-race-absence records.
