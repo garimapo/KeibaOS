@@ -93,14 +93,14 @@ must never replace them with the historical race identity.
 and immutable preservation of the official target horse-link identity from a DebaTable row. c1d must not silently
 reparse a target page and duplicate c1b's target-row boundary merely to recover discarded identity.
 
-**Single-record provenance prerequisite required: YES.** The target-row/horse-history pages prove target-horse
-linkage, while RaceMarkTable supplies the historical result facts. A single c1a record presently has only one
-`canonical_source_url` and one observed stamp. Selecting only the result URL would omit the identity evidence; using
-only the history URL would misrepresent the fact source. Before c1d can combine pages, ChatGPT must approve a
-provider-neutral immutable evidence-chain/provenance representation or prove that the committed c1a model can record
-the chain without misleading a record's canonical source URL and timestamps. This PREPARE does not change c1a.
+**C1A provenance extension required: NOT_YET_PROVEN.** The narrower official result-page alternative must be evaluated
+first: if a supplied historical RaceMarkTable row itself links by exact official `k_lineageLoginCode` to the already
+verified target horse and supplies every emitted fact, its exact canonical RaceMarkTable URL can be the sole fact
+provenance. HorseMarkInfo then acts only as caller navigation/discovery evidence. c1a changes are required only if
+that direct result-page proof fails; this PREPARE does not pre-authorize such a change.
 
-Consequently, c1d is **PREREQUISITE_REQUIRED**, not an implementation-ready four-file phase.
+Consequently, c1d is **IDENTITY_PREREQUISITE_REQUIRED** and **FIELD_MAPPING_PREREQUISITE_REQUIRED**, not an
+implementation-ready four-file phase.
 
 ## Supported-page and URL Findings
 
@@ -108,7 +108,7 @@ Consequently, c1d is **PREREQUISITE_REQUIRED**, not an implementation-ready four
 | --- | --- | --- |
 | Target DebaTable horse-link extraction | PREREQUISITE_REQUIRED | c1b currently discards the official horse anchor. |
 | Horse detail/profile / HorseMarkInfo | DEFERRED | Provider-native lineage query was observed, but raw target-link compatibility, canonical URL grammar, and pagination proof are not frozen. |
-| Normal completed RaceMarkTable row | PREREQUISITE_REQUIRED | Result facts are available, but target identity and multi-response provenance are not representable yet. |
+| Normal completed RaceMarkTable row | Identity PROVEN; field mapping PREREQUISITE_REQUIRED | Its horse anchor reaches the same observed HorseMarkInfo lineage identity, but every c1a field is not yet semantically frozen. |
 | Abnormal/cancelled/removed/disqualified row | UNSUPPORTED | c1a strict numeric/result fields cannot receive invented values. |
 | Same-date multiple starts | UNSUPPORTED | c1c rejects unprovable same-date chronology; provider ID/list order is not a tie-breaker. |
 | ばんえい RaceMarkTable | UNSUPPORTED | Required corner/fourth-corner evidence is not uniformly present. |
@@ -142,10 +142,12 @@ duplicate historical identities, or incompatible result rows must fail closed.
 
 ## Provider Record Identity and Response Provenance
 
-No provider-record-ID representation is frozen. A RaceMarkTable URL alone identifies a race page, not necessarily one
-horse's result. A possible future identity would need the exact canonical historical RaceMarkTable race identity plus
-the validated official `k_lineageLoginCode` bound through the target and history chain. That pair cannot be adopted
-until the prerequisites establish its canonical syntax, target linkage, one-row uniqueness, and immutable provenance.
+No provider-record-ID string syntax is frozen. A RaceMarkTable URL alone identifies a race page, not necessarily one
+horse's result. Official inspection now proves that normal RaceMarkTable horse anchors use
+`/KeibaWeb/DataRoom/HorseMarkInfo` with exact observed query key `k_lineageLoginCode`, and the same lineage code
+(`30039401296`) was reached from both the current and historical result rows for the same horse. Thus the primitive
+`(canonical historical RaceMarkTable race identity, validated k_lineageLoginCode)` is a candidate one-result identity,
+subject to a future exact URL grammar, one matching row, duplicate/missing-anchor rejection, and field-mapping phase.
 It must never be a source ID, URL alone, Python hash, random UUID, local ID, target horse number, or horse name.
 
 Every future raw response needs caller-supplied exact bytes, strict UTF-8 policy where applicable, a canonical official
@@ -153,10 +155,11 @@ response URL, and an explicit aware `observed_at`; no current-time fallback is p
 `None` unless an official page itself exposes defensible publication-time evidence. It must not be derived from race
 date, result time, HTTP Date, file metadata, crawl time, or a clock.
 
-An eventual bundle must preserve all official pages needed for the identity proof and reject missing, duplicate, or
-incompatible links. Reusing `NarSuppliedOfficialResponse` is not approved merely because it is convenient: it models
-one response, while the required relation is multi-response. The evidence-chain prerequisite must first decide whether
-a new frozen/slotted bundle and a c1a-compatible immutable chain representation are sufficient.
+An eventual caller bundle may use HorseMarkInfo as discovery/navigation evidence, but it must preserve enough immutable
+identity information to reject missing, duplicate, or incompatible links. Reusing `NarSuppliedOfficialResponse` is not
+approved merely because it is convenient. Whether an evidence-chain representation is needed remains contingent: it is
+not needed for normal past-race fact provenance if the supplied RaceMarkTable row independently proves the verified
+horse identity and supplies all emitted facts.
 
 ## Temporal and Pagination Policy
 
@@ -172,13 +175,14 @@ missing page, or duplicate page must fail closed. No bounded first-page window i
 
 ## Future Public API and Allowed Files
 
-No c1d production public API is frozen, because the identity and provenance prerequisites are unresolved. The
+No c1d production public API is frozen, because the identity and field-mapping prerequisites are unresolved. The
 candidate module name `scripts/simulation/nar_historical_past_race_source.py`, an associated dedicated test module,
 and a small supplied-response bundle/error/normalizer surface are **not authorized** until ChatGPT decides the
 prerequisite contract extension.
 
-Accordingly, no c1d implementation Allowed Files are approved. A later prerequisite may need to change the c1b target
-identity contract and/or the c1a provenance model; it must be separately designed and phased. c1d must not silently
+Accordingly, no c1d implementation Allowed Files are approved. The immediate prerequisite must change the c1b target
+identity contract; a c1a provenance phase is conditional, not yet required. Each must be separately designed and
+phased. c1d must not silently
 broaden a nominal four-file scope to change `historical_input_source_records.py`,
 `nar_historical_input_source.py`, or `historical_input_snapshot_builder.py`.
 
@@ -208,6 +212,46 @@ branch, or merge.
 
 ## Blockers
 
-blocker: c1b does not retain a verified target-row-to-official-horse identity, and current c1a single-record
-canonical URL/timestamp fields cannot faithfully represent the multi-response official identity-and-result evidence
-chain. `past_race` is PREREQUISITE_REQUIRED and `past_race_absence` is UNSUPPORTED pending separate approved contracts.
+blocker: c1b does not retain a verified target-row-to-official-horse identity. RaceMarkTable independently exposes a
+matching official horse-link candidate, so a c1a provenance extension is NOT_YET_PROVEN; required field semantics,
+especially race_class and Decimal margin, remain separate blockers. `past_race` is PREREQUISITE_REQUIRED and
+`past_race_absence` is UNSUPPORTED pending separate approved contracts.
+
+## GitHub Review Prerequisite Refinement
+
+The official RaceMarkTable result row has now been inspected directly. Its horse anchor resolves to:
+
+    /KeibaWeb/DataRoom/HorseMarkInfo?k_lineageLoginCode=30039401296
+
+The same exact path and single observed query key resolve from both a current RaceMarkTable row and the selected
+historical RaceMarkTable row for that horse. This proves a provider-native historical-row horse-identity candidate:
+the RaceMarkTable response can carry a row-level HorseMarkInfo k_lineageLoginCode that equals a target horse identity
+once c1b has first preserved and verified that target identity. The future normalizer must require exactly one matching
+horse anchor in the selected historical result row; missing or duplicate anchors, a wrong path/key, or a differing code
+fails closed. It must not use horse name or cross-race horse number.
+
+The exact required question is therefore narrowed. A normal past-race record may use the exact canonical historical
+RaceMarkTable URL as canonical_source_url without a c1a provenance extension only if that one supplied response
+independently proves the verified lineage code, historical race identity, and every emitted c1a field. HorseMarkInfo is
+then discovery/navigation evidence for the caller, not normalized fact provenance. This is sufficient as an identity
+pattern but not yet a full c1a field-mapping proof.
+
+| Prerequisite decision | Status | Basis / remaining rule |
+| --- | --- | --- |
+| Target DebaTable -> stable horse identity | PREREQUISITE_REQUIRED | c1b still emits external_horse_id=None; d1 must freeze the target-row anchor and lineage-code grammar. |
+| Historical RaceMarkTable -> same stable horse identity | PROVEN | Both inspected result rows link to the same HorseMarkInfo k_lineageLoginCode=30039401296 identity. |
+| RaceMarkTable single-response fact provenance | NOT_PROVEN | Identity pattern is sufficient, but all required c1a field mappings are not yet semantic/proven. |
+| c1a provenance extension | NOT_YET_PROVEN | Not required if one RaceMarkTable response proves the selected horse and all emitted facts; revisit only if that fails. |
+| race_class mapping | NOT_PROVEN | A historical result-page semantic class element remains to be frozen; subtitle text is forbidden. |
+| Decimal margin compatibility | CONTRACT_GAP | Observed Japanese and fraction forms cannot be silently converted to c1a Decimal. |
+| past_race | PREREQUISITE_REQUIRED | d1 identity plus field-mapping decision remain required. |
+| past_race_absence | UNSUPPORTED | No full pagination/count/terminal zero-history proof. |
+
+The recommended immediate next phase is Phase 4C-2d3b1i6c1d1 — NAR target horse identity preparation. It will design
+only the DebaTable horse-anchor selector, exact HorseMarkInfo URL grammar, canonical k_lineageLoginCode representation,
+external_horse_id semantics, relationship to existing external_entry_id, and missing/duplicate/mismatch behavior, with
+a minimal c1b/test scope. It must not normalize historical races.
+
+A potential Phase 4C-2d3b1i6c1d2 — historical source evidence-chain provenance preparation is conditional only.
+It is proposed if, after d1 and field inspection, a RaceMarkTable response cannot independently bind the official horse
+identity and every emitted fact. It is not scheduled as mandatory and no c1a change is authorized now.

@@ -2833,8 +2833,46 @@ git diff --check: success
 
 Status remains `READY_FOR_REVIEW`; formal integration has not occurred.
 
-blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
-assembled from its DebaTable-only output.
+
+## Phase 4C-2d3b1i6c1d Prerequisite Refinement
+
+GitHub design re-review approved the conclusion that c1d is not implementation-ready, that c1b has not preserved a
+proven target horse identity, and that absence remains unsupported. It required only a narrower decomposition: do not
+treat a c1a provenance-model extension as mandatory before testing the official RaceMarkTable row itself.
+
+Official inspection now shows a normal RaceMarkTable horse anchor resolves to:
+
+    /KeibaWeb/DataRoom/HorseMarkInfo?k_lineageLoginCode=30039401296
+
+The same exact path and query key were reached from both a current result row and the selected historical result row.
+Thus, once d1 verifies/preserves the target DebaTable row's exact official horse identity, a supplied historical
+RaceMarkTable row can independently prove the same provider-native lineage identity by its own horse anchor. It must
+have exactly one matching row anchor; missing, duplicate, malformed, or mismatched anchors fail closed. Names and
+cross-race horse numbers remain invalid identity keys.
+
+HorseMarkInfo is therefore distinguished as discovery/navigation evidence. RaceMarkTable may be normalized as the
+single-response fact source only if it also supplies every emitted c1a field with approved semantic mapping. That full
+condition is not yet proven. A c1a provenance extension is NOT_YET_PROVEN, not required by this PREPARE.
+
+| Decision | Status |
+| --- | --- |
+| target DebaTable stable horse identity | PREREQUISITE_REQUIRED |
+| historical RaceMarkTable same horse identity | PROVEN |
+| RaceMarkTable single-response fact provenance | NOT_PROVEN |
+| c1a provenance extension | NOT_YET_PROVEN |
+| race_class mapping | NOT_PROVEN |
+| Decimal margin compatibility | CONTRACT_GAP |
+| past_race | PREREQUISITE_REQUIRED |
+| past_race_absence | UNSUPPORTED |
+
+Recommended next design phase: Phase 4C-2d3b1i6c1d1 — NAR target horse identity preparation. It will freeze only the
+target DebaTable horse anchor, exact HorseMarkInfo URL grammar, k_lineageLoginCode canonical form,
+external_horse_id representation, and missing/duplicate/mismatch behavior. A d2 evidence-chain provenance phase is
+conditional only if d1 plus field inspection show that RaceMarkTable cannot independently prove identity and facts.
+
+blocker: c1b target horse identity preservation and c1a-required field semantics (notably race_class and Decimal
+margin) remain unresolved; c1a provenance extension is conditional, not yet required; past_race_absence is unsupported.
+
 
 ## Phase 4C-2d3b1i6c1c Implementation
 
