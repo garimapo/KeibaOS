@@ -172,6 +172,17 @@ time-of-day chronology, and c1c must not use caller tuple order, database order,
 `provider_record_id` as invented chronology. A valid c1a absence record yields no past snapshot and exactly the
 `past_race/{race_entry_id}/none` provenance key. No record means neither history nor absence proof.
 
+After each entry has received its chronology-derived `past_race_index`, the final
+`HistoricalInputSnapshot.past_races` tuple is sorted globally by exactly `(race_entry_id, past_race_index)` ascending.
+This is a serialization and object-level canonicalization rule, distinct from the within-entry `race_date` descending
+chronology. It must not use horse number, external entry ID, caller source tuple order, database row order,
+provider-record ID, or hash/random order.
+
+The final `HistoricalInputSnapshot.provenance` tuple is sorted globally by exactly `audit_key` ascending using normal
+Python string ordering over the already-constructed canonical keys. Every source record still maps one-to-one to its
+exact provenance entry; only the final tuple ordering is canonicalized. It must not use source tuple order, source ID,
+record kind, horse number, or insertion order.
+
 ## Error Ownership
 
 The future module has one assembler-owned `HistoricalInputSnapshotAssemblyError(ValueError)`. It owns exact input
@@ -185,8 +196,10 @@ propagate unchanged. Direct `HistoricalInputSnapshot` domain `ValueError` values
 
 The same source records, mapping, dataset ID, internal race ID, captured_at, and information cutoff must produce the
 same snapshot and `content_sha256` irrespective of source tuple order. c1c freezes grouping and horse-number/past-date
-ordering before constructing immutable snapshot children. It has no HTTP, parser, filesystem, database, repository,
-environment, random, UUID, or current-time dependency and adds no package-root export.
+ordering before constructing immutable snapshot children: entries remain horse-number ascending with contiguous
+`entry_order`; final past races are `(race_entry_id, past_race_index)` ascending; final provenance is `audit_key`
+ascending. It has no HTTP, parser, filesystem, database, repository, environment, random, UUID, or current-time
+dependency and adds no package-root export.
 
 ## Future Allowed Files
 
@@ -206,7 +219,10 @@ mapping completeness/type/uniqueness; canonical entry order; track source URL se
 None as valid outcomes; non-track URL nonselection and differing non-track URL invariance; exact provenance keys/source
 IDs/timestamps; track/entry/past field mapping; captured/cutoff/start causal rules; multiple past races; valid absence;
 past-and-absence conflict; missing evidence; same-date past ambiguity; c1b-only DebaTable rejection; deterministic
-content hash; no DB/network/filesystem/clock/legacy dependency; and package-root non-export.
+snapshot equality and content hash across materially different source-record tuple permutations; exact entries
+`entry_order` ascending, global past-race `(race_entry_id, past_race_index)` ascending, and global provenance
+`audit_key` ascending with two entries and multiple past races; no DB/network/filesystem/clock/legacy dependency; and
+package-root non-export.
 
 Future verification runs the new dedicated suite, source-record and snapshot regressions, SQLite snapshot repository
 and migration regressions, full pytest, source/AST dependency checks, `git diff --check`, and `git status --short`.

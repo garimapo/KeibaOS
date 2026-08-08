@@ -2764,3 +2764,23 @@ source-ID provenance propagation. Status remains `DRAFT_FOR_REVIEW`; implementat
 
 blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
 assembled from its DebaTable-only output.
+
+## Phase 4C-2d3b1i6c1c Snapshot Child Ordering Revision
+
+GitHub design re-review of `731e6849be675612d58a060d80009195ade31c6e` approved the source URL policy and required
+only explicit final child-tuple ordering. Entries remain sorted by `horse_no` ascending and receive contiguous
+zero-based `entry_order` values. Per-entry past-race chronology remains `race_date` descending with same-date
+ambiguity rejected and contiguous zero-based `past_race_index` values.
+
+After those indexes are assigned, the final snapshot `past_races` tuple is sorted globally by exactly
+`(race_entry_id, past_race_index)` ascending. The final snapshot `provenance` tuple is sorted globally by exactly
+canonical `audit_key` ascending using normal Python string ordering. Neither final tuple may depend on supplied source
+tuple order, horse number, external entry ID, source ID, record kind, insertion order, database rows, provider IDs,
+or hash/random order.
+
+The future dedicated suite now includes a materially noncanonical source-record permutation with two entries and
+multiple past races. It must prove exact snapshot equality and equal `content_sha256`, plus exact final entry,
+past-race, and provenance tuple orders. Status remains `DRAFT_FOR_REVIEW`; implementation has not started.
+
+blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
+assembled from its DebaTable-only output.
