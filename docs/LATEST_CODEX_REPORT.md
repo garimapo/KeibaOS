@@ -2884,6 +2884,49 @@ past-race-absence evidence, so a complete snapshot still requires a later suppli
 blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
 assembled from its DebaTable-only output.
 
+## Phase 4C-2d3b1i6c1d3 PREPARE — Historical Past-race Result-field Contract
+
+Status: `DRAFT_FOR_REVIEW`. This is a documentation-only PREPARE from formal base
+`2b6d389b4296be2f6749b71fc4ed827f244ce570`. No production, tests, fixtures, schema, migration, database, provider,
+parser, CLI, package export, logs, or original-workspace files changed.
+
+Repository-wide investigation found that `race_name` has no direct feature-engine reader, while `race_class` is used by
+`AbilityEngine._class_score`; unknown provider class text is currently neutral. `margin` is used only as an undefined
+positive numeric closeness scalar by `AbilityEngine._margin_score`; `PaceEngine` uses explicit fourth-corner position
+and then a legacy passing-order fallback. Historical snapshot/c1a/c1c/repository paths validate, persist, reconstruct,
+and digest every field. TrackEngine has no direct reader, and Predictor sees the fields only through engine outputs.
+
+The target historical-race asymmetry remains justified: target race name/class are optional because DebaTable may lack
+separate semantic values, but the supported past-race subset has separate official HorseMarkInfo `競走名` and `格組`
+columns. Thus both past fields remain required. HorseMarkInfo is authoritative for those exact NFC values and its
+official numeric `差`; CompeteTable is only a semantic cross-check. RaceMarkTable is authoritative for canonical
+historical race identity, matching d1 lineage row, win odds, passing sequence, and corner evidence. Its h3 is not
+split, and its textual `着差` is not used as the numeric field.
+
+The legacy parser's textual-margin constants/fractions, fallback zeroes, float conversion, and last-position corner
+guessing are `UNTRUSTED_FOR_HISTORICAL_EVIDENCE`. The current `margin` name has no stable provider-neutral unit.
+The proposed replacement is `reference_time_difference_seconds: Decimal`, using the direct official HorseMarkInfo
+value: relative to first for non-winners and to second for winners. This is not a signed deficit. Therefore
+`MARGIN_DOMAIN_CHANGE_REQUIRED = YES`; the current AbilityEngine cannot be silently mapped to that new unit.
+
+`passing_order` remains exact row-local RaceMarkTable text. A fourth-corner int is supportable only when the same page
+proves either labels `[1,2,3,4]` for four row positions or labels `[3,4]` for two row positions. That exact mapping is
+not yet proven; row length, final-token, distance/course, and legacy-parser inference are prohibited.
+
+No single official response supplies every semantically correct value. HorseMarkInfo supplies name/class/reference
+time difference; RaceMarkTable supplies identity, odds, passing, and corner facts. A logical past race therefore needs
+two factual response references with independently auditable timestamps. `SINGLE_RESPONSE_COMPLETE_SOURCE = NO`,
+`MULTI_RESPONSE_EVIDENCE_REQUIRED = YES`, and `C1A_PROVENANCE_EXTENSION_REQUIRED = YES`. Navigation-only pages must
+not enter the digest; each fact-contributing evidence identity must.
+
+Outcome is D: both field-domain and provenance prerequisites are required. The recommended order is d3a, historical
+past-race field-domain contract implementation (append-only v011, never rewrite formal v010), then d3b,
+multi-source evidence/provenance contract preparation, then a return to c1d normalizer PREPARE. The current d3 scope
+remains exactly `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`.
+
+blocker: field-domain and multi-source evidence/provenance contracts must be separately approved before any NAR
+past-race normalizer can be designed or implemented.
+
 ## Phase 4C-2d3b1i6c1d1 Source-ID Isolation Review Correction
 
 GitHub implementation review of `86c26816d894fbee98691c9c8f231dee2129503e` approved the d1 production module,
