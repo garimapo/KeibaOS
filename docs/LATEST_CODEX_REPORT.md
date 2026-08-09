@@ -3001,3 +3001,50 @@ past-race, and provenance tuple orders. Status remains `DRAFT_FOR_REVIEW`; imple
 
 blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
 assembled from its DebaTable-only output.
+
+## Phase 4C-2d3b1i6c1d3b Multi-source Evidence/Provenance PREPARE
+
+Status: DRAFT_FOR_REVIEW.
+
+Read-only review of formal commit 3cd5f2916213f32340782f1c069d9093a4e75499 confirms that c1a v2 source records
+and snapshot provenance retain only one URL and one observation pair. That scalar model is adequate for
+track/entry/jockey/odds records but cannot truthfully audit one NAR past-race record whose approved factual authority
+is split between HorseMarkInfo and RaceMarkTable.
+
+Official NAR re-inspection preserves the approved target-horse chain: target DebaTable lineage identity,
+HorseMarkInfo historical-race navigation, canonical RaceMarkTable historical-race identity, and exactly one
+same-lineage result row. Horse name, cross-race horse number, local mapping, URL-only identity, and target-race
+substitution remain forbidden. HorseMarkInfo supplies race_name, race_class, and
+reference_time_difference_seconds; RaceMarkTable supplies historical result facts including odds and passing/corner
+evidence. This PREPARE adds no parser or fixture.
+
+The selected architecture is uniform provider-neutral evidence references for every c1a record kind. A shared
+frozen/slotted HistoricalInputEvidenceReference carries evidence_role, optional canonical_source_url, required raw
+response SHA-256, optional available_at, and required observed_at. The digest is SHA-256 of exact supplied bytes
+before decoding or normalization. It identifies audit evidence but does not retain a body; later capture storage is
+separate. There is no additional evidence_id.
+
+c1a moves globally to schema version 3 and his-v3:{record_kind}:{sha256}. It removes scalar source URL/timestamps in
+favor of role-ordered evidence. Source IDs include roles, URLs, response hashes, and facts but exclude observation
+timestamps. Timestamp-only changes preserve source_id but change snapshot content_sha256; raw-byte changes, including
+irrelevant markup, change evidence and source identity. Roles are exact: singleton track, entry, jockey, odds_win,
+and past_race_absence_query roles; every past_race requires historical_race_context plus historical_race_result.
+Duplicate, missing, extra, or noncanonical evidence fails closed.
+
+HistoricalInputProvenance remains one item per audit_key and carries nested evidence instead of scalar timestamps.
+It is deliberately no longer structurally interchangeable with generic runtime InputAuditEntry, which remains
+unchanged. Snapshot payload moves to version 3 and includes role-ordered evidence plus each per-response timestamp;
+the snapshot digest preserves fact, evidence, and observation audit identity.
+
+SQLite needs a logical provenance parent plus normalized provenance-evidence child table. Planned v012 must require an
+empty historical_input_snapshots store before mutation. Existing v2 rows cannot be truthfully migrated because they
+have no raw response digest and scalar past-race provenance cannot prove multi-response fact authority. Empty-store
+identity/linkage mappings may remain. c1b constructs singleton evidence mechanically from supplied DebaTable bytes,
+and c1c evaluates eligibility per evidence item; neither receives provider parsing logic.
+
+Recommended next phase: Phase 4C-2d3b1i6c1d3b1 - Uniform historical evidence contract implementation. It is an
+atomic in-memory and persistence transition, followed by separately prepared NAR multi-response normalizer work.
+past_race_absence remains UNSUPPORTED.
+
+blocker: d3b requires independent ChatGPT design approval. No production, migration, schema, test, fixture,
+database, log, or formal-branch change has been made.
