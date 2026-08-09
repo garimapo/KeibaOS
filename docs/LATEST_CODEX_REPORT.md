@@ -2884,6 +2884,57 @@ past-race-absence evidence, so a complete snapshot still requires a later suppli
 blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
 assembled from its DebaTable-only output.
 
+## Phase 4C-2d3b1i6c1d3a Implementation Verification Scope Blocker
+
+The approved d3a implementation updated only its allowed historical domain, builder, repository, v011 migration,
+runner, and dedicated tests. External Python 3.14.5 / pytest 8.3.5 verification passed the directly affected suites:
+96 passed across c1a, snapshot domain, builder, SQLite repository, migration, simulation-migration, and d1 regressions.
+The changed simulation modules also passed the forbidden dependency/source check.
+
+The full suite ran and found five migration-registry expectation failures, not a production defect: 2445 passed and 5
+failed. The failures are in the currently unauthorized files `tests/test_simulation_bet_plan_migration.py` (three) and
+`tests/test_sqlite_persisted_simulation_application.py` (two). Each still asserts that runner-applied migrations end at
+v010; the approved runner contract now registers and applies v011 to an empty store. Their production behavior is
+otherwise successful.
+
+Updating those expectations is necessary for a passing full suite, but those files are outside d3a Allowed Files. No
+scope expansion or edit was made. The phase is returned to DRAFT_FOR_REVIEW pending explicit authorization to include
+only those affected tests. No commit or push was performed.
+
+blocker: full-suite completion requires an explicit d3a Allowed Files correction for the five v011 registry-expectation tests.
+
+## Phase 4C-2d3b1i6c1d3a Implementation Scope Extension Result
+
+The scope extension authorized only `tests/test_simulation_bet_plan_migration.py` and
+`tests/test_sqlite_persisted_simulation_application.py`. They now assert the exact global migration sequence 8, 9,
+10, 11 and the approved v011 name, while preserving their original v009 and persisted-application responsibilities.
+No production code changed after the extension.
+
+External Python 3.14.5 / pytest 8.3.5 verification passed: added bet-plan migration suite 17 passed; added persisted
+application suite 8 passed; c1a/snapshot/builder/repository/migration/d1 targeted suite 96 passed; full suite 2450
+passed. The forbidden dependency/source check passed and `git diff --check` passed. Status is
+`PHASE_4C_2D3B1I6C1D3A_READY_FOR_REVIEW` pending independent ChatGPT code review.
+
+blocker: none for d3a implementation verification; d3b multi-source evidence/provenance work remains unstarted.
+
+## Phase 4C-2d3b1i6c1d3a Final Regression Correction
+
+GitHub implementation review of `001c2e77b759fa7c420f38176abd3fea8c9ce82c` approved production and required two
+test-only contract pins. The c1a suite now proves within-v2 past-race-only source isolation: changing only
+`reference_time_difference_seconds` changes only that past-race source ID/payload; track, entry, jockey, and odds
+records retain equal v2 payloads and source IDs, and both record sets validate independently.
+
+The snapshot-domain suite now independently proves that `HistoricalPastRaceSnapshot` accepts Decimal zero and rejects
+int, bool, float, negative Decimal, NaN, and infinities at its own dataclass boundary. It also pins the public new
+field and absence of a `margin` compatibility attribute. No production, migration, fixture, or scope-extension test
+changed in this correction.
+
+External Python 3.14.5 / pytest 8.3.5 verification passed: c1a 9, snapshot domain 16, complete d3a targeted set 97,
+and full suite 2451. Forbidden dependency/source checking and `git diff --check` passed. Status remains
+`PHASE_4C_2D3B1I6C1D3A_READY_FOR_REVIEW` pending independent ChatGPT re-review.
+
+blocker: none for d3a implementation verification; d3b remains unstarted.
+
 ## Phase 4C-2d3b1i6c1d1 Source-ID Isolation Review Correction
 
 GitHub implementation review of `86c26816d894fbee98691c9c8f231dee2129503e` approved the d1 production module,

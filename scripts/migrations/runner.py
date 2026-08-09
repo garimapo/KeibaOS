@@ -6,12 +6,14 @@ from .versions import (
     v008_simulation_schema,
     v009_simulation_bet_plan_schema,
     v010_historical_input_snapshot_schema,
+    v011_historical_past_race_time_difference_schema,
 )
 
 MIGRATIONS = (
     v008_simulation_schema,
     v009_simulation_bet_plan_schema,
     v010_historical_input_snapshot_schema,
+    v011_historical_past_race_time_difference_schema,
 )
 
 def _enable_foreign_keys(connection: sqlite3.Connection) -> None:

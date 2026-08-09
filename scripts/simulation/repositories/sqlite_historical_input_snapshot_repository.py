@@ -442,7 +442,7 @@ class SQLiteHistoricalInputSnapshotRepository:
     def _load_past_races(self, snapshot_id: int) -> list[HistoricalPastRaceSnapshot]:
         rows = self._connection.execute(
             """SELECT race_entry_id,past_race_index,race_date,place,race_name,race_class,distance_m,track,
-                      weather,track_condition,finish,margin_text,race_time,weight_text,weight_diff_text,jockey,
+                      weather,track_condition,finish,reference_time_difference_seconds_text,race_time,weight_text,weight_diff_text,jockey,
                       popularity,odds_text,passing_order,fourth_corner_position
                FROM historical_input_snapshot_past_races
                WHERE snapshot_id=? ORDER BY race_entry_id ASC,past_race_index ASC""",
@@ -463,7 +463,7 @@ class SQLiteHistoricalInputSnapshotRepository:
                     weather,
                     condition,
                     finish,
-                    margin,
+                    reference_time_difference_seconds,
                     race_time,
                     weight,
                     weight_diff,
@@ -488,7 +488,10 @@ class SQLiteHistoricalInputSnapshotRepository:
                     self._stored_required_text(weather, "past_race.weather"),
                     self._stored_required_text(condition, "past_race.track_condition"),
                     self._stored_positive_int(finish, "past_race.finish"),
-                    self._stored_decimal(margin, "margin_text"),
+                    self._stored_decimal(
+                        reference_time_difference_seconds,
+                        "reference_time_difference_seconds_text",
+                    ),
                     self._stored_required_text(race_time, "past_race.race_time"),
                     self._stored_decimal(weight, "weight_text"),
                     self._stored_decimal(weight_diff, "weight_diff_text"),
@@ -725,7 +728,7 @@ class SQLiteHistoricalInputSnapshotRepository:
         self._connection.executemany(
             """INSERT INTO historical_input_snapshot_past_races(
                    snapshot_id,race_entry_id,past_race_index,race_date,place,race_name,race_class,distance_m,
-                   track,weather,track_condition,finish,margin_text,race_time,weight_text,weight_diff_text,
+                   track,weather,track_condition,finish,reference_time_difference_seconds_text,race_time,weight_text,weight_diff_text,
                    jockey,popularity,odds_text,passing_order,fourth_corner_position
                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
@@ -742,7 +745,7 @@ class SQLiteHistoricalInputSnapshotRepository:
                     item.weather,
                     item.track_condition,
                     item.finish,
-                    self._decimal_text(item.margin),
+                    self._decimal_text(item.reference_time_difference_seconds),
                     item.race_time,
                     self._decimal_text(item.weight),
                     self._decimal_text(item.weight_diff),
