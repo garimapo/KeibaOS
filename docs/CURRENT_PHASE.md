@@ -114,9 +114,13 @@ where track has no URL. When present it uses the existing canonical HTTPS URL va
 past_race_absence evidence item still requires a non-null canonical URL. Every reference requires lowercase,
 exactly 64-character ASCII hexadecimal response_sha256.
 
-There is no evidence_id. The canonical identity tuple
-(evidence_role, canonical_source_url, response_sha256) is sufficient, and a second hash namespace would add an
-unneeded identity layer.
+There is no standalone evidence_id. Two distinct identities are deliberately named:
+
+    UNDERLYING_RESPONSE_IDENTITY = (canonical_source_url, response_sha256)
+    ROLE_BINDING_IDENTITY = (evidence_role, canonical_source_url, response_sha256)
+
+An evidence reference is a binding of one semantic role to one immutable supplied-response identity and observation,
+not merely a unique response object. A second hash namespace would add an unneeded identity layer.
 
 ### Raw response digest and byte rule
 
@@ -132,9 +136,11 @@ self-contained body recovery.
 
 ### Evidence roles, cardinality, and field authority
 
-The c1a v3 constructor canonicalizes evidence by ascending evidence_role and rejects duplicate roles, duplicate
-(canonical_source_url, response_sha256) identities, unrecognized roles, missing roles, and extra roles. The exact
-role sets are:
+The c1a v3 constructor canonicalizes evidence by ascending evidence_role and rejects duplicate roles, duplicate exact
+role bindings, unrecognized roles, missing roles, and extra roles. It does not reject a shared
+UNDERLYING_RESPONSE_IDENTITY across distinct roles. If two role bindings share the same
+(canonical_source_url, response_sha256), they must have exactly equal available_at and observed_at; a conflicting
+observation of the same body/location fails closed. The exact role sets are:
 
 | record kind | required evidence roles |
 | --- | --- |
@@ -144,6 +150,15 @@ role sets are:
 | odds_win | odds_win |
 | past_race | historical_race_context, historical_race_result |
 | past_race_absence | past_race_absence_query |
+
+For generic past_race, REQUIRED_ROLE_COUNT = 2 and DISTINCT_UNDERLYING_RESPONSE_COUNT = 1_OR_2. Thus one response
+may legitimately bind both historical_race_context and historical_race_result when it proves both responsibilities.
+The two role bindings remain distinct canonical source-ID inputs and both appear in snapshot provenance.
+
+The current NAR provider-normalizer rule is narrower: NAR_DISTINCT_RESPONSE_COUNT = 2. It requires one independently
+supplied HorseMarkInfo response for historical_race_context and one independently supplied RaceMarkTable response for
+historical_race_result. That NAR topology belongs only to the future provider normalizer and must not be encoded as a
+provider-neutral c1a distinct-response rule.
 
 The names express factual responsibility, not NAR page names. For the initial NAR past-race contract, authority is
 fixed in the generic contract so an auditor need not reread provider code:
@@ -223,10 +238,11 @@ source/linkage columns, but no longer stores scalar observation timestamps. A ne
     historical_input_snapshot_provenance_evidence
 
 It contains at least snapshot_id, audit_key, evidence_order, evidence_role, canonical_source_url, response_sha256,
-available_at_utc, and observed_at_utc. It has a foreign key to the logical provenance row, unique role per
-provenance item, unique response identity per provenance item, and canonical evidence order. Save/load validates URL,
-SHA-256, timestamps, role/cardinality, ordering, and all foreign-key relations; corruption fails closed and cannot
-fall back to an older snapshot.
+available_at_utc, and observed_at_utc. It has a foreign key to the logical provenance row, a unique role per
+provenance item, and canonical evidence order. It must not impose uniqueness on URL/SHA alone: the same underlying
+response can occupy two role rows. Save/load validates URL, SHA-256, timestamps, role/cardinality, ordering,
+same-response timestamp consistency, and all foreign-key relations; corruption fails closed and cannot fall back to
+an older snapshot.
 
 This requires append-only v012 and runner registration. v012 first requires historical_input_snapshots to be empty.
 If nonempty it raises deterministic RuntimeError before any schema mutation or migration registration. If empty it
@@ -247,7 +263,10 @@ database or capture responsibility.
 
 No HorseMarkInfo/RaceMarkTable normalizer is authorized. Future multi-response NAR normalization must enforce the
 approved HorseMarkInfo-to-RaceMarkTable lineage/race identity chain, use the fixed two past-race roles, and fail
-closed if evidence, digest, field, or cross-response identity is missing.
+closed if evidence, digest, field, or cross-response identity is missing. HorseMarkInfo history is observed on
+www2.keiba.go.jp while RaceMarkTable links may use www.keiba.go.jp. The generic evidence domain accepts valid
+canonical HTTPS URLs but does not rewrite hosts. The future NAR normalizer must separately freeze accepted official
+hosts, whether www and www2 are distinct evidence URLs, and whether any host rewrite is authorized.
 
 ## Recommended Next Phase and Allowed Files
 
@@ -282,8 +301,11 @@ The future suite must prove: exact public surfaces; v3 payloads and his-v3 IDs f
 ordering; duplicate/missing/extra role rejection; strict SHA-256/URL validation; raw-byte hash semantics; timestamps
 and cutoff eligibility per evidence; ID stability under timestamp-only change and change under URL/role/body/fact
 change; c1b singleton evidence; d1 isolation in v3; one logical past-race provenance with two evidence refs;
-snapshot v3 digest behavior; SQLite exact nested round trip; corrupt child rejection; no older-snapshot fallback;
-v012 empty-store success and nonempty-store atomic failure; and the full suite.
+generic past-race acceptance with one or two underlying responses; same-response multi-role acceptance only with
+identical timestamps; rejection of same-response timestamp disagreement and duplicate roles; source-ID distinction
+for role bindings; SQLite preservation of two role rows with identical URL/SHA; snapshot v3 digest behavior; corrupt
+child rejection; no older-snapshot fallback; v012 empty-store success and nonempty-store atomic failure; and the full
+suite.
 
 ## Blockers and Stop Condition
 

@@ -3048,3 +3048,34 @@ past_race_absence remains UNSUPPORTED.
 
 blocker: d3b requires independent ChatGPT design approval. No production, migration, schema, test, fixture,
 database, log, or formal-branch change has been made.
+
+## Phase 4C-2d3b1i6c1d3b Provider-neutral Evidence Cardinality Revision
+
+GitHub design review approved the central uniform-evidence architecture and corrected only its generic cardinality
+boundary. HistoricalInputEvidenceReference is a semantic role binding to an immutable supplied response observation,
+not a unique response object. The documentation now distinguishes:
+
+    UNDERLYING_RESPONSE_IDENTITY = canonical_source_url + response_sha256
+    ROLE_BINDING_IDENTITY = evidence_role + canonical_source_url + response_sha256
+
+Generic past_race requires exactly the two roles historical_race_context and historical_race_result, while the
+number of distinct underlying responses is 1 or 2. Thus one exact response may prove both roles. That is accepted only
+when the two bindings have identical available_at and observed_at; conflicting timestamps for the same URL/body
+identity fail closed. Duplicate roles remain rejected, and both role bindings remain distinct source-ID and snapshot
+provenance inputs.
+
+The NAR provider contract remains stricter and unchanged: it requires two independently supplied responses, with
+HorseMarkInfo bound to historical_race_context and RaceMarkTable bound to historical_race_result. This is provider
+normalizer policy, not c1a policy. The approved HorseMarkInfo-to-RaceMarkTable lineage/race cross-check remains
+required.
+
+SQLite provenance evidence rows are unique by logical provenance identity plus evidence_role, not URL/SHA alone, so
+the same underlying response can persist as two semantic role rows. Save/load must enforce same-response timestamp
+consistency. Future tests explicitly cover one-response/two-role and two-response cases, timestamp disagreement,
+duplicate roles, role-binding source-ID distinction, and SQLite round trip of two role rows with identical URL/SHA.
+
+The generic evidence domain does not rewrite provider hosts. Future NAR normalizer work must decide accepted official
+HorseMarkInfo/RaceMarkTable hosts, whether www and www2 are distinct evidence URLs, and whether any rewrite is
+authorized. The raw response SHA-256, global c1a v3, snapshot v3, and v012 empty-store policy are unchanged.
+
+Status remains DRAFT_FOR_REVIEW; implementation has not started.
