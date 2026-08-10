@@ -2975,6 +2975,20 @@ proposed. The only future implementation files are the new pair normalizer, its 
 official pair fixtures under `tests/fixtures/nar/`, and the phase documents. The next proposed phase is d3b2a pair
 normalizer implementation; acquisition and multi-race orchestration remain separate.
 
+## Phase 4C-2d3b1i6c1d3b2 Corner-label Mapping Correction
+
+Status remains DRAFT_FOR_REVIEW. The future normalizer no longer assumes the fourth row-local passing component is
+the fourth corner. RaceMarkTable's race-level `全馬コーナー通過順` section authoritatively supplies the ordered corner
+labels; the matched row-local `コーナー通過順` cell supplies the horse's ordered position components. The implementation
+must normalize explicit `Nコーナー` and `N角` labels, require unique strictly increasing labels, exactly one label 4,
+and exact component-count agreement, then select the component positionally mapped to label 4.
+
+This supports both observed ordinary layouts: labels `[1,2,3,4]` with `8-8-6-5`, and labels `[2,3,4]` with `4-4-5`.
+Both produce fourth-corner position 5. Fixed fourth-element and blind-last-element rules are rejected. Missing,
+duplicate, malformed, unordered, or count-incompatible labels/components are recognized unsupported corner states;
+whole-field grouped-order parsing is intentionally deferred. All other d3b2 identity, authority, evidence, replay,
+and file-scope decisions remain unchanged.
+
 ## Phase 4C-2d3b1i6c1d3a Implementation Verification Scope Blocker
 
 The approved d3a implementation updated only its allowed historical domain, builder, repository, v011 migration,

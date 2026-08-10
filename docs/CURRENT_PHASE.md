@@ -118,11 +118,29 @@ tests only, never historical availability.
 | jockey | RaceMark jockey anchor name excluding affiliation span; NFC; allowance symbol retained if name text | normalized history jockey agrees |
 | popularity, odds | RaceMark positive integer / direct positive Decimal | blank, zero, special or abnormal token unsupported |
 | passing_order | RaceMark row-local コーナー通過順, exact NFC display | no global-order synthesis |
-| fourth_corner_position | matched row’s fourth component only where same page’s 全馬コーナー通過順 proves label-compatible [1,2,3,4] or [3,4] and includes ４コーナー | missing/count-mismatch/ambiguous token is unsupported |
+| fourth_corner_position | RaceMarkTable row-local コーナー通過順 component mapped positionally to the same page’s official corner-4 label in 全馬コーナー通過順 | unique label mapping and exact row-component/label-count agreement are required; missing or ambiguous mapping is unsupported |
 
 Any directly comparable cross-page disagreement is validation failure. RaceMarkTable 着差 labels/fractions are never
 converted to seconds. The initial subset uses only ordinary flat NAR results; ばんえい is unsupported because corner
 and condition semantics are not proven equivalent.
+
+### Frozen Corner-label Mapping
+
+Passing order remains the matched row-local `コーナー通過順` display, NFC-normalized under the existing display-text
+rule. The race-level `全馬コーナー通過順` section is authoritative only for which official corners the row sequence
+represents; it never reconstructs or replaces the row-local string.
+
+The normalizer parses every race-level label from the explicit lexical families `１コーナー`/`２コーナー`/
+`３コーナー`/`４コーナー` and `１角`/`２角`/`３角`/`４角`, maps each to 1–4, then requires labels that are unique,
+strictly increasing, include exactly one 4, and match the count of ordered numeric row-local components exactly.
+Components map positionally to those labels. `fourth_corner_position` is the component mapped to label 4 — never a
+fixed fourth component, a fixed final component without labels, a distance/venue inference, a horse number, or a
+corner count. Thus both `[1,2,3,4]` with `8-8-6-5` and `[2,3,4]` with `4-4-5` yield fourth-corner position 5.
+
+Absent corner sections, unrecognized/duplicate/out-of-order labels, missing corner 4, count mismatch, or nonnumeric
+or ambiguous row component are recognized unsupported corner states and raise
+`NarHistoricalInputSourceUnsupportedError`. Parsing the complete whole-field grouped-horse syntax (parentheses,
+commas, hyphens, equals signs) is intentionally not required for initial d3b2 support.
 
 ## Support and Error Policy
 
@@ -143,6 +161,12 @@ winner literal zero; ignored RaceMark margin; body vs assigned weight; jockey/od
 proof; ambiguity/abnormal states; timestamp preservation; source-ID raw-byte sensitivity and timestamp stability; no
 name fallback/HTTP/DB/filesystem/clock/legacy parser; c1a propagation; c1c assembly with valid track/entry/jockey/odds;
 and builder rejection for either evidence observed after capture/cutoff.
+
+Corner regressions must include four labels `[1,2,3,4]` with row `8-8-6-5`, and the official short-layout shape
+`[2,3,4]` with row `4-4-5`, both yielding 5. They must also pin label/component count mismatch, no corner 4,
+duplicate corner 4, malformed labels, and rejection of fixed-index or blind-last-component behavior. A controlled
+synthetic mutation is sufficient for the three-component case; no additional authentic fixture is required solely for
+that regression.
 
 Expected implementation files only:
 
