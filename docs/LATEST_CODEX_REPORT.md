@@ -2989,6 +2989,20 @@ duplicate, malformed, unordered, or count-incompatible labels/components are rec
 whole-field grouped-order parsing is intentionally deferred. All other d3b2 identity, authority, evidence, replay,
 and file-scope decisions remain unchanged.
 
+## Phase 4C-2d3b1i6c1d3b2 Target-entry Binding Correction
+
+Status remains DRAFT_FOR_REVIEW. The pair normalizer no longer accepts independently supplied target race, entry, and
+horse strings. Its exact future input is one validated c1a `HistoricalInputSourceRecord(record_kind="entry")` with
+organization `NAR`, source system `nar_official`, an external entry ID, and a non-null canonical
+`nar:horse:{k_lineageLoginCode}` value. It derives all target identities from that record and rejects incomplete or
+incompatible entry records at the existing NAR validation boundary.
+
+The resulting binding chain is target entry record lineage -> HorseMarkInfo lineage -> selected history context
+lineage -> RaceMarkTable matched-row lineage. This prevents an internally valid historical pair for one lineage from
+being attached to another target entry. The entry record is contextual binding input only: its source ID and evidence
+do not become a third past-race evidence role, and c1a, c1b, c1c builder, SQLite, migration, and schema remain
+unchanged. The future integration test must reuse that same target entry record in the source set passed to c1c.
+
 ## Phase 4C-2d3b1i6c1d3a Implementation Verification Scope Blocker
 
 The approved d3a implementation updated only its allowed historical domain, builder, repository, v011 migration,

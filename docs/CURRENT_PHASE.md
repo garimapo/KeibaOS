@@ -32,9 +32,7 @@ The selected future module is scripts/simulation/nar_historical_past_race_source
 
     normalize_nar_historical_past_race_source_record(
         *,
-        target_external_race_id: str,
-        target_external_entry_id: str,
-        target_external_horse_id: str,
+        target_entry_record: HistoricalInputSourceRecord,
         horse_history_response: NarSuppliedOfficialResponse,
         race_result_response: NarSuppliedOfficialResponse,
     ) -> HistoricalInputSourceRecord
@@ -43,13 +41,25 @@ It reuses only the existing public NarSuppliedOfficialResponse,
 NarHistoricalInputSourceValidationError, and NarHistoricalInputSourceUnsupportedError. No new public type or error is
 required.
 
-## Target and Response Identity
+## Target Entry Binding and Response Identity
 
-- Target race is exactly nar:{YYYYMMDD}:{k_babaCode}:{k_raceNo}; date and the two ASCII decimal tokens are
-  canonical, positive, and have no sign, whitespace, Unicode digit, or leading zero.
-- Target entry is exactly {target_external_race_id}:entry:{horse_no}, not a substring relationship.
-- Target horse is exactly nar:horse:{k_lineageLoginCode}, retaining the committed d1 lexical [1-9][0-9]* lineage
-  grammar. Name, horse number, jockey, trainer, local ID, row order, and fuzzy matching are forbidden.
+`PAIR_NORMALIZER_TARGET_ENTRY_BINDING = VALIDATED_C1A_ENTRY_RECORD`. The exact `target_entry_record` type is
+`HistoricalInputSourceRecord`; it must be `record_kind == "entry"`, `organization == "NAR"`,
+`source_system == "nar_official"`, have non-null `external_entry_id`, and retain the committed c1a invariant that
+`record_values["external_entry_id"] == external_entry_id`.
+
+All target identities are derived without caller overrides: target race is `target_entry_record.external_race_id`,
+target entry is `target_entry_record.external_entry_id`, and target horse is
+`target_entry_record.record_values["external_horse_id"]`. The race must be exactly
+`nar:{YYYYMMDD}:{k_babaCode}:{k_raceNo}` and entry exactly `{target_external_race_id}:entry:{horse_no}` with canonical
+positive lexical tokens. The required horse value is `nar:horse:{k_lineageLoginCode}` with the committed
+`[1-9][0-9]*` grammar. A None or malformed external_horse_id is `NarHistoricalInputSourceValidationError` for this
+incomplete pair-normalizer input; there is no name, horse-number, jockey, trainer, local-ID, row-order, or fuzzy
+fallback.
+
+This one authoritative entry record proves that the target entry and lineage belong together. Independent target
+identity strings and duplicate target-identity arguments are not part of the public API.
+
 - The historical URL date must be strictly before the target date. Same-day and future races fail; d3b2 never infers
   intraday ordering.
 - Both responses are exact NarSuppliedOfficialResponse instances with charset == "utf-8". Hash exact body bytes before
@@ -80,12 +90,19 @@ accepted www and www2 remain distinct evidence URLs. URL equality is never race 
 
 The only accepted chain is:
 
-    target lineage == HorseMarkInfo lineage == selected history-row lineage == RaceMarkTable row lineage
+    target entry record external_horse_id == HorseMarkInfo lineage
+        == selected history-row lineage == RaceMarkTable row lineage
+    target entry record external_race_id == output external_race_id
+    target entry record external_entry_id == output external_entry_id
     selected history link race identity == RaceMarkTable URL race identity
 
 The frozen provider record ID is:
 
     nar:result:{YYYYMMDD}:{k_babaCode}:{k_raceNo}:horse:{k_lineageLoginCode}
+
+The target entry record is contextual binding input only. Its source ID and its own evidence are not copied into the
+past-race canonical payload, record values, or evidence tuple. The output still has exactly the two historical roles
+below; c1a schema version 3 and the provider-neutral builder remain unchanged.
 
 ## Evidence and Replay Causality
 
@@ -156,11 +173,16 @@ recognized valid but excluded official page/result variants. No broad wrapping.
 ## Future Tests and Files
 
 The future dedicated suite must pin public signature/non-export; pair cardinality; response/UTF-8/page/URL rules;
-host preservation; raw SHA; identity chains; JRA rejection; provider ID; two roles; every authority/cross-check;
+exact target-entry-record type/kind/organization/source-system/external-entry invariants; missing or malformed target
+external_horse_id; host preservation; raw SHA; the full target-entry-to-HorseMarkInfo-to-RaceMarkTable lineage chain;
+rejection of a valid pair for another lineage; proof that target horse_no is not used to locate the historical row;
+JRA rejection; provider ID; two roles; every authority/cross-check;
 winner literal zero; ignored RaceMark margin; body vs assigned weight; jockey/odds/popularity; passing/fourth-corner
 proof; ambiguity/abnormal states; timestamp preservation; source-ID raw-byte sensitivity and timestamp stability; no
 name fallback/HTTP/DB/filesystem/clock/legacy parser; c1a propagation; c1c assembly with valid track/entry/jockey/odds;
-and builder rejection for either evidence observed after capture/cutoff.
+and builder rejection for either evidence observed after capture/cutoff. The c1c compatibility case must pass the
+same target entry record to this normalizer and into the assembled source-record set, then prove its past race attaches
+to the mapped entry whose snapshot external_horse_id equals that entry record's lineage.
 
 Corner regressions must include four labels `[1,2,3,4]` with row `8-8-6-5`, and the official short-layout shape
 `[2,3,4]` with row `4-4-5`, both yielding 5. They must also pin label/component count mismatch, no corner 4,
@@ -184,6 +206,8 @@ nonempty class, and pinned race/lineage IDs. Fixtures are not added in PREPARE.
 ## Frozen Non-changes and Stop Condition
 
 No c1a/evidence/c1b/builder/SQLite/migration/schema/package-root/parser/provider/CLI/database/log change is expected.
+In particular, no external_horse_id is added to past-race record values, no c1a v4 is introduced, and the builder does
+not parse provider_record_id.
 NAR_PAST_RACE_ABSENCE = UNSUPPORTED; pagination and fetch/acquisition orchestration are out of scope.
 
 Recommended next phase: 4C-2d3b1i6c1d3b2a — NAR historical past-race pair normalizer implementation. Trusted
