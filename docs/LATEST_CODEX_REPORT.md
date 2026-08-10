@@ -3010,6 +3010,73 @@ The dedicated tests pin a local NAR result whose jockey affiliation displays `(J
 mixed NAR/JRA selection and missing-NAR behavior, structurally JRA-only history, and generic missing navigation.
 `JOCKEY_AFFILIATION_JRA_DOES_NOT_IMPLY_JRA_RACE = YES`. No fixture or collaborator changed.
 
+## Phase 4C-2d3b1i6c1d3b2b1 Trusted NAR Capture Archive Implementation
+
+Implemented the approved d3b2b design on a review branch based exactly on formal
+`4af5a7ba4f18769f365ac2c934bcfd0ffcf38818`. The implementation is deliberately isolated from the main KeibaOS
+database and migration registry. `DATABASE_LOCATION = SEPARATE_NAR_CAPTURE_DATABASE`; the main migration sequence
+remains `(8, 9, 10, 11, 12)`, with no v013, global migration runner/version/test change, or capture table in the
+simulation database.
+
+The new pure capture domain owns the closed DebaTable/HorseMarkInfo/RaceMarkTable URL vocabulary, deterministic URL
+canonicalization, immutable frozen/slotted capture values, strict UTF-8 parser-input bytes, exact raw SHA-256, and the
+deterministic `nar-capture-v1:` JSON identity. It contains no HTTP, SQLite, filesystem, clock, or normalizer-private
+helper dependency. It reconstructs the existing `NarSuppliedOfficialResponse` exactly, including original archived
+body bytes and supplied observation time.
+
+The dedicated v001 migration is transaction-neutral and creates only content-addressed body storage, immutable capture
+observations, and `ux_nar_official_response_captures_evidence` over the exact evidence tuple. Its independent runner
+owns foreign-key activation, registry validation, transaction ownership, pending ordering, and rollback. It does not
+import or invoke the global migration runner. The injected-connection archive repository is append-only: it atomically
+deduplicates valid body bytes, rejects same-ID metadata conflicts, makes exact reinsert idempotent, and rolls back a
+new body when later capture insertion fails. Every retrieval revalidates all stored identity/body/URL/timestamp/header
+invariants and fails closed for corruption. Exact lookup miss raises the capture-domain missing error with no fallback.
+
+`CROSS_DATABASE_LINKAGE = EXISTING_EVIDENCE_IDENTITY_TUPLE`; no cross-database transaction, FK, c1a field, snapshot
+field, or body persistence in evidence was added. Future composition owns `capture_database_path`; d3b2b2 live HTTP,
+clock, collection, pagination, and orchestration remain unimplemented.
+
+Verification with external Python 3.14.5 / pytest 8.3.5 passed: dedicated capture suites 20 passed; related existing
+NAR/c1a/c1c snapshot suites 53 passed; complete suite 2488 passed. Source/public-surface checks confirm package root
+unchanged, global migrations unchanged, capture domain/repository free of network/filesystem/clock ownership, and
+repository free of `ATTACH`. `git diff --check` passed. Status is `READY_FOR_REVIEW` pending independent GitHub code
+review; no formal integration was performed.
+
+### d3b2b1 Archive Corruption Fail-Closed Correction
+
+Review found that a same capture save could insert a missing body before discovering that the capture row already
+existed, thereby repairing pre-existing archive corruption. The archive now preflights capture ID, exact evidence tuple,
+and body SHA before any body insert. `SAVE_ON_PREEXISTING_ARCHIVE_CORRUPTION = FAIL_CLOSED_NO_REPAIR`: a missing body
+referenced by the same capture or by an older observation with the same SHA now raises `RepositoryDataIntegrityError`,
+leaves the body missing, leaves existing rows intact, and ends the transaction. An existing capture additionally proves
+its exact evidence tuple is uniquely coherent before idempotent success.
+
+Both load routes now apply symmetric exact-evidence uniqueness validation during reconstruction. Broken tuple uniqueness,
+missing body, body/content-length corruption, and SQLite errors from reconstruction/body/evidence reads are all
+`RepositoryDataIntegrityError`; valid tuple absence remains `NAROfficialResponseCaptureMissingError` and malformed
+caller input remains `RepositoryValidationError`.
+
+Dedicated v001 DDL no longer uses `IF NOT EXISTS`. `PREEXISTING_UNREGISTERED_CAPTURE_SCHEMA = FAIL_CLOSED`: a manually
+created colliding capture table without v001 registration aborts dedicated migration and leaves v001 unregistered. Direct
+v001 application is transaction-neutral but intentionally has no independent idempotency promise; registry-runner
+idempotency remains the sole approved path. Fresh verification passed 25 dedicated tests, 53 related existing tests,
+and 2493 full-suite tests.
+
+### d3b2b1 Dedicated Migration Registry Structural Validation Correction
+
+The dedicated runner no longer trusts a same-name migration registry solely because `SELECT version,name` succeeds.
+Before reading applied versions or applying v001, it now verifies `sqlite_master` object kind and normalized approved
+DDL, then exact ordered `PRAGMA table_info` columns, declared types, primary-key, and NOT NULL properties. This pins
+the approved `WITHOUT ROWID` registry containing only positive integer `version` and nonempty text `name` checks.
+
+`CAPTURE_MIGRATION_REGISTRY_SCHEMA_VALIDATION = REQUIRED` and
+`PREEXISTING_MALFORMED_CAPTURE_MIGRATION_REGISTRY = FAIL_CLOSED`. A weak pre-existing same-name table aborts before
+capture table creation or v001 registration; `get_applied_capture_schema_versions()` fails as well. No ALTER, DROP,
+replacement, row copy, or constraint addition is permitted (`MALFORMED_REGISTRY_AUTO_REPAIR = FORBIDDEN`). Dedicated
+tests additionally pin stored name mismatch and malformed-row failure. Existing v001 table-collision, runner
+idempotency, rollback, active-transaction, foreign-key, and global-migration isolation behavior remains covered.
+Fresh verification passed 27 dedicated tests, 53 related existing tests, and 2495 full-suite tests.
+
 ## Phase 4C-2d3b1i6c1d3a Implementation Verification Scope Blocker
 
 The approved d3a implementation updated only its allowed historical domain, builder, repository, v011 migration,
