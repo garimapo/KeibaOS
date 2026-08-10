@@ -2,118 +2,167 @@
 
 ## Status
 
-READY_FOR_REVIEW
+DRAFT_FOR_REVIEW
 
 ## Phase
 
-Phase 4C-2d3b1i6c1d3b1 - Uniform historical evidence contract implementation
+Phase 4C-2d3b1i6c1d3b2 — NAR historical past-race multi-response normalizer contract preparation
 
 ## Base Commit
 
-3cd5f2916213f32340782f1c069d9093a4e75499 feat: define historical time-difference contract
+21c0c644f9bf8641afa5f007cd7fb14ac9eb030e feat: add historical input evidence contract
 
 ## Branch and Workspace
 
 Formal branch: feature/ver0.8-simulator
 
-Implementation review branch: review/4c-2d3b1i6c1d3b1-implementation
+Preparation review branch: review/4c-2d3b1i6c1d3b2-prepare
 
 Canonical workspace: C:\Users\garim\Desktop\KeibaAI-review-1i5b2b
 
 The original workspace, C:\Users\garim\Desktop\KeibaAI, is read-only for this phase.
 
-## Objective
+## Objective and Public Boundary
 
-Implement the approved uniform, provider-neutral evidence contract atomically across c1a source records, c1c
-assembly, historical snapshot provenance, SQLite persistence, and the existing NAR DebaTable singleton-record
-normalizer. No HorseMarkInfo or RaceMarkTable parser is included.
+Freeze a pure supplied-response NAR pair normalizer: exactly one official HorseMarkInfo response plus exactly one
+official RaceMarkTable response yield exactly one c1a v3 HistoricalInputSourceRecord(record_kind="past_race").
+There is no list/pagination, fetch, cache, database, clock, filesystem, raw-body-persistence, or package-root role.
 
-## Frozen Contract
+The selected future module is scripts/simulation/nar_historical_past_race_source.py. Its exact public surface is:
 
-- HistoricalInputEvidenceReference is the only new public type and is not package-root exported.
-- Every c1a record is schema version 3 with his-v3:{record_kind}:{sha256}.
-- Record-level URL and timestamps are replaced by exact tuple evidence.
-- Required role sets are track; entry; jockey; odds_win; historical_race_context plus historical_race_result; and
-  past_race_absence_query, respectively.
-- A generic past_race has exactly two role bindings but one or two distinct underlying responses. If two roles share
-  URL/SHA, their available_at and observed_at must exactly agree.
-- NAR remains a future two-response provider-normalizer rule; no parser is added here.
-- Snapshot provenance holds nested evidence, has no aggregate timestamps, and snapshot canonical payload is version 3.
-- v012 replaces scalar persisted provenance timestamps only when the snapshot store is empty; nonempty stores fail
-  before mutation.
-- InputAuditEntry is unchanged. No adapter or implicit timestamp collapse is permitted.
-- Raw response SHA-256 is over exact supplied body bytes before decoding or normalization.
-- Evidence canonicalization is ascending `evidence_role`; source IDs include role, URL, raw SHA-256, and record facts,
-  but intentionally exclude evidence timestamps. Snapshot content SHA-256 includes the nested evidence timestamps.
-- HistoricalSourceIdentity.source_url is selected only from the sole track record's `track` evidence URL; `None` remains
-  valid and no non-track URL is substituted.
-- SQLite stores one logical provenance parent row per audit key and role-ordered child evidence rows. It permits the
-  same underlying `(canonical_source_url, response_sha256)` for distinct roles only when both timestamps agree.
+    normalize_nar_historical_past_race_source_record(
+        *,
+        target_external_race_id: str,
+        target_external_entry_id: str,
+        target_external_horse_id: str,
+        horse_history_response: NarSuppliedOfficialResponse,
+        race_result_response: NarSuppliedOfficialResponse,
+    ) -> HistoricalInputSourceRecord
 
-## Implementation Result
+It reuses only the existing public NarSuppliedOfficialResponse,
+NarHistoricalInputSourceValidationError, and NarHistoricalInputSourceUnsupportedError. No new public type or error is
+required.
 
-The approved uniform evidence transition is implemented for review. c1a is globally schema version 3 and all six
-record kinds use exact role sets. c1b computes one SHA-256 over the supplied DebaTable bytes and constructs singleton
-evidence for track, entry, jockey, and odds-win records. c1c copies record evidence into one logical provenance item
-and evaluates every evidence timestamp for causal eligibility. The snapshot digest is version 3 and preserves
-role-ordered evidence observations.
+## Target and Response Identity
 
-Migration `v012_historical_input_evidence_schema` is registered after v011. It checks that the historical snapshot
-store is empty before replacing scalar provenance observations with the normalized evidence child table; a nonempty
-store fails before schema mutation. No HorseMarkInfo/RaceMarkTable normalizer, capture-body retention, or NAR
-past-race-absence production behavior was added.
+- Target race is exactly nar:{YYYYMMDD}:{k_babaCode}:{k_raceNo}; date and the two ASCII decimal tokens are
+  canonical, positive, and have no sign, whitespace, Unicode digit, or leading zero.
+- Target entry is exactly {target_external_race_id}:entry:{horse_no}, not a substring relationship.
+- Target horse is exactly nar:horse:{k_lineageLoginCode}, retaining the committed d1 lexical [1-9][0-9]* lineage
+  grammar. Name, horse number, jockey, trainer, local ID, row order, and fuzzy matching are forbidden.
+- The historical URL date must be strictly before the target date. Same-day and future races fail; d3b2 never infers
+  intraday ordering.
+- Both responses are exact NarSuppliedOfficialResponse instances with charset == "utf-8". Hash exact body bytes before
+  decoding; then decode once. No CP932/Latin-1 fallback, replacement, or ignored errors.
 
-## Review Correction
+## URL and Host Contract
 
-Selected-snapshot reconstruction now explicitly rejects an evidence child whose `(snapshot_id, audit_key)` has no
-logical provenance parent, including corruption introduced while SQLite foreign keys are disabled. A corrupt newest
-eligible snapshot raises `RepositoryDataIntegrityError`; it never falls back to an older snapshot.
+| Page | accepted hosts | path | query / canonical representation |
+| --- | --- | --- | --- |
+| HorseMarkInfo | www.keiba.go.jp, www2.keiba.go.jp | /KeibaWeb/DataRoom/HorseMarkInfo | exactly k_lineageLoginCode; retain accepted host and canonical lexical token |
+| RaceMarkTable | www.keiba.go.jp | /KeibaWeb/TodayRaceInfo/RaceMarkTable | exactly k_babaCode,k_raceDate,k_raceNo; canonical order and YYYY%2FMM%2FDD date |
 
-Two source-ID isolation rules are intentionally distinct. With evidence role, URL, and raw SHA-256 held constant, a
-change to one entry's logical facts changes only that record's c1a source ID. Conversely, a c1b DebaTable byte change
-changes the shared raw SHA-256 and therefore the source ID of every logical record derived from that supplied response.
-This intentionally supersedes the prior d1 source-ID isolation consequence at the provider boundary while preserving
-the exact horse-lineage factual identity rule.
+Both require HTTPS, an absent port or 443, no credentials, fragment, controls, surrounding whitespace, malformed percent
+escape, plus ambiguity, duplicate/blank/unknown query key, or noncanonical number/date. Hosts are not rewritten:
+accepted www and www2 remain distinct evidence URLs. URL equality is never race identity.
 
-`HistoricalInputProvenance` has no scalar `available_at` or `observed_at` fields and no automatic `InputAuditEntry`
-adapter. The runtime audit type remains unchanged; no nested-evidence timestamp is selected or collapsed in production.
+## Pair Selection and Provider Identity
 
-## Allowed Files
+1. Parse the RaceMarkTable URL into exact (race_date, baba_code, race_no).
+2. Locate the unique HorseMarkInfo history table by its ordered labelled heading family (年月日, 競馬場, R,
+   競走名, 格組, ..., 差, 体重, 騎手). In its data rows, canonicalize each official RaceMarkTable navigation anchor and
+   select exactly one with that complete race identity. Zero/multiple match is validation failure; JRA row is
+   unsupported.
+3. HorseMarkInfo page lineage, selected history-row horse context, and exactly one RaceMarkTable row-local
+   a.horseName[href] must all equal the target lineage. The RaceMarkTable response independently validates its official
+   h4/active-course structure and full URL race identity.
+4. History-link and RaceMarkTable race identity must agree exactly on date, baba code, and race number.
 
-    scripts/simulation/historical_input_evidence.py
-    scripts/simulation/historical_input_source_records.py
-    scripts/simulation/historical_input_snapshots.py
-    scripts/simulation/historical_input_snapshot_builder.py
-    scripts/simulation/nar_historical_input_source.py
-    scripts/simulation/repositories/sqlite_historical_input_snapshot_repository.py
-    scripts/migrations/versions/v012_historical_input_evidence_schema.py
-    scripts/migrations/runner.py
-    tests/test_historical_input_source_records.py
-    tests/test_historical_input_snapshots.py
-    tests/test_historical_input_snapshot_builder.py
-    tests/test_nar_historical_input_source.py
-    tests/test_sqlite_historical_input_snapshot_repository.py
-    tests/test_historical_input_snapshot_migration.py
-    tests/test_simulation_migrations.py
-    tests/test_simulation_bet_plan_migration.py
-    tests/test_sqlite_persisted_simulation_application.py
+The only accepted chain is:
+
+    target lineage == HorseMarkInfo lineage == selected history-row lineage == RaceMarkTable row lineage
+    selected history link race identity == RaceMarkTable URL race identity
+
+The frozen provider record ID is:
+
+    nar:result:{YYYYMMDD}:{k_babaCode}:{k_raceNo}:horse:{k_lineageLoginCode}
+
+## Evidence and Replay Causality
+
+The record has exactly two distinct underlying responses:
+
+| evidence role | response | availability / observation |
+| --- | --- | --- |
+| historical_race_context | HorseMarkInfo | URL and SHA-256 of its exact body; available_at=None; preserve supplied observed_at |
+| historical_race_result | RaceMarkTable | URL and SHA-256 of its exact body; available_at=None; preserve supplied observed_at |
+
+NAR requires two distinct (canonical_source_url, response_sha256) identities even though generic c1a permits one or
+two. Evidence timestamps are neither selected nor aggregated. A raw-byte change changes its response SHA and the
+past-race source ID; timestamp-only change does not change source ID.
+
+HISTORICAL_REPLAY_CAPTURE_REQUIREMENT = REQUIRED. Current live pages cannot be presented as historical-cutoff
+evidence. Live use needs capture before cutoff; replay needs trusted causally observed bytes. Fixture timestamps prove
+tests only, never historical availability.
+
+## Field Authority Matrix
+
+| field(s) | authority and exact rule | cross-check / unsupported state |
+| --- | --- | --- |
+| race_date, place | RaceMark URL; unique active course plus compact h4 place | history row/h4 must agree |
+| race_name, race_class | HorseMarkInfo selected-row 競走名, 格組; exact NFC nonempty text | RaceMark h3, subtitle, sponsor text never substitutes |
+| distance_m, track, weather, track_condition | RaceMark unique race facts: surface, positive NNNm, 天候：, 馬場： | exact history-side fact agrees when present |
+| finish | RaceMark matched row, positive decimal token | normal completed state only |
+| reference_time_difference_seconds | HorseMark selected-row direct 差, finite nonnegative Decimal, no float | literal displayed zero accepted; RaceMark 着差 is ignored |
+| race_time | RaceMark matched row, nonempty NFC official time | direct history time agrees where present |
+| weight, weight_diff | RaceMark body weight digits(sign digits), e.g. 495(1), as Decimal | assigned race weight forbidden; 計不/blank/other grammar unsupported |
+| jockey | RaceMark jockey anchor name excluding affiliation span; NFC; allowance symbol retained if name text | normalized history jockey agrees |
+| popularity, odds | RaceMark positive integer / direct positive Decimal | blank, zero, special or abnormal token unsupported |
+| passing_order | RaceMark row-local コーナー通過順, exact NFC display | no global-order synthesis |
+| fourth_corner_position | matched row’s fourth component only where same page’s 全馬コーナー通過順 proves label-compatible [1,2,3,4] or [3,4] and includes ４コーナー | missing/count-mismatch/ambiguous token is unsupported |
+
+Any directly comparable cross-page disagreement is validation failure. RaceMarkTable 着差 labels/fractions are never
+converted to seconds. The initial subset uses only ordinary flat NAR results; ばんえい is unsupported because corner
+and condition semantics are not proven equivalent.
+
+## Support and Error Policy
+
+NORMAL_COMPLETED_NAR_RESULT_ONLY requires the complete two-page chain, every required direct field, completed numeric
+finish/popularity/odds, valid body weight, direct HorseMarkInfo difference, and proven fourth corner.
+
+Unsupported: JRA history, ばんえい, cancellation/exclusion/stopped/disqualification/ambiguous demotion, no time/odds,
+missing class/difference/body weight, nonnumeric result values, absent or ambiguous fourth corner, all absence claims,
+pagination, and acquisition. NarHistoricalInputSourceValidationError owns malformed/contradictory supplied evidence,
+URLs, tokens, duplicate/zero matches, and cross-page disagreement. NarHistoricalInputSourceUnsupportedError owns
+recognized valid but excluded official page/result variants. No broad wrapping.
+
+## Future Tests and Files
+
+The future dedicated suite must pin public signature/non-export; pair cardinality; response/UTF-8/page/URL rules;
+host preservation; raw SHA; identity chains; JRA rejection; provider ID; two roles; every authority/cross-check;
+winner literal zero; ignored RaceMark margin; body vs assigned weight; jockey/odds/popularity; passing/fourth-corner
+proof; ambiguity/abnormal states; timestamp preservation; source-ID raw-byte sensitivity and timestamp stability; no
+name fallback/HTTP/DB/filesystem/clock/legacy parser; c1a propagation; c1c assembly with valid track/entry/jockey/odds;
+and builder rejection for either evidence observed after capture/cutoff.
+
+Expected implementation files only:
+
+    scripts/simulation/nar_historical_past_race_source.py
+    tests/test_nar_historical_past_race_source.py
+    tests/fixtures/nar/horse_mark_info_past_race_context.html
+    tests/fixtures/nar/race_mark_table_past_race_result.html
     docs/CURRENT_PHASE.md
     docs/LATEST_CODEX_REPORT.md
 
-## Forbidden Files and Work
+The fixtures must be one authentic ordinary-NAR pair, minimized only outside selected official rows, with a direct
+numeric difference, completed result, numeric odds, body-weight change, row-local passing order, page corner labels,
+nonempty class, and pinned race/lineage IDs. Fixtures are not added in PREPARE.
 
-No provider/past-race parser, HTTP fetching, capture-body storage, past-race absence NAR production, legacy
-engine/model change, package-root export, README, database file, logs, or original-workspace modification is allowed.
-No c1b semantic parser change beyond singleton evidence construction.
+## Frozen Non-changes and Stop Condition
 
-## Required Tests
+No c1a/evidence/c1b/builder/SQLite/migration/schema/package-root/parser/provider/CLI/database/log change is expected.
+NAR_PAST_RACE_ABSENCE = UNSUPPORTED; pagination and fetch/acquisition orchestration are out of scope.
 
-Run the nine named dedicated/migration suites in the execution authorization, then the full pytest suite using the
-external Python 3.14.5 environment, plus forbidden dependency/source checks, package-root export checks,
-git diff --check, and git status --short.
+Recommended next phase: 4C-2d3b1i6c1d3b2a — NAR historical past-race pair normalizer implementation. Trusted
+capture/acquisition and multi-race orchestration are separate later work.
 
-## Stop Condition
-
-Stop at READY_FOR_REVIEW after one review commit and normal push to
-review/4c-2d3b1i6c1d3b1-implementation. Do not integrate formally or begin NAR HorseMarkInfo/RaceMarkTable
-normalization without separate approval.
+Stop at DRAFT_FOR_REVIEW. Do not implement the normalizer, capture or commit fixture HTML, or begin acquisition.

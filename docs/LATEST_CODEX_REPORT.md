@@ -2941,6 +2941,40 @@ NAR, repository, and v012 migration suites 68 passed; the remaining approved d3b
 the full suite 2456 passed. Forbidden dependency/source/AST and package-root export checks passed, as did
 `git diff --check`.
 
+## Phase 4C-2d3b1i6c1d3b2 Preparation
+
+Status: DRAFT_FOR_REVIEW.
+
+This PREPARE selects a separate pure provider boundary,
+`scripts/simulation/nar_historical_past_race_source.py`, rather than expanding the single-DebaTable c1b normalizer.
+Its exact future public function accepts one caller-supplied HorseMarkInfo response, one caller-supplied
+RaceMarkTable response, and explicit target race, entry, and lineage identities; it returns one c1a v3 past-race
+record. It reuses `NarSuppliedOfficialResponse` and existing NAR validation/unsupported errors, with no public
+parser class or package export.
+
+The pair is fixed at one HorseMarkInfo response plus one RaceMarkTable response per logical historical result. The
+HorseMarkInfo selected history row is matched by the complete provider-native RaceMarkTable date/baba-code/race-number
+identity, not by row order, race name, horse number, or horse name. The RaceMarkTable matched row must have exactly
+one HorseMarkInfo link whose lineage equals the target lineage. The result identity is frozen as
+`nar:result:{YYYYMMDD}:{k_babaCode}:{k_raceNo}:horse:{k_lineageLoginCode}`.
+
+HorseMarkInfo is authoritative only for `競走名`, `格組`, and direct numeric `差`; RaceMarkTable is authoritative for
+the race/result row facts, body weight/change, odds, popularity, and row-local passing/corner evidence. RaceMarkTable
+`着差` is explicitly not time difference. The initial envelope is a normal completed ordinary-NAR flat result with
+all direct fields and an unambiguous, label-proven fourth corner; JRA rows, Ban'ei, abnormal results, absent/ambiguous
+corner evidence, pagination, and past-race absence remain unsupported.
+
+The two evidence references are fixed: HorseMarkInfo is `historical_race_context` and RaceMarkTable is
+`historical_race_result`. NAR requires two distinct supplied response identities, each retaining its exact raw-body
+SHA-256 and supplied observed time; `available_at` is None. A current live page is not historical replay evidence:
+trusted causally observed captures require a later acquisition/capture phase. Fixtures in the future pair-normalizer
+test suite demonstrate parsing only and are not historical capture proof.
+
+No c1a, evidence, c1b, builder, SQLite, migration, schema, package-root, parser, provider, database, or log change is
+proposed. The only future implementation files are the new pair normalizer, its dedicated test, two authentic
+official pair fixtures under `tests/fixtures/nar/`, and the phase documents. The next proposed phase is d3b2a pair
+normalizer implementation; acquisition and multi-race orchestration remain separate.
+
 ## Phase 4C-2d3b1i6c1d3a Implementation Verification Scope Blocker
 
 The approved d3a implementation updated only its allowed historical domain, builder, repository, v011 migration,
