@@ -6,7 +6,7 @@ DRAFT_FOR_REVIEW
 
 ## Phase and Base
 
-Phase 4C-2d3b1i6c1d3b2b — Trusted NAR official-response capture/archive preparation.
+Phase `4C-2d3b1i6c1d3b2b` — Trusted NAR official-response capture/archive preparation.
 
 Formal base: `4af5a7ba4f18769f365ac2c934bcfd0ffcf38818 feat: normalize NAR historical past races`.
 
@@ -14,37 +14,24 @@ Formal branch: `feature/ver0.8-simulator`.
 
 Review branch: `review/4c-2d3b1i6c1d3b2b-prepare`.
 
-PREPARE changes only this file and `docs/LATEST_CODEX_REPORT.md`. It implements no capture/archive, migration,
-repository, HTTP request, fixture, test, or orchestration.
+This PREPARE changes only this file and `docs/LATEST_CODEX_REPORT.md`. It implements no capture/archive, database, migration, repository, HTTP request, fixture, test, or orchestration.
 
 ## Trust Model and Causal Boundary
 
-`TRUST_MODEL = OPERATIONALLY_TRUSTED_LOCAL_CAPTURE`. KeibaOS makes the HTTPS request, timestamps only after receiving
-the complete parser-input bytes, retains those exact bytes, and verifies SHA-256 on save and retrieval. Its archive API
-is application-level append-only. `CRYPTOGRAPHIC_EXTERNAL_TIMESTAMP_AUTHORITY = NOT_PROVIDED`: a host clock plus
-SQLite does not prove to a hostile third party that time was never forged. External attestation is a separate phase.
+`TRUST_MODEL = OPERATIONALLY_TRUSTED_LOCAL_CAPTURE`. KeibaOS makes the HTTPS request, timestamps only after receiving complete parser-input bytes, retains those bytes, and verifies SHA-256 on save and retrieval. `CRYPTOGRAPHIC_EXTERNAL_TIMESTAMP_AUTHORITY = NOT_PROVIDED`; host clock plus SQLite is not proof to a hostile third party.
 
-`RETROACTIVE_LIVE_SITE_BACKFILL = IMPOSSIBLE_TO_TRUST`. A current page cannot be made eligible for an old cutoff using
-an old `observed_at`, race/result date, provider publication date, HTTP Date, file/Git/database time, or a claim that
-the current page equals an old page. Before trusted collection, `NAR_LIVE_SITE_ONLY = NO_CAUSALLY_ELIGIBLE_CAPTURE` is
-expected no-data. HorseMarkInfo history is mutable; RaceMarkTable has no immutability bypass. Third-party archive
-imports, manual HTML, logs, Wayback, and current live content are out of scope for trusted `nar_official` capture.
+`RETROACTIVE_LIVE_SITE_BACKFILL = IMPOSSIBLE_TO_TRUST`. A current page cannot become eligible for an old cutoff by old `observed_at`, race/result/publication date, HTTP Date, file/Git/database time, or claims of equality with old content. Before collection, `NAR_LIVE_SITE_ONLY = NO_CAUSALLY_ELIGIBLE_CAPTURE` is expected no-data. HorseMarkInfo is mutable. Third-party archive imports, manual HTML, logs, Wayback, and current live content are outside trusted `nar_official` capture.
 
-No c1a/c1b/d3b2a/c1c snapshot contract changes. `available_at = None` stays unchanged. No c1a v4, source-ID namespace
-change, snapshot schema change, capture ID in evidence, provider-record parsing, or evidence-row backfill is allowed.
-The archive joins operationally through:
+No c1a/c1b/d3b2a/c1c changes: `available_at = None`; no c1a v4, source-ID namespace or snapshot schema change, capture ID in evidence, provider-record parsing, or evidence backfill. The logical link is exactly:
 
 ```text
+CROSS_DATABASE_LINKAGE = EXISTING_EVIDENCE_IDENTITY_TUPLE
 EVIDENCE_REPLAY_LOOKUP_KEY = canonical_source_url + response_sha256 + observed_at
 ```
 
-Miss means `NAROfficialResponseCaptureMissingError`: no network/current/adjacent-capture fallback. Stored corruption
-means `RepositoryDataIntegrityError`: no automatic repair or alternate capture selection. The existing builder remains
-the final `observed_at <= captured_at <= information_cutoff` enforcer.
+Persist valid received bytes before later normalization. An unused capture after normalizer failure is safe; capture persistence failure means no trusted operational evidence. Archive miss is `NAROfficialResponseCaptureMissingError`, with no network/current/adjacent fallback. Stored corruption is `RepositoryDataIntegrityError`, with no repair or alternate selection. Builder retains final `observed_at <= captured_at <= information_cutoff` ownership.
 
 ## Closed URL/Page Vocabulary
-
-Initial capture supports exactly these URL-derived kinds:
 
 | kind | HTTPS host(s) | path | exact query keys |
 | --- | --- | --- | --- |
@@ -52,20 +39,9 @@ Initial capture supports exactly these URL-derived kinds:
 | `horse_mark_info` | `www.keiba.go.jp`, `www2.keiba.go.jp` | `/KeibaWeb/DataRoom/HorseMarkInfo` | `k_lineageLoginCode` |
 | `race_mark_table` | `www.keiba.go.jp` | `/KeibaWeb/TodayRaceInfo/RaceMarkTable` | `k_babaCode`, `k_raceDate`, `k_raceNo` |
 
-Page kind is derived from strict pre-network URL validation, never independent caller text. Reject non-HTTPS, foreign
-or IP hosts, credentials, fragments, controls/whitespace, ports except absent/443, unknown paths, malformed percent
-escapes, `+` ambiguity, duplicate/blank/unknown query keys, invalid dates, and noncanonical positive tokens. Race URL
-canonical spelling orders `k_babaCode`, escaped `k_raceDate=YYYY%2FMM%2FDD`, then `k_raceNo`; HorseMark has only its
-lineage key. The accepted HorseMark host is preserved, never silently rewritten. Capture owns an independent validator
-and cross-contract tests; it does not import private normalizer helpers.
+Page kind is URL-derived before network access, never caller text. Reject non-HTTPS, foreign/IP host, credentials, fragment, controls/whitespace, port other than absent/443, unknown path, malformed percent escape, `+` ambiguity, duplicate/blank/unknown keys, invalid date, and noncanonical positive tokens. Canonical race query order is `k_babaCode`, escaped `k_raceDate=YYYY%2FMM%2FDD`, `k_raceNo`; HorseMark has only lineage. Accepted HorseMark host is preserved; no www/www2 rewrite. Capture owns independent validation and does not import private normalizer helpers.
 
-The 2026-08-10 read-only probe found direct `www` DebaTable/HorseMarkInfo/RaceMarkTable representatives returned 200,
-no redirect, `text/html; charset=UTF-8`, no Content-Encoding, and 297,718 / 83,949 / 96,614 bytes respectively. The
-observed `www2` HorseMarkInfo 301 is temporal transport evidence only, not a permanent domain invariant. Unit tests
-pin any 3xx as transport failure/no capture, not a lasting public-site behavior.
-
-`LEGACY_NAR_PROVIDER_TEXT_PATH = NOT_TRUSTED_EVIDENCE_ARCHIVE`: the legacy `response.text`, apparent-encoding, and
-logs path cannot prove byte identity. Logs are never evidence storage.
+The 2026-08-10 read-only probe saw direct `www` representatives return 200, `text/html; charset=UTF-8`, no Content-Encoding, and 297,718 / 83,949 / 96,614 byte bodies. Observed `www2` HorseMarkInfo 301 is temporal only; tests treat every 3xx under disabled redirects as transport failure/no capture. Legacy NARProvider `response.text`, apparent encoding, and logs are `NOT_TRUSTED_EVIDENCE_ARCHIVE`.
 
 ## Exact d3b2b1 Public and Error Surface
 
@@ -82,86 +58,81 @@ NAROfficialResponseCaptureMissingError
 canonicalize_nar_official_capture_url
 ```
 
-No package-root export, capture-specific repository-integrity error, or capture-specific conflict error exists.
-`NAROfficialResponseCaptureArchive` exactly provides:
+No package-root export or capture-specific repository conflict/integrity error. `NAROfficialResponseCaptureArchive` exactly provides:
 
 ```python
 def save_capture(*, capture: NAROfficialResponseCapture) -> None: ...
 def load_capture(*, capture_id: str) -> NAROfficialResponseCapture | None: ...
-def load_supplied_response_for_evidence(
-    *, canonical_source_url: str, response_sha256: str, observed_at: datetime,
-) -> NarSuppliedOfficialResponse: ...
+def load_supplied_response_for_evidence(*, canonical_source_url: str, response_sha256: str, observed_at: datetime) -> NarSuppliedOfficialResponse: ...
 ```
 
-Repository errors are reused exactly: invalid caller input is `RepositoryValidationError`; a same immutable identity
-with different stored content is `RepositoryConflictError`; impossible stored metadata, FK/storage failure, persisted
-Content-Length mismatch, or body SHA mismatch is `RepositoryDataIntegrityError`; an exact non-archived lookup is
-`NAROfficialResponseCaptureMissingError`.
+Reuse repository errors: invalid caller input is `RepositoryValidationError`; same immutable identity/different content is `RepositoryConflictError`; impossible metadata, FK/storage failure, persisted Content-Length mismatch, or body SHA mismatch is `RepositoryDataIntegrityError`; exact non-archived lookup is the capture-domain missing error.
 
-`NAROfficialResponseCapture` is frozen/slotted and has schema version 1 (not init), deterministic `capture_id`,
-page kind, canonical URL, response SHA, exact `bytes` body, exact `charset="utf-8"`, requested/observed/stored aware
-datetimes, HTTP status, and optional Content-Type, Content-Encoding, Date, ETag, Last-Modified, Content-Length.
-`capture_id` is `nar-capture-v1:` plus lowercase SHA-256 of canonical compact sorted-key UTF-8 JSON containing schema
-version, kind, canonical URL, body SHA, and canonical UTC observed time. Same URL/body at a different observed time is
-a distinct observation. Same ID is idempotent only if every immutable field/body is identical; otherwise conflict.
+`NAROfficialResponseCapture` is frozen/slotted, schema version 1 (not init), and has deterministic `capture_id`, kind, canonical URL, body SHA, exact `bytes` body, exact `charset="utf-8"`, requested/observed/stored aware datetimes, HTTP status, and optional Content-Type/Encoding/Date/ETag/Last-Modified/Length. `capture_id` is `nar-capture-v1:` plus lowercase SHA-256 of canonical compact sorted-key UTF-8 JSON of schema version, kind, canonical URL, body SHA, and canonical UTC observed time. Same URL/body at another observed time is a distinct observation; same ID is idempotent only with identical immutable fields/body, otherwise conflict.
 
-`response_body` is `EXACT_PARSER_INPUT_ENTITY_BYTES`: exact bytes saved and later passed unchanged to
-`NarSuppliedOfficialResponse.response_body`. Hash is before decoding/NFC/HTML processing. It is not packet-level wire
-capture. A strict UTF-8 validation decode is only a compatibility check and is never persisted/re-encoded. No text
-round trip, `response.text`, apparent encoding, or replacement/fallback decode. Only absent/`identity`
-Content-Encoding is accepted. `to_supplied_official_response()` and exact archive reconstruction reuse the existing
-`NarSuppliedOfficialResponse`, not a duplicate type.
+`response_body = EXACT_PARSER_INPUT_ENTITY_BYTES`: exact saved bytes later passed unchanged to `NarSuppliedOfficialResponse.response_body`; hash precedes decode/NFC/HTML. Strict UTF-8 decode is only compatibility validation, never persisted/re-encoded. No text round-trip, `response.text`, apparent encoding, or fallback. Only absent/`identity` Content-Encoding is accepted. Reconstruction reuses `NarSuppliedOfficialResponse`.
 
 ## Time, Transport, and d3b2b2 API
 
-`SYSTEM_CLOCK_CORRECTNESS = OPERATIONAL_PRECONDITION`. `requested_at` is sampled immediately before request start;
-`observed_at` immediately after the complete entity bytes are received and before parsing; `stored_at` is the trusted
-live-capture clock sample immediately before invoking atomic archive save/finalization. A successful save returns only
-after persistence completed after `stored_at`; it does not prove the exact SQLite durability instant. `stored_at` is
-audit metadata, not observed/available/capture/evidence identity/cutoff.
+`SYSTEM_CLOCK_CORRECTNESS = OPERATIONAL_PRECONDITION`. `requested_at` is immediately before request start; `observed_at` immediately after complete entity receipt before parsing; `stored_at` immediately before atomic archive save/finalization. Save returns after persistence completed after `stored_at`, not an exact SQLite durability instant. `stored_at` is audit metadata, not observed/available/capture/evidence identity/cutoff.
 
-d3b2b2's exact module-defined public API is:
-
-```python
-NAROfficialLiveResponseCaptureService
-NAROfficialResponseCaptureTransportError
-build_nar_official_live_response_capture_service
-```
+d3b2b2 public definitions are exactly `NAROfficialLiveResponseCaptureService`, `NAROfficialResponseCaptureTransportError`, and `build_nar_official_live_response_capture_service`.
 
 ```python
 class NAROfficialLiveResponseCaptureService:
-    def __init__(self, *, archive: NAROfficialResponseCaptureArchive,
-                 transport: _NAROfficialHTTPTransport,
-                 utc_clock: Callable[[], datetime]) -> None: ...
+    def __init__(self, *, archive: NAROfficialResponseCaptureArchive, transport: _NAROfficialHTTPTransport, utc_clock: Callable[[], datetime]) -> None: ...
     def capture(self, *, response_url: str) -> NAROfficialResponseCapture: ...
 
-def build_nar_official_live_response_capture_service(
-    *, archive: NAROfficialResponseCaptureArchive,
-) -> NAROfficialLiveResponseCaptureService: ...
+def build_nar_official_live_response_capture_service(*, archive: NAROfficialResponseCaptureArchive) -> NAROfficialLiveResponseCaptureService: ...
 ```
 
-The public factory owns private requests transport and real aware UTC clock. Tests may inject the private collaborator
-through the constructor. `D3B2C_PRIVATE_TRANSPORT_IMPORT = FORBIDDEN` and `D3B2C_HTTP_IMPLEMENTATION = FORBIDDEN`;
-d3b2c uses the public factory/service only. No generic `fetch_url` API or caller-supplied observed time exists.
+The public factory owns private requests transport and real aware UTC clock. `D3B2C_PRIVATE_TRANSPORT_IMPORT = FORBIDDEN` and `D3B2C_HTTP_IMPLEMENTATION = FORBIDDEN`; d3b2c uses only the public factory/service. HTTPS GET uses TLS verification, disabled redirects, HTTP 200 only, 10/30-second connect/read timeouts, 4 MiB complete-body maximum, static identifying UA, and no retry. 3xx/4xx/5xx, TLS/network/timeout, partial/oversize, and Content-Length mismatch fail before persistence. HTTP Date is never observed/available time; retained headers are auxiliary and controls are rejected. `PERSIST_BEFORE_NORMALIZATION = YES`.
 
-Policy is HTTPS GET with TLS verification, redirects disabled, HTTP 200 only, connect/read timeouts 10/30 seconds,
-4 MiB maximum complete body, static identifying UA, and no automatic retry. Any 3xx/4xx/5xx, TLS/network/timeout,
-partial or oversize response leaves no successful capture. `NAROfficialResponseCaptureTransportError` covers these
-states and pre-persistence Content-Length mismatch. If header Content-Length is present, its parsed integer must equal
-the exact body length; it is never a body identity or silently rewritten. Persisted non-null Content-Length must equal
-loaded body length or repository integrity fails. Retained headers are auxiliary only; HTTP Date is never observed or
-available time; control-containing header metadata is rejected. `PERSIST_BEFORE_NORMALIZATION = YES` so valid 200 strict-UTF-8 responses are archived before parser
-success/unsupported/validation decisions.
+## Separate Capture Database and Dedicated Migration
 
-## v013 Exact SQLite Contract
+`DATABASE_LOCATION = SEPARATE_NAR_CAPTURE_DATABASE`.
 
-`VERSION = 13`; `NAME = "v013_nar_official_response_capture_schema"`. v013 is additive, has no empty-store
-precondition, and does not modify/backfill existing evidence. `apply(connection)` is transaction-neutral: no BEGIN,
-COMMIT, or ROLLBACK. `scripts.migrations.runner` imports/orders v013 after v012 and alone owns BEGIN IMMEDIATE,
-commit, rollback, and FK activation.
+The illustrative collection model (one DebaTable per target race, ten HorseMarkInfo captures per target race, one RaceMarkTable body per race before repeat/extra coverage) projects:
 
-All UTC columns use the existing fixed-width 32-character microsecond UTC text format
-`YYYY-MM-DDTHH:MM:SS.ffffff+00:00`; lexical order is chronological. The exact intended DDL is:
+| target races/year | DebaTable | HorseMarkInfo | RaceMarkTable | total bodies |
+| --- | ---: | ---: | ---: | ---: |
+| 10,000 | 2.77 GiB | 7.82 GiB | 0.90 GiB | about 11.5 GiB/year |
+| 15,000 | 4.16 GiB | 11.73 GiB | 1.35 GiB | about 17.2 GiB/year |
+
+These exclude rows/indexes, WAL, backups, changed bodies defeating dedup, and added history. Blob/WAL/checkpoint/backup/vacuum and retention lifecycle materially differ from the main simulation DB. Separation confines capture failure/maintenance and prevents archive growth from burdening main backup/vacuum; main failure likewise cannot corrupt the archive. `AUTOMATIC_CAPTURE_RETENTION_DELETE = FORBIDDEN`.
+
+`CAPTURE_DATABASE_PATH = COMPOSITION_OWNED`. d3b2c later owns a distinct `capture_database_path`, separate from existing main `database_path`; d3b2b1 repository and d3b2b2 archive/service take neither path nor connection selection. Repository receives an injected capture SQLite connection, knows no main/simulation path/tables, and must never `ATTACH`. `CROSS_DATABASE_ATOMIC_TRANSACTION = NOT_REQUIRED`: capture precedes normalization and the evidence tuple supplies linkage without cross-DB FKs/distributed transaction.
+
+Backups are the pair `main KeibaOS SQLite db` and `NAR trusted capture SQLite db`, recommended main then capture. Backup skew has no web fallback; restoration uses available independent DBs and exact archive lookup fail-closes.
+
+`GLOBAL_MIGRATION_REQUIRED = NO`. No main/global `v013`; do not modify `scripts/migrations/runner.py`, add `scripts/migrations/versions/v013_*`, or change global migration order. Formal global sequence remains `8, 9, 10, 11, 12`. `GLOBAL_MIGRATION_REGISTRY_SCAN = COMPLETE`; these existing expectation tests are unchanged:
+
+```text
+tests/test_historical_input_snapshot_migration.py
+tests/test_simulation_bet_plan_migration.py
+tests/test_simulation_migrations.py
+tests/test_sqlite_persisted_simulation_application.py
+```
+
+`GLOBAL_MIGRATION_REGISTRY_AFFECTED_TESTS = NONE`.
+
+`CAPTURE_SCHEMA_MIGRATION_REQUIRED = YES`; dedicated version 1 is exactly `v001_nar_official_response_capture_schema` in:
+
+```text
+scripts/simulation/nar_official_response_capture_migration.py
+scripts/simulation/nar_official_response_capture_migration_runner.py
+```
+
+The migration module owns `VERSION`, `NAME`, and transaction-neutral `apply(connection)` (no begin/commit/rollback). Runner operates on capture DB only: rejects active transaction, enables/verifies FKs, validates registry, rejects duplicate/malformed/unknown-future/name-mismatch, creates registry if absent, applies ascending pending versions, and performs `BEGIN IMMEDIATE` plus registry insertion atomically. It rolls back failure and leaves transaction-neutral. It must not import/invoke `scripts.migrations.runner.MIGRATIONS` or create/inspect global simulation tables. Dedicated registry is exactly:
+
+```sql
+CREATE TABLE nar_official_response_capture_schema_migrations (
+  version INTEGER PRIMARY KEY CHECK (typeof(version) = 'integer' AND version > 0),
+  name TEXT NOT NULL CHECK (typeof(name) = 'text' AND name <> '')
+) WITHOUT ROWID;
+```
+
+Dedicated v001 creates only the body table, capture table, and named unique index. UTC text is 32-character `YYYY-MM-DDTHH:MM:SS.ffffff+00:00`; lexical order is chronological. Exact body/capture DDL remains:
 
 ```sql
 CREATE TABLE nar_official_response_bodies (
@@ -195,44 +166,33 @@ CREATE UNIQUE INDEX ux_nar_official_response_captures_evidence
     ON nar_official_response_captures (canonical_source_url, response_sha256, observed_at_utc);
 ```
 
-`EVIDENCE_LOOKUP_INDEX_COUNT = ONE`; the named UNIQUE index is both constraint and lookup. A duplicate ordinary index
-on the same columns is forbidden. Repository save/load still recomputes SHA-256 and parses/validates URLs/timestamps;
-SQL checks do not replace cryptographic/domain verification. Body dedup and capture insertion are one repository
-transaction; no row can reference a missing body. Existing evidence without a body remains `MISSING_CAPTURE`.
+`EVIDENCE_LOOKUP_INDEX_COUNT = ONE`; the named UNIQUE index is constraint and lookup. Duplicate ordinary index is forbidden. Repository recomputes SHA-256 and validates URL/timestamps; SQL does not replace domain/cryptographic verification. Body dedup/capture insertion are one repository transaction; no capture references a missing body. Existing evidence without body remains `MISSING_CAPTURE`.
 
-## Storage Decision and Future Scope
+## Future Scope and Stop Condition
 
-`DATABASE_LOCATION = SAME_KEIBAOS_DATABASE`. The measured representative size model is illustrative only: one DebaTable
-per target race, ten HorseMarkInfo captures per target race, and one RaceMarkTable body per race before repeated
-observations or extra historical RaceMark pages.
-
-| target races/year | DebaTable | HorseMarkInfo | RaceMarkTable | total bodies |
-| --- | ---: | ---: | ---: | ---: |
-| 10,000 | 2.77 GiB | 7.82 GiB | 0.90 GiB | about 11.5 GiB/year |
-| 15,000 | 4.16 GiB | 11.73 GiB | 1.35 GiB | about 17.2 GiB/year |
-
-These exclude indexes/rows, WAL, backups, changed bodies that defeat dedup, and added historical coverage. Same DB
-keeps archive and simulation data atomic and recoverable together under the existing v013 runner, but backups grow,
-WAL/checkpoint operations include capture writes, capture bodies must never be pruned merely to shrink simulation data,
-and operational disk monitoring is required. Storage separation needs a separate explicit migration/export phase.
-`AUTOMATIC_CAPTURE_RETENTION_DELETE = FORBIDDEN`.
-
-d3b2b1 allowed files are `nar_official_response_capture.py`, its SQLite repository, runner, v013, dedicated
-domain/repository/migration tests, these exact migration-registry tests:
+d3b2b1 future allowed files are exactly:
 
 ```text
-tests/test_historical_input_snapshot_migration.py
-tests/test_simulation_bet_plan_migration.py
-tests/test_simulation_migrations.py
-tests/test_sqlite_persisted_simulation_application.py
+scripts/simulation/nar_official_response_capture.py
+scripts/simulation/repositories/sqlite_nar_official_response_capture_repository.py
+scripts/simulation/nar_official_response_capture_migration.py
+scripts/simulation/nar_official_response_capture_migration_runner.py
+tests/test_nar_official_response_capture.py
+tests/test_sqlite_nar_official_response_capture_repository.py
+tests/test_nar_official_response_capture_migration.py
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
 ```
 
-and both phase docs. The complete scan found no additional test with a v012 final-version expectation. d3b2b2 changes
-only `scripts/simulation/nar_official_response_live_capture.py`, its dedicated test, and both docs. d3b2c later owns
-discovery, scheduling, multi-race collection, and cutoff-eligible selection; no HTTP/private transport implementation.
+d3b2b2 future allowed files are exactly:
 
-## Stop Condition
+```text
+scripts/simulation/nar_official_response_live_capture.py
+tests/test_nar_official_response_live_capture.py
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+```
 
-No code blocker is hidden. Intentional limits are operational local-clock trust, no retroactive live-page backfill,
-no third-party import, no retention deletion, no pagination/orchestration, and unsupported `past_race_absence`. Stop
-for independent architecture re-review; do not implement d3b2b1/b2/c, v013, or live capture.
+d3b2c later owns composition, distinct `capture_database_path`, discovery, scheduling, multi-race collection, and cutoff-eligible selection. It may not implement private transport/HTTP, repair backup skew through the web, or introduce automatic retention deletion. Pagination/orchestration and `past_race_absence` remain out of scope.
+
+Stop for independent architecture re-review. Do not implement d3b2b1/b2/c, capture storage, dedicated migration, global migration, live capture, or acquisition.
