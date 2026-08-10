@@ -2941,6 +2941,75 @@ NAR, repository, and v012 migration suites 68 passed; the remaining approved d3b
 the full suite 2456 passed. Forbidden dependency/source/AST and package-root export checks passed, as did
 `git diff --check`.
 
+## Phase 4C-2d3b1i6c1d3b2a Implementation
+
+Status: READY_FOR_REVIEW.
+
+Implemented the separate pure `scripts/simulation/nar_historical_past_race_source.py` boundary. Its only
+module-defined public name is `normalize_nar_historical_past_race_source_record`, with the approved keyword-only
+inputs: one exact c1a NAR entry record, one supplied HorseMarkInfo response, and one supplied RaceMarkTable response.
+The entry record supplies the target race, entry, and canonical NAR lineage; no independent caller identity override,
+horse-name fallback, horse-number linkage, database, fetch, filesystem, or clock path exists.
+
+The normalizer validates the full binding chain from target entry lineage through HorseMarkInfo and the selected history
+link to the unique RaceMarkTable result-row lineage. It emits exactly one c1a v3 `past_race` with provider ID
+`nar:result:20260503:31:1:horse:30074407776`, target race/entry envelope, and exactly two raw-response evidence roles:
+`historical_race_context` for HorseMarkInfo and `historical_race_result` for RaceMarkTable. Each evidence reference
+uses SHA-256 over exact supplied bytes, `available_at=None`, and the unmodified supplied `observed_at`. Timestamp-only
+changes leave source IDs stable; changing either raw body changes the source ID.
+
+The representative official-derived pair is stored as `MINIMIZED_AUTHENTIC_STRUCTURAL_FIXTURE`s: it preserves the
+official selected structural headers, HorseMarkInfo history row/result link, RaceMark result row, and corner labels.
+It yields 2026-05-03 高知 1R, Ｃ２－８ / Ｃ２, ダート 1400m, 雨 / 不良, finish 9, direct difference Decimal(2.6),
+time 1:32.4, body weight Decimal(495) with Decimal(1), 妹尾浩, popularity 8, odds Decimal(42.5), passing order
+9-9-9-11, and fourth-corner position 11. RaceMarkTable 着差 remains excluded from time-difference semantics.
+
+Fourth-corner extraction uses row-local `コーナー通過順` only for the horse positions and the same page's
+`全馬コーナー通過順` only for explicit label alignment. It requires unique increasing labels with exactly one corner 4
+and matching component count, thereby supporting both `[1,2,3,4]` and `[2,3,4]` layouts without a fixed-index or
+blind-last-component rule. JRA history, ばんえい, abnormal results, and missing/ambiguous direct facts remain fail-closed
+unsupported states.
+
+The dedicated regression suite covers the successful pair, every output field, URL/host validation, target entry and
+lineage binding, raw-body and timestamp source-ID semantics, direct difference versus RaceMark margin, weight/change,
+jockey normalization, positional corner alignment, multiplicity, horse-name fallback prohibition, c1c compatibility,
+and c1c causal rejection for late evidence. No c1a/c1b/c1c builder/SQLite/migration/schema/package-root production
+change was made. Historical replay still needs separately trusted causally observed captures; fixture timestamps are
+test values only.
+
+Verification used the external Python 3.14.5 / pytest 8.3.5 runtime. The dedicated pair suite passed 11 tests; the
+related NAR/c1a/c1c/snapshot suites passed 52 tests; the full suite passed 2467 tests. Dedicated source/AST and
+package-root non-export checks pass. `git diff --check` and the approved changed-file scope are verified before review
+publication.
+
+### d3b2a Target-entry Binding Correction
+
+`TARGET_ENTRY_HORSE_NO_CONSISTENCY = REQUIRED`: the normalizer now extracts the canonical horse-number suffix from
+the exact target entry ID and fails validation unless it equals that entry record's committed `horse_no`. This closes
+the target-entry internal-coherence gap without changing c1a. `HISTORICAL_ROW_IDENTITY = LINEAGE_ONLY` remains frozen:
+the historical RaceMarkTable row is still selected exclusively by `k_lineageLoginCode`, and a valid target horse number
+need not equal the historical race's horse number.
+
+The dedicated regression now rejects an entry-ID suffix/record-value mismatch, proves a changed historical horse
+number with the same lineage still normalizes, directly tests both supplied-response exact-type boundaries, and proves
+that both late HorseMarkInfo evidence and late RaceMarkTable evidence are rejected by the unchanged c1c builder.
+`BOTH_EVIDENCE_CAUSALITY_REGRESSIONS = PASS`; target-entry source-ID independence remains covered. Fixtures are
+unchanged.
+
+### d3b2a Structural JRA History Classification Correction
+
+`JRA_CLASSIFICATION = ROW_STRUCTURAL_NOT_PAGE_GLOBAL_TEXT`. Missing requested NAR history is no longer classified from
+arbitrary page text such as `JRA` or a jockey affiliation. The HorseMarkInfo history table now inspects each result
+navigation link: supported NAR RaceMarkTable links retain exact date/babaCode/raceNo identity; recognizable official
+JRA navigation is a JRA-only state only when no NAR navigation exists in that table. Thus
+`MIXED_NAR_JRA_HISTORY_PAGE = SUPPORTED_FOR_EXACT_NAR_SELECTION`, while
+`MISSING_REQUESTED_NAR_IDENTITY = VALIDATION_ERROR` and
+`JRA_ONLY_RECOGNIZED_HISTORY = UNSUPPORTED_ERROR`.
+
+The dedicated tests pin a local NAR result whose jockey affiliation displays `(JRA)`, unrelated page-global JRA text,
+mixed NAR/JRA selection and missing-NAR behavior, structurally JRA-only history, and generic missing navigation.
+`JOCKEY_AFFILIATION_JRA_DOES_NOT_IMPLY_JRA_RACE = YES`. No fixture or collaborator changed.
+
 ## Phase 4C-2d3b1i6c1d3a Implementation Verification Scope Blocker
 
 The approved d3a implementation updated only its allowed historical domain, builder, repository, v011 migration,
