@@ -3010,6 +3010,38 @@ The dedicated tests pin a local NAR result whose jockey affiliation displays `(J
 mixed NAR/JRA selection and missing-NAR behavior, structurally JRA-only history, and generic missing navigation.
 `JOCKEY_AFFILIATION_JRA_DOES_NOT_IMPLY_JRA_RACE = YES`. No fixture or collaborator changed.
 
+## Phase 4C-2d3b1i6c1d3b2b1 Trusted NAR Capture Archive Implementation
+
+Implemented the approved d3b2b design on a review branch based exactly on formal
+`4af5a7ba4f18769f365ac2c934bcfd0ffcf38818`. The implementation is deliberately isolated from the main KeibaOS
+database and migration registry. `DATABASE_LOCATION = SEPARATE_NAR_CAPTURE_DATABASE`; the main migration sequence
+remains `(8, 9, 10, 11, 12)`, with no v013, global migration runner/version/test change, or capture table in the
+simulation database.
+
+The new pure capture domain owns the closed DebaTable/HorseMarkInfo/RaceMarkTable URL vocabulary, deterministic URL
+canonicalization, immutable frozen/slotted capture values, strict UTF-8 parser-input bytes, exact raw SHA-256, and the
+deterministic `nar-capture-v1:` JSON identity. It contains no HTTP, SQLite, filesystem, clock, or normalizer-private
+helper dependency. It reconstructs the existing `NarSuppliedOfficialResponse` exactly, including original archived
+body bytes and supplied observation time.
+
+The dedicated v001 migration is transaction-neutral and creates only content-addressed body storage, immutable capture
+observations, and `ux_nar_official_response_captures_evidence` over the exact evidence tuple. Its independent runner
+owns foreign-key activation, registry validation, transaction ownership, pending ordering, and rollback. It does not
+import or invoke the global migration runner. The injected-connection archive repository is append-only: it atomically
+deduplicates valid body bytes, rejects same-ID metadata conflicts, makes exact reinsert idempotent, and rolls back a
+new body when later capture insertion fails. Every retrieval revalidates all stored identity/body/URL/timestamp/header
+invariants and fails closed for corruption. Exact lookup miss raises the capture-domain missing error with no fallback.
+
+`CROSS_DATABASE_LINKAGE = EXISTING_EVIDENCE_IDENTITY_TUPLE`; no cross-database transaction, FK, c1a field, snapshot
+field, or body persistence in evidence was added. Future composition owns `capture_database_path`; d3b2b2 live HTTP,
+clock, collection, pagination, and orchestration remain unimplemented.
+
+Verification with external Python 3.14.5 / pytest 8.3.5 passed: dedicated capture suites 20 passed; related existing
+NAR/c1a/c1c snapshot suites 53 passed; complete suite 2488 passed. Source/public-surface checks confirm package root
+unchanged, global migrations unchanged, capture domain/repository free of network/filesystem/clock ownership, and
+repository free of `ATTACH`. `git diff --check` passed. Status is `READY_FOR_REVIEW` pending independent GitHub code
+review; no formal integration was performed.
+
 ## Phase 4C-2d3b1i6c1d3a Implementation Verification Scope Blocker
 
 The approved d3a implementation updated only its allowed historical domain, builder, repository, v011 migration,
