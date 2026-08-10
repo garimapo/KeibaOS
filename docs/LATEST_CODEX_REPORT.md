@@ -2884,6 +2884,46 @@ past-race-absence evidence, so a complete snapshot still requires a later suppli
 blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
 assembled from its DebaTable-only output.
 
+## Phase 4C-2d3b1i6c1d3b2b2 Trusted NAR Live HTTPS Capture Implementation
+
+Implemented the approved live acquisition boundary on review branch
+`review/4c-2d3b1i6c1d3b2b2-implementation` from formal
+`5ab64c6c9401b56e4bacd5b3b4049452609ddf60`. The only production module is
+`scripts/simulation/nar_official_response_live_capture.py`; it reuses the completed capture-domain URL validator,
+immutable `NAROfficialResponseCapture`, and archive protocol without changing their APIs, capture schema, archive
+repository, global migrations, legacy provider, or any parser/normalizer.
+
+The public surface is exactly `NAROfficialLiveResponseCaptureService`,
+`NAROfficialResponseCaptureTransportError`, and
+`build_nar_official_live_response_capture_service`. `capture_response(*, response_url)` first canonicalizes the URL,
+then samples requested_at, completes one private HTTPS transport operation, samples observed_at and stored_at,
+constructs the immutable capture, persists it once, and only then returns. Successful time order is
+`requested_at <= observed_at <= stored_at`; malformed clock samples fail closed without fabricated replacements.
+
+The private requests transport uses certificate verification, `stream=True`, `allow_redirects=False`, an explicit
+`(10.0, 10.0)` connect/read timeout, `Accept-Encoding: identity`, a stable User-Agent, and zero-retry adapters.
+Only a complete HTTP 200 response with absent or identity content encoding, canonical effective URL equality, valid
+Content-Length (when supplied), and streamed bytes no larger than 4 MiB is accepted. The raw parser-input body is
+accumulated only as bytes: no `response.text`, `response.content`, apparent encoding, or decode/re-encode path is
+used. Redirect/status/network/stream/length/effective-URL failures are transport errors; unsupported content encoding,
+strict UTF-8 rejection, capture-domain validation, and archive errors retain their existing ownership.
+
+The dedicated suite has fake transport, archive, clock, requests Session, and streaming response collaborators. It
+pins canonical URL-before-network, exact byte identity through the archive and supplied-response conversion, causal
+event ordering, all required status/redirect cases, no-retry request configuration, encoding policy, 4 MiB and
+Content-Length limits, effective URL rejection, narrow requests failure translation, archive propagation, and source/
+AST/package-root boundaries.
+
+An unpersisted manual official probe using `Accept-Encoding: identity` completed on 2026-08-11. DebaTable www
+returned HTTP 200, no Content-Encoding/Content-Length, and 297718 body bytes; RaceMarkTable www returned HTTP 200,
+no Content-Encoding/Content-Length, and 96614 bytes; HorseMarkInfo www returned HTTP 200, no
+Content-Encoding/Content-Length, and 83949 bytes. HorseMarkInfo www2 returned HTTP 301 with zero declared/body bytes,
+which is correctly fail-closed under redirect-disabled policy. No probe body, fixture, or capture database row was
+created. `LIVE_PROBE = PASS` for the supported www endpoints.
+
+Status is `READY_FOR_REVIEW`; d3b2c composition, database-path ownership, discovery, collection, pagination,
+scheduling, CLI, formal integration, and historical absence remain unstarted.
+
 ## Phase 4C-2d3b1i6c1d3b1 Uniform Historical Evidence Implementation
 
 Status: READY_FOR_REVIEW.
