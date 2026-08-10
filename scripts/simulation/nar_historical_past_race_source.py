@@ -261,8 +261,12 @@ def _target_identity(record: object) -> tuple[_date, str, str, str, str]:
     except ValueError as error:
         raise _validation("target external_race_id date is invalid") from error
     expected_entry = _re.compile(rf"{_re.escape(record.external_race_id)}:entry:([1-9][0-9]*)\Z")
-    if expected_entry.fullmatch(record.external_entry_id) is None:
+    entry_match = expected_entry.fullmatch(record.external_entry_id)
+    if entry_match is None:
         raise _validation("target external_entry_id is invalid")
+    entry_horse_no = _positive_int(entry_match.group(1), "target external_entry_id horse number")
+    if entry_horse_no != record.record_values["horse_no"]:
+        raise _validation("target entry horse number is inconsistent")
     horse = record.record_values["external_horse_id"]
     if type(horse) is not str:
         raise _validation("target external_horse_id is required")

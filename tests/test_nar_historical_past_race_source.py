@@ -175,11 +175,16 @@ class NarHistoricalPastRaceSourceTests(unittest.TestCase):
             _normalize(target_entry_record=_entry(organization="JRA"))
         with self.assertRaises(NarHistoricalInputSourceValidationError):
             _normalize(target_entry_record=_entry(source_system="other"))
-        self.assertEqual(_normalize(target_entry_record=_entry(horse_no=99)).external_entry_id, TARGET_ENTRY)
+        with self.assertRaises(NarHistoricalInputSourceValidationError):
+            _normalize(target_entry_record=_entry(horse_no=99))
         with self.assertRaises(NarHistoricalInputSourceValidationError):
             _normalize(horse_url=HORSE_URL.replace("30074407776", "30074407777"))
         with self.assertRaises(NarHistoricalInputSourceValidationError):
             _normalize(race_body=RACE_BODY.replace(b"30074407776", b"30074407777", 1))
+        changed_historical_horse_no = _normalize(
+            race_body=RACE_BODY.replace(b'<td class="c">3</td>', b'<td class="c">99</td>', 1)
+        )
+        self.assertEqual(changed_historical_horse_no.provider_record_id, "nar:result:20260503:31:1:horse:30074407776")
 
     def test_urls_are_strict_and_horsemark_host_alias_is_preserved(self) -> None:
         record = _normalize(horse_url=HORSE_URL.replace("www.", "www2."))
@@ -197,6 +202,10 @@ class NarHistoricalPastRaceSourceTests(unittest.TestCase):
         with self.assertRaises(NarHistoricalInputSourceValidationError):
             normalize_nar_historical_past_race_source_record(
                 target_entry_record=_entry(), horse_history_response=object(), race_result_response=_responses()[1]
+            )
+        with self.assertRaises(NarHistoricalInputSourceValidationError):
+            normalize_nar_historical_past_race_source_record(
+                target_entry_record=_entry(), horse_history_response=_responses()[0], race_result_response=object()
             )
 
     def test_direct_difference_and_racemark_margin_are_separate(self) -> None:
@@ -286,6 +295,10 @@ class NarHistoricalPastRaceSourceTests(unittest.TestCase):
         late = normalize_nar_historical_past_race_source_record(target_entry_record=entry, horse_history_response=late_horse, race_result_response=race)
         with self.assertRaises(HistoricalInputSnapshotAssemblyError):
             build_historical_input_snapshot(dataset_id="dataset", internal_race_id=1, captured_at=datetime(2026, 6, 1, tzinfo=timezone.utc), information_cutoff=datetime(2026, 6, 2, tzinfo=timezone.utc), source_records=(track, entry, jockey, odds, late), race_entry_id_by_external_entry_id={TARGET_ENTRY: 99})
+        horse, late_race = _responses(race_observed=datetime(2026, 6, 3, tzinfo=timezone.utc))
+        late_result = normalize_nar_historical_past_race_source_record(target_entry_record=entry, horse_history_response=horse, race_result_response=late_race)
+        with self.assertRaises(HistoricalInputSnapshotAssemblyError):
+            build_historical_input_snapshot(dataset_id="dataset", internal_race_id=1, captured_at=datetime(2026, 6, 1, tzinfo=timezone.utc), information_cutoff=datetime(2026, 6, 2, tzinfo=timezone.utc), source_records=(track, entry, jockey, odds, late_result), race_entry_id_by_external_entry_id={TARGET_ENTRY: 99})
 
 
 if __name__ == "__main__":

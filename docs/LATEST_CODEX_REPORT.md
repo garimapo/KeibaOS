@@ -2982,6 +2982,20 @@ related NAR/c1a/c1c/snapshot suites passed 52 tests; the full suite passed 2467 
 package-root non-export checks pass. `git diff --check` and the approved changed-file scope are verified before review
 publication.
 
+### d3b2a Target-entry Binding Correction
+
+`TARGET_ENTRY_HORSE_NO_CONSISTENCY = REQUIRED`: the normalizer now extracts the canonical horse-number suffix from
+the exact target entry ID and fails validation unless it equals that entry record's committed `horse_no`. This closes
+the target-entry internal-coherence gap without changing c1a. `HISTORICAL_ROW_IDENTITY = LINEAGE_ONLY` remains frozen:
+the historical RaceMarkTable row is still selected exclusively by `k_lineageLoginCode`, and a valid target horse number
+need not equal the historical race's horse number.
+
+The dedicated regression now rejects an entry-ID suffix/record-value mismatch, proves a changed historical horse
+number with the same lineage still normalizes, directly tests both supplied-response exact-type boundaries, and proves
+that both late HorseMarkInfo evidence and late RaceMarkTable evidence are rejected by the unchanged c1c builder.
+`BOTH_EVIDENCE_CAUSALITY_REGRESSIONS = PASS`; target-entry source-ID independence remains covered. Fixtures are
+unchanged.
+
 ## Phase 4C-2d3b1i6c1d3a Implementation Verification Scope Blocker
 
 The approved d3a implementation updated only its allowed historical domain, builder, repository, v011 migration,

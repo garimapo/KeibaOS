@@ -48,6 +48,11 @@ caller overrides for — the target race, entry, and horse identity. It strictly
 - `{target_race_id}:entry:{horseNo}` target entry identity; and
 - `nar:horse:{k_lineageLoginCode}`, with lexical `[1-9][0-9]*` lineage.
 
+`TARGET_ENTRY_HORSE_NO_CONSISTENCY = REQUIRED`: the canonical horse-number suffix in `external_entry_id` must equal
+the committed positive exact-int `record_values["horse_no"]`. This only validates internal coherence of the target
+entry. `HISTORICAL_ROW_IDENTITY = LINEAGE_ONLY`: target horse number is never used to locate a historical RaceMarkTable
+row and need not equal that historical race's horse number.
+
 The binding chain is exact:
 
 ```text
