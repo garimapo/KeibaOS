@@ -13,6 +13,7 @@ import unittest
 
 import scripts.simulation.repositories as repositories
 from scripts.migrations.runner import apply_migrations
+from scripts.simulation.historical_input_evidence import HistoricalInputEvidenceReference
 from scripts.simulation.historical_input_snapshots import (
     HistoricalExternalEntryIdentity,
     HistoricalExternalRaceIdentity,
@@ -41,6 +42,13 @@ START = datetime(2026, 8, 5, 12, 0, 0, 111111, tzinfo=UTC)
 
 
 class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
+    @staticmethod
+    def evidence(*roles: str, available_at: datetime | None = None, observed_at: datetime = CAPTURED) -> tuple[HistoricalInputEvidenceReference, ...]:
+        return tuple(
+            HistoricalInputEvidenceReference(role, "https://example.test/evidence", str(index + 1) * 64, available_at, observed_at)
+            for index, role in enumerate(roles)
+        )
+
     def connection(self) -> sqlite3.Connection:
         connection = sqlite3.connect(":memory:")
         connection.execute("CREATE TABLE races(id INTEGER PRIMARY KEY)")
@@ -87,10 +95,10 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
         )
         past_races = ()
         provenance = [
-            HistoricalInputProvenance("track", "track", "nar", "track-1", None, observed_at=CAPTURED),
-            HistoricalInputProvenance("entry", f"entry/{entry_id}", "nar", "entry-1", entry_id, observed_at=CAPTURED),
-            HistoricalInputProvenance("odds", f"odds/{entry_id}", "nar", "odds-1", entry_id, available_at=CAPTURED),
-            HistoricalInputProvenance("jockey", f"jockey/{entry_id}", "nar", "jockey-1", entry_id, observed_at=CAPTURED),
+            HistoricalInputProvenance("track", "track", "nar", "track-1", None, self.evidence("track")),
+            HistoricalInputProvenance("entry", f"entry/{entry_id}", "nar", "entry-1", entry_id, self.evidence("entry")),
+            HistoricalInputProvenance("odds", f"odds/{entry_id}", "nar", "odds-1", entry_id, self.evidence("odds_win", available_at=CAPTURED)),
+            HistoricalInputProvenance("jockey", f"jockey/{entry_id}", "nar", "jockey-1", entry_id, self.evidence("jockey")),
         ]
         if include_past_race:
             past_races = (
@@ -103,14 +111,14 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
             provenance.append(
                 HistoricalInputProvenance(
                     "past_race", f"past_race/{entry_id}/0", "nar", "past-1", entry_id,
-                    observed_at=CAPTURED, past_race_index=0,
+                    evidence=self.evidence("historical_race_context", "historical_race_result"), past_race_index=0,
                 )
             )
         else:
             provenance.append(
                 HistoricalInputProvenance(
                     "past_race", f"past_race/{entry_id}/none", "nar", "past-none-1", entry_id,
-                    observed_at=CAPTURED,
+                    evidence=self.evidence("past_race_absence_query"),
                 )
             )
         return HistoricalInputSnapshot(identity, race_id, cutoff, race, (entry,), past_races, tuple(provenance))
@@ -210,17 +218,49 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
         )
         self.assertEqual(
             connection.execute(
-                """SELECT input_type,audit_key,source,source_id,race_entry_id,available_at_utc,observed_at_utc,past_race_index
+                """SELECT input_type,audit_key,source,source_id,race_entry_id,past_race_index
                    FROM historical_input_snapshot_provenance ORDER BY audit_key"""
             ).fetchall(),
             [
-                ("entry", "entry/11", "nar", "entry-1", 11, None, "2026-08-05T10:00:00.123456+00:00", None),
-                ("jockey", "jockey/11", "nar", "jockey-1", 11, None, "2026-08-05T10:00:00.123456+00:00", None),
-                ("odds", "odds/11", "nar", "odds-1", 11, "2026-08-05T10:00:00.123456+00:00", None, None),
-                ("past_race", "past_race/11/0", "nar", "past-1", 11, None, "2026-08-05T10:00:00.123456+00:00", 0),
-                ("track", "track", "nar", "track-1", None, None, "2026-08-05T10:00:00.123456+00:00", None),
+                ("entry", "entry/11", "nar", "entry-1", 11, None),
+                ("jockey", "jockey/11", "nar", "jockey-1", 11, None),
+                ("odds", "odds/11", "nar", "odds-1", 11, None),
+                ("past_race", "past_race/11/0", "nar", "past-1", 11, 0),
+                ("track", "track", "nar", "track-1", None, None),
             ],
         )
+        self.assertEqual(self.count(connection, "historical_input_snapshot_provenance_evidence"), 6)
+
+    def test_same_response_may_bind_both_generic_past_race_roles(self) -> None:
+        connection, repository = self.repository()
+        snapshot = self.snapshot()
+        provenance = tuple(sorted((
+            replace(
+                item,
+                evidence=(
+                    item.evidence[0],
+                    replace(item.evidence[1], response_sha256=item.evidence[0].response_sha256),
+                ),
+            )
+            if item.audit_key == "past_race/11/0"
+            else item
+            for item in snapshot.provenance
+        ), key=lambda item: item.audit_key))
+        same_response = HistoricalInputSnapshot(
+            snapshot.identity, snapshot.internal_race_id, snapshot.information_cutoff, snapshot.race,
+            snapshot.entries, snapshot.past_races, provenance,
+        )
+        repository.save_snapshot(snapshot=same_response)
+        rows = connection.execute(
+            """SELECT evidence_role,canonical_source_url,response_sha256
+               FROM historical_input_snapshot_provenance_evidence
+               WHERE audit_key='past_race/11/0' ORDER BY evidence_order"""
+        ).fetchall()
+        self.assertEqual(rows[0][1:], rows[1][1:])
+        self.assertEqual(repository.load_latest_snapshot(
+            dataset_id="dataset-1", race_id=1, information_cutoff=CUTOFF,
+            source_identity=HistoricalExternalRaceIdentity("NAR", "nar_official", "race-1"),
+        ), same_response)
 
     def test_same_snapshot_is_an_idempotent_no_op(self) -> None:
         connection, repository = self.repository()
@@ -489,16 +529,16 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
         past_11_1 = replace(past_11_0, past_race_index=1, race_date=date(2026, 8, 3))
         past_12_0 = replace(past_11_0, race_entry_id=12)
         provenance = (
-            HistoricalInputProvenance("track", "track", "nar", "track-1", None, observed_at=CAPTURED),
-            HistoricalInputProvenance("entry", "entry/12", "nar", "entry-12", 12, observed_at=CAPTURED),
-            HistoricalInputProvenance("odds", "odds/12", "nar", "odds-12", 12, available_at=CAPTURED),
-            HistoricalInputProvenance("jockey", "jockey/12", "nar", "jockey-12", 12, observed_at=CAPTURED),
-            HistoricalInputProvenance("past_race", "past_race/12/0", "nar", "past-12-0", 12, observed_at=CAPTURED, past_race_index=0),
-            HistoricalInputProvenance("entry", "entry/11", "nar", "entry-11", 11, observed_at=CAPTURED),
-            HistoricalInputProvenance("odds", "odds/11", "nar", "odds-11", 11, available_at=CAPTURED),
-            HistoricalInputProvenance("jockey", "jockey/11", "nar", "jockey-11", 11, observed_at=CAPTURED),
-            HistoricalInputProvenance("past_race", "past_race/11/1", "nar", "past-11-1", 11, observed_at=CAPTURED, past_race_index=1),
-            HistoricalInputProvenance("past_race", "past_race/11/0", "nar", "past-11-0", 11, observed_at=CAPTURED, past_race_index=0),
+            HistoricalInputProvenance("track", "track", "nar", "track-1", None, self.evidence("track")),
+            HistoricalInputProvenance("entry", "entry/12", "nar", "entry-12", 12, self.evidence("entry")),
+            HistoricalInputProvenance("odds", "odds/12", "nar", "odds-12", 12, self.evidence("odds_win", available_at=CAPTURED)),
+            HistoricalInputProvenance("jockey", "jockey/12", "nar", "jockey-12", 12, self.evidence("jockey")),
+            HistoricalInputProvenance("past_race", "past_race/12/0", "nar", "past-12-0", 12, self.evidence("historical_race_context", "historical_race_result"), 0),
+            HistoricalInputProvenance("entry", "entry/11", "nar", "entry-11", 11, self.evidence("entry")),
+            HistoricalInputProvenance("odds", "odds/11", "nar", "odds-11", 11, self.evidence("odds_win", available_at=CAPTURED)),
+            HistoricalInputProvenance("jockey", "jockey/11", "nar", "jockey-11", 11, self.evidence("jockey")),
+            HistoricalInputProvenance("past_race", "past_race/11/1", "nar", "past-11-1", 11, self.evidence("historical_race_context", "historical_race_result"), 1),
+            HistoricalInputProvenance("past_race", "past_race/11/0", "nar", "past-11-0", 11, self.evidence("historical_race_context", "historical_race_result"), 0),
         )
         saved = HistoricalInputSnapshot(
             base.identity,
@@ -538,6 +578,88 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
                 connection.execute(f"UPDATE {table} SET {column}=? WHERE snapshot_id=?", (value, snapshot_id))
                 connection.commit()
                 connection.execute("PRAGMA ignore_check_constraints=OFF")
+                with self.assertRaises(RepositoryDataIntegrityError):
+                    self.load(repository)
+                self.assertEqual(older.identity.captured_at, CAPTURED)
+
+    def test_selected_evidence_corruption_is_fail_closed_without_fallback(self) -> None:
+        def mutate(connection: sqlite3.Connection, snapshot_id: int, case: str) -> None:
+            audit_key = "past_race/11/0"
+            if case == "missing":
+                connection.execute(
+                    "DELETE FROM historical_input_snapshot_provenance_evidence WHERE snapshot_id=? AND audit_key=? AND evidence_order=0",
+                    (snapshot_id, audit_key),
+                )
+            elif case == "wrong_role":
+                connection.execute(
+                    "UPDATE historical_input_snapshot_provenance_evidence SET evidence_role='wrong' WHERE snapshot_id=? AND audit_key=? AND evidence_order=0",
+                    (snapshot_id, audit_key),
+                )
+            elif case == "order":
+                connection.execute(
+                    "UPDATE historical_input_snapshot_provenance_evidence SET evidence_order=3 WHERE snapshot_id=? AND audit_key=? AND evidence_order=0",
+                    (snapshot_id, audit_key),
+                )
+            elif case == "invalid_sha":
+                connection.execute("PRAGMA ignore_check_constraints=ON")
+                connection.execute(
+                    "UPDATE historical_input_snapshot_provenance_evidence SET response_sha256='invalid' WHERE snapshot_id=? AND audit_key=? AND evidence_order=0",
+                    (snapshot_id, audit_key),
+                )
+                connection.execute("PRAGMA ignore_check_constraints=OFF")
+            elif case == "invalid_observed":
+                connection.execute("PRAGMA ignore_check_constraints=ON")
+                connection.execute(
+                    "UPDATE historical_input_snapshot_provenance_evidence SET observed_at_utc='invalid' WHERE snapshot_id=? AND audit_key=? AND evidence_order=0",
+                    (snapshot_id, audit_key),
+                )
+                connection.execute("PRAGMA ignore_check_constraints=OFF")
+            elif case == "late_observed":
+                connection.execute(
+                    "UPDATE historical_input_snapshot_provenance_evidence SET observed_at_utc=? WHERE snapshot_id=? AND audit_key=? AND evidence_order=0",
+                    ((CAPTURED + timedelta(seconds=3)).isoformat(timespec="microseconds"), snapshot_id, audit_key),
+                )
+            elif case in {"observed_mismatch", "available_mismatch"}:
+                row = connection.execute(
+                    """SELECT canonical_source_url,response_sha256,observed_at_utc
+                       FROM historical_input_snapshot_provenance_evidence
+                       WHERE snapshot_id=? AND audit_key=? AND evidence_order=0""",
+                    (snapshot_id, audit_key),
+                ).fetchone()
+                column, value = (
+                    ("observed_at_utc", (CAPTURED + timedelta(seconds=1)).isoformat(timespec="microseconds"))
+                    if case == "observed_mismatch"
+                    else ("available_at_utc", row[2])
+                )
+                connection.execute(
+                    f"""UPDATE historical_input_snapshot_provenance_evidence
+                        SET canonical_source_url=?, response_sha256=?, {column}=?
+                        WHERE snapshot_id=? AND audit_key=? AND evidence_order=1""",
+                    (row[0], row[1], value, snapshot_id, audit_key),
+                )
+            elif case == "orphan":
+                connection.execute("PRAGMA foreign_keys=OFF")
+                connection.execute(
+                    """INSERT INTO historical_input_snapshot_provenance_evidence(
+                        snapshot_id,audit_key,evidence_order,evidence_role,canonical_source_url,response_sha256,
+                        available_at_utc,observed_at_utc
+                    ) VALUES(?,?,?,?,?,?,?,?)""",
+                    (snapshot_id, "orphan", 0, "track", "https://example.test/orphan", "a" * 64, None, CAPTURED.isoformat(timespec="microseconds")),
+                )
+                connection.commit()
+                connection.execute("PRAGMA foreign_keys=ON")
+            else:
+                raise AssertionError(case)
+
+        for case in (
+            "missing", "wrong_role", "order", "invalid_sha", "invalid_observed", "late_observed",
+            "observed_mismatch", "available_mismatch", "orphan",
+        ):
+            with self.subTest(case=case):
+                connection, repository = self.repository()
+                older, newer = self.save_older_and_newer(repository)
+                mutate(connection, self.snapshot_id_for(connection, newer.identity.captured_at), case)
+                connection.commit()
                 with self.assertRaises(RepositoryDataIntegrityError):
                     self.load(repository)
                 self.assertEqual(older.identity.captured_at, CAPTURED)

@@ -13,6 +13,7 @@ from scripts.migrations.versions import (
     v009_simulation_bet_plan_schema,
     v010_historical_input_snapshot_schema,
     v011_historical_past_race_time_difference_schema,
+    v012_historical_input_evidence_schema,
 )
 
 
@@ -25,6 +26,7 @@ HISTORICAL_TABLES = {
     "historical_input_snapshot_entries",
     "historical_input_snapshot_past_races",
     "historical_input_snapshot_provenance",
+    "historical_input_snapshot_provenance_evidence",
 }
 V010_INDEXES = {
     "ux_horses_race_id_id",
@@ -104,10 +106,18 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
     def provenance(self, connection: sqlite3.Connection, *, input_type: str, audit_key: str, race_entry_id: int | None, past_race_index: int | None = None) -> None:
         connection.execute(
             """INSERT INTO historical_input_snapshot_provenance(
-                snapshot_id, input_type, audit_key, source, source_id, race_entry_id,
-                available_at_utc, observed_at_utc, past_race_index
-            ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (1, input_type, audit_key, "nar_official", f"source-{audit_key}", race_entry_id, None, UTC, past_race_index),
+                snapshot_id, input_type, audit_key, source, source_id, race_entry_id, past_race_index
+            ) VALUES(?, ?, ?, ?, ?, ?, ?)""",
+            (1, input_type, audit_key, "nar_official", f"source-{audit_key}", race_entry_id, past_race_index),
+        )
+        role = {
+            "track": "track", "entry": "entry", "odds": "odds_win", "jockey": "jockey",
+        }.get(input_type, "past_race_absence_query" if past_race_index is None else "historical_race_context")
+        connection.execute(
+            """INSERT INTO historical_input_snapshot_provenance_evidence(
+                snapshot_id,audit_key,evidence_order,evidence_role,canonical_source_url,response_sha256,available_at_utc,observed_at_utc
+            ) VALUES(?,?,?,?,?,?,?,?)""",
+            (1, audit_key, 0, role, "https://example.test/evidence", HASH, None, UTC),
         )
 
     def test_identity_registration_schema_objects_and_no_backfill(self) -> None:
@@ -116,10 +126,12 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         self.assertEqual(v010_historical_input_snapshot_schema.NAME, "v010_historical_input_snapshot_schema")
         self.assertEqual(v011_historical_past_race_time_difference_schema.VERSION, 11)
         self.assertEqual(v011_historical_past_race_time_difference_schema.NAME, "v011_historical_past_race_time_difference_schema")
-        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS), (8, 9, 10, 11))
+        self.assertEqual(v012_historical_input_evidence_schema.VERSION, 12)
+        self.assertEqual(v012_historical_input_evidence_schema.NAME, "v012_historical_input_evidence_schema")
+        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS), (8, 9, 10, 11, 12))
         self.assertEqual(
             get_applied_versions(connection),
-            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema"},
+            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema"},
         )
         self.assertEqual(
             {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'historical_input_%'")},
@@ -143,7 +155,7 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         apply_migrations(connection)
         self.assertEqual(
             connection.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall(),
-            [(8,), (9,), (10,), (11,)],
+            [(8,), (9,), (10,), (11,), (12,)],
         )
         self.assertEqual(connection.execute("SELECT count(*) FROM historical_input_snapshots").fetchone()[0], 0)
         for table in HISTORICAL_TABLES:
@@ -262,7 +274,7 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         self.assertEqual(connection.execute("SELECT COUNT(*) FROM historical_input_external_entries").fetchone()[0], 1)
         self.assertEqual(get_applied_versions(connection)[11], "v011_historical_past_race_time_difference_schema")
 
-    def test_v011_rejects_nonempty_snapshot_store_atomically(self) -> None:
+    def test_v012_rejects_nonempty_snapshot_store_atomically(self) -> None:
         connection = self.db()
         apply_migrations(connection, MIGRATIONS[:-1])
         self.source_and_external_mapping(connection)
@@ -271,10 +283,18 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "nonempty historical input snapshot store"):
             apply_migrations(connection)
         columns = {row[1] for row in connection.execute("PRAGMA table_info(historical_input_snapshot_past_races)")}
-        self.assertIn("margin_text", columns)
-        self.assertNotIn("reference_time_difference_seconds_text", columns)
-        self.assertNotIn(11, get_applied_versions(connection))
+        self.assertNotIn("margin_text", columns)
+        self.assertIn("reference_time_difference_seconds_text", columns)
+        self.assertNotIn(12, get_applied_versions(connection))
         self.assertEqual(connection.execute("SELECT COUNT(*) FROM historical_input_snapshots").fetchone()[0], 1)
+        provenance_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(historical_input_snapshot_provenance)")
+        }
+        self.assertIn("available_at_utc", provenance_columns)
+        self.assertIn("observed_at_utc", provenance_columns)
+        tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        self.assertNotIn("historical_input_snapshot_provenance_evidence", tables)
+        self.assertNotIn("historical_input_snapshot_provenance_v2", tables)
         self.assertFalse(connection.in_transaction)
 
     def test_date_datetime_and_nonempty_text_checks_do_not_trim(self) -> None:

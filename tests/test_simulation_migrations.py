@@ -21,7 +21,7 @@ class MigrationTests(unittest.TestCase):
     def test_getter_has_no_side_effect(self):
         c=self.db(); self.assertEqual(get_applied_versions(c),{}); self.assertIsNone(c.execute("SELECT 1 FROM sqlite_master WHERE name='schema_migrations'").fetchone())
     def test_apply_idempotent_and_utc_history(self):
-        c=self.migrated(); apply_migrations(c); self.assertEqual(get_applied_versions(c),{8:'v008_simulation_schema',9:'v009_simulation_bet_plan_schema',10:'v010_historical_input_snapshot_schema',11:'v011_historical_past_race_time_difference_schema'}); self.assertTrue(c.execute("SELECT applied_at FROM schema_migrations").fetchone()[0].endswith('+00:00'))
+        c=self.migrated(); apply_migrations(c); self.assertEqual(get_applied_versions(c),{8:'v008_simulation_schema',9:'v009_simulation_bet_plan_schema',10:'v010_historical_input_snapshot_schema',11:'v011_historical_past_race_time_difference_schema',12:'v012_historical_input_evidence_schema'}); self.assertTrue(c.execute("SELECT applied_at FROM schema_migrations").fetchone()[0].endswith('+00:00'))
     def test_foreign_keys_and_active_transaction_rejected(self):
         c=self.db(); c.execute('BEGIN');
         with self.assertRaises(RuntimeError): apply_migrations(c)

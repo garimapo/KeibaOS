@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass as _dataclass
 from datetime import date as _date, datetime as _datetime
 from decimal import Decimal as _Decimal, InvalidOperation as _InvalidOperation
+import hashlib as _hashlib
 import re as _re
 from typing import Literal as _Literal
 from unicodedata import normalize as _normalize
@@ -20,6 +21,9 @@ from scripts.simulation.historical_input_source_records import (
     HistoricalInputSourceRecord as _HistoricalInputSourceRecord,
     HistoricalInputSourceValidationError as _HistoricalInputSourceValidationError,
     validate_historical_input_source_record_set as _validate_historical_input_source_record_set,
+)
+from scripts.simulation.historical_input_evidence import (
+    HistoricalInputEvidenceReference as _HistoricalInputEvidenceReference,
 )
 
 if "annotations" in globals():
@@ -486,6 +490,17 @@ def normalize_nar_historical_input_source_records(
     canonical_url, race_date, baba_code, race_no = _canonical_url(
         response.response_url,
     )
+    response_sha256 = _hashlib.sha256(response.response_body).hexdigest()
+    def evidence(role: str) -> tuple[_HistoricalInputEvidenceReference, ...]:
+        return (
+            _HistoricalInputEvidenceReference(
+                role,
+                canonical_url,
+                response_sha256,
+                None,
+                response.observed_at,
+            ),
+        )
     soup = _require_utf8_document(response)
     card = _header_card(soup)
     external_race_id = f"nar:{race_date:%Y%m%d}:{baba_code}:{race_no}"
@@ -495,11 +510,9 @@ def normalize_nar_historical_input_source_records(
         source_system="nar_official",
         external_race_id=external_race_id,
         external_entry_id=None,
-        canonical_source_url=canonical_url,
         provider_record_id=None,
         record_values=_track_values(card, race_date, race_no),
-        available_at=None,
-        observed_at=response.observed_at,
+        evidence=evidence("track"),
     )
     parsed_rows = tuple(
         _row_values(row, external_race_id)
@@ -514,10 +527,7 @@ def normalize_nar_historical_input_source_records(
             "source_system": "nar_official",
             "external_race_id": external_race_id,
             "external_entry_id": entry_id,
-            "canonical_source_url": canonical_url,
             "provider_record_id": None,
-            "available_at": None,
-            "observed_at": response.observed_at,
         }
         records.extend(
             (
@@ -528,6 +538,7 @@ def normalize_nar_historical_input_source_records(
                         "external_horse_id": external_horse_id,
                         "horse_no": horse_no,
                     },
+                    evidence=evidence("entry"),
                     **common,
                 ),
                 _HistoricalInputSourceRecord(
@@ -536,6 +547,7 @@ def normalize_nar_historical_input_source_records(
                         "external_entry_id": entry_id,
                         "jockey": jockey,
                     },
+                    evidence=evidence("jockey"),
                     **common,
                 ),
                 _HistoricalInputSourceRecord(
@@ -545,6 +557,7 @@ def normalize_nar_historical_input_source_records(
                         "horse_no": horse_no,
                         "win_odds": odds,
                     },
+                    evidence=evidence("odds_win"),
                     **common,
                 ),
             ),
