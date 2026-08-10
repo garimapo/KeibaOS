@@ -3042,6 +3042,26 @@ unchanged, global migrations unchanged, capture domain/repository free of networ
 repository free of `ATTACH`. `git diff --check` passed. Status is `READY_FOR_REVIEW` pending independent GitHub code
 review; no formal integration was performed.
 
+### d3b2b1 Archive Corruption Fail-Closed Correction
+
+Review found that a same capture save could insert a missing body before discovering that the capture row already
+existed, thereby repairing pre-existing archive corruption. The archive now preflights capture ID, exact evidence tuple,
+and body SHA before any body insert. `SAVE_ON_PREEXISTING_ARCHIVE_CORRUPTION = FAIL_CLOSED_NO_REPAIR`: a missing body
+referenced by the same capture or by an older observation with the same SHA now raises `RepositoryDataIntegrityError`,
+leaves the body missing, leaves existing rows intact, and ends the transaction. An existing capture additionally proves
+its exact evidence tuple is uniquely coherent before idempotent success.
+
+Both load routes now apply symmetric exact-evidence uniqueness validation during reconstruction. Broken tuple uniqueness,
+missing body, body/content-length corruption, and SQLite errors from reconstruction/body/evidence reads are all
+`RepositoryDataIntegrityError`; valid tuple absence remains `NAROfficialResponseCaptureMissingError` and malformed
+caller input remains `RepositoryValidationError`.
+
+Dedicated v001 DDL no longer uses `IF NOT EXISTS`. `PREEXISTING_UNREGISTERED_CAPTURE_SCHEMA = FAIL_CLOSED`: a manually
+created colliding capture table without v001 registration aborts dedicated migration and leaves v001 unregistered. Direct
+v001 application is transaction-neutral but intentionally has no independent idempotency promise; registry-runner
+idempotency remains the sole approved path. Fresh verification passed 25 dedicated tests, 53 related existing tests,
+and 2493 full-suite tests.
+
 ## Phase 4C-2d3b1i6c1d3a Implementation Verification Scope Blocker
 
 The approved d3a implementation updated only its allowed historical domain, builder, repository, v011 migration,

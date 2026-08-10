@@ -127,6 +127,75 @@ class SQLiteCaptureRepositoryTests(unittest.TestCase):
             repository.load_capture(capture_id=value.capture_id)
         connection.execute("PRAGMA foreign_keys=ON")
 
+    def test_save_rejects_missing_referenced_body_without_repair(self) -> None:
+        connection, repository = self._repository()
+        value = _capture()
+        repository.save_capture(capture=value)
+        connection.execute("PRAGMA foreign_keys=OFF")
+        connection.execute("DELETE FROM nar_official_response_bodies WHERE response_sha256=?", (value.response_sha256,))
+        connection.commit()
+        connection.execute("PRAGMA foreign_keys=ON")
+        with self.assertRaises(RepositoryDataIntegrityError):
+            repository.save_capture(capture=value)
+        self.assertIsNone(connection.execute("SELECT 1 FROM nar_official_response_bodies WHERE response_sha256=?", (value.response_sha256,)).fetchone())
+        self.assertIsNotNone(connection.execute("SELECT 1 FROM nar_official_response_captures WHERE capture_id=?", (value.capture_id,)).fetchone())
+        self.assertFalse(connection.in_transaction)
+
+    def test_new_observation_cannot_repair_another_missing_referenced_body(self) -> None:
+        connection, repository = self._repository()
+        first = _capture()
+        repository.save_capture(capture=first)
+        connection.execute("PRAGMA foreign_keys=OFF")
+        connection.execute("DELETE FROM nar_official_response_bodies WHERE response_sha256=?", (first.response_sha256,))
+        connection.commit()
+        connection.execute("PRAGMA foreign_keys=ON")
+        second = _capture(observed_at=OBSERVED + timedelta(seconds=3), stored_at=STORED + timedelta(seconds=3))
+        with self.assertRaises(RepositoryDataIntegrityError):
+            repository.save_capture(capture=second)
+        self.assertIsNone(connection.execute("SELECT 1 FROM nar_official_response_bodies WHERE response_sha256=?", (first.response_sha256,)).fetchone())
+        self.assertEqual(connection.execute("SELECT COUNT(*) FROM nar_official_response_captures").fetchone()[0], 1)
+        self.assertFalse(connection.in_transaction)
+
+    def test_duplicate_evidence_identity_fails_closed_for_load_and_save(self) -> None:
+        connection, repository = self._repository()
+        value = _capture()
+        repository.save_capture(capture=value)
+        duplicate_id = "nar-capture-v1:" + "f" * 64
+        connection.execute("DROP INDEX ux_nar_official_response_captures_evidence")
+        connection.execute(
+            """INSERT INTO nar_official_response_captures(
+                capture_id,schema_version,page_kind,canonical_source_url,response_sha256,charset,
+                requested_at_utc,observed_at_utc,stored_at_utc,http_status,content_type,content_encoding,
+                http_date,etag,last_modified,content_length
+            ) SELECT ?,schema_version,page_kind,canonical_source_url,response_sha256,charset,
+                     requested_at_utc,observed_at_utc,stored_at_utc,http_status,content_type,content_encoding,
+                     http_date,etag,last_modified,content_length
+              FROM nar_official_response_captures WHERE capture_id=?""",
+            (duplicate_id, value.capture_id),
+        )
+        connection.commit()
+        with self.assertRaises(RepositoryDataIntegrityError):
+            repository.load_capture(capture_id=value.capture_id)
+        with self.assertRaises(RepositoryDataIntegrityError):
+            repository.save_capture(capture=value)
+        self.assertFalse(connection.in_transaction)
+
+    def test_reconstruction_sqlite_errors_become_integrity_errors(self) -> None:
+        connection, repository = self._repository()
+        value = _capture()
+        repository.save_capture(capture=value)
+        connection.execute("PRAGMA foreign_keys=OFF")
+        connection.execute("DROP TABLE nar_official_response_bodies")
+        connection.commit()
+        connection.execute("PRAGMA foreign_keys=ON")
+        with self.assertRaises(RepositoryDataIntegrityError):
+            repository.load_capture(capture_id=value.capture_id)
+        with self.assertRaises(RepositoryDataIntegrityError):
+            repository.load_supplied_response_for_evidence(
+                canonical_source_url=value.canonical_source_url, response_sha256=value.response_sha256,
+                observed_at=value.observed_at,
+            )
+
     def test_missing_body_and_metadata_corruption_fail_closed(self) -> None:
         connection, repository = self._repository()
         value = _capture()

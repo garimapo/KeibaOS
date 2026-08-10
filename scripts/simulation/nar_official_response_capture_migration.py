@@ -13,7 +13,7 @@ def apply(connection: _sqlite3.Connection) -> None:
     """Create only capture-archive schema objects; caller owns transactions."""
 
     connection.execute(
-        """CREATE TABLE IF NOT EXISTS nar_official_response_bodies (
+        """CREATE TABLE nar_official_response_bodies (
             response_sha256 TEXT PRIMARY KEY CHECK (
                 typeof(response_sha256) = 'text' AND length(response_sha256) = 64
                 AND response_sha256 NOT GLOB '*[^0-9a-f]*'
@@ -25,7 +25,7 @@ def apply(connection: _sqlite3.Connection) -> None:
         ) WITHOUT ROWID""",
     )
     connection.execute(
-        """CREATE TABLE IF NOT EXISTS nar_official_response_captures (
+        """CREATE TABLE nar_official_response_captures (
             capture_id TEXT PRIMARY KEY CHECK (
                 typeof(capture_id) = 'text' AND length(capture_id) = 79
                 AND substr(capture_id, 1, 15) = 'nar-capture-v1:'
@@ -66,7 +66,7 @@ def apply(connection: _sqlite3.Connection) -> None:
         ) WITHOUT ROWID""",
     )
     connection.execute(
-        """CREATE UNIQUE INDEX IF NOT EXISTS ux_nar_official_response_captures_evidence
+        """CREATE UNIQUE INDEX ux_nar_official_response_captures_evidence
             ON nar_official_response_captures (canonical_source_url, response_sha256, observed_at_utc)""",
     )
 

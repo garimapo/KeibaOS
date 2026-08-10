@@ -77,8 +77,14 @@ Save is append-only and atomic: verify caller capture and raw SHA, deduplicate/v
 
 Every load reconstructs and validates body length/digest, canonical URL, derived kind/ID/SHA, UTC timestamp text/order, UTF-8 charset, HTTP 200, header metadata, and Content-Length. Missing bodies, corruption, duplicate/impossible identity, or SQLite data failure raise `RepositoryDataIntegrityError`; storage is never repaired or normalized.
 
+`SAVE_ON_PREEXISTING_ARCHIVE_CORRUPTION = FAIL_CLOSED_NO_REPAIR`. Save preflights capture ID, exact evidence tuple, and body SHA before inserting any missing body. A capture row with missing/corrupt body, an absent body already referenced by another capture, or duplicate/contradictory evidence identity is `RepositoryDataIntegrityError`; save leaves that body absent and the pre-existing rows unchanged. `MISSING_REFERENCED_BODY_ON_SAVE = REPOSITORY_DATA_INTEGRITY_ERROR`.
+
+`LOAD_CAPTURE_EVIDENCE_UNIQUENESS = REQUIRED`. Reconstruction verifies that the loaded capture's exact evidence tuple has exactly one row and the expected capture ID; both capture-ID load and evidence-tuple load therefore fail closed on broken uniqueness. `RECONSTRUCTION_SQLITE_ERRORS = REPOSITORY_DATA_INTEGRITY_ERROR`: SQLite errors from capture reconstruction/body/evidence reads never leak raw. Genuine exact tuple absence remains `NAROfficialResponseCaptureMissingError`, and malformed callers remain `RepositoryValidationError`.
+
+`PREEXISTING_UNREGISTERED_CAPTURE_SCHEMA = FAIL_CLOSED`. v001 uses plain `CREATE TABLE` / `CREATE UNIQUE INDEX`, not `IF NOT EXISTS`; the dedicated registry, not direct migration application, owns idempotency. `DIRECT_V001_APPLY_IDEMPOTENT = NO_REQUIREMENT`; `RUNNER_IDEMPOTENT = YES`.
+
 ## Verification and Stop Condition
 
-External verification used Python 3.14.5 and pytest 8.3.5. Dedicated capture domain/migration/repository tests: 20 passed. Related existing NAR/c1a/c1c snapshot tests: 53 passed. Full suite: 2488 passed. Dedicated static checks confirm no package-root export, no main migration change, no HTTP/filesystem/clock ownership in domain/repository, no global migration import in dedicated runner, and no `ATTACH` behavior.
+External verification used Python 3.14.5 and pytest 8.3.5. Dedicated capture domain/migration/repository tests: 25 passed. Related existing NAR/c1a/c1c snapshot tests: 53 passed. Full suite: 2493 passed. Dedicated static checks confirm no package-root export, no main migration change, no HTTP/filesystem/clock ownership in domain/repository, no global migration import in dedicated runner, and no `ATTACH` behavior.
 
 `PERSIST_BEFORE_NORMALIZATION`, live HTTP transport, clock construction, scheduling, composition, `capture_database_path`, multi-race collection, pagination, `past_race_absence`, and formal integration remain out of scope. Stop for independent GitHub implementation review.

@@ -55,22 +55,15 @@ class SQLiteNAROfficialResponseCaptureRepository:
         self._ensure_foreign_keys()
         try:
             self._connection.execute("BEGIN IMMEDIATE")
-            self._ensure_body(capture)
             existing = self._capture_by_id(capture.capture_id)
             if existing is not None:
                 if existing != capture:
                     raise _RepositoryConflictError("capture identity already has different immutable content")
                 self._connection.commit()
                 return
-            tuple_rows = self._connection.execute(
-                """SELECT capture_id FROM nar_official_response_captures
-                   WHERE canonical_source_url=? AND response_sha256=? AND observed_at_utc=?""",
-                (capture.canonical_source_url, capture.response_sha256, self._datetime_text(capture.observed_at)),
-            ).fetchall()
-            if len(tuple_rows) > 1:
-                raise _RepositoryDataIntegrityError("stored evidence tuple is duplicated")
-            if tuple_rows:
-                raise _RepositoryDataIntegrityError("stored evidence tuple has impossible capture identity")
+            self._require_absent_evidence_identity(capture)
+            self._require_body_insert_is_not_repair(capture)
+            self._ensure_body(capture)
             self._connection.execute(
                 """INSERT INTO nar_official_response_captures(
                     capture_id,schema_version,page_kind,canonical_source_url,response_sha256,charset,
@@ -106,13 +99,15 @@ class SQLiteNAROfficialResponseCaptureRepository:
                    FROM nar_official_response_captures WHERE capture_id=?""",
                 (capture_id,),
             ).fetchall()
+            if not rows:
+                return None
+            if len(rows) != 1:
+                raise _RepositoryDataIntegrityError("capture ID is duplicated")
+            return self._reconstruct(rows[0])
+        except _RepositoryDataIntegrityError:
+            raise
         except _sqlite3.Error as error:
             raise _RepositoryDataIntegrityError("capture archive SQLite read failed") from error
-        if not rows:
-            return None
-        if len(rows) != 1:
-            raise _RepositoryDataIntegrityError("capture ID is duplicated")
-        return self._reconstruct(rows[0])
 
     def load_supplied_response_for_evidence(
         self,
@@ -141,13 +136,17 @@ class SQLiteNAROfficialResponseCaptureRepository:
                    WHERE canonical_source_url=? AND response_sha256=? AND observed_at_utc=?""",
                 (canonical, response_sha256, self._datetime_text(observed)),
             ).fetchall()
+            if not rows:
+                raise _NAROfficialResponseCaptureMissingError("exact trusted capture evidence is not archived")
+            if len(rows) != 1:
+                raise _RepositoryDataIntegrityError("stored evidence tuple is duplicated")
+            return self._reconstruct(rows[0]).to_supplied_official_response()
+        except _NAROfficialResponseCaptureMissingError:
+            raise
+        except _RepositoryDataIntegrityError:
+            raise
         except _sqlite3.Error as error:
             raise _RepositoryDataIntegrityError("capture archive SQLite evidence read failed") from error
-        if not rows:
-            raise _NAROfficialResponseCaptureMissingError("exact trusted capture evidence is not archived")
-        if len(rows) != 1:
-            raise _RepositoryDataIntegrityError("stored evidence tuple is duplicated")
-        return self._reconstruct(rows[0]).to_supplied_official_response()
 
     def _ensure_foreign_keys(self) -> None:
         try:
@@ -178,6 +177,33 @@ class SQLiteNAROfficialResponseCaptureRepository:
             raise _RepositoryDataIntegrityError("stored response body digest is invalid")
         if body != capture.response_body:
             raise _RepositoryConflictError("response digest has conflicting body bytes")
+
+    def _require_absent_evidence_identity(self, capture: _NAROfficialResponseCapture) -> None:
+        rows = self._connection.execute(
+            """SELECT capture_id FROM nar_official_response_captures
+               WHERE canonical_source_url=? AND response_sha256=? AND observed_at_utc=?""",
+            (capture.canonical_source_url, capture.response_sha256, self._datetime_text(capture.observed_at)),
+        ).fetchall()
+        if len(rows) > 1:
+            raise _RepositoryDataIntegrityError("stored evidence tuple is duplicated")
+        if rows:
+            raise _RepositoryDataIntegrityError("stored evidence tuple has impossible capture identity")
+
+    def _require_body_insert_is_not_repair(self, capture: _NAROfficialResponseCapture) -> None:
+        body_rows = self._connection.execute(
+            "SELECT 1 FROM nar_official_response_bodies WHERE response_sha256=?",
+            (capture.response_sha256,),
+        ).fetchall()
+        if len(body_rows) > 1:
+            raise _RepositoryDataIntegrityError("stored response body identity is duplicated")
+        if body_rows:
+            return
+        references = self._connection.execute(
+            "SELECT 1 FROM nar_official_response_captures WHERE response_sha256=? LIMIT 1",
+            (capture.response_sha256,),
+        ).fetchone()
+        if references is not None:
+            raise _RepositoryDataIntegrityError("missing referenced response body must not be repaired")
 
     def _capture_by_id(self, capture_id: str) -> _NAROfficialResponseCapture | None:
         rows = self._connection.execute(
@@ -241,7 +267,21 @@ class SQLiteNAROfficialResponseCaptureRepository:
             raise _RepositoryDataIntegrityError("stored capture derived identity differs")
         if capture.page_kind.value != page_kind or capture.response_sha256 != response_sha256:
             raise _RepositoryDataIntegrityError("stored capture derived values differ")
+        self._require_unique_evidence_identity(capture, capture_id)
         return capture
+
+    def _require_unique_evidence_identity(
+        self,
+        capture: _NAROfficialResponseCapture,
+        expected_capture_id: str,
+    ) -> None:
+        rows = self._connection.execute(
+            """SELECT capture_id FROM nar_official_response_captures
+               WHERE canonical_source_url=? AND response_sha256=? AND observed_at_utc=?""",
+            (capture.canonical_source_url, capture.response_sha256, self._datetime_text(capture.observed_at)),
+        ).fetchall()
+        if len(rows) != 1 or rows[0][0] != expected_capture_id:
+            raise _RepositoryDataIntegrityError("stored evidence tuple is not uniquely coherent")
 
     @staticmethod
     def _stored_header(value: object, name: str) -> str | None:

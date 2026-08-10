@@ -25,10 +25,11 @@ class CaptureMigrationTests(unittest.TestCase):
         connection = self._connection()
         migration.apply(connection)
         self.assertFalse(connection.in_transaction)
-        migration.apply(connection)
+        with self.assertRaises(sqlite3.OperationalError):
+            migration.apply(connection)
         self.assertFalse(connection.in_transaction)
         source = inspect.getsource(migration.apply)
-        for forbidden in ("BEGIN", "COMMIT", "ROLLBACK", "executescript"):
+        for forbidden in ("BEGIN", "COMMIT", "ROLLBACK", "executescript", "IF NOT EXISTS"):
             self.assertNotIn(forbidden, source)
 
     def test_runner_creates_exact_dedicated_schema_and_no_global_tables(self) -> None:
@@ -106,6 +107,19 @@ class CaptureMigrationTests(unittest.TestCase):
         self.assertIsNone(connection.execute("SELECT 1 FROM sqlite_master WHERE name='nar_official_response_capture_schema_migrations'").fetchone())
         with self.assertRaises(ValueError):
             get_pending_capture_schema_migrations(connection, (migration, migration))
+
+    def test_unregistered_preexisting_capture_table_is_not_adopted(self) -> None:
+        connection = self._connection()
+        connection.execute("CREATE TABLE nar_official_response_bodies (wrong TEXT)")
+        with self.assertRaises(sqlite3.OperationalError):
+            apply_capture_schema_migrations(connection)
+        self.assertFalse(connection.in_transaction)
+        self.assertIsNone(
+            connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='nar_official_response_capture_schema_migrations'",
+            ).fetchone(),
+        )
+        self.assertEqual(connection.execute("SELECT sql FROM sqlite_master WHERE name='nar_official_response_bodies'").fetchone()[0], "CREATE TABLE nar_official_response_bodies (wrong TEXT)")
 
     def test_runner_rollback_boundary_immediately_reraises(self) -> None:
         source = inspect.getsource(runner_module.apply_capture_schema_migrations)
