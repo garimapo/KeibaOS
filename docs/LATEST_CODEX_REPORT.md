@@ -2884,6 +2884,39 @@ past-race-absence evidence, so a complete snapshot still requires a later suppli
 blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
 assembled from its DebaTable-only output.
 
+## Phase 4C-2d3b1i6c1d3b1 Uniform Historical Evidence Implementation
+
+Status: READY_FOR_REVIEW.
+
+Implemented the approved provider-neutral `HistoricalInputEvidenceReference` contract. Historical source records are
+now schema version 3 with `his-v3:{record_kind}:{sha256}` identifiers derived from logical record content and ordered
+evidence role/URL/raw-response-SHA values; evidence observations remain excluded from source IDs. Snapshot provenance
+now owns the exact ordered evidence tuple, and snapshot content SHA-256 version 3 includes each evidence timestamp.
+
+The existing NAR DebaTable normalizer computes SHA-256 from exact caller-supplied bytes and builds singleton evidence
+for track, entry, jockey, and odds-win records without changing its parsing scope. The snapshot builder evaluates
+every evidence observation against captured-at and information-cutoff. SQLite v012 replaces scalar provenance
+timestamps only for an empty snapshot store, then persists normalized evidence children and reconstructs them
+fail-closed on load.
+
+Verification using the external Python 3.14.5 / pytest 8.3.5 runtime:
+
+The approved migration-registry test scope extension was used only for
+`tests/test_simulation_bet_plan_migration.py` and `tests/test_sqlite_persisted_simulation_application.py`, which now
+pin v012 registry presence in their existing migration/application coverage.
+
+- dedicated source-record tests: 11 passed
+- snapshot-domain tests: 16 passed
+- snapshot-builder tests: 12 passed
+- NAR source tests: 12 passed
+- SQLite/migration/application regression set: 74 passed
+- combined phase suites: 125 passed
+- full suite: 2454 passed
+- `git diff --check`: success
+
+No network, filesystem, database-file, capture-body, provider/parser, package-root, legacy model, or original-workspace
+change was made. NAR historical past-race normalization and past-race absence remain out of scope.
+
 ## Phase 4C-2d3b1i6c1d3a Implementation Verification Scope Blocker
 
 The approved d3a implementation updated only its allowed historical domain, builder, repository, v011 migration,

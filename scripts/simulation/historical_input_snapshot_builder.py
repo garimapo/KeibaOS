@@ -79,13 +79,14 @@ def _validate_temporal_eligibility(
     if information_cutoff > scheduled_start_at:
         raise _error("information_cutoff must not be later than scheduled_start_at")
     for record in records:
-        if record.observed_at > captured_at or record.observed_at > information_cutoff:
-            raise _error("source record observed_at is not causally eligible")
-        if record.available_at is not None:
-            if record.available_at > record.observed_at:
-                raise _error("source record available_at is later than observed_at")
-            if record.available_at > captured_at or record.available_at > information_cutoff:
-                raise _error("source record available_at is not causally eligible")
+        for evidence in record.evidence:
+            if evidence.observed_at > captured_at or evidence.observed_at > information_cutoff:
+                raise _error("source evidence observed_at is not causally eligible")
+            if evidence.available_at is not None:
+                if evidence.available_at > evidence.observed_at:
+                    raise _error("source evidence available_at is later than observed_at")
+                if evidence.available_at > captured_at or evidence.available_at > information_cutoff:
+                    raise _error("source evidence available_at is not causally eligible")
 
 
 def _provenance(
@@ -101,8 +102,7 @@ def _provenance(
             source=record.source_system,
             source_id=record.source_id,
             race_entry_id=None,
-            available_at=record.available_at,
-            observed_at=record.observed_at,
+            evidence=record.evidence,
         )
     if race_entry_id is None:
         raise _error("entry-scoped provenance requires race_entry_id")
@@ -131,8 +131,7 @@ def _provenance(
         source=record.source_system,
         source_id=record.source_id,
         race_entry_id=race_entry_id,
-        available_at=record.available_at,
-        observed_at=record.observed_at,
+        evidence=record.evidence,
         past_race_index=past_race_index,
     )
 
@@ -225,7 +224,7 @@ def build_historical_input_snapshot(
         organization=organization,
         source_system=source_system,
         external_race_id=external_race_id,
-        source_url=track.canonical_source_url,
+        source_url=track.evidence[0].canonical_source_url,
     )
     external_race_identity = _HistoricalExternalRaceIdentity(
         organization=organization,

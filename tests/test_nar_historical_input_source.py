@@ -7,6 +7,7 @@ import inspect
 from pathlib import Path
 import unittest
 
+from scripts.simulation.historical_input_evidence import HistoricalInputEvidenceReference
 from scripts.simulation.historical_input_source_records import (
     HistoricalInputSourceRecord,
     validate_historical_input_source_record_set,
@@ -185,7 +186,7 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
         )
         track = result[0]
         self.assertEqual(track.external_race_id, "nar:20260716:32:10")
-        self.assertEqual(track.canonical_source_url, CANONICAL_URL)
+        self.assertEqual(track.evidence[0].canonical_source_url, CANONICAL_URL)
         self.assertEqual(track.record_values["place"], PLACE)
         self.assertEqual(track.record_values["race_class"], None)
         self.assertEqual(track.record_values["race_name"], "Race Name")
@@ -197,8 +198,8 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
             track.record_values["scheduled_start_at"].isoformat(),
             "2026-07-16T11:40:00+00:00",
         )
-        self.assertEqual(track.available_at, None)
-        self.assertEqual(track.observed_at, OBSERVED)
+        self.assertEqual(track.evidence[0].available_at, None)
+        self.assertEqual(track.evidence[0].observed_at, OBSERVED)
         self.assertEqual(result[1].external_entry_id, "nar:20260716:32:10:entry:1")
         self.assertEqual(result[1].record_values["external_horse_id"], "nar:horse:30000000001")
         self.assertEqual(result[2].record_values["jockey"], "Rider One")
@@ -245,15 +246,13 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
             source_system=entries[0].source_system,
             external_race_id=entries[0].external_race_id,
             external_entry_id=entries[0].external_entry_id,
-            canonical_source_url=entries[0].canonical_source_url,
             provider_record_id=None,
             record_values={
                 "external_entry_id": entries[0].external_entry_id,
                 "external_horse_id": None,
                 "horse_no": 1,
             },
-            available_at=None,
-            observed_at=response.observed_at,
+            evidence=entries[0].evidence,
         )
         self.assertNotEqual(entries[0].source_id, old_entry.source_id)
         absence_records = tuple(
@@ -263,7 +262,6 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
                 source_system=entry.source_system,
                 external_race_id=entry.external_race_id,
                 external_entry_id=entry.external_entry_id,
-                canonical_source_url=entry.canonical_source_url,
                 provider_record_id=None,
                 record_values={
                     "external_entry_id": entry.external_entry_id,
@@ -274,8 +272,15 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
                     },
                     "result_count": 0,
                 },
-                available_at=None,
-                observed_at=response.observed_at,
+                evidence=(
+                    HistoricalInputEvidenceReference(
+                        "past_race_absence_query",
+                        entry.evidence[0].canonical_source_url,
+                        entry.evidence[0].response_sha256,
+                        entry.evidence[0].available_at,
+                        entry.evidence[0].observed_at,
+                    ),
+                ),
             )
             for entry in entries
         )
@@ -351,7 +356,7 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
             baseline_by_key[("track", None)].record_values,
             changed_by_key[("track", None)].record_values,
         )
-        self.assertEqual(
+        self.assertNotEqual(
             baseline_by_key[("track", None)].source_id,
             changed_by_key[("track", None)].source_id,
         )
@@ -361,7 +366,7 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
                 baseline_by_key[selected_key].record_values,
                 changed_by_key[selected_key].record_values,
             )
-            self.assertEqual(
+            self.assertNotEqual(
                 baseline_by_key[selected_key].source_id,
                 changed_by_key[selected_key].source_id,
             )
@@ -371,7 +376,7 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
                 baseline_by_key[untouched_key].record_values,
                 changed_by_key[untouched_key].record_values,
             )
-            self.assertEqual(
+            self.assertNotEqual(
                 baseline_by_key[untouched_key].source_id,
                 changed_by_key[untouched_key].source_id,
             )
@@ -385,12 +390,12 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
             [("entry", "nar:20260716:32:10:entry:1")],
         )
         self.assertEqual(
-            [
+            {
                 key
                 for key in baseline_by_key
                 if baseline_by_key[key].source_id != changed_by_key[key].source_id
-            ],
-            [("entry", "nar:20260716:32:10:entry:1")],
+            },
+            set(baseline_by_key),
         )
 
     def test_horse_anchor_href_contract_fails_closed_and_keeps_lexical_tokens(self) -> None:

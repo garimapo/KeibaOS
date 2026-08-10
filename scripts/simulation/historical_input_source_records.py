@@ -18,6 +18,10 @@ from typing import Literal as _Literal
 from unicodedata import category as _category, normalize as _normalize
 from urllib.parse import urlsplit as _urlsplit
 
+from scripts.simulation.historical_input_evidence import (
+    HistoricalInputEvidenceReference as _HistoricalInputEvidenceReference,
+)
+
 
 SourceRecordKind = _Literal[
     "track",
@@ -43,6 +47,14 @@ class HistoricalInputSourceConflictError(HistoricalInputSourceError):
 
 _RECORD_KINDS = frozenset({"track", "entry", "jockey", "odds_win", "past_race", "past_race_absence"})
 _ENTRY_SCOPED_KINDS = _RECORD_KINDS - {"track"}
+_EVIDENCE_ROLES = {
+    "track": ("track",),
+    "entry": ("entry",),
+    "jockey": ("jockey",),
+    "odds_win": ("odds_win",),
+    "past_race": ("historical_race_context", "historical_race_result"),
+    "past_race_absence": ("past_race_absence_query",),
+}
 _RECORD_VALUE_KEYS = {
     "track": frozenset(
         {
@@ -363,6 +375,48 @@ def _json_value(value: object) -> object:
     return value
 
 
+def _canonical_evidence(
+    value: object,
+    *,
+    record_kind: str,
+) -> tuple[_HistoricalInputEvidenceReference, ...]:
+    if type(value) is not tuple:
+        raise _validation_error("evidence must be tuple")
+    if not value:
+        raise _validation_error("evidence must not be empty")
+    for item in value:
+        if type(item) is not _HistoricalInputEvidenceReference:
+            raise _validation_error("evidence item must be HistoricalInputEvidenceReference")
+    ordered = tuple(sorted(value, key=lambda item: item.evidence_role))
+    roles = tuple(item.evidence_role for item in ordered)
+    if roles != _EVIDENCE_ROLES[record_kind] or len(set(roles)) != len(roles):
+        raise _validation_error("evidence roles are invalid")
+    observations: dict[tuple[str | None, str], tuple[_datetime | None, _datetime]] = {}
+    for item in ordered:
+        identity = (item.canonical_source_url, item.response_sha256)
+        previous = observations.get(identity)
+        times = (item.available_at, item.observed_at)
+        if previous is not None and previous != times:
+            raise _validation_error("same response evidence timestamps conflict")
+        observations[identity] = times
+    if record_kind == "past_race_absence" and ordered[0].canonical_source_url is None:
+        raise _validation_error("canonical_source_url is required for past_race_absence")
+    return ordered
+
+
+def _evidence_payload(
+    evidence: tuple[_HistoricalInputEvidenceReference, ...],
+) -> list[dict[str, object]]:
+    return [
+        {
+            "evidence_role": item.evidence_role,
+            "canonical_source_url": item.canonical_source_url,
+            "response_sha256": item.response_sha256,
+        }
+        for item in evidence
+    ]
+
+
 def _unchecked_payload(record: HistoricalInputSourceRecord) -> dict[str, object]:
     return {
         "schema_version": record.schema_version,
@@ -371,9 +425,9 @@ def _unchecked_payload(record: HistoricalInputSourceRecord) -> dict[str, object]
         "organization": record.organization,
         "external_race_id": record.external_race_id,
         "external_entry_id": record.external_entry_id,
-        "canonical_source_url": record.canonical_source_url,
         "provider_record_id": record.provider_record_id,
         "record_values": _json_value(record.record_values),
+        "evidence": _evidence_payload(record.evidence),
     }
 
 
@@ -385,22 +439,20 @@ def _source_id_from_payload(*, record_kind: str, payload: dict[str, object]) -> 
         separators=(",", ":"),
         allow_nan=False,
     ).encode("utf-8")
-    return f"his-v2:{record_kind}:{_hashlib.sha256(encoded).hexdigest()}"
+    return f"his-v3:{record_kind}:{_hashlib.sha256(encoded).hexdigest()}"
 
 
 @_dataclass(frozen=True, slots=True)
 class HistoricalInputSourceRecord:
-    schema_version: int = _field(default=2, init=False)
+    schema_version: int = _field(default=3, init=False)
     record_kind: SourceRecordKind
     organization: str
     source_system: str
     external_race_id: str
     external_entry_id: str | None
-    canonical_source_url: str | None
     provider_record_id: str | None
     record_values: _Mapping[str, object]
-    available_at: _datetime | None
-    observed_at: _datetime
+    evidence: tuple[_HistoricalInputEvidenceReference, ...]
     source_id: str = _field(init=False)
 
     def __post_init__(self) -> None:
@@ -416,26 +468,17 @@ class HistoricalInputSourceRecord:
         elif external_entry_id is None:
             raise _validation_error("external_entry_id is required for entry-scoped record")
         object.__setattr__(self, "external_entry_id", external_entry_id)
-        canonical_source_url = _validate_canonical_source_url(self.canonical_source_url)
-        if self.record_kind == "past_race_absence" and canonical_source_url is None:
-            raise _validation_error("canonical_source_url is required for past_race_absence")
-        object.__setattr__(self, "canonical_source_url", canonical_source_url)
         provider_record_id = _normalize_optional_text(self.provider_record_id, "provider_record_id")
         if self.record_kind == "past_race" and provider_record_id is None:
             raise _validation_error("provider_record_id is required for past_race")
         object.__setattr__(self, "provider_record_id", provider_record_id)
-        available_at = _normalize_optional_utc_datetime(self.available_at, "available_at")
-        observed_at = _normalize_utc_datetime(self.observed_at, "observed_at")
-        if available_at is not None and available_at > observed_at:
-            raise _validation_error("available_at must not be later than observed_at")
-        object.__setattr__(self, "available_at", available_at)
-        object.__setattr__(self, "observed_at", observed_at)
         record_values = _validate_record_values(
             record_kind=self.record_kind,
             value=self.record_values,
             external_entry_id=external_entry_id,
         )
         object.__setattr__(self, "record_values", record_values)
+        object.__setattr__(self, "evidence", _canonical_evidence(self.evidence, record_kind=self.record_kind))
         object.__setattr__(self, "source_id", _source_id_from_payload(record_kind=self.record_kind, payload=_unchecked_payload(self)))
 
 

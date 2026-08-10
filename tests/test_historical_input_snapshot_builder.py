@@ -8,6 +8,7 @@ from typing import get_type_hints
 import unittest
 
 import scripts.simulation as simulation_package
+from scripts.simulation.historical_input_evidence import HistoricalInputEvidenceReference
 from scripts.simulation.historical_input_snapshot_builder import (
     HistoricalInputSnapshotAssemblyError,
     build_historical_input_snapshot,
@@ -126,17 +127,33 @@ def _record(
         }
     else:
         raise AssertionError(kind)
+    roles = {
+        "track": ("track",),
+        "entry": ("entry",),
+        "jockey": ("jockey",),
+        "odds_win": ("odds_win",),
+        "past_race": ("historical_race_context", "historical_race_result"),
+        "past_race_absence": ("past_race_absence_query",),
+    }[kind]
+    evidence = tuple(
+        HistoricalInputEvidenceReference(
+            evidence_role=role,
+            canonical_source_url=canonical_source_url,
+            response_sha256=str(index + 1) * 64,
+            available_at=available_at,
+            observed_at=observed_at,
+        )
+        for index, role in enumerate(roles)
+    )
     return HistoricalInputSourceRecord(
         record_kind=kind,
         organization=organization,
         source_system=source_system,
         external_race_id=external_race_id,
         external_entry_id=external_entry_id,
-        canonical_source_url=canonical_source_url,
         provider_record_id=provider_record_id,
         record_values=values,
-        available_at=available_at,
-        observed_at=observed_at,
+        evidence=evidence,
     )
 
 
@@ -211,8 +228,8 @@ class HistoricalInputSnapshotBuilderTests(unittest.TestCase):
         for item in snapshot.provenance:
             self.assertIs(item.source_id, records_by_id[item.source_id].source_id)
             self.assertEqual(item.source, "nar_official")
-            self.assertEqual(item.available_at, AVAILABLE)
-            self.assertEqual(item.observed_at, OBSERVED)
+            self.assertEqual(item.evidence[0].available_at, AVAILABLE)
+            self.assertEqual(item.evidence[0].observed_at, OBSERVED)
 
     def test_source_url_none_and_non_track_urls_do_not_change_selection(self) -> None:
         self.assertIs(_build(_complete_records(track_url=None)).identity.source_identity.source_url, None)
@@ -224,7 +241,7 @@ class HistoricalInputSnapshotBuilderTests(unittest.TestCase):
                 horse_no=record.record_values.get("horse_no", 1),
                 external_horse_id=record.record_values.get("external_horse_id"),
                 canonical_source_url=(
-                    record.canonical_source_url
+                    record.evidence[0].canonical_source_url
                     if record.record_kind == "track"
                     else "https://different.example.test/non-track"
                 ),
@@ -335,7 +352,7 @@ class HistoricalInputSnapshotBuilderTests(unittest.TestCase):
                 external_entry_id=record.external_entry_id,
                 horse_no=record.record_values.get("horse_no", 1),
                 external_horse_id=record.record_values.get("external_horse_id"),
-                canonical_source_url=record.canonical_source_url,
+                canonical_source_url=record.evidence[0].canonical_source_url,
                 race_date=record.record_values.get("race_date", date(2026, 8, 1)),
                 provider_record_id=record.provider_record_id,
                 observed_at=CAPTURED + timedelta(seconds=1),

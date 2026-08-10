@@ -18,6 +18,7 @@ from scripts.simulation.historical_input_snapshots import (
     HistoricalRaceSnapshot,
     HistoricalSourceIdentity,
 )
+from scripts.simulation.historical_input_evidence import HistoricalInputEvidenceReference
 
 from .errors import RepositoryConflictError, RepositoryDataIntegrityError, RepositoryValidationError
 
@@ -506,26 +507,44 @@ class SQLiteHistoricalInputSnapshotRepository:
 
     def _load_provenance(self, snapshot_id: int) -> list[HistoricalInputProvenance]:
         rows = self._connection.execute(
-            """SELECT input_type,audit_key,source,source_id,race_entry_id,available_at_utc,observed_at_utc,
-                      past_race_index
+            """SELECT input_type,audit_key,source,source_id,race_entry_id,past_race_index
                FROM historical_input_snapshot_provenance WHERE snapshot_id=? ORDER BY audit_key ASC""",
             (snapshot_id,),
         ).fetchall()
         values: list[HistoricalInputProvenance] = []
         for row in rows:
             try:
-                input_type, audit_key, source, source_id, race_entry_id, available_at, observed_at, index = tuple(row)
+                input_type, audit_key, source, source_id, race_entry_id, index = tuple(row)
             except (TypeError, ValueError) as exc:
                 raise RepositoryDataIntegrityError("stored historical provenance is malformed") from exc
+            audit = self._stored_required_text(audit_key, "provenance.audit_key")
+            evidence_rows = self._connection.execute(
+                """SELECT evidence_order,evidence_role,canonical_source_url,response_sha256,available_at_utc,observed_at_utc
+                   FROM historical_input_snapshot_provenance_evidence
+                   WHERE snapshot_id=? AND audit_key=? ORDER BY evidence_order ASC""",
+                (snapshot_id, audit),
+            ).fetchall()
+            evidence = []
+            for order, role, url, digest, available, observed in evidence_rows:
+                if self._stored_non_negative_int(order, "evidence_order") != len(evidence):
+                    raise RepositoryDataIntegrityError("stored provenance evidence order is invalid")
+                evidence.append(
+                    HistoricalInputEvidenceReference(
+                        self._stored_required_text(role, "evidence_role"),
+                        self._stored_optional_text(url, "canonical_source_url"),
+                        self._stored_sha256(digest),
+                        self._stored_optional_datetime(available, "available_at_utc"),
+                        self._stored_datetime(observed, "observed_at_utc"),
+                    )
+                )
             values.append(
                 HistoricalInputProvenance(
                     self._stored_required_text(input_type, "provenance.input_type"),
-                    self._stored_required_text(audit_key, "provenance.audit_key"),
+                    audit,
                     self._stored_required_text(source, "provenance.source"),
                     self._stored_required_text(source_id, "provenance.source_id"),
                     None if race_entry_id is None else self._stored_positive_int(race_entry_id, "provenance.race_entry_id"),
-                    self._stored_optional_datetime(available_at, "available_at_utc"),
-                    self._stored_optional_datetime(observed_at, "observed_at_utc"),
+                    tuple(evidence),
                     self._stored_optional_non_negative_int(index, "provenance.past_race_index"),
                 )
             )
@@ -762,9 +781,8 @@ class SQLiteHistoricalInputSnapshotRepository:
     def _insert_provenance(self, snapshot_id: int, snapshot: HistoricalInputSnapshot) -> None:
         self._connection.executemany(
             """INSERT INTO historical_input_snapshot_provenance(
-                   snapshot_id,input_type,audit_key,source,source_id,race_entry_id,
-                   available_at_utc,observed_at_utc,past_race_index
-               ) VALUES(?,?,?,?,?,?,?,?,?)""",
+                   snapshot_id,input_type,audit_key,source,source_id,race_entry_id,past_race_index
+               ) VALUES(?,?,?,?,?,?,?)""",
             (
                 (
                     snapshot_id,
@@ -773,11 +791,29 @@ class SQLiteHistoricalInputSnapshotRepository:
                     item.source,
                     item.source_id,
                     item.race_entry_id,
-                    None if item.available_at is None else self._datetime_text(item.available_at),
-                    None if item.observed_at is None else self._datetime_text(item.observed_at),
                     item.past_race_index,
                 )
                 for item in snapshot.provenance
+            ),
+        )
+        self._connection.executemany(
+            """INSERT INTO historical_input_snapshot_provenance_evidence(
+                   snapshot_id,audit_key,evidence_order,evidence_role,canonical_source_url,response_sha256,
+                   available_at_utc,observed_at_utc
+               ) VALUES(?,?,?,?,?,?,?,?)""",
+            (
+                (
+                    snapshot_id,
+                    item.audit_key,
+                    order,
+                    evidence.evidence_role,
+                    evidence.canonical_source_url,
+                    evidence.response_sha256,
+                    None if evidence.available_at is None else self._datetime_text(evidence.available_at),
+                    self._datetime_text(evidence.observed_at),
+                )
+                for item in snapshot.provenance
+                for order, evidence in enumerate(item.evidence)
             ),
         )
 

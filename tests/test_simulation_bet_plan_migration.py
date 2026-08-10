@@ -97,7 +97,7 @@ class SimulationBetPlanMigrationTests(unittest.TestCase):
         )
 
     def test_v009_is_registered_after_v008_without_duplicate_version(self) -> None:
-        self.assertEqual(tuple(migration.VERSION for migration in MIGRATIONS), (8, 9, 10, 11))
+        self.assertEqual(tuple(migration.VERSION for migration in MIGRATIONS), (8, 9, 10, 11, 12))
         self.assertEqual(v009_simulation_bet_plan_schema.VERSION, 9)
         self.assertEqual(v009_simulation_bet_plan_schema.NAME, "v009_simulation_bet_plan_schema")
         self.assertEqual(sum(migration.VERSION == 9 for migration in MIGRATIONS), 1)
@@ -112,7 +112,7 @@ class SimulationBetPlanMigrationTests(unittest.TestCase):
         connection = self.migrated()
         self.assertEqual(
             get_applied_versions(connection),
-            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema"},
+            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema"},
         )
         self.assertTrue(PLAN_TABLES <= {row[0] for row in connection.execute("SELECT name FROM sqlite_master")})
         self.assertTrue(PLAN_TRIGGERS <= {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='trigger'")})
@@ -127,7 +127,7 @@ class SimulationBetPlanMigrationTests(unittest.TestCase):
         connection.commit()
         apply_migrations(connection)
         self.assertEqual(connection.execute("SELECT result_status FROM race_results WHERE race_id=1").fetchone()[0], "void")
-        self.assertEqual(get_applied_versions(connection), {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema"})
+        self.assertEqual(get_applied_versions(connection), {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema"})
         self.assertTrue(PLAN_TABLES <= {row[0] for row in connection.execute("SELECT name FROM sqlite_master")})
 
     def test_schema_columns_primary_keys_and_defaults(self) -> None:

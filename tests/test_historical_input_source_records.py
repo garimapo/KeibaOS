@@ -10,6 +10,7 @@ from typing import get_type_hints
 import unittest
 
 import scripts.simulation as simulation_package
+from scripts.simulation.historical_input_evidence import HistoricalInputEvidenceReference
 from scripts.simulation.historical_input_source_records import (
     HistoricalInputSourceConflictError,
     HistoricalInputSourceError,
@@ -97,21 +98,102 @@ def _record(
         provider_record_id = "official-past-race-1"
     if kind == "past_race_absence" and canonical_source_url is None:
         canonical_source_url = "https://EXAMPLE.test/history?z=2&a=1"
+    roles = {
+        "track": ("track",),
+        "entry": ("entry",),
+        "jockey": ("jockey",),
+        "odds_win": ("odds_win",),
+        "past_race": ("historical_race_context", "historical_race_result"),
+        "past_race_absence": ("past_race_absence_query",),
+    }[kind]
+    evidence = tuple(
+        HistoricalInputEvidenceReference(
+            evidence_role=role,
+            canonical_source_url=canonical_source_url,
+            response_sha256=(str(index + 1) * 64),
+            available_at=available_at,
+            observed_at=observed_at,
+        )
+        for index, role in enumerate(roles)
+    )
     return HistoricalInputSourceRecord(
         record_kind=kind,
         organization="NAR",
         source_system="nar_official",
         external_race_id="nar:20260805:1:1",
         external_entry_id=external_entry_id,
-        canonical_source_url=canonical_source_url,
         provider_record_id=provider_record_id,
         record_values=_values(kind, entry_id=entry_id) if record_values is None else record_values,
-        available_at=available_at,
-        observed_at=observed_at,
+        evidence=evidence,
     )
 
 
 class HistoricalInputSourceRecordsTest(unittest.TestCase):
+    def test_evidence_reference_is_frozen_and_validates_raw_response_identity(self) -> None:
+        import scripts.simulation.historical_input_evidence as module
+
+        self.assertEqual(
+            {name for name, value in inspect.getmembers(module, inspect.isclass) if not name.startswith("_")},
+            {"HistoricalInputEvidenceReference"},
+        )
+        reference = HistoricalInputEvidenceReference(
+            "track", "https://example.test/raw", "a" * 64, AVAILABLE, OBSERVED,
+        )
+        self.assertFalse(hasattr(reference, "__dict__"))
+        self.assertEqual(reference.observed_at, OBSERVED)
+        for kwargs in (
+            {"response_sha256": "A" * 64},
+            {"response_sha256": "a" * 63},
+            {"canonical_source_url": "http://example.test/raw"},
+            {"observed_at": OBSERVED.replace(tzinfo=None)},
+            {"available_at": OBSERVED + timedelta(seconds=1)},
+        ):
+            with self.subTest(kwargs=kwargs):
+                values = {
+                    "evidence_role": "track", "canonical_source_url": "https://example.test/raw",
+                    "response_sha256": "a" * 64, "available_at": AVAILABLE, "observed_at": OBSERVED,
+                }
+                values.update(kwargs)
+                with self.assertRaises(ValueError):
+                    HistoricalInputEvidenceReference(**values)
+
+    def test_evidence_roles_order_timestamps_and_raw_digest_drive_v3_identity(self) -> None:
+        baseline = _record("past_race", canonical_source_url="https://example.test/past")
+        reversed_roles = tuple(reversed(baseline.evidence))
+        reordered = HistoricalInputSourceRecord(
+            record_kind=baseline.record_kind, organization=baseline.organization, source_system=baseline.source_system,
+            external_race_id=baseline.external_race_id, external_entry_id=baseline.external_entry_id,
+            provider_record_id=baseline.provider_record_id, record_values=baseline.record_values, evidence=reversed_roles,
+        )
+        self.assertEqual(reordered.evidence, baseline.evidence)
+        self.assertEqual(reordered.source_id, baseline.source_id)
+        shifted = tuple(replace(item, observed_at=item.observed_at + timedelta(minutes=1)) for item in baseline.evidence)
+        timestamp_shifted = HistoricalInputSourceRecord(
+            record_kind=baseline.record_kind, organization=baseline.organization, source_system=baseline.source_system,
+            external_race_id=baseline.external_race_id, external_entry_id=baseline.external_entry_id,
+            provider_record_id=baseline.provider_record_id, record_values=baseline.record_values, evidence=shifted,
+        )
+        self.assertEqual(timestamp_shifted.source_id, baseline.source_id)
+        changed_raw = (replace(baseline.evidence[0], response_sha256="b" * 64), baseline.evidence[1])
+        raw_shifted = HistoricalInputSourceRecord(
+            record_kind=baseline.record_kind, organization=baseline.organization, source_system=baseline.source_system,
+            external_race_id=baseline.external_race_id, external_entry_id=baseline.external_entry_id,
+            provider_record_id=baseline.provider_record_id, record_values=baseline.record_values, evidence=changed_raw,
+        )
+        self.assertNotEqual(raw_shifted.source_id, baseline.source_id)
+        conflicting = (
+            baseline.evidence[0],
+            replace(baseline.evidence[1], canonical_source_url=baseline.evidence[0].canonical_source_url,
+                    response_sha256=baseline.evidence[0].response_sha256,
+                    observed_at=baseline.evidence[1].observed_at + timedelta(minutes=1)),
+        )
+        with self.assertRaises(HistoricalInputSourceValidationError):
+            HistoricalInputSourceRecord(
+                record_kind=baseline.record_kind, organization=baseline.organization, source_system=baseline.source_system,
+                external_race_id=baseline.external_race_id, external_entry_id=baseline.external_entry_id,
+                provider_record_id=baseline.provider_record_id, record_values=baseline.record_values, evidence=conflicting,
+            )
+
     def test_public_api_field_contract_and_no_package_export(self) -> None:
         import scripts.simulation.historical_input_source_records as module
 
@@ -125,16 +207,14 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
                 "source_system",
                 "external_race_id",
                 "external_entry_id",
-                "canonical_source_url",
                 "provider_record_id",
                 "record_values",
-                "available_at",
-                "observed_at",
+                "evidence",
                 "source_id",
             ),
         )
         field_map = {item.name: item for item in fields(HistoricalInputSourceRecord)}
-        self.assertEqual(field_map["schema_version"].default, 2)
+        self.assertEqual(field_map["schema_version"].default, 3)
         self.assertFalse(field_map["schema_version"].init)
         self.assertFalse(field_map["source_id"].init)
         hints = get_type_hints(HistoricalInputSourceRecord)
@@ -188,15 +268,15 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
                     set(payload),
                     {
                         "schema_version", "source_system", "record_kind", "organization", "external_race_id",
-                        "external_entry_id", "canonical_source_url", "provider_record_id", "record_values",
+                        "external_entry_id", "provider_record_id", "record_values", "evidence",
                     },
                 )
                 self.assertNotIn("available_at", payload)
                 self.assertNotIn("observed_at", payload)
                 self.assertNotIn("race_id", payload)
                 self.assertNotIn("race_entry_id", payload)
-                self.assertEqual(payload["schema_version"], 2)
-                self.assertTrue(record.source_id.startswith(f"his-v2:{kind}:"))
+                self.assertEqual(payload["schema_version"], 3)
+                self.assertTrue(record.source_id.startswith(f"his-v3:{kind}:"))
                 self.assertIsInstance(record.record_values, MappingProxyType)
                 if kind == "track":
                     self.assertIsNone(payload["external_entry_id"])
@@ -236,11 +316,9 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
                         source_system="nar_official",
                         external_race_id="nar:20260805:1:1",
                         external_entry_id=None,
-                        canonical_source_url=None,
                         provider_record_id=None,
                         record_values=_values("track"),
-                        available_at=AVAILABLE,
-                        observed_at=OBSERVED,
+                        evidence=_record("track").evidence,
                     )
         values = _values("track"); values["distance_m"] = True
         with self.assertRaises(HistoricalInputSourceValidationError): _record("track", record_values=values)
@@ -276,15 +354,15 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
         tokyo = timezone(timedelta(hours=9))
         observed = OBSERVED.astimezone(tokyo)
         shifted = _record("track", observed_at=observed)
-        self.assertEqual(shifted.observed_at, OBSERVED)
-        with self.assertRaises(HistoricalInputSourceValidationError): _record("track", observed_at=OBSERVED.replace(tzinfo=None))
-        with self.assertRaises(HistoricalInputSourceValidationError): _record("track", available_at=OBSERVED + timedelta(seconds=1))
+        self.assertEqual(shifted.evidence[0].observed_at, OBSERVED)
+        with self.assertRaises(ValueError): _record("track", observed_at=OBSERVED.replace(tzinfo=None))
+        with self.assertRaises(ValueError): _record("track", available_at=OBSERVED + timedelta(seconds=1))
 
     def test_url_validation_policy_and_byte_for_byte_retention(self) -> None:
         valid = "https://EXAMPLE.test/Path/%7e?z=2&a=1"
         record = _record("track", canonical_source_url=valid)
-        self.assertEqual(record.canonical_source_url, valid)
-        self.assertEqual(canonical_historical_input_source_payload(record=record)["canonical_source_url"], valid)
+        self.assertEqual(record.evidence[0].canonical_source_url, valid)
+        self.assertEqual(canonical_historical_input_source_payload(record=record)["evidence"][0]["canonical_source_url"], valid)
         for invalid in (
             1,
             "",
@@ -299,26 +377,24 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
             " https://example.test/path",
         ):
             with self.subTest(url=invalid):
-                with self.assertRaises(HistoricalInputSourceValidationError):
+                with self.assertRaises(ValueError):
                     _record("track", canonical_source_url=invalid)  # type: ignore[arg-type]
-        self.assertIsNone(_record("track").canonical_source_url)
-        self.assertIsNone(_record("entry").canonical_source_url)
-        self.assertIsNone(_record("jockey").canonical_source_url)
-        self.assertIsNone(_record("odds_win").canonical_source_url)
-        self.assertIsNone(_record("past_race").canonical_source_url)
+        self.assertIsNone(_record("track").evidence[0].canonical_source_url)
+        self.assertIsNone(_record("entry").evidence[0].canonical_source_url)
+        self.assertIsNone(_record("jockey").evidence[0].canonical_source_url)
+        self.assertIsNone(_record("odds_win").evidence[0].canonical_source_url)
+        self.assertIsNone(_record("past_race").evidence[0].canonical_source_url)
         with self.assertRaises(HistoricalInputSourceValidationError):
             HistoricalInputSourceRecord(
                 record_kind="past_race_absence", organization="NAR", source_system="nar_official",
                 external_race_id="nar:20260805:1:1", external_entry_id="nar:20260805:1:1:entry:1",
-                canonical_source_url=None, provider_record_id=None, record_values=_values("past_race_absence"),
-                available_at=AVAILABLE, observed_at=OBSERVED,
+                provider_record_id=None, record_values=_values("past_race_absence"), evidence=(),
             )
         with self.assertRaises(HistoricalInputSourceValidationError):
             HistoricalInputSourceRecord(
                 record_kind="past_race", organization="NAR", source_system="nar_official",
                 external_race_id="nar:20260805:1:1", external_entry_id="nar:20260805:1:1:entry:1",
-                canonical_source_url=None, provider_record_id=None, record_values=_values("past_race"),
-                available_at=AVAILABLE, observed_at=OBSERVED,
+                provider_record_id=None, record_values=_values("past_race"), evidence=_record("past_race").evidence,
             )
 
     def test_deterministic_payload_id_and_timestamp_exclusion(self) -> None:
@@ -330,10 +406,10 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
         changed_values = _values("odds_win"); changed_values["win_odds"] = Decimal("3")
         changed = _record("odds_win", record_values=changed_values)
         self.assertNotEqual(one.source_id, changed.source_id)
-        self.assertTrue(one.source_id.startswith("his-v2:odds_win:"))
+        self.assertTrue(one.source_id.startswith("his-v3:odds_win:"))
         self.assertEqual(len(one.source_id.rsplit(":", 1)[1]), 64)
 
-    def test_v2_past_race_factual_change_isolated_to_its_source_id(self) -> None:
+    def test_v3_past_race_factual_change_isolated_to_its_source_id(self) -> None:
         baseline = (
             _record("track"),
             _record("entry"),
@@ -349,8 +425,8 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
         self.assertEqual(validate_historical_input_source_record_set(records=baseline), baseline)
         self.assertEqual(validate_historical_input_source_record_set(records=changed), changed)
         for record in baseline + changed:
-            self.assertEqual(record.schema_version, 2)
-            self.assertTrue(record.source_id.startswith(f"his-v2:{record.record_kind}:"))
+            self.assertEqual(record.schema_version, 3)
+            self.assertTrue(record.source_id.startswith(f"his-v3:{record.record_kind}:"))
 
         for original, replacement in zip(baseline[:-1], changed[:-1], strict=True):
             self.assertEqual(original.source_id, replacement.source_id)

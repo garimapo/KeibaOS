@@ -9,6 +9,7 @@ from typing import get_type_hints
 import unittest
 
 import scripts.simulation as simulation_package
+from scripts.simulation.historical_input_evidence import HistoricalInputEvidenceReference
 from scripts.simulation.historical_input_snapshots import (
     HistoricalExternalEntryIdentity,
     HistoricalExternalRaceIdentity,
@@ -31,6 +32,13 @@ UTC = timezone.utc
 CAPTURED = datetime(2026, 8, 5, 12, 0, tzinfo=UTC)
 CUTOFF = CAPTURED + timedelta(minutes=30)
 START = CUTOFF + timedelta(minutes=30)
+
+
+def _evidence(*roles: str, observed: datetime = CAPTURED - timedelta(minutes=1)) -> tuple[HistoricalInputEvidenceReference, ...]:
+    return tuple(
+        HistoricalInputEvidenceReference(role, "https://example.test/evidence", str(index + 1) * 64, None, observed)
+        for index, role in enumerate(roles)
+    )
 
 
 def _source(*, source_url: str | None = "https://example.test/race") -> HistoricalSourceIdentity:
@@ -91,15 +99,15 @@ def _past(*, race_entry_id: int = 10, index: int = 0, passing_order: str = "1-1-
 def _provenance(*, entry_id: int = 10, past: bool = True) -> tuple[HistoricalInputProvenance, ...]:
     observed = CAPTURED - timedelta(minutes=1)
     result = [
-        HistoricalInputProvenance("track", "track", "nar_official", "track-1", None, observed_at=observed),
-        HistoricalInputProvenance("entry", f"entry/{entry_id}", "nar_official", "entry-1", entry_id, observed_at=observed),
-        HistoricalInputProvenance("odds", f"odds/{entry_id}", "nar_official", "odds-1", entry_id, observed_at=observed),
-        HistoricalInputProvenance("jockey", f"jockey/{entry_id}", "nar_official", "jockey-1", entry_id, observed_at=observed),
+        HistoricalInputProvenance("track", "track", "nar_official", "track-1", None, _evidence("track", observed=observed)),
+        HistoricalInputProvenance("entry", f"entry/{entry_id}", "nar_official", "entry-1", entry_id, _evidence("entry", observed=observed)),
+        HistoricalInputProvenance("odds", f"odds/{entry_id}", "nar_official", "odds-1", entry_id, _evidence("odds_win", observed=observed)),
+        HistoricalInputProvenance("jockey", f"jockey/{entry_id}", "nar_official", "jockey-1", entry_id, _evidence("jockey", observed=observed)),
     ]
     if past:
-        result.append(HistoricalInputProvenance("past_race", f"past_race/{entry_id}/0", "nar_official", "past-1", entry_id, observed_at=observed, past_race_index=0))
+        result.append(HistoricalInputProvenance("past_race", f"past_race/{entry_id}/0", "nar_official", "past-1", entry_id, _evidence("historical_race_context", "historical_race_result", observed=observed), 0))
     else:
-        result.append(HistoricalInputProvenance("past_race", f"past_race/{entry_id}/none", "nar_official", "absence-1", entry_id, observed_at=observed))
+        result.append(HistoricalInputProvenance("past_race", f"past_race/{entry_id}/none", "nar_official", "absence-1", entry_id, _evidence("past_race_absence_query", observed=observed)))
     return tuple(result)
 
 
@@ -163,7 +171,7 @@ class HistoricalInputSnapshotsTest(unittest.TestCase):
             HistoricalRaceSnapshot: ("target_race_date", "scheduled_start_at", "place", "distance_m", "track", "track_condition", "race_name", "race_class", "weather"),
             HistoricalRaceEntrySnapshot: ("race_entry_id", "external_entry_identity", "horse_no", "jockey", "win_odds", "entry_order"),
             HistoricalPastRaceSnapshot: ("race_entry_id", "past_race_index", "race_date", "place", "race_name", "race_class", "distance_m", "track", "weather", "track_condition", "finish", "reference_time_difference_seconds", "race_time", "weight", "weight_diff", "jockey", "popularity", "odds", "passing_order", "fourth_corner_position"),
-            HistoricalInputProvenance: ("input_type", "audit_key", "source", "source_id", "race_entry_id", "available_at", "observed_at", "past_race_index"),
+            HistoricalInputProvenance: ("input_type", "audit_key", "source", "source_id", "race_entry_id", "evidence", "past_race_index"),
             HistoricalInputSnapshot: ("identity", "internal_race_id", "information_cutoff", "race", "entries", "past_races", "provenance", "content_sha256"),
         }
         for value in dataclasses:
@@ -176,8 +184,7 @@ class HistoricalInputSnapshotsTest(unittest.TestCase):
         digest = fields(HistoricalInputSnapshot)[-1]
         self.assertFalse(digest.init); self.assertFalse(digest.compare); self.assertFalse(digest.hash)
         provenance_fields = {item.name: item for item in fields(HistoricalInputProvenance)}
-        self.assertIsNone(provenance_fields["available_at"].default)
-        self.assertIsNone(provenance_fields["observed_at"].default)
+        self.assertFalse(provenance_fields["evidence"].init is False)
         self.assertIsNone(provenance_fields["past_race_index"].default)
         self.assertIsNone(HistoricalSourceIdentity("NAR", "system", "race").source_url)
         self.assertIsNone(
@@ -190,9 +197,9 @@ class HistoricalInputSnapshotsTest(unittest.TestCase):
         self.assertIsNone(default_race.race_name)
         self.assertIsNone(default_race.race_class)
         self.assertIsNone(default_race.weather)
-        default_provenance = HistoricalInputProvenance("track", "track", "source", "id", None, observed_at=CAPTURED)
-        self.assertIsNone(default_provenance.available_at)
-        self.assertEqual(default_provenance.observed_at, CAPTURED)
+        default_provenance = HistoricalInputProvenance("track", "track", "source", "id", None, _evidence("track", observed=CAPTURED))
+        self.assertIsNone(default_provenance.evidence[0].available_at)
+        self.assertEqual(default_provenance.evidence[0].observed_at, CAPTURED)
         self.assertIsNone(default_provenance.past_race_index)
         public_classes = {name for name, value in inspect.getmembers(module, inspect.isclass) if not name.startswith("_")}
         public_functions = {name for name, value in inspect.getmembers(module, inspect.isfunction) if not name.startswith("_")}
@@ -254,14 +261,14 @@ class HistoricalInputSnapshotsTest(unittest.TestCase):
         item = _provenance()[0]
         copied = InputAuditEntry(
             input_type=item.input_type, audit_key=item.audit_key, source=item.source, source_id=item.source_id,
-            race_entry_id=item.race_entry_id, available_at=item.available_at, observed_at=item.observed_at,
+            race_entry_id=item.race_entry_id, available_at=item.evidence[0].available_at, observed_at=item.evidence[0].observed_at,
             past_race_index=item.past_race_index,
         )
         self.assertEqual(copied.audit_key, "track")
-        with self.assertRaises(ValueError): HistoricalInputProvenance("odds_win", "odds/10", "s", "id", 10, observed_at=CAPTURED)
-        with self.assertRaises(ValueError): HistoricalInputProvenance("past_race", "past_race/10/none", "s", "id", 10, observed_at=CAPTURED, past_race_index=0)
-        with self.assertRaises(ValueError): HistoricalInputProvenance("track", "track", "s", "id", None)
-        with self.assertRaises(ValueError): HistoricalInputProvenance("track", "track", "s", "id", None, available_at=CAPTURED, observed_at=CAPTURED - timedelta(seconds=1))
+        with self.assertRaises(ValueError): HistoricalInputProvenance("odds_win", "odds/10", "s", "id", 10, _evidence("odds_win"))
+        with self.assertRaises(ValueError): HistoricalInputProvenance("past_race", "past_race/10/none", "s", "id", 10, _evidence("past_race_absence_query"), 0)
+        with self.assertRaises(ValueError): HistoricalInputProvenance("track", "track", "s", "id", None, ())
+        self.assertEqual(HistoricalInputProvenance("track", "track", "s", "id", None, _evidence("track", observed=CAPTURED - timedelta(seconds=1))).evidence[0].observed_at, CAPTURED - timedelta(seconds=1))
 
     def test_snapshot_structural_and_audit_requirements(self) -> None:
         snapshot = _snapshot()
@@ -288,7 +295,10 @@ class HistoricalInputSnapshotsTest(unittest.TestCase):
         past_one = replace(snapshot.past_races[0], past_race_index=1)
         provenance = tuple(replace(item, audit_key="past_race/10/1", past_race_index=1) if item.input_type == "past_race" else item for item in snapshot.provenance)
         with self.assertRaises(ValueError): HistoricalInputSnapshot(snapshot.identity, 100, CUTOFF, snapshot.race, snapshot.entries, (past_one,), provenance)
-        late = tuple(replace(item, observed_at=CAPTURED + timedelta(seconds=1)) for item in snapshot.provenance)
+        late = tuple(
+            replace(item, evidence=tuple(replace(reference, observed_at=CAPTURED + timedelta(seconds=1)) for reference in item.evidence))
+            for item in snapshot.provenance
+        )
         with self.assertRaises(ValueError): HistoricalInputSnapshot(snapshot.identity, 100, CUTOFF, snapshot.race, snapshot.entries, snapshot.past_races, late)
         with self.assertRaises(ValueError): HistoricalInputSnapshot(snapshot.identity, 100, START + timedelta(seconds=1), snapshot.race, snapshot.entries, snapshot.past_races, snapshot.provenance)
 
@@ -342,7 +352,7 @@ class HistoricalInputSnapshotsTest(unittest.TestCase):
             "nar_official",
             "absence-1",
             10,
-            observed_at=CAPTURED - timedelta(minutes=1),
+            evidence=_evidence("past_race_absence_query"),
         )
         with self.assertRaises(ValueError):
             HistoricalInputSnapshot(
@@ -356,7 +366,7 @@ class HistoricalInputSnapshotsTest(unittest.TestCase):
             )
         without_past = _snapshot(with_past=False)
         numbered_audits = tuple(
-            replace(item, audit_key="past_race/10/0", past_race_index=0)
+            replace(item, audit_key="past_race/10/0", evidence=_evidence("historical_race_context", "historical_race_result"), past_race_index=0)
             if item.input_type == "past_race"
             else item
             for item in without_past.provenance
@@ -404,7 +414,7 @@ class HistoricalInputSnapshotsTest(unittest.TestCase):
             "nar_official",
             "past-2",
             10,
-            observed_at=CAPTURED - timedelta(minutes=1),
+            evidence=_evidence("historical_race_context", "historical_race_result"),
             past_race_index=1,
         )
         supplied_past_races = (third_past, second_past, first_past)
@@ -468,9 +478,9 @@ class HistoricalInputSnapshotsTest(unittest.TestCase):
         self.assertEqual(tuple(payload["race"]), ("target_race_date", "scheduled_start_at", "place", "distance_m", "track", "track_condition", "race_name", "race_class", "weather"))
         self.assertEqual(tuple(payload["entries"][0]), ("race_entry_id", "external_entry_identity", "horse_no", "jockey", "win_odds", "entry_order"))
         self.assertEqual(tuple(payload["entries"][0]["external_entry_identity"]), ("organization", "source_system", "external_race_id", "external_entry_id", "external_horse_id"))
-        self.assertEqual(payload["schema_version"], 2)
+        self.assertEqual(payload["schema_version"], 3)
         self.assertEqual(tuple(payload["past_races"][0]), ("race_entry_id", "past_race_index", "race_date", "place", "race_name", "race_class", "distance_m", "track", "weather", "track_condition", "finish", "reference_time_difference_seconds", "race_time", "weight", "weight_diff", "jockey", "popularity", "odds", "passing_order", "fourth_corner_position"))
-        self.assertEqual(tuple(payload["provenance"][0]), ("input_type", "audit_key", "source", "source_id", "available_at", "observed_at", "race_entry_id", "past_race_index"))
+        self.assertEqual(tuple(payload["provenance"][0]), ("input_type", "audit_key", "source", "source_id", "race_entry_id", "past_race_index", "evidence"))
         self.assertEqual(payload["entries"][0]["win_odds"], "2")
         self.assertEqual(payload["past_races"][0]["reference_time_difference_seconds"], "0")
         self.assertEqual(compute_historical_input_snapshot_content_sha256(snapshot=snapshot), snapshot.content_sha256)

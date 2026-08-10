@@ -10,6 +10,10 @@ import json as _json
 from typing import Protocol as _Protocol
 from unicodedata import normalize as _normalize
 
+from scripts.simulation.historical_input_evidence import (
+    HistoricalInputEvidenceReference as _HistoricalInputEvidenceReference,
+)
+
 
 def _require_exact(value: object, expected: type[object], name: str) -> object:
     if type(value) is not expected:
@@ -252,8 +256,7 @@ class HistoricalInputProvenance:
     source: str
     source_id: str
     race_entry_id: int | None
-    available_at: _datetime | None = None
-    observed_at: _datetime | None = None
+    evidence: tuple[_HistoricalInputEvidenceReference, ...]
     past_race_index: int | None = None
 
     def __post_init__(self) -> None:
@@ -263,37 +266,55 @@ class HistoricalInputProvenance:
         object.__setattr__(self, "source_id", _normalize_required_text(self.source_id, "source_id"))
         if self.race_entry_id is not None:
             object.__setattr__(self, "race_entry_id", _positive_int(self.race_entry_id, "race_entry_id"))
-        object.__setattr__(self, "available_at", _normalize_optional_utc_datetime(self.available_at, "available_at"))
-        object.__setattr__(self, "observed_at", _normalize_optional_utc_datetime(self.observed_at, "observed_at"))
         if self.past_race_index is not None:
             object.__setattr__(self, "past_race_index", _non_negative_int(self.past_race_index, "past_race_index"))
+        if type(self.evidence) is not tuple or not self.evidence:
+            raise ValueError("provenance evidence must be a non-empty tuple")
+        for item in self.evidence:
+            _require_exact(item, _HistoricalInputEvidenceReference, "provenance evidence item")
+        object.__setattr__(self, "evidence", tuple(sorted(self.evidence, key=lambda item: item.evidence_role)))
         _validate_provenance_shape(self)
 
 
 def _validate_provenance_shape(provenance: HistoricalInputProvenance) -> None:
-    if provenance.available_at is None and provenance.observed_at is None:
-        raise ValueError("provenance requires available_at or observed_at")
-    if provenance.available_at is not None and provenance.observed_at is not None and provenance.available_at > provenance.observed_at:
-        raise ValueError("available_at must not be later than observed_at")
+    expected_roles = {
+        "track": ("track",),
+        "entry": ("entry",),
+        "odds": ("odds_win",),
+        "jockey": ("jockey",),
+    }
     if provenance.input_type == "track":
         if provenance.audit_key != "track" or provenance.race_entry_id is not None or provenance.past_race_index is not None:
             raise ValueError("track provenance shape is invalid")
-        return
-    if provenance.race_entry_id is None:
+        required = expected_roles["track"]
+    elif provenance.race_entry_id is None:
         raise ValueError("race_entry_id is required for non-track provenance")
-    entry_id = provenance.race_entry_id
-    if provenance.input_type in {"entry", "odds", "jockey"}:
-        if provenance.past_race_index is not None or provenance.audit_key != f"{provenance.input_type}/{entry_id}":
+    elif provenance.input_type in {"entry", "odds", "jockey"}:
+        if provenance.past_race_index is not None or provenance.audit_key != f"{provenance.input_type}/{provenance.race_entry_id}":
             raise ValueError("entry provenance shape is invalid")
-        return
-    if provenance.input_type != "past_race":
+        required = expected_roles[provenance.input_type]
+    elif provenance.input_type != "past_race":
         raise ValueError("input_type is invalid")
-    if provenance.past_race_index is None:
-        if provenance.audit_key != f"past_race/{entry_id}/none":
+    elif provenance.past_race_index is None:
+        if provenance.audit_key != f"past_race/{provenance.race_entry_id}/none":
             raise ValueError("past-race absence provenance shape is invalid")
-        return
-    if provenance.audit_key != f"past_race/{entry_id}/{provenance.past_race_index}":
-        raise ValueError("past-race provenance shape is invalid")
+        required = ("past_race_absence_query",)
+    else:
+        if provenance.audit_key != f"past_race/{provenance.race_entry_id}/{provenance.past_race_index}":
+            raise ValueError("past-race provenance shape is invalid")
+        required = ("historical_race_context", "historical_race_result")
+    roles = tuple(item.evidence_role for item in provenance.evidence)
+    if roles != required or len(set(roles)) != len(roles):
+        raise ValueError("provenance evidence roles are invalid")
+    observations: dict[tuple[str | None, str], tuple[_datetime | None, _datetime]] = {}
+    for item in provenance.evidence:
+        identity = (item.canonical_source_url, item.response_sha256)
+        current = (item.available_at, item.observed_at)
+        previous = observations.get(identity)
+        if previous is not None and previous != current:
+            raise ValueError("provenance same-response timestamps conflict")
+        observations[identity] = current
+    return
 
 
 def _validate_snapshot_children(
@@ -345,10 +366,11 @@ def _validate_snapshot_children(
     if identity.captured_at > information_cutoff or information_cutoff > race.scheduled_start_at:
         raise ValueError("snapshot timestamps are not causal")
     for item in typed_provenance:
-        if item.available_at is not None and item.available_at > identity.captured_at:
-            raise ValueError("available_at must not be later than captured_at")
-        if item.observed_at is not None and item.observed_at > identity.captured_at:
-            raise ValueError("observed_at must not be later than captured_at")
+        for evidence in item.evidence:
+            if evidence.available_at is not None and evidence.available_at > identity.captured_at:
+                raise ValueError("available_at must not be later than captured_at")
+            if evidence.observed_at > identity.captured_at:
+                raise ValueError("observed_at must not be later than captured_at")
     actual_keys = {item.audit_key for item in typed_provenance}
     required_keys = {"track"}
     for entry_id in entry_ids:
@@ -376,7 +398,7 @@ def _build_unchecked_historical_input_snapshot_content_payload(
 ) -> dict[str, object]:
     source = snapshot.identity.source_identity
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "snapshot_identity": {
             "dataset_id": snapshot.identity.dataset_id,
             "organization": source.organization,
@@ -453,10 +475,18 @@ def _build_unchecked_historical_input_snapshot_content_payload(
                 "audit_key": item.audit_key,
                 "source": item.source,
                 "source_id": item.source_id,
-                "available_at": None if item.available_at is None else _format_datetime(item.available_at),
-                "observed_at": None if item.observed_at is None else _format_datetime(item.observed_at),
                 "race_entry_id": item.race_entry_id,
                 "past_race_index": item.past_race_index,
+                "evidence": [
+                    {
+                        "evidence_role": evidence.evidence_role,
+                        "canonical_source_url": evidence.canonical_source_url,
+                        "response_sha256": evidence.response_sha256,
+                        "available_at": None if evidence.available_at is None else _format_datetime(evidence.available_at),
+                        "observed_at": _format_datetime(evidence.observed_at),
+                    }
+                    for evidence in item.evidence
+                ],
             }
             for item in sorted(snapshot.provenance, key=lambda value: value.audit_key)
         ],
