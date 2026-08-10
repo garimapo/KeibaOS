@@ -317,17 +317,39 @@ def _history_row(
 ) -> tuple[_Tag, dict[str, str]]:
     table = _history_table(soup)
     matches: list[tuple[_Tag, dict[str, str]]] = []
+    nar_history_links = 0
+    recognized_jra_rows = 0
     for row in table.select("tbody > tr"):
-        links = row.select(f'a[href*="{_RACE_PATH}"]')
-        if len(links) > 1:
+        links = row.select("a[href]")
+        nar_links: list[tuple[_date, str, str]] = []
+        jra_link = False
+        for link in links:
+            href = link.get("href")
+            parsed = _url_parts(href, "HorseMarkInfo history navigation")
+            candidate = str(href) if parsed.scheme else _urljoin(horse_url, str(href))
+            resolved = _url_parts(candidate, "HorseMarkInfo history navigation")
+            if resolved.path == _RACE_PATH:
+                _, race_date, baba_code, race_no = _canonical_race_url(href, base_url=horse_url)
+                nar_links.append((race_date, baba_code, race_no))
+            elif (
+                resolved.scheme.lower() == "https"
+                and (resolved.hostname or "").lower() == "www.jra.go.jp"
+                and resolved.path.startswith("/JRADB/")
+                and bool(resolved.query)
+            ):
+                jra_link = True
+        if len(nar_links) > 1:
             raise _validation("HorseMarkInfo history result link is ambiguous")
-        if not links:
-            continue
-        _, race_date, baba_code, race_no = _canonical_race_url(links[0].get("href"), base_url=horse_url)
-        if (race_date, baba_code, race_no) == race_identity:
-            matches.append((row, _history_values(row)))
+        if nar_links:
+            nar_history_links += 1
+            if jra_link:
+                raise _validation("HorseMarkInfo history navigation is contradictory")
+            if nar_links[0] == race_identity:
+                matches.append((row, _history_values(row)))
+        elif jra_link:
+            recognized_jra_rows += 1
     if not matches:
-        if "JRA" in soup.get_text(" ", strip=True):
+        if nar_history_links == 0 and recognized_jra_rows:
             raise _unsupported("JRA history is unsupported")
         raise _validation("HorseMarkInfo history row is missing")
     if len(matches) != 1:

@@ -2996,6 +2996,20 @@ that both late HorseMarkInfo evidence and late RaceMarkTable evidence are reject
 `BOTH_EVIDENCE_CAUSALITY_REGRESSIONS = PASS`; target-entry source-ID independence remains covered. Fixtures are
 unchanged.
 
+### d3b2a Structural JRA History Classification Correction
+
+`JRA_CLASSIFICATION = ROW_STRUCTURAL_NOT_PAGE_GLOBAL_TEXT`. Missing requested NAR history is no longer classified from
+arbitrary page text such as `JRA` or a jockey affiliation. The HorseMarkInfo history table now inspects each result
+navigation link: supported NAR RaceMarkTable links retain exact date/babaCode/raceNo identity; recognizable official
+JRA navigation is a JRA-only state only when no NAR navigation exists in that table. Thus
+`MIXED_NAR_JRA_HISTORY_PAGE = SUPPORTED_FOR_EXACT_NAR_SELECTION`, while
+`MISSING_REQUESTED_NAR_IDENTITY = VALIDATION_ERROR` and
+`JRA_ONLY_RECOGNIZED_HISTORY = UNSUPPORTED_ERROR`.
+
+The dedicated tests pin a local NAR result whose jockey affiliation displays `(JRA)`, unrelated page-global JRA text,
+mixed NAR/JRA selection and missing-NAR behavior, structurally JRA-only history, and generic missing navigation.
+`JOCKEY_AFFILIATION_JRA_DOES_NOT_IMPLY_JRA_RACE = YES`. No fixture or collaborator changed.
+
 ## Phase 4C-2d3b1i6c1d3a Implementation Verification Scope Blocker
 
 The approved d3a implementation updated only its allowed historical domain, builder, repository, v011 migration,

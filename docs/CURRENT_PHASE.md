@@ -53,6 +53,13 @@ the committed positive exact-int `record_values["horse_no"]`. This only validate
 entry. `HISTORICAL_ROW_IDENTITY = LINEAGE_ONLY`: target horse number is never used to locate a historical RaceMarkTable
 row and need not equal that historical race's horse number.
 
+`JRA_CLASSIFICATION = ROW_STRUCTURAL_NOT_PAGE_GLOBAL_TEXT`. A HorseMarkInfo row is recognized as JRA-only only from
+its own official JRA result-navigation structure and only when the relevant history table has no supported NAR
+RaceMarkTable link. `MIXED_NAR_JRA_HISTORY_PAGE = SUPPORTED_FOR_EXACT_NAR_SELECTION`: unrelated JRA rows are ignored
+when one NAR link has the requested complete date/babaCode/raceNo identity. A missing requested NAR identity is always
+`NarHistoricalInputSourceValidationError`, even if unrelated page text says JRA or the table includes JRA rows.
+`JOCKEY_AFFILIATION_JRA_DOES_NOT_IMPLY_JRA_RACE = YES`.
+
 The binding chain is exact:
 
 ```text

@@ -257,12 +257,36 @@ class NarHistoricalPastRaceSourceTests(unittest.TestCase):
         changed_name = _normalize(race_body=RACE_BODY.replace("エコロマーベリック".encode(), "別名馬".encode(), 1))
         self.assertEqual(changed_name.provider_record_id, "nar:result:20260503:31:1:horse:30074407776")
 
-    def test_recognized_jra_and_banei_states_are_unsupported(self) -> None:
-        jra_history = HORSE_BODY.replace(
-            b"/KeibaWeb/TodayRaceInfo/RaceMarkTable", b"/JRA/Result", 1
-        ).replace(b"<body>", b"<body>JRA", 1)
+    def test_jra_history_classification_is_row_structural(self) -> None:
+        jra_href = b"https://www.jra.go.jp/JRADB/accessD.html?CNAME=pw01dde100"
+        jra_row = b'<tr><td>2025/01/01</td><td>JRA</td><td><a href="' + jra_href + b'">JRA</a></td></tr>'
+        self.assertEqual(
+            _normalize(horse_body=HORSE_BODY.replace(b"(\xe9\xab\x98\xe7\x9f\xa5)", b"(JRA)", 1)).provider_record_id,
+            "nar:result:20260503:31:1:horse:30074407776",
+        )
+        mixed = HORSE_BODY.replace(b"</tbody>", jra_row + b"</tbody>", 1)
+        self.assertEqual(_normalize(horse_body=mixed).record_values["race_name"], "Ｃ２－８")
+        missing_nar = HORSE_BODY.replace(b"2026%2F05%2F03", b"2026%2F05%2F02", 1).replace(b"<body>", b"<body>JRA", 1)
+        with self.assertRaises(NarHistoricalInputSourceValidationError):
+            _normalize(horse_body=missing_nar)
+        with self.assertRaises(NarHistoricalInputSourceValidationError):
+            _normalize(horse_body=missing_nar.replace(b"</tbody>", jra_row + b"</tbody>", 1))
+        jra_only = HORSE_BODY.replace(
+            b"/KeibaWeb/TodayRaceInfo/RaceMarkTable?k_raceDate=2026%2F05%2F03&amp;k_raceNo=1&amp;k_babaCode=31",
+            jra_href,
+            1,
+        )
         with self.assertRaises(NarHistoricalInputSourceUnsupportedError):
-            _normalize(horse_body=jra_history)
+            _normalize(horse_body=jra_only)
+        no_navigation = HORSE_BODY.replace(
+            b'href="/KeibaWeb/TodayRaceInfo/RaceMarkTable',
+            b'data-href="/KeibaWeb/TodayRaceInfo/RaceMarkTable',
+            1,
+        )
+        with self.assertRaises(NarHistoricalInputSourceValidationError):
+            _normalize(horse_body=no_navigation)
+
+    def test_banei_state_is_unsupported(self) -> None:
         with self.assertRaises(NarHistoricalInputSourceUnsupportedError):
             _normalize(race_body=RACE_BODY.replace("ダート".encode(), "ばんえい".encode(), 1))
 
