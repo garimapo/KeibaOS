@@ -3234,3 +3234,59 @@ past-race, and provenance tuple orders. Status remains `DRAFT_FOR_REVIEW`; imple
 
 blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
 assembled from its DebaTable-only output.
+
+## Phase 4C-2d3b1i6c1d3b2c NAR Trusted Historical Source Collection Orchestration Preparation
+
+Prepared a docs-only collection architecture from formal `93fad49e7b188e3b4492cc7fe0eb61d36d16b735`; no production,
+tests, fixtures, migrations, databases, capture bodies, or archived responses changed. The proposed one-race boundary
+is caller-supplied DebaTable URL -> trusted live DebaTable capture -> c1b target records -> one trusted HorseMarkInfo
+capture per entry -> bounded historical-start discovery -> trusted RaceMarkTable captures -> d3b2a pair normalization
+-> one complete, c1a-validated record set. Target-race discovery, scheduling, CLI/daemon work, fetching retries,
+pagination crawling, and historical replay repair remain out of scope.
+
+The c1b gap is exact: it emits `track`, `entry`, `jockey`, and `odds_win`, but never `past_race` or
+`past_race_absence`; c1c requires each target entry to have one or more past races or exactly one absence. Inspection
+of `scripts/database.py`, `scripts/cli/run_prediction.py`, the historical source/snapshot modules, and the
+Prediction/Ability/Pace/Jockey paths found no existing c1a collection-depth contract. Legacy database and c1c paths
+preserve all past races; Ability/Pace consume all supplied history; only JockeyEngine has a separate five-race scoring
+limit. Accordingly `PAST_RACE_HISTORY_DEPTH = PROPOSED_5_ACTUAL_PRIOR_STARTS`, pending design review rather than being
+silently inherited.
+
+The required window is formed before support filtering. It contains the five newest actual starts before the target
+race date (or every actual prior start if fewer exist). A JRA or otherwise unsupported start within that window fails
+the collection; neither may be skipped to replace it with an older NAR result. Absence means a structurally proven
+complete zero actual starts, not zero usable NAR rows.
+
+Official `keiba.go.jp` investigation, used only for provider semantics and not persisted, found the representative
+HorseMarkInfo response for lineage `30074407776` had one history table with 34 date-descending rows and 15 row-local
+relative RaceMarkTable links. The response exposed no pagination control; lineage `30039401296` similarly exposed 14
+rows/14 NAR result links without a control. This establishes the observed table/link shape but does not prove generic
+provider completeness. Therefore generic `ZERO_HISTORY_PROOF_AVAILABLE = NO` until c1 can prove that a supplied page
+has no official continuation/row-limit state. Any date greater than or equal to the target date is a chronology
+contradiction.
+
+The proposed c1 pure supplied-response phase owns structured HorseMarkInfo discovery plus a zero-only NAR absence
+normalizer. The proposed absence record uses existing c1a v3 `past_race_absence` payload semantics: exact target entry
+and target date scope, `strictly_before_target_race=true`, `result_count=0`, and one
+`past_race_absence_query` evidence reference bound to the canonical HorseMarkInfo URL and raw-body SHA-256. Its generic
+`his-v3:past_race_absence:` source ID includes the facts/evidence identity and excludes timestamps. It cannot be
+emitted from a JRA, unsupported, or incomplete history state.
+
+The proposed c2 collector is sequential, injected-service-only, and persists every live capture before normalization.
+It derives HorseMarkInfo URLs only from the c1b entry lineage, validates that DebaTable/HorseMarkInfo/RaceMarkTable
+observations are all no later than c1b `scheduled_start_at`, and sets collection metadata
+`COLLECTION_CAPTURED_AT = max(accepted observed_at)`. It returns no partial source collection if any operation fails,
+although already immutable archived captures remain. It deduplicates RaceMarkTable capture to once per canonical URL
+within that collection only; cross-collection reuse is out of scope. No retry is approved. The design proposes
+concurrency one and an injected, testable minimum-one-second pacing policy, owned by composition rather than parser
+code, as a conservative guard rather than a claim about a NAR limit.
+
+Current live pages captured after an old target's scheduled start cannot be trusted historical replay evidence:
+`HISTORICAL_RETROACTIVE_LIVE_BACKFILL = IMPOSSIBLE`. No response timestamp may be backdated or inferred. c3 is kept
+separate for capture/main-database composition and snapshot building; it must use the complete c2 source tuple
+unchanged and make information-cutoff policy explicit.
+
+The proposed responsibility split is: d3b2c1 pure discovery/zero absence normalization;
+d3b2c2 injected one-race collection; d3b2c3 capture/main-database snapshot composition. The primary review blockers
+are explicit approval of the five-actual-start depth and a provider-complete zero-history/pagination proof. Status is
+`DRAFT_FOR_REVIEW`; no implementation is authorized.
