@@ -506,6 +506,18 @@ class SQLiteHistoricalInputSnapshotRepository:
         return values
 
     def _load_provenance(self, snapshot_id: int) -> list[HistoricalInputProvenance]:
+        orphan = self._connection.execute(
+            """SELECT 1
+               FROM historical_input_snapshot_provenance_evidence AS evidence
+               LEFT JOIN historical_input_snapshot_provenance AS provenance
+                 ON provenance.snapshot_id=evidence.snapshot_id
+                AND provenance.audit_key=evidence.audit_key
+               WHERE evidence.snapshot_id=? AND provenance.audit_key IS NULL
+               LIMIT 1""",
+            (snapshot_id,),
+        ).fetchone()
+        if orphan is not None:
+            raise RepositoryDataIntegrityError("stored provenance evidence has no logical parent")
         rows = self._connection.execute(
             """SELECT input_type,audit_key,source,source_id,race_entry_id,past_race_index
                FROM historical_input_snapshot_provenance WHERE snapshot_id=? ORDER BY audit_key ASC""",

@@ -149,6 +149,42 @@ def _protocol_method_node(protocol: type[object], method_name: str) -> ast.Funct
 
 
 class HistoricalInputSnapshotsTest(unittest.TestCase):
+    def test_past_race_provenance_requires_consistent_same_response_observations(self) -> None:
+        baseline = _provenance()[4]
+        same_response = (
+            baseline.evidence[0],
+            replace(
+                baseline.evidence[1],
+                canonical_source_url=baseline.evidence[0].canonical_source_url,
+                response_sha256=baseline.evidence[0].response_sha256,
+                available_at=baseline.evidence[0].available_at,
+                observed_at=baseline.evidence[0].observed_at,
+            ),
+        )
+        accepted = replace(baseline, evidence=same_response)
+        self.assertEqual(tuple(item.evidence_role for item in accepted.evidence), ("historical_race_context", "historical_race_result"))
+        with self.assertRaises(ValueError):
+            replace(
+                baseline,
+                evidence=(
+                    baseline.evidence[0],
+                    replace(baseline.evidence[1], canonical_source_url=baseline.evidence[0].canonical_source_url,
+                            response_sha256=baseline.evidence[0].response_sha256,
+                            observed_at=baseline.evidence[0].observed_at + timedelta(seconds=1)),
+                ),
+            )
+        with self.assertRaises(ValueError):
+            replace(
+                baseline,
+                evidence=(
+                    baseline.evidence[0],
+                    replace(baseline.evidence[1], canonical_source_url=baseline.evidence[0].canonical_source_url,
+                            response_sha256=baseline.evidence[0].response_sha256,
+                            available_at=baseline.evidence[0].observed_at,
+                            observed_at=baseline.evidence[0].observed_at),
+                ),
+            )
+
     def test_public_surface_and_dataclass_contracts(self) -> None:
         import scripts.simulation.historical_input_snapshots as module
 
@@ -257,14 +293,17 @@ class HistoricalInputSnapshotsTest(unittest.TestCase):
                     replace(past, reference_time_difference_seconds=invalid)
         self.assertEqual(past.weight, Decimal("480"))
 
-    def test_provenance_shape_timestamp_and_input_audit_compatibility(self) -> None:
+    def test_provenance_has_no_scalar_audit_adapter(self) -> None:
         item = _provenance()[0]
-        copied = InputAuditEntry(
-            input_type=item.input_type, audit_key=item.audit_key, source=item.source, source_id=item.source_id,
-            race_entry_id=item.race_entry_id, available_at=item.evidence[0].available_at, observed_at=item.evidence[0].observed_at,
-            past_race_index=item.past_race_index,
+        self.assertFalse(hasattr(item, "available_at"))
+        self.assertFalse(hasattr(item, "observed_at"))
+        audit = InputAuditEntry(
+            input_type="track", audit_key="track", source="literal", source_id="literal-track",
+            race_entry_id=None, available_at=None, observed_at=CAPTURED, past_race_index=None,
         )
-        self.assertEqual(copied.audit_key, "track")
+        self.assertEqual(audit.audit_key, "track")
+        source = inspect.getsource(__import__("scripts.simulation.historical_input_snapshots", fromlist=["*"]))
+        self.assertNotIn("InputAuditEntry", source)
         with self.assertRaises(ValueError): HistoricalInputProvenance("odds_win", "odds/10", "s", "id", 10, _evidence("odds_win"))
         with self.assertRaises(ValueError): HistoricalInputProvenance("past_race", "past_race/10/none", "s", "id", 10, _evidence("past_race_absence_query"), 0)
         with self.assertRaises(ValueError): HistoricalInputProvenance("track", "track", "s", "id", None, ())

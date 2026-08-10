@@ -304,7 +304,7 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
             normalize_nar_historical_input_source_records(response=_fixture_response()),
         )
 
-    def test_lineage_change_isolates_only_the_selected_entry_source_id(self) -> None:
+    def test_lineage_change_isolates_factual_payload_but_changes_shared_response_source_ids(self) -> None:
         baseline = normalize_nar_historical_input_source_records(response=_response())
         changed = normalize_nar_historical_input_source_records(
             response=_response(
@@ -327,6 +327,10 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
 
         baseline_by_key = records_by_kind_and_entry(baseline)
         changed_by_key = records_by_kind_and_entry(changed)
+        self.assertNotEqual(
+            baseline_by_key[("track", None)].evidence[0].response_sha256,
+            changed_by_key[("track", None)].evidence[0].response_sha256,
+        )
         selected_entry_id = "nar:20260716:32:10:entry:1"
         untouched_entry_id = "nar:20260716:32:10:entry:2"
         selected_key = ("entry", selected_entry_id)
@@ -397,6 +401,8 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
             },
             set(baseline_by_key),
         )
+        self.assertTrue(all(record.source_id.startswith(f"his-v3:{record.record_kind}:") for record in baseline))
+        self.assertTrue(all(record.source_id.startswith(f"his-v3:{record.record_kind}:") for record in changed))
 
     def test_horse_anchor_href_contract_fails_closed_and_keeps_lexical_tokens(self) -> None:
         default_href = "../DataRoom/HorseMarkInfo?k_lineageLoginCode=30000000001"

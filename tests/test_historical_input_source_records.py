@@ -167,6 +167,22 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
         )
         self.assertEqual(reordered.evidence, baseline.evidence)
         self.assertEqual(reordered.source_id, baseline.source_id)
+        same_underlying = (
+            baseline.evidence[0],
+            replace(
+                baseline.evidence[1],
+                canonical_source_url=baseline.evidence[0].canonical_source_url,
+                response_sha256=baseline.evidence[0].response_sha256,
+                available_at=baseline.evidence[0].available_at,
+                observed_at=baseline.evidence[0].observed_at,
+            ),
+        )
+        accepted_same_response = HistoricalInputSourceRecord(
+            record_kind=baseline.record_kind, organization=baseline.organization, source_system=baseline.source_system,
+            external_race_id=baseline.external_race_id, external_entry_id=baseline.external_entry_id,
+            provider_record_id=baseline.provider_record_id, record_values=baseline.record_values, evidence=same_underlying,
+        )
+        self.assertEqual(len(accepted_same_response.evidence), 2)
         shifted = tuple(replace(item, observed_at=item.observed_at + timedelta(minutes=1)) for item in baseline.evidence)
         timestamp_shifted = HistoricalInputSourceRecord(
             record_kind=baseline.record_kind, organization=baseline.organization, source_system=baseline.source_system,
@@ -192,6 +208,21 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
                 record_kind=baseline.record_kind, organization=baseline.organization, source_system=baseline.source_system,
                 external_race_id=baseline.external_race_id, external_entry_id=baseline.external_entry_id,
                 provider_record_id=baseline.provider_record_id, record_values=baseline.record_values, evidence=conflicting,
+            )
+        available_conflict = (
+            baseline.evidence[0],
+            replace(
+                baseline.evidence[1], canonical_source_url=baseline.evidence[0].canonical_source_url,
+                response_sha256=baseline.evidence[0].response_sha256,
+                available_at=baseline.evidence[0].observed_at,
+                observed_at=baseline.evidence[0].observed_at,
+            ),
+        )
+        with self.assertRaises(HistoricalInputSourceValidationError):
+            HistoricalInputSourceRecord(
+                record_kind=baseline.record_kind, organization=baseline.organization, source_system=baseline.source_system,
+                external_race_id=baseline.external_race_id, external_entry_id=baseline.external_entry_id,
+                provider_record_id=baseline.provider_record_id, record_values=baseline.record_values, evidence=available_conflict,
             )
 
     def test_public_api_field_contract_and_no_package_export(self) -> None:

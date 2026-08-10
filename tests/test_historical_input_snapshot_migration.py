@@ -287,6 +287,14 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         self.assertIn("reference_time_difference_seconds_text", columns)
         self.assertNotIn(12, get_applied_versions(connection))
         self.assertEqual(connection.execute("SELECT COUNT(*) FROM historical_input_snapshots").fetchone()[0], 1)
+        provenance_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(historical_input_snapshot_provenance)")
+        }
+        self.assertIn("available_at_utc", provenance_columns)
+        self.assertIn("observed_at_utc", provenance_columns)
+        tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        self.assertNotIn("historical_input_snapshot_provenance_evidence", tables)
+        self.assertNotIn("historical_input_snapshot_provenance_v2", tables)
         self.assertFalse(connection.in_transaction)
 
     def test_date_datetime_and_nonempty_text_checks_do_not_trim(self) -> None:

@@ -582,6 +582,88 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
                     self.load(repository)
                 self.assertEqual(older.identity.captured_at, CAPTURED)
 
+    def test_selected_evidence_corruption_is_fail_closed_without_fallback(self) -> None:
+        def mutate(connection: sqlite3.Connection, snapshot_id: int, case: str) -> None:
+            audit_key = "past_race/11/0"
+            if case == "missing":
+                connection.execute(
+                    "DELETE FROM historical_input_snapshot_provenance_evidence WHERE snapshot_id=? AND audit_key=? AND evidence_order=0",
+                    (snapshot_id, audit_key),
+                )
+            elif case == "wrong_role":
+                connection.execute(
+                    "UPDATE historical_input_snapshot_provenance_evidence SET evidence_role='wrong' WHERE snapshot_id=? AND audit_key=? AND evidence_order=0",
+                    (snapshot_id, audit_key),
+                )
+            elif case == "order":
+                connection.execute(
+                    "UPDATE historical_input_snapshot_provenance_evidence SET evidence_order=3 WHERE snapshot_id=? AND audit_key=? AND evidence_order=0",
+                    (snapshot_id, audit_key),
+                )
+            elif case == "invalid_sha":
+                connection.execute("PRAGMA ignore_check_constraints=ON")
+                connection.execute(
+                    "UPDATE historical_input_snapshot_provenance_evidence SET response_sha256='invalid' WHERE snapshot_id=? AND audit_key=? AND evidence_order=0",
+                    (snapshot_id, audit_key),
+                )
+                connection.execute("PRAGMA ignore_check_constraints=OFF")
+            elif case == "invalid_observed":
+                connection.execute("PRAGMA ignore_check_constraints=ON")
+                connection.execute(
+                    "UPDATE historical_input_snapshot_provenance_evidence SET observed_at_utc='invalid' WHERE snapshot_id=? AND audit_key=? AND evidence_order=0",
+                    (snapshot_id, audit_key),
+                )
+                connection.execute("PRAGMA ignore_check_constraints=OFF")
+            elif case == "late_observed":
+                connection.execute(
+                    "UPDATE historical_input_snapshot_provenance_evidence SET observed_at_utc=? WHERE snapshot_id=? AND audit_key=? AND evidence_order=0",
+                    ((CAPTURED + timedelta(seconds=3)).isoformat(timespec="microseconds"), snapshot_id, audit_key),
+                )
+            elif case in {"observed_mismatch", "available_mismatch"}:
+                row = connection.execute(
+                    """SELECT canonical_source_url,response_sha256,observed_at_utc
+                       FROM historical_input_snapshot_provenance_evidence
+                       WHERE snapshot_id=? AND audit_key=? AND evidence_order=0""",
+                    (snapshot_id, audit_key),
+                ).fetchone()
+                column, value = (
+                    ("observed_at_utc", (CAPTURED + timedelta(seconds=1)).isoformat(timespec="microseconds"))
+                    if case == "observed_mismatch"
+                    else ("available_at_utc", row[2])
+                )
+                connection.execute(
+                    f"""UPDATE historical_input_snapshot_provenance_evidence
+                        SET canonical_source_url=?, response_sha256=?, {column}=?
+                        WHERE snapshot_id=? AND audit_key=? AND evidence_order=1""",
+                    (row[0], row[1], value, snapshot_id, audit_key),
+                )
+            elif case == "orphan":
+                connection.execute("PRAGMA foreign_keys=OFF")
+                connection.execute(
+                    """INSERT INTO historical_input_snapshot_provenance_evidence(
+                        snapshot_id,audit_key,evidence_order,evidence_role,canonical_source_url,response_sha256,
+                        available_at_utc,observed_at_utc
+                    ) VALUES(?,?,?,?,?,?,?,?)""",
+                    (snapshot_id, "orphan", 0, "track", "https://example.test/orphan", "a" * 64, None, CAPTURED.isoformat(timespec="microseconds")),
+                )
+                connection.commit()
+                connection.execute("PRAGMA foreign_keys=ON")
+            else:
+                raise AssertionError(case)
+
+        for case in (
+            "missing", "wrong_role", "order", "invalid_sha", "invalid_observed", "late_observed",
+            "observed_mismatch", "available_mismatch", "orphan",
+        ):
+            with self.subTest(case=case):
+                connection, repository = self.repository()
+                older, newer = self.save_older_and_newer(repository)
+                mutate(connection, self.snapshot_id_for(connection, newer.identity.captured_at), case)
+                connection.commit()
+                with self.assertRaises(RepositoryDataIntegrityError):
+                    self.load(repository)
+                self.assertEqual(older.identity.captured_at, CAPTURED)
+
     def test_load_latest_incomplete_or_mapping_corruption_never_falls_back(self) -> None:
         connection, repository = self.repository()
         _older, newer = self.save_older_and_newer(repository)

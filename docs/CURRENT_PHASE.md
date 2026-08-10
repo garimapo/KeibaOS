@@ -63,6 +63,21 @@ store is empty before replacing scalar provenance observations with the normaliz
 store fails before schema mutation. No HorseMarkInfo/RaceMarkTable normalizer, capture-body retention, or NAR
 past-race-absence production behavior was added.
 
+## Review Correction
+
+Selected-snapshot reconstruction now explicitly rejects an evidence child whose `(snapshot_id, audit_key)` has no
+logical provenance parent, including corruption introduced while SQLite foreign keys are disabled. A corrupt newest
+eligible snapshot raises `RepositoryDataIntegrityError`; it never falls back to an older snapshot.
+
+Two source-ID isolation rules are intentionally distinct. With evidence role, URL, and raw SHA-256 held constant, a
+change to one entry's logical facts changes only that record's c1a source ID. Conversely, a c1b DebaTable byte change
+changes the shared raw SHA-256 and therefore the source ID of every logical record derived from that supplied response.
+This intentionally supersedes the prior d1 source-ID isolation consequence at the provider boundary while preserving
+the exact horse-lineage factual identity rule.
+
+`HistoricalInputProvenance` has no scalar `available_at` or `observed_at` fields and no automatic `InputAuditEntry`
+adapter. The runtime audit type remains unchanged; no nested-evidence timestamp is selected or collapsed in production.
+
 ## Allowed Files
 
     scripts/simulation/historical_input_evidence.py

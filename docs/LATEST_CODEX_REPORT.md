@@ -2917,6 +2917,30 @@ pin v012 registry presence in their existing migration/application coverage.
 No network, filesystem, database-file, capture-body, provider/parser, package-root, legacy model, or original-workspace
 change was made. NAR historical past-race normalization and past-race absence remain out of scope.
 
+## Phase 4C-2d3b1i6c1d3b1 Review Correction
+
+Status: READY_FOR_REVIEW.
+
+The SQLite repository now fail-closes when a selected snapshot contains an evidence child without its logical
+provenance parent. The check is scoped to the selected snapshot and an invalid newest eligible snapshot never falls
+back to an older snapshot. Dedicated corruption coverage now pins missing children, wrong roles, noncontiguous orders,
+invalid hashes/timestamps, late observations, same-response timestamp disagreements, and an FK-disabled orphan child.
+
+The source-ID contract is clarified without changing raw SHA-256 semantics. `C1A_FACT_CHANGE_ISOLATION_WITH_CONSTANT_
+EVIDENCE_IDENTITY=YES`: with role/URL/raw SHA held constant, one logical factual change changes only its record ID.
+`C1B_SHARED_RESPONSE_BYTE_CHANGE_SOURCE_ID_CHURN=ALL_RECORDS_FROM_RESPONSE`: a changed supplied DebaTable body changes
+the shared raw SHA and all c1b-derived source IDs. This supersedes the old d1 source-ID consequence at that provider
+boundary only; horse-lineage factual identity is unchanged.
+
+HistoricalInputProvenance still has no scalar timestamp fields and no automatic InputAuditEntry adapter or production
+dependency. v012 nonempty-store tests now prove failure occurs before any provenance-table replacement, child-table
+creation, temporary-table residue, or migration registration.
+
+Correction verification with the external Python 3.14.5 / pytest 8.3.5 runtime passed: source-record, snapshot,
+NAR, repository, and v012 migration suites 68 passed; the remaining approved d3b1 targeted suites 59 passed; and
+the full suite 2456 passed. Forbidden dependency/source/AST and package-root export checks passed, as did
+`git diff --check`.
+
 ## Phase 4C-2d3b1i6c1d3a Implementation Verification Scope Blocker
 
 The approved d3a implementation updated only its allowed historical domain, builder, repository, v011 migration,
