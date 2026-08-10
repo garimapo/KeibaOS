@@ -10,6 +10,10 @@ from scripts.simulation import nar_official_response_capture_migration as _v001
 
 CAPTURE_MIGRATIONS = (_v001,)
 _REGISTRY_TABLE = "nar_official_response_capture_schema_migrations"
+_REGISTRY_DDL = """CREATE TABLE nar_official_response_capture_schema_migrations (
+    version INTEGER PRIMARY KEY CHECK (typeof(version) = 'integer' AND version > 0),
+    name TEXT NOT NULL CHECK (typeof(name) = 'text' AND name <> '')
+) WITHOUT ROWID"""
 
 
 def _require_connection(connection: object) -> _sqlite3.Connection:
@@ -40,19 +44,30 @@ def _registry(migrations: _Iterable[object]) -> tuple[object, ...]:
     return ordered
 
 
-def _registry_exists(connection: _sqlite3.Connection) -> bool:
-    return connection.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (_REGISTRY_TABLE,),
-    ).fetchone() is not None
+def _normalized_schema_sql(value: str) -> str:
+    return " ".join(value.upper().split())
+
+
+def _existing_registry_is_valid(connection: _sqlite3.Connection) -> bool:
+    rows = connection.execute(
+        "SELECT type,sql FROM sqlite_master WHERE name=?", (_REGISTRY_TABLE,),
+    ).fetchall()
+    if not rows:
+        return False
+    if len(rows) != 1 or rows[0][0] != "table" or type(rows[0][1]) is not str:
+        raise RuntimeError("capture migration registry schema is malformed")
+    if _normalized_schema_sql(rows[0][1]) != _normalized_schema_sql(_REGISTRY_DDL):
+        raise RuntimeError("capture migration registry schema is malformed")
+    columns = connection.execute(f"PRAGMA table_info({_REGISTRY_TABLE})").fetchall()
+    expected = (("version", "INTEGER", 1, 1), ("name", "TEXT", 1, 0))
+    actual = tuple((row[1], row[2], row[3], row[5]) for row in columns)
+    if actual != expected:
+        raise RuntimeError("capture migration registry schema is malformed")
+    return True
 
 
 def _create_registry(connection: _sqlite3.Connection) -> None:
-    connection.execute(
-        """CREATE TABLE IF NOT EXISTS nar_official_response_capture_schema_migrations (
-            version INTEGER PRIMARY KEY CHECK (typeof(version) = 'integer' AND version > 0),
-            name TEXT NOT NULL CHECK (typeof(name) = 'text' AND name <> '')
-        ) WITHOUT ROWID""",
-    )
+    connection.execute(_REGISTRY_DDL)
 
 
 def get_applied_capture_schema_versions(connection: _sqlite3.Connection) -> dict[int, str]:
@@ -60,7 +75,7 @@ def get_applied_capture_schema_versions(connection: _sqlite3.Connection) -> dict
 
     connection = _require_connection(connection)
     _enable_foreign_keys(connection)
-    if not _registry_exists(connection):
+    if not _existing_registry_is_valid(connection):
         return {}
     rows = connection.execute(f"SELECT version,name FROM {_REGISTRY_TABLE}").fetchall()
     applied: dict[int, str] = {}
@@ -100,7 +115,9 @@ def apply_capture_schema_migrations(
     _enable_foreign_keys(connection)
     connection.execute("BEGIN IMMEDIATE")
     try:
-        _create_registry(connection)
+        if not _existing_registry_is_valid(connection):
+            _create_registry(connection)
+        _existing_registry_is_valid(connection)
         pending = get_pending_capture_schema_migrations(connection, registry)
         for migration in pending:
             migration.apply(connection)

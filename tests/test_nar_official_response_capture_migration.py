@@ -121,6 +121,42 @@ class CaptureMigrationTests(unittest.TestCase):
         )
         self.assertEqual(connection.execute("SELECT sql FROM sqlite_master WHERE name='nar_official_response_bodies'").fetchone()[0], "CREATE TABLE nar_official_response_bodies (wrong TEXT)")
 
+    def test_malformed_existing_registry_is_rejected_before_v001(self) -> None:
+        connection = self._connection()
+        malformed_sql = "CREATE TABLE nar_official_response_capture_schema_migrations (version INTEGER,name TEXT)"
+        connection.execute(malformed_sql)
+        with self.assertRaises(RuntimeError):
+            apply_capture_schema_migrations(connection)
+        with self.assertRaises(RuntimeError):
+            get_applied_capture_schema_versions(connection)
+        self.assertFalse(connection.in_transaction)
+        names = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        self.assertEqual(names, {"nar_official_response_capture_schema_migrations"})
+        self.assertEqual(
+            connection.execute("SELECT sql FROM sqlite_master WHERE name='nar_official_response_capture_schema_migrations'").fetchone()[0],
+            malformed_sql,
+        )
+
+    def test_registry_name_mismatch_and_malformed_row_are_rejected(self) -> None:
+        connection = self._connection()
+        apply_capture_schema_migrations(connection)
+        connection.execute(
+            "UPDATE nar_official_response_capture_schema_migrations SET name='wrong-name' WHERE version=1",
+        )
+        connection.commit()
+        with self.assertRaises(RuntimeError):
+            get_pending_capture_schema_migrations(connection)
+        connection = self._connection()
+        apply_capture_schema_migrations(connection)
+        connection.execute("PRAGMA ignore_check_constraints=ON")
+        connection.execute(
+            "INSERT INTO nar_official_response_capture_schema_migrations(version,name) VALUES(0,'')",
+        )
+        connection.commit()
+        with self.assertRaises(RuntimeError):
+            get_applied_capture_schema_versions(connection)
+        self.assertFalse(connection.in_transaction)
+
     def test_runner_rollback_boundary_immediately_reraises(self) -> None:
         source = inspect.getsource(runner_module.apply_capture_schema_migrations)
         self.assertIn("except BaseException:", source)

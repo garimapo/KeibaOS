@@ -3062,6 +3062,21 @@ v001 application is transaction-neutral but intentionally has no independent ide
 idempotency remains the sole approved path. Fresh verification passed 25 dedicated tests, 53 related existing tests,
 and 2493 full-suite tests.
 
+### d3b2b1 Dedicated Migration Registry Structural Validation Correction
+
+The dedicated runner no longer trusts a same-name migration registry solely because `SELECT version,name` succeeds.
+Before reading applied versions or applying v001, it now verifies `sqlite_master` object kind and normalized approved
+DDL, then exact ordered `PRAGMA table_info` columns, declared types, primary-key, and NOT NULL properties. This pins
+the approved `WITHOUT ROWID` registry containing only positive integer `version` and nonempty text `name` checks.
+
+`CAPTURE_MIGRATION_REGISTRY_SCHEMA_VALIDATION = REQUIRED` and
+`PREEXISTING_MALFORMED_CAPTURE_MIGRATION_REGISTRY = FAIL_CLOSED`. A weak pre-existing same-name table aborts before
+capture table creation or v001 registration; `get_applied_capture_schema_versions()` fails as well. No ALTER, DROP,
+replacement, row copy, or constraint addition is permitted (`MALFORMED_REGISTRY_AUTO_REPAIR = FORBIDDEN`). Dedicated
+tests additionally pin stored name mismatch and malformed-row failure. Existing v001 table-collision, runner
+idempotency, rollback, active-transaction, foreign-key, and global-migration isolation behavior remains covered.
+Fresh verification passed 27 dedicated tests, 53 related existing tests, and 2495 full-suite tests.
+
 ## Phase 4C-2d3b1i6c1d3a Implementation Verification Scope Blocker
 
 The approved d3a implementation updated only its allowed historical domain, builder, repository, v011 migration,

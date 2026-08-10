@@ -83,8 +83,12 @@ Every load reconstructs and validates body length/digest, canonical URL, derived
 
 `PREEXISTING_UNREGISTERED_CAPTURE_SCHEMA = FAIL_CLOSED`. v001 uses plain `CREATE TABLE` / `CREATE UNIQUE INDEX`, not `IF NOT EXISTS`; the dedicated registry, not direct migration application, owns idempotency. `DIRECT_V001_APPLY_IDEMPOTENT = NO_REQUIREMENT`; `RUNNER_IDEMPOTENT = YES`.
 
+`CAPTURE_MIGRATION_REGISTRY_SCHEMA_VALIDATION = REQUIRED`. Before reading any applied migration row, the dedicated runner verifies a present `nar_official_response_capture_schema_migrations` object is exactly the approved table: only `version INTEGER PRIMARY KEY CHECK (typeof(version) = 'integer' AND version > 0)` and `name TEXT NOT NULL CHECK (typeof(name) = 'text' AND name <> '')`, with `WITHOUT ROWID`. It verifies table object kind, canonical `sqlite_master` schema SQL, exact ordered columns, declared types, PK, and NOT NULL properties.
+
+`PREEXISTING_MALFORMED_CAPTURE_MIGRATION_REGISTRY = FAIL_CLOSED`; `MALFORMED_REGISTRY_AUTO_REPAIR = FORBIDDEN`. A same-name weaker table is never adopted, altered, dropped, replaced, copied, or supplemented. It raises before v001 schema creation or registry insertion. `REGISTRY_NAME_MISMATCH = FAIL_CLOSED` and `MALFORMED_REGISTRY_ROW = FAIL_CLOSED` remain enforced after structural validation.
+
 ## Verification and Stop Condition
 
-External verification used Python 3.14.5 and pytest 8.3.5. Dedicated capture domain/migration/repository tests: 25 passed. Related existing NAR/c1a/c1c snapshot tests: 53 passed. Full suite: 2493 passed. Dedicated static checks confirm no package-root export, no main migration change, no HTTP/filesystem/clock ownership in domain/repository, no global migration import in dedicated runner, and no `ATTACH` behavior.
+External verification used Python 3.14.5 and pytest 8.3.5. Dedicated capture domain/migration/repository tests: 27 passed. Related existing NAR/c1a/c1c snapshot tests: 53 passed. Full suite: 2495 passed. Dedicated static checks confirm no package-root export, no main migration change, no HTTP/filesystem/clock ownership in domain/repository, no global migration import in dedicated runner, and no `ATTACH` behavior.
 
 `PERSIST_BEFORE_NORMALIZATION`, live HTTP transport, clock construction, scheduling, composition, `capture_database_path`, multi-race collection, pagination, `past_race_absence`, and formal integration remain out of scope. Stop for independent GitHub implementation review.
