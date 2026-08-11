@@ -45,6 +45,12 @@ identity. It requires the exact target lineage, expected document identity, one 
 zero-history layout (never both), complete parseable rows, unique event IDs, non-increasing official chronology, and
 no continuation, pagination, extra table, or hidden additional history marker.
 
+The HISTORY_TABLE schema is now fail-closed: its normalized 21-heading tuple must equal the approved fixture order
+exactly. Unknown, duplicate, missing, or reordered headings are rejected. `天候・馬場` is the only span and must be
+exactly `colspan="3"`; no heading may have `rowspan`, and no other heading may have `colspan`. Every history row has
+exactly 23 direct unspanned `td` cells. The stricter schema applies only to the HISTORY_TABLE state; the exact
+no-table zero-history state is unchanged.
+
 `normalize_nar_historical_past_race_absence_source_record` accepts the same three inputs and internally reruns
 discovery; it never trusts a caller-provided empty sequence. Only the exact official zero-history layout creates one
 v3 `past_race_absence` record. Its c1a payload is exactly the target entry scope, target race date,

@@ -3260,3 +3260,19 @@ archive access, network, snapshots, and prediction integration remain unimplemen
 
 Verification: dedicated c1 tests 10 passed; related c1a/NAR/capture/snapshot tests 87 passed; full suite 2520 passed
 under Python 3.14.5 and pytest 8.3.5. Status is `READY_FOR_REVIEW`; stop for independent implementation review.
+
+## Phase 4C-2d3b1i6c1d3b2c1 Exact HorseMarkInfo Table Schema Correction
+
+The discovery boundary now requires the complete normalized approved HorseMarkInfo heading tuple in its exact order,
+not heading membership. The only accepted span is `天候・馬場` with exact `colspan="3"`; all other headings are
+unspanned and no heading may use `rowspan`. History rows continue to require exactly 23 direct unspanned cells.
+Unknown, duplicated, reordered, missing, or span-altered headings fail closed before any history discovery. The
+separate exact zero-history page state remains unchanged because it has no history table.
+
+Regression coverage now directly rejects unknown, duplicate, reordered, and missing headings; incorrect or missing
+weather/track colspan; and both 22-cell and 24-cell rows. Dedicated verification is pending the final required
+related and full-suite reruns. Status remains `READY_FOR_REVIEW`.
+
+Correction verification completed under Python 3.14.5 / pytest 8.3.5: dedicated discovery/absence tests 11 passed;
+related c1a/NAR/capture/snapshot tests 87 passed; full suite 2521 passed. Package-root export and forbidden
+dependency/source/AST checks passed. Status remains `READY_FOR_REVIEW`; stop for independent re-review.

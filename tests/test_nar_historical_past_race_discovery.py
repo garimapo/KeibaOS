@@ -150,6 +150,23 @@ class NARHistoricalPastRaceDiscoveryTests(unittest.TestCase):
         with self.assertRaises(NARHistoricalPastRaceDiscoveryValidationError):
             _discover(body=HISTORY_BODY.replace(b"<td>2026/04/19</td>", b"<td>2026/05/03</td>", 1).replace(b"k_raceDate=2026%2F04%2F19", b"k_raceDate=2026%2F05%2F03", 1).replace(b"k_raceNo=2", b"k_raceNo=1", 1))
 
+    def test_history_table_schema_is_exact_and_body_has_exactly_23_cells(self) -> None:
+        mutations = (
+            HISTORY_BODY.replace("<th>年月日</th>".encode(), "<th>年月日</th><th>未知列</th>".encode(), 1),
+            HISTORY_BODY.replace("<th>人気</th>".encode(), "<th>人気</th><th>人気</th>".encode(), 1),
+            HISTORY_BODY.replace("<th>人気</th><th>着順</th>".encode(), "<th>着順</th><th>人気</th>".encode(), 1),
+            HISTORY_BODY.replace("<th>上3F</th>".encode(), b"", 1),
+            HISTORY_BODY.replace(b'colspan="3"', b'colspan="2"', 1),
+            HISTORY_BODY.replace(b'colspan="3"', b'colspan="three"', 1),
+            HISTORY_BODY.replace(b' colspan="3"', b"", 1),
+            HISTORY_BODY.replace("<th>人気</th>".encode(), "<th colspan=\"2\">人気</th>".encode(), 1),
+            HISTORY_BODY.replace(b"<td>40.1</td>", b"", 1),
+            HISTORY_BODY.replace("<td>妹尾浩 (高知)</td>".encode(), "<td>extra</td><td>妹尾浩 (高知)</td>".encode(), 1),
+        )
+        for body in mutations:
+            with self.subTest(body=body[:80]), self.assertRaises(NARHistoricalPastRaceDiscoveryValidationError):
+                _discover(body=body)
+
     def test_zero_conflict_unknown_and_unapproved_states_fail_closed(self) -> None:
         with self.assertRaises(NARHistoricalPastRaceDiscoveryValidationError):
             _discover(body=ZERO_BODY.replace(b"</body>", b'<table class="HorseMarkInfo_table"></table></body>'))

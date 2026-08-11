@@ -60,7 +60,7 @@ _ENTRY = _re.compile(r"(?P<race>nar:[0-9]{8}:[1-9][0-9]*:[1-9][0-9]*):entry:([1-
 _HORSE = _re.compile(r"nar:horse:([1-9][0-9]*)\Z")
 _PERCENT = _re.compile(r"%(?:[0-9A-Fa-f]{2})")
 _HISTORY_HEADINGS = (
-    "年月日", "競馬場", "R", "競走名", "格組", "距離", "天候・馬場", "人気", "着順", "タイム", "差", "体重", "騎手(所属)",
+    "年月日", "競馬場", "R", "競走名", "格組", "距離", "天候・馬場", "頭数", "枠", "馬番", "人気", "着順", "タイム", "差", "上3F", "体重", "騎手(所属)", "重量", "調教師", "収得賞金", "1着馬または(2着馬)",
 )
 _ZERO_MESSAGE = "指定の馬の出走履歴がありません。"
 _JRA_PLACE = _re.compile(r"Ｊ.+\Z")
@@ -229,10 +229,26 @@ def _history_table(soup: _BeautifulSoup) -> _Tag:
     tables = soup.select("table.HorseMarkInfo_table")
     if len(tables) != 1:
         raise _validation("HorseMarkInfo history table is missing or ambiguous")
-    headings = tuple(_text(item.get_text(" ", strip=True)) for item in tables[0].select("thead th"))
-    if not all(heading in headings for heading in _HISTORY_HEADINGS):
+    table = tables[0]
+    heads = table.find_all("thead", recursive=False)
+    if len(heads) != 1:
+        raise _validation("HorseMarkInfo history heading structure is invalid")
+    header_rows = heads[0].find_all("tr", recursive=False)
+    if len(header_rows) != 1:
+        raise _validation("HorseMarkInfo history heading structure is invalid")
+    nodes = header_rows[0].find_all(["th", "td"], recursive=False)
+    if any(node.name != "th" for node in nodes):
+        raise _validation("HorseMarkInfo history heading structure is invalid")
+    headings = tuple(_text(node.get_text(" ", strip=True)) for node in nodes)
+    if headings != _HISTORY_HEADINGS:
         raise _validation("HorseMarkInfo history headings are invalid")
-    return tables[0]
+    for index, node in enumerate(nodes):
+        if index == 6:
+            if node.get("colspan") != "3" or node.has_attr("rowspan"):
+                raise _validation("HorseMarkInfo weather/track heading span is invalid")
+        elif node.has_attr("colspan") or node.has_attr("rowspan"):
+            raise _validation("HorseMarkInfo history heading span is invalid")
+    return table
 
 
 def _continuation(soup: _BeautifulSoup) -> bool:
@@ -245,7 +261,7 @@ def _continuation(soup: _BeautifulSoup) -> bool:
 
 def _cells(row: _Tag) -> list[_Tag]:
     cells = row.find_all("td", recursive=False)
-    if len(cells) != 23:
+    if len(cells) != 23 or any(cell.has_attr("colspan") or cell.has_attr("rowspan") for cell in cells):
         raise _validation("HorseMarkInfo history row columns are invalid")
     return cells
 
@@ -356,7 +372,10 @@ def discover_nar_historical_past_race_history(
     table = _history_table(soup)
     if _continuation(soup):
         raise _validation("HorseMarkInfo history continuation is unsupported")
-    rows = table.select("tbody > tr")
+    bodies = table.find_all("tbody", recursive=False)
+    if len(bodies) != 1:
+        raise _validation("HorseMarkInfo history body structure is invalid")
+    rows = bodies[0].find_all("tr", recursive=False)
     if not rows:
         raise _validation("HorseMarkInfo history table is empty")
     events = tuple(_reference(row, canonical_horse_url) for row in rows)
