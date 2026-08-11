@@ -3379,3 +3379,38 @@ C1A_EVIDENCE_ROLE_EXTENSION_REQUIRED = UNRESOLVED.
 JRA_FOURTH_CORNER_MAPPING = LAYOUT_DEPENDENT. Result pages with labelled 1st–4th-corner rows may later support positional row-component mapping only after exact alignment proof; layouts omitting that table are unsupported. No blind last-component rule is allowed. ABNORMAL_RESULT_TAXONOMY is reserved as normal start, recognized non-start cancellation/exclusion, and recognized started-abnormal stopped/disqualified/demoted states; no state may be skipped.
 
 REFERENCE_TIME_DIFFERENCE_STATUS remains FIELD_DOMAIN_CONTRACT_GAP and HISTORICAL_PAST_RACE_DOMAIN_CHANGE_REQUIRED remains YES. The recommended next phase is 4C-2d3b1i6d1a — historical time/reference comparison domain contract PREPARE, followed by d1b identity bridge, d1c capture, and d1d normalization.
+
+## Phase 4C-2d3b1i6d1 Authoritative Contract Consolidation
+
+CURRENT_PHASE was rebuilt as one coherent JRA PREPARE contract. The older provisional CNAME-as-identity, approved-entry, and evidence-role-extension statements were removed from the active phase document; this report intentionally retains their earlier history.
+
+Authoritative active values are:
+
+EXACT_CNAME_AS_STABLE_ENTITY_ID = REJECTED.
+SAME_JRA_RACE_MULTIPLE_ACCESS_S_CNAME = INCONCLUSIVE.
+SAME_JRA_HORSE_MULTIPLE_ACCESS_U_CNAME = INCONCLUSIVE.
+JRA_STABLE_RACE_ID = NOT_PROVEN.
+JRA_STABLE_HORSE_ID = NOT_PROVEN.
+JRA_STABLE_ENTRY_ID = NOT_APPROVED.
+JRA_PROVIDER_RECORD_ID = PROVISIONAL.
+
+JRA_DOMESTIC_REGISTERED_HORSE_HISTORY_COMPLETENESS = PROVEN_FOR_CURRENT_PAGE_CONTENT.
+JRA_FOREIGN_HORSE_HISTORY_COMPLETENESS = NOT_COMPLETE_ALL_HISTORY.
+FOREIGN_HORSE_COMPLETE_HISTORY_POLICY = UNSUPPORTED_FAIL_CLOSED.
+
+NAR_JRA_EVENT_TO_JRA_RESULT_RESOLUTION = NOT_PROVEN.
+NAR_LINEAGE_TO_JRA_HORSE_ID_LINK = NOT_PROVEN.
+JRA_ACCESS_D_CHARSET = CP932.
+JRA_ACCESS_S_CHARSET = CP932.
+JRA_ACCESS_U_CHARSET = CP932.
+JRA_ACCESS_O_CHARSET = CP932.
+JRA_CHARSET_POLICY = CP932_FOR_APPROVED_PAGE_FAMILIES.
+
+JRA_HISTORICAL_ODDS_AUTHORITY = NOT_PROVEN.
+MINIMUM_JRA_PAST_RACE_RESPONSE_SET = UNRESOLVED.
+C1A_EVIDENCE_ROLE_EXTENSION_REQUIRED = UNRESOLVED.
+REFERENCE_TIME_DIFFERENCE_STATUS = FIELD_DOMAIN_CONTRACT_GAP.
+HISTORICAL_PAST_RACE_DOMAIN_CHANGE_REQUIRED = YES.
+JRA_FOURTH_CORNER_MAPPING = LAYOUT_DEPENDENT.
+
+Capture remains JRA-specific with a separate JRA capture database, available_at=None, raw-byte hashing before CP932 decoding, and source_system=jra_official. The recommended next phase remains d1a — historical time/reference comparison domain contract PREPARE. No implementation or next-phase work started.
