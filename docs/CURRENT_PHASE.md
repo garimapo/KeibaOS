@@ -67,6 +67,7 @@ or dead-heat policy without a separately designed rule.
 | `JRA_DIRECT_WINNER_AND_SECOND_TIME_AVAILABILITY` | `YES_FOR_INVESTIGATED_NORMAL_OFFICIAL_RESULT_ROWS`; this does not define a source comparison value. |
 | `JRA_DIRECT_REFERENCE_TIME_DIFFERENCE_AVAILABILITY` | `NO`. |
 | `JRA_OFFICIAL_MARGIN_TEXT_AVAILABILITY` | `YES`; it is textual, including blank winner cells and `同着`. |
+| `JRA_TEXTUAL_MARGIN_TO_SECONDS` | `FORBIDDEN`. |
 | `HISTORICAL_DOMAIN_DERIVED_VALUES_POLICY` | `DIRECT_OFFICIAL_SOURCE_FACTS_ONLY`. |
 | `NAR_DIRECT_DIFFERENCE_VS_TIME_SUBTRACTION` | `NOT_EQUIVALENT_AS_A_CONTRACT`; the direct NAR `差` and RaceMark textual margin are distinct, and no general subtraction equivalence is proven. |
 | `JRA_TIME_SUBTRACTION_STATUS` | `DETERMINISTIC_ARITHMETIC_IN_SOME_NORMAL_ROWS_BUT_NOT_AN_APPROVED_SOURCE_FACT`. |
@@ -124,6 +125,23 @@ for other facts, historical causality, capture, discovery, or absence proof.  It
 The JRA result investigation is sufficient to select a common time-source domain, but it does not approve JRA
 identity, capture, history discovery, odds, or normalization implementation.  Those remain separate d1 phases.
 
+### Persisted-composition blockers
+
+`scripts/prediction/ability_engine.py` and `scripts/prediction/jockey_engine.py` each default their
+`reference_date` to `date.today()` and use it to exclude future races.  In
+`scripts/simulation/persisted_simulation_application_inputs.py`, the sole persisted pipeline date is
+`track_reference_date`; it is injected only into `TrackEngine`.  `PipelineConfig` therefore default-constructs
+AbilityEngine and JockeyEngine with the runtime date.  A historical persisted simulation can consequently evaluate
+ability and jockey inputs with a future reference date.
+
+```text
+ABILITY_REFERENCE_DATE_STATUS = FUTURE_LEAKAGE_BLOCKER_IN_CURRENT_PERSISTED_COMPOSITION
+JOCKEY_REFERENCE_DATE_STATUS = FUTURE_LEAKAGE_BLOCKER_IN_CURRENT_PERSISTED_COMPOSITION
+```
+
+These are independently real prediction-composition blockers, not reasons to distort the historical source domain.
+They are explicitly out of scope for d1a and d1a1 and require a later prediction-composition phase.
+
 ## Future Implementation Phase
 
 Recommended next phase:
@@ -133,7 +151,8 @@ Recommended next phase:
 ```
 
 It must complete before d1d prediction-adapter work.  It is logically independent of JRA capture/identity
-investigation, but JRA result normalization must wait for d1a1 so it never targets the rejected field.
+investigation.  `d1b` identity-bridge PREPARE may proceed independently because it does not consume the time field,
+but JRA result normalization must wait for d1a1 so it never targets the rejected field.
 
 Proposed allowed files for d1a1 are exactly:
 

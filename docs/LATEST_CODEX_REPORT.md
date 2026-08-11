@@ -3303,3 +3303,10 @@ reinterpretation of historic NAR values. It changes c1a, snapshot, builder, SQLi
 their focused tests only; no JRA parser, capture, fixture, prediction engine, or acquisition work is authorized.
 
 Status is `DRAFT_FOR_REVIEW`; no implementation or test was changed.
+
+Preparation correction: the frozen contract now also records `JRA_TEXTUAL_MARGIN_TO_SECONDS = FORBIDDEN` and the
+separate persisted-composition causality blockers. `AbilityEngine` and `JockeyEngine` each default reference date
+to `date.today()`, while the persisted application input injects its sole stored `track_reference_date` only into
+TrackEngine. Thus both ability and jockey evaluation can use a future reference date in historical composition.
+Those blockers are not solved by changing source facts and remain outside d1a/d1a1. The d1b identity-bridge
+PREPARE may proceed independently, but JRA result normalization must wait for the d1a1 schema transition.
