@@ -3350,3 +3350,32 @@ TIME_DIFFERENCE_TO_PREDICTION_ADAPTER_STATUS = NO_ADAPTER_CONTRACT_GAP.
 5. Only after those approvals may d3b2c2 mixed-history collection be designed.
 
 Status is DRAFT_FOR_REVIEW. Stop for independent architecture review.
+
+## Phase 4C-2d3b1i6d1 JRA Identity and Source-Contract Correction
+
+This docs-only correction supersedes the prior CNAME-as-identity proposal. It retains placeholder fetch, unsupported parser, official page-family findings, time-difference domain gap, JRA-specific supplied-response/capture/archive decisions, separate capture DB, available_at=None, and jra_official source-system conclusions.
+
+EXACT_CNAME_AS_STABLE_ENTITY_ID = REJECTED.
+SAME_JRA_RACE_MULTIPLE_ACCESS_S_CNAME = INCONCLUSIVE.
+SAME_JRA_HORSE_MULTIPLE_ACCESS_U_CNAME = INCONCLUSIVE.
+
+Official result CNAME observations include pw01sde010... and pw01sde100.... Official horse-profile observations include pw01dud002... and pw01dud102.... The only proven lexical components are page-family prefixes pw01sde and pw01dud. Their leading variants, digit runs, and slash-two-hex suffixes have unknown entity/view/navigation/integrity semantics. The sampled race kept one CNAME through direct result access, accessU history navigation, and race-page navigation; raw slash and %2F were equivalent delimiter encodings, not distinct CNAMEs. The sampled horse kept one CNAME through its result-row link and direct profile access. Those observations do not establish invariance across independent official navigation forms.
+
+JRA_STABLE_RACE_ID = NOT_PROVEN.
+JRA_STABLE_HORSE_ID = NOT_PROVEN.
+JRA_STABLE_ENTRY_ID = NOT_APPROVED.
+JRA_PROVIDER_RECORD_ID = PROVISIONAL.
+
+The accessS matched-row horse link is https://www.jra.go.jp/JRADB/accessU.html?CNAME=<accessU-CNAME>. It proves row-to-official-profile navigation but not a stable cross-view horse identity. NAR HorseMark JRA rows provide only date, display place, race number, and row display fields: no JRA result URL, CNAME, or JRA horse key. Accordingly NAR_JRA_EVENT_TO_JRA_RESULT_RESOLUTION = NOT_PROVEN and NAR_LINEAGE_TO_JRA_HORSE_ID_LINK = NOT_PROVEN; fuzzy/name/local-ID linkage remains forbidden.
+
+The official accessU note distinguishes populations. Domestic registered horses state JRA, local, and overseas results are included: JRA_DOMESTIC_REGISTERED_HORSE_HISTORY_COMPLETENESS = PROVEN_FOR_CURRENT_PAGE_CONTENT, subject to causal observed_at and later parser contract. Foreign horses are generally limited to their latest four starts: JRA_FOREIGN_HORSE_HISTORY_COMPLETENESS = NOT_COMPLETE_ALL_HISTORY and FOREIGN_HORSE_COMPLETE_HISTORY_POLICY = UNSUPPORTED_FAIL_CLOSED.
+
+Fresh identity-encoding probes used Accept-Encoding: identity. accessD, accessS, accessU, and accessO each returned Content-Type text/html, meta charset Shift_JIS, no Content-Encoding, and strict CP932 decoding. Therefore JRA_ACCESS_D_CHARSET = CP932, JRA_ACCESS_S_CHARSET = CP932, JRA_ACCESS_U_CHARSET = CP932, JRA_ACCESS_O_CHARSET = CP932, and JRA_CHARSET_POLICY = CP932 for these approved families. Response SHA remains over exact bytes before decoding. The official accessO POST flow opened current オッズ 開催選択, not historical per-horse odds.
+
+JRA_HISTORICAL_ODDS_AUTHORITY = NOT_PROVEN.
+MINIMUM_JRA_PAST_RACE_RESPONSE_SET = UNRESOLVED.
+C1A_EVIDENCE_ROLE_EXTENSION_REQUIRED = UNRESOLVED.
+
+JRA_FOURTH_CORNER_MAPPING = LAYOUT_DEPENDENT. Result pages with labelled 1st–4th-corner rows may later support positional row-component mapping only after exact alignment proof; layouts omitting that table are unsupported. No blind last-component rule is allowed. ABNORMAL_RESULT_TAXONOMY is reserved as normal start, recognized non-start cancellation/exclusion, and recognized started-abnormal stopped/disqualified/demoted states; no state may be skipped.
+
+REFERENCE_TIME_DIFFERENCE_STATUS remains FIELD_DOMAIN_CONTRACT_GAP and HISTORICAL_PAST_RACE_DOMAIN_CHANGE_REQUIRED remains YES. The recommended next phase is 4C-2d3b1i6d1a — historical time/reference comparison domain contract PREPARE, followed by d1b identity bridge, d1c capture, and d1d normalization.

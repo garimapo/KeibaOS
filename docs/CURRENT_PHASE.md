@@ -180,3 +180,59 @@ docs/LATEST_CODEX_REPORT.md
 
 Stop after the docs-only review commit and independent architecture review. Do not implement JRA source, capture,
 bridge, fixtures, acquisition, c1a changes, NAR changes, or d3b2c2 collection.
+
+## Design Review Correction — Identity and Source Contract
+
+This correction supersedes only the earlier CNAME-as-identity and evidence-count conclusions. All retained status,
+time-difference, capture-separation, source-system, and recent-column conclusions above remain unchanged.
+
+`EXACT_CNAME_AS_STABLE_ENTITY_ID = REJECTED`. Officially observed accessS families include `pw01sde010...` and
+`pw01sde100...`; accessU families include `pw01dud002...` and `pw01dud102...`. The investigation did not prove
+whether their leading variants, digit runs, or final `/XX` suffix are native entity identity, view/navigation mode,
+or integrity context. They must not become an external identity by visual inference.
+
+The same sampled race retained one accessS CNAME through direct access, the official accessU history link, and
+race-page navigation. Raw `/` and `%2F` are equivalent URL-delimiter spellings, not distinct CNAMEs. No independent
+official navigation form yielding a second valid CNAME for that physical race was obtained:
+`SAME_JRA_RACE_MULTIPLE_ACCESS_S_CNAME = INCONCLUSIVE`. The result-row horse link and direct accessU profile likewise
+retained one CNAME only, so `SAME_JRA_HORSE_MULTIPLE_ACCESS_U_CNAME = INCONCLUSIVE`.
+
+Accordingly, `JRA_STABLE_RACE_ID = NOT_PROVEN`, `JRA_STABLE_HORSE_ID = NOT_PROVEN`, and
+`JRA_STABLE_ENTRY_ID = NOT_APPROVED`. A future entry spelling may be
+`{stable-external-race-id}:entry:{horseNo}` only after stable race identity and separate horse identity are proven.
+`JRA_PROVIDER_RECORD_ID = PROVISIONAL`; no CNAME-based provider-record spelling is approved.
+
+`ACCESS_S_CNAME_COMPONENTS = page-family prefix pw01sde; leading variant/digit run/final slash-hex suffix unknown`.
+`ACCESS_U_CNAME_COMPONENTS = page-family prefix pw01dud; leading variant/digit run/final slash-hex suffix unknown`.
+The exact result-row horse anchor is `https://www.jra.go.jp/JRADB/accessU.html?CNAME=<accessU-CNAME>`; it proves
+official row-to-profile navigation, but not yet stable JRA horse identity across accessU variants.
+
+`NAR_JRA_EVENT_TO_JRA_RESULT_RESOLUTION = NOT_PROVEN`: the current NAR HorseMark JRA row has only date, display
+place, race number, and display/result fields; it has no JRA accessS link, CNAME, or JRA horse token.
+`NAR_LINEAGE_TO_JRA_HORSE_ID_LINK = NOT_PROVEN` remains unchanged. No name, local-ID, date/place-only, or fuzzy bridge
+is allowed.
+
+The official accessU `出走レース` note distinguishes populations. It states domestic registered horses include JRA,
+local, and overseas race results, so `JRA_DOMESTIC_REGISTERED_HORSE_HISTORY_COMPLETENESS = PROVEN_FOR_CURRENT_PAGE_CONTENT`
+(still subject to supplied observed-at causality and later parser validation). It says foreign horses are generally
+limited to their latest four starts, so `JRA_FOREIGN_HORSE_HISTORY_COMPLETENESS = NOT_COMPLETE_ALL_HISTORY` and
+`FOREIGN_HORSE_COMPLETE_HISTORY_POLICY = UNSUPPORTED_FAIL_CLOSED`.
+
+The direct probes freeze `JRA_ACCESS_D_CHARSET = CP932`, `JRA_ACCESS_S_CHARSET = CP932`,
+`JRA_ACCESS_U_CHARSET = CP932`, and `JRA_ACCESS_O_CHARSET = CP932`: each had `Content-Type: text/html`, HTML
+`meta charset=Shift_JIS`, no content encoding when explicitly requesting identity, and successful strict CP932 decode.
+Thus `JRA_CHARSET_POLICY = CP932` for these four approved page families. SHA-256 remains over exact bytes before
+decoding. The accessO POST navigation reached current `オッズ 開催選択`, not historical per-horse odds.
+
+`JRA_HISTORICAL_ODDS_AUTHORITY = NOT_PROVEN`, `MINIMUM_JRA_PAST_RACE_RESPONSE_SET = UNRESOLVED`, and
+`C1A_EVIDENCE_ROLE_EXTENSION_REQUIRED = UNRESOLVED`. A third evidence role is not approved until the exact truthful
+official response set is proven.
+
+`JRA_FOURTH_CORNER_MAPPING = LAYOUT_DEPENDENT`: use row-local passing order only where same-page labelled corner rows
+prove ordered component alignment and exactly one fourth corner; pages that omit that proof are unsupported. No
+blind final-component rule is permitted. `ABNORMAL_RESULT_TAXONOMY = normal_start: positive numeric finish with
+required fields; non_start: recognised cancellation/exclusion; started_abnormal: recognised stopped, disqualified,
+demoted, or related result state`. A later selector/state design must freeze exact provider spellings; none may skip.
+
+The recommended next phase is `4C-2d3b1i6d1a` — historical time/reference comparison domain contract PREPARE;
+it remains ahead of identity bridge (`d1b`), capture (`d1c`), and normalization (`d1d`).
