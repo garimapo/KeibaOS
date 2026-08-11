@@ -3276,3 +3276,30 @@ related and full-suite reruns. Status remains `READY_FOR_REVIEW`.
 Correction verification completed under Python 3.14.5 / pytest 8.3.5: dedicated discovery/absence tests 11 passed;
 related c1a/NAR/capture/snapshot tests 87 passed; full suite 2521 passed. Package-root export and forbidden
 dependency/source/AST checks passed. Status remains `READY_FOR_REVIEW`; stop for independent re-review.
+
+## Phase 4C-2d3b1i6d1a Provider-Neutral Historical Time/Reference Domain Preparation
+
+Prepared a docs-only design from formal base `7b4a0f5e28311c2d64685f6d3309f68556e67f8b`. The current c1a v3
+`past_race.reference_time_difference_seconds` is exact finite nonnegative Decimal data, but its actual producer
+meaning is NAR-only: the direct HorseMarkInfo row `差`. The NAR pair normalizer neither derives it from race times
+nor uses the RaceMarkTable textual `着差`; direct zero is accepted only when displayed by HorseMarkInfo.
+
+Official-result investigation showed that ordinary JRA result rows directly expose each horse's race time and
+normal first/second time values, plus a textual margin (the winner margin can be blank). Official JRA dead-heat
+results also expose textual `同着`. This is enough to prove that arithmetic subtraction can be performed in some
+normal rows, but not that it is an official provider-neutral source fact or that it resolves winner/second/dead-heat
+semantics. The representative NAR fixture similarly proves selected-horse direct `差 = 2.6`, time `1:32.4`, and
+separate RaceMark margin `1.1/2`; it contains no winner row, so no general NAR subtraction equivalence is claimed.
+
+The selected contract removes `reference_time_difference_seconds` from c1a/snapshot/SQLite and retains only the
+existing normalized official `race_time` text as the time-related provider-neutral source fact. Margin text and
+direct provider differences remain recoverable in raw official evidence/archive, not in the c1a payload. Any
+comparison feature is deferred to a later versioned prediction adapter; the current legacy float `PastRaceInput`
+margin path is not an adapter from historical snapshots.
+
+The required implementation phase is `4C-2d3b1i6d1a1`, before d1d and before JRA result normalization. It will be
+a global c1a/snapshot v4 and `his-v4` transition with an empty-store-only v013 migration, no dual-read/write or
+reinterpretation of historic NAR values. It changes c1a, snapshot, builder, SQLite, migration, NAR source, and
+their focused tests only; no JRA parser, capture, fixture, prediction engine, or acquisition work is authorized.
+
+Status is `DRAFT_FOR_REVIEW`; no implementation or test was changed.
