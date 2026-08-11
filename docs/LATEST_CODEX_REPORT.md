@@ -3234,3 +3234,29 @@ past-race, and provenance tuple orders. Status remains `DRAFT_FOR_REVIEW`; imple
 
 blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
 assembled from its DebaTable-only output.
+
+## Phase 4C-2d3b1i6c1d3b2c1 Complete NAR HorseMark History Discovery Implementation
+
+Implemented the pure supplied-response c1 boundary on formal base `93fad49e7b188e3b4492cc7fe0eb61d36d16b735`.
+`discover_nar_historical_past_race_history` accepts only validated NAR target track/entry c1a records and one exact
+UTF-8 HorseMarkInfo response. It validates the target race/entry/lineage chain, HorseMarkInfo canonical host and
+lineage, strict target-date chronology, and the supplied observation time against scheduled start. It returns every
+classified row in official order: NAR actual starts, row-structural JRA actual starts, proven `取消`/`取止` non-starts,
+or a fail-closed unsupported/validation result. It does not filter providers or truncate history.
+
+NAR row-local RaceMark identities become canonical `www.keiba.go.jp` result URLs and `nar:event` identifiers. JRA
+rows retain a deterministic date/place/R identity with no invented NAR result URL. Proven non-starts remain visible
+for audit but do not count as actual starts. The exact HorseMarkInfo zero-history layout produces `events=()` with
+`proven_zero_history=True`; a table never becomes zero merely because it has no normal starts.
+
+`normalize_nar_historical_past_race_absence_source_record` internally reruns discovery and accepts only that exact
+zero state. It creates the existing v3 `past_race_absence` record with the exact target query scope, result count zero,
+one HorseMarkInfo-only evidence role, SHA-256 over the supplied bytes, `available_at=None`, and preserved observed
+time. Evidence timestamp changes do not change its source ID; raw byte changes do.
+
+Added minimized authentic structural HorseMark fixtures for complete-history classification and the official explicit
+zero-history layout. They are parser fixtures, not trusted historical captures. JRA result normalization, collection,
+archive access, network, snapshots, and prediction integration remain unimplemented.
+
+Verification: dedicated c1 tests 10 passed; related c1a/NAR/capture/snapshot tests 87 passed; full suite 2520 passed
+under Python 3.14.5 and pytest 8.3.5. Status is `READY_FOR_REVIEW`; stop for independent implementation review.
