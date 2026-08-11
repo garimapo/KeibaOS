@@ -3234,3 +3234,37 @@ past-race, and provenance tuple orders. Status remains `DRAFT_FOR_REVIEW`; imple
 
 blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
 assembled from its DebaTable-only output.
+
+## Phase 4C-2d3b1i6c1d3b2c0a NAR HorseMarkInfo Completeness Contract Preparation
+
+Official current-page structural investigation now supports
+`HORSE_MARK_COMPLETE_ACTUAL_START_SOURCE = YES` and
+`RACE_HORSE_INFO_RUNTIME_REQUIRED = NO`. No official response body was retained. Every HorseMarkInfo/RaceHorseInfo
+comparison used the exact same `k_lineageLoginCode`, never horse-name linkage.
+
+The representative count matrix is decisive across long, mixed, short, and zero history. High-career NAR-only lineage
+`30023406756` renders 85 HorseMarkInfo rows while RaceHorseInfo lifetime total is 83. The two difference rows are
+direct official non-start states: one `取消` and one `取止`, each with blank result fields. Thus 85 minus two proven
+non-starts equals 83. Mixed lineage `30074407776` has 34 rows and lifetime 34: 15 NAR RaceMarkTable rows plus 19
+row-local JRA rows. Short lineage `30022408717` is exactly one HorseMarkInfo start and lifetime one. Zero lineage
+`30055402717` is an official future debut entry whose canonical HorseMarkInfo page has no history table or race link
+and directly says `指定の馬の出走履歴がありません。`; same-lineage RaceHorseInfo total is zero.
+
+High (85), mixed (34), short (1), and zero pages had no history pagination/continuation controls, no page/offset/limit
+input, no hidden history rows, and no alternate history endpoint. The only relevant official navigation was
+RaceHorseInfo plus row-local RaceMarkTable links. This freezes a strict runtime acceptance rule: canonical lineage,
+expected page identity, exactly one recognized table or explicit zero layout, complete uniquely identified rows,
+non-increasing chronology, complete row classification, and no continuation marker. Ambiguity, unknown state, or
+continuation fails closed.
+
+RaceHorseInfo remains a research cross-check only; no additional runtime source/evidence/capture-schema dependency is
+introduced. A valid zero HorseMarkInfo page can therefore support future HorseMarkInfo-only absence provenance, and
+legitimate short histories can return all actual starts. d3b2c1 may now be prepared as pure complete event discovery
+plus zero-absence normalization. Mixed all-history collection still requires JRA official capture/normalization;
+JRA rows cannot be skipped.
+
+No `中止`, `失格`, `降着`, `除外`, or `競走除外` representative was encountered. Those are not guessed from text:
+future directly observed started abnormal result structure counts as unsupported actual history, while a future
+non-start must prove the same row/result semantics as observed `取消`/`取止`. The current Ability/Jockey reference-date
+and time-difference-to-legacy-margin adapter gaps remain separate downstream blockers. Status is `DRAFT_FOR_REVIEW`;
+no implementation is authorized.
