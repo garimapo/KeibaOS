@@ -1,87 +1,182 @@
+Exit code: 0
+Wall time: 0.2 seconds
+Total output lines: 3584
+Output:
 # Current Phase
 
 ## Status
 
-READY_FOR_REVIEW
+DRAFT_FOR_REVIEW
 
 ## Phase and Base
 
-Phase `4C-2d3b1i6c1d3b2c1` — pure NAR HorseMarkInfo complete-history discovery and zero-history absence normalization.
+Phase `4C-2d3b1i6d1` 窶・JRA trusted historical source architecture preparation.
 
-Formal base: `93fad49e7b188e3b4492cc7fe0eb61d36d16b735`.
+Formal branch/base: `feature/ver0.8-simulator` at
+`7b4a0f5e28311c2d64685f6d3309f68556e67f8b`.
 
-Implementation review branch: `review/4c-2d3b1i6c1d3b2c1-implementation`.
+Review branch: `review/4c-2d3b1i6d1-prepare`.
 
-Approved completeness design: `db9329ac6febddabf7f5289f6440250e6cdba5fb`.
+## Current JRA State
 
-## Implemented Pure Boundaries
+| Area | Status | Finding |
+| --- | --- | --- |
+| Current JRA fetch | PLACEHOLDER | `scripts/fetch_jra.py` contains one hard-coded sample `Race`; it makes no official request. |
+| Current JRA parser | UNSUPPORTED | No JRA parser or official URL parser exists. `HorseParser` and `PastRaceParser` are legacy NAR/DB code. |
+| Current JRA official source | PARTIAL | Official JRA page families are reachable and have been probed, but no trusted JRA supplied-response, capture, archive, or normalizer boundary exists. |
+| Current JRA external identity | PARTIAL | Official opaque race and horse CNAMEs are present on JRA pages, but KeibaOS has no approved implementation or NAR-to-JRA bridge. |
+| Current JRA historical source | UNSUPPORTED | No causally eligible JRA capture can create a c1a `past_race` record. |
 
-`discover_nar_historical_past_race_history` accepts exactly one validated target track record, target entry record,
-and supplied UTF-8 HorseMarkInfo response. It returns the complete official row order without NAR filtering or a
-5/10/20-race truncation. The target race date comes only from the target track record and every discovered event must
-strictly precede it; the supplied observation must also be no later than the target scheduled start.
+Legacy `scripts/fetch_races.py` selects `JRAFetcher` on weekends and writes legacy `Race` data through
+`scripts/database.py`. The legacy `races`, `horses`, and `past_races` tables use local IDs and `REAL` values;
+they are not trusted historical evidence and are forbidden as a JRA fallback.
 
-The public discovery domain is exactly:
+## Official Page and Identity Findings
 
-```text
-NARHistoricalEventKind
-NARHistoricalPastRaceReference
-NARHistoricalPastRaceDiscovery
-NARHistoricalPastRaceDiscoveryError
-NARHistoricalPastRaceDiscoveryValidationError
-NARHistoricalPastRaceDiscoveryUnsupportedError
-discover_nar_historical_past_race_history
-```
+Official probes used `https://www.jra.go.jp` only and retained no probe body. Valid representative pages returned
+`200`, did not redirect, had `Content-Type: text/html`, no `Content-Encoding`, no declared charset, and decoded as
+CP932. A bare `JRADB/accessD.html`, `accessS.html`, or `accessU.html` request redirected to
+`/error/error013.html`; a canonical CNAME is therefore required.
 
-The closed event vocabulary is `NAR_ACTUAL_START`, `JRA_ACTUAL_START`, `PROVEN_NON_START`, and
-`UNSUPPORTED_ACTUAL_START`. NAR rows use `nar:event:{YYYYMMDD}:{babaCode}:{raceNo}` and reconstruct the canonical
-`www.keiba.go.jp` RaceMarkTable URL from the proven row-local identity. Structurally recognized JRA starts remain in
-the complete sequence with a deterministic row-local date/place/R identity and no NAR result URL. The approved
-`取消`/`取止` non-result pattern is retained as `PROVEN_NON_START` with its NAR event identity and audit URL, but it
-is not an actual start and is not a later RaceMark capture candidate. Unknown or unapproved states fail closed.
+| Family | Exact approved investigation form | Observed semantic evidence |
+| --- | --- | --- |
+| Target entry / race card | `https://www.jra.go.jp/JRADB/accessD.html?CNAME=<opaque-accessD-cname>` | Page title `蜃ｺ鬥ｬ陦ｨ`; it is the prospective target track/entry/jockey/odds family, not complete history. |
+| Historical result | `https://www.jra.go.jp/JRADB/accessS.html?CNAME=<opaque-accessS-cname>` | Page title `繝ｬ繝ｼ繧ｹ邨先棡`; its result table labels include finish, horse number, horse link, time, textual 逹蟾ｮ, row-local corner order, body weight, and win popularity. |
+| Horse profile/history | `https://www.jra.go.jp/JRADB/accessU.html?CNAME=<opaque-accessU-cname>` | Page title `遶ｶ襍ｰ鬥ｬ諠・ｱ`; its `蜃ｺ襍ｰ繝ｬ繝ｼ繧ｹ` table links rows to `accessS.html`. |
+| Odds | `https://www.jra.go.jp/JRADB/accessO.html?...` | The result page navigation points to this distinct family. It is not yet an approved historical source. |
 
-HorseMarkInfo accepts canonical `www.keiba.go.jp` and `www2.keiba.go.jp` inputs while preserving the supplied host
-identity. It requires the exact target lineage, expected document identity, one complete official table or the exact
-zero-history layout (never both), complete parseable rows, unique event IDs, non-increasing official chronology, and
-no continuation, pagination, extra table, or hidden additional history marker.
+The observed result CNAME family is `pw01sde10` + 20 ASCII digits + `/` + two uppercase hexadecimal characters;
+the observed profile CNAME family is `pw01dud10` + 10 ASCII digits + `/` + two uppercase hexadecimal characters.
+These are provider-native opaque keys. No field decomposition, generation, date/place inference, case folding,
+trailing-token removal, query reordering, or token re-encoding is approved. The same result response bytes were
+observed for the official raw `/` and `%2F` CNAME spellings. Future accepted inputs may use either spelling, must
+decode exactly one CNAME value, and must canonicalize only that URL delimiter to uppercase `%2F`; the opaque decoded
+token is otherwise byte-for-byte lexical identity. A future URL validator must require HTTPS, host exactly
+`www.jra.go.jp`, no credentials/fragment/non-default port, exact path, exactly one nonblank `CNAME` query pair, no
+unknown query pair, no `+`, and no malformed percent escape. Redirect following is not approved.
 
-The HISTORY_TABLE schema is now fail-closed: its normalized 21-heading tuple must equal the approved fixture order
-exactly. Unknown, duplicate, missing, or reordered headings are rejected. `天候・馬場` is the only span and must be
-exactly `colspan="3"`; no heading may have `rowspan`, and no other heading may have `colspan`. Every history row has
-exactly 23 direct unspanned `td` cells. The stricter schema applies only to the HISTORY_TABLE state; the exact
-no-table zero-history state is unchanged.
+`JRA_STABLE_RACE_ID = PROVEN`: once a supplied `accessS` URL passes its future closed validator, its exact opaque
+CNAME is the race key and the proposed identity is `jra:race:<accessS-CNAME>`. The `accessD` token is a separate
+official page token and must not be assumed interchangeable with the result CNAME. `JRA_STABLE_HORSE_ID = PROVEN`:
+a result-row horse link to `accessU` supplies the opaque profile CNAME, with proposed identity
+`jra:horse:<accessU-CNAME>`. `JRA_STABLE_ENTRY_ID = PROVEN`: a positive canonical row-local `鬥ｬ逡ｪ`, scoped by the
+approved race identity and accompanied by the exact horse link, gives `jra:race:<accessS-CNAME>:entry:<horseNo>`.
 
-`normalize_nar_historical_past_race_absence_source_record` accepts the same three inputs and internally reruns
-discovery; it never trusts a caller-provided empty sequence. Only the exact official zero-history layout creates one
-v3 `past_race_absence` record. Its c1a payload is exactly the target entry scope, target race date,
-`strictly_before_target_race=True`, and `result_count=0`; its sole evidence is the exact HorseMarkInfo response body
-SHA-256, canonical supplied URL, `available_at=None`, and supplied `observed_at`.
+`NAR_JRA_EVENT_TO_JRA_RESULT_RESOLUTION = NOT_PROVEN`. c1 discovery currently emits only
+`jra:event:{YYYYMMDD}:{NAR-display-place}:{raceNo}`, which cannot derive an opaque JRA accessS CNAME.
+`NAR_LINEAGE_TO_JRA_HORSE_ID_LINK = NOT_PROVEN`: neither NAR lineage nor horse-name matching establishes the JRA
+profile key. A bridge must prove both mappings from official supplied evidence; no fuzzy name, date/place-only, or
+local-ID fallback is allowed.
 
-## Fixture and Scope Decision
+`JRA_HORSE_HISTORY_PAGE = accessU.html?CNAME=<profile-CNAME>`. Its `蜃ｺ襍ｰ繝ｬ繝ｼ繧ｹ` table has row-local accessS links,
+and an inspected horse showed its career list, but general completeness across JRA/local/overseas starts and
+pagination semantics are not proven. `JRA_HORSE_HISTORY_COMPLETENESS = UNPROVEN`.
+`JRA_DEBATABLE_RECENT_COLUMNS_AS_COMPLETE_HISTORY = FORBIDDEN`: accessD窶冱 prior-four-race display is only recent
+display context and never proof of `ALL_CAUSALLY_AVAILABLE_ACTUAL_PRIOR_STARTS`.
 
-Both fixtures are `MINIMIZED_AUTHENTIC_STRUCTURAL_FIXTURE`s: official HorseMarkInfo page/table, result-link,
-JRA-row, and zero-layout semantics were retained. They are parser fixtures only, not trusted historical captures.
-No production network, archive, SQLite, filesystem, clock, JRA result normalization, collection, snapshot building,
-or prediction configuration was added.
+## Result Field Authority and Blocking Domain Finding
 
-`HORSE_MARK_COMPLETE_ACTUAL_START_SOURCE = YES`; `RACE_HORSE_INFO_RUNTIME_REQUIRED = NO`; and
-`PAST_RACE_ABSENCE_PROOF_SOURCE = HORSEMARKINFO_ONLY` remain frozen. JRA result normalization is not implemented,
-and complete mixed-history collection remains blocked until its separate official source support exists.
+| c1a past-race field | JRA authority/status |
+| --- | --- |
+| `race_date`, `place` | accessS visible race header, cross-checked to the opaque accessS identity only when an approved decoder exists; otherwise identity remains opaque. |
+| `race_name`, `race_class` | Separate accessS title and condition/class nodes are required; a single combined heading must not be regex-split. Selector contract remains unimplemented. |
+| `distance_m`, `track`, `weather`, `track_condition` | accessS race facts: course/surface/distance and displayed weather/going. Direct parsing is plausible but unapproved pending a closed selector contract. |
+| `finish`, `race_time`, `weight`, `weight_diff`, `jockey`, `popularity`, `passing_order` | accessS matched horse row: `逹鬆・`, `繧ｿ繧､繝`, `鬥ｬ菴馴㍾・亥｢玲ｸ幢ｼ噂`, `鬨取焔蜷構`, `蜊伜享 莠ｺ豌予`, and `繧ｳ繝ｼ繝翫・騾夐℃鬆・ｽ構`. Body weight is not assigned weight; jockey allowance marks require preservation pending an exact grammar. |
+| `fourth_corner_position` | accessS row-local order plus its labelled race-level `1繧ｳ繝ｼ繝翫・`窶ｦ`4繧ｳ繝ｼ繝翫・` table could support positional mapping only after the same uniqueness/count contract as NAR is separately proven. Current status: NOT_PROVEN. |
+| `odds` | accessS exposes popularity but not exact per-horse win odds. Historical odds require a separate authoritative JRA page or an explicit unsupported result state. Final historical result odds must never backfill prediction-time target odds. |
+| `reference_time_difference_seconds` | BLOCKED. accessS displays exact horse/winner times and textual `逹蟾ｮ` (e.g. 繧ｯ繝・ 繝上リ, fractions), but no directly displayed official Decimal time-difference field was found. Textual margin must not be converted to seconds. |
+
+`REFERENCE_TIME_DIFFERENCE_STATUS = FIELD_DOMAIN_CONTRACT_GAP` and
+`HISTORICAL_PAST_RACE_DOMAIN_CHANGE_REQUIRED = YES`. A deterministic subtraction from displayed times would be a
+new provider-neutral semantic contract, not a direct official field, and JRA's reference semantics have not been
+shown equivalent to NAR's. No JRA `past_race` implementation is authorized until that independent domain design is
+reviewed. Textual margin conversion remains forbidden.
+
+For initial JRA support, cancellation/exclusion/non-start, stopped/disqualified, missing time/body-weight/odds,
+nonnumeric popularity, or ambiguous corner state must be explicitly classified and never skipped. Current
+`ABNORMAL_RESULT_STATUS = UNPROVEN / IMPLEMENTATION_BLOCKED`.
+
+## Evidence, Capture, and Causality
+
+The final evidence cardinality is blocked but its minimum vocabulary consequence is clear: accessS lacks exact
+per-horse odds, while c1a requires `odds`. A truthful JRA source would require accessS plus an authoritative separate
+odds response if one exists. Therefore `JRA_PAST_RACE_EVIDENCE_COUNT = AT_LEAST_2_NOT_YET_SOURCE_PROVEN` and
+`C1A_EVIDENCE_ROLE_EXTENSION_REQUIRED = YES`: existing `historical_race_context` and
+`historical_race_result` cannot truthfully label a third odds response. This is a blocker report, not authorization
+to change c1a.
+
+`JRA_SPECIFIC_SUPPLIED_RESPONSE = REQUIRED`: introduce a JRA-specific supplied-response value later rather than
+reuse `NarSuppliedOfficialResponse` or refactor stable NAR APIs. It must preserve exact bytes, canonical JRA URL,
+explicit charset, and supplied `observed_at`; raw SHA-256 is over bytes before decoding. CP932 is the presently
+observed parser charset. `JRA_CHARSET_POLICY = EXPLICIT_CP932_ONLY_UNTIL_A_FUTURE_PROBE_PROVES_ANOTHER_OFFICIAL
+FAMILY`; no byte conversion occurs before archival hashing. `JRA_CONTENT_ENCODING_POLICY = INITIAL_IDENTITY_ONLY`:
+the probes had no content encoding, and a compressed response needs an independently designed byte-preserving rule.
+
+`CAPTURE_ARCHITECTURE_DECISION = JRA_SPECIFIC`. Keep the NAR capture/archive/live modules frozen: their page-kind
+vocabulary, UTF-8 rule, and host policy are NAR-specific. `CAPTURE_DATABASE_DECISION = SEPARATE_JRA_CAPTURE_DATABASE`
+is selected for the same reason; a shared multi-provider archive is a later architecture proposal, not a DRY
+refactor. `JRA_CAPTURE_REUSE_OF_NAR_DOMAIN = FORBIDDEN`.
+
+`JRA_REDIRECT_POLICY = DISALLOW_UNTIL_SEPARATELY_APPROVED`: capture must issue a no-redirect request and reject
+3xx or any effective URL different from the requested canonical URL. `JRA_AVAILABLE_AT_POLICY = None`; neither
+page date, HTTP date, nor current time is reliable publication availability. Preserve
+`requested_at <= observed_at <= stored_at`; only `observed_at <= information_cutoff` establishes later historical
+eligibility. A live page fetched today is not historical evidence for an earlier cutoff.
+
+`JRA_REQUEST_PACING_POLICY = SERIAL_SINGLE_REQUESTS_WITHOUT_RETRY_OR_CONCURRENCY_IN_THE_FIRST_CAPTURE_BOUNDARY`.
+No official numeric rate limit was found in these probes, so no invented rate is frozen. Caller orchestration must
+remain explicit and conservative.
+
+## Target Inputs, Bridge, and Scope
+
+The first JRA route is only: NAR target entry + NAR HorseMark-discovered JRA actual start 竊・trusted JRA past-race
+source. It is blocked by both the opaque-event bridge and the time-difference domain gap. It must not expand to JRA
+target-race collection. A later JRA target source may use accessD for track/entry/jockey/odds only with pre-cutoff
+capture; `JRA_TARGET_ODDS_HISTORICAL_BACKFILL_FROM_FINAL = FORBIDDEN`.
+
+The future JRA source record would use `organization="JRA"`, `source_system="jra_official"`, and, only after bridge
+proof, `provider_record_id = jra:result:<accessS-CNAME>:horse:<accessU-CNAME>`. It must use the same JRA race
+identity grammar for target and historical races. The future API is intentionally not frozen until its required
+bridge and evidence inputs are proven; a candidate module is
+`scripts/simulation/jra_historical_past_race_source.py` with a provider-specific response type and normalizer.
+
+`ABILITY_REFERENCE_DATE_STATUS = FUTURE_LEAKAGE_BLOCKER_IN_CURRENT_PERSISTED_COMPOSITION`.
+`JOCKEY_REFERENCE_DATE_STATUS = FUTURE_LEAKAGE_BLOCKER_IN_CURRENT_PERSISTED_COMPOSITION`.
+`TIME_DIFFERENCE_TO_PREDICTION_ADAPTER_STATUS = NO_ADAPTER_CONTRACT_GAP`.
+
+## Recommended Sequence and Exact Future Scope
+
+1. `4C-2d3b1i6d1a` 窶・JRA/provider-neutral time-difference compatibility PREPARE: only
+   `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`. It must decide whether a c1a domain extension is
+   truthful before any JRA parser is authorized.
+2. `4C-2d3b1i6d1b` 窶・NAR-discovered JRA opaque-identity bridge PREPARE: only
+   `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`. It must prove JRA event-CNAME and NAR-lineage to
+   JRA-horse-CNAME linkage from supplied official pages.
+3. `4C-2d3b1i6d1c` 窶・JRA capture/archive design and implementation, after the preceding approvals:
+   `scripts/simulation/jra_official_response_capture.py`,
+   `scripts/simulation/jra_official_response_capture_migration.py`,
+   `scripts/simulation/jra_official_response_capture_migration_runner.py`,
+   `scripts/simulation/jra_official_response_live_capture.py`,
+   `scripts/simulation/repositories/sqlite_jra_official_response_capture_repository.py`,
+   `tests/test_jra_official_response_capture.py`,
+   `tests/test_jra_official_response_capture_migration.py`,
+   `tests/test_jra_official_response_live_capture.py`,
+   `tests/test_sqlite_jra_official_response_capture_repository.py`, and the two phase docs. It uses a new dedicated
+   archive DB.
+4. `4C-2d3b1i6d1d` 窶・JRA historical result normalizer implementation, only after all blockers are closed:
+   `scripts/simulation/jra_historical_past_race_source.py`,
+   `tests/test_jra_historical_past_race_source.py`, approved authentic JRA fixtures under `tests/fixtures/jra/`,
+   and the two phase docs. No NAR, c1a, builder, SQLite snapshot, or migration change is pre-approved here.
+5. Only then may `4C-2d3b1i6c1d3b2c2` design mixed-history NAR collection.
 
 ## Allowed Files
 
 ```text
-scripts/simulation/nar_historical_past_race_discovery.py
-scripts/simulation/nar_historical_past_race_absence_source.py
-tests/test_nar_historical_past_race_discovery.py
-tests/test_nar_historical_past_race_absence_source.py
-tests/fixtures/nar/horse_mark_info_history_discovery.html
-tests/fixtures/nar/horse_mark_info_zero_history.html
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
 ## Stop Condition
 
-Stop after one review commit and independent implementation review. Do not start JRA historical result normalization,
-d3b2c2 collection, d3b2c3 composition, d3b2d prediction integration, or formal integration.
+Stop after the docs-only review commit and independent architecture review. Do not implement JRA source, capture,
+bridge, fixtures, acquisition, c1a changes, NAR changes, or d3b2c2 collection.

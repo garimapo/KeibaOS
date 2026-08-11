@@ -3276,3 +3276,77 @@ related and full-suite reruns. Status remains `READY_FOR_REVIEW`.
 Correction verification completed under Python 3.14.5 / pytest 8.3.5: dedicated discovery/absence tests 11 passed;
 related c1a/NAR/capture/snapshot tests 87 passed; full suite 2521 passed. Package-root export and forbidden
 dependency/source/AST checks passed. Status remains `READY_FOR_REVIEW`; stop for independent re-review.
+
+## Phase 4C-2d3b1i6d1 JRA Trusted Historical Source Architecture Preparation
+
+Docs-only investigation on formal base 7b4a0f5e28311c2d64685f6d3309f68556e67f8b. No response body was retained; no production, test, fixture, database, migration, or NAR file changed.
+
+### Repository status
+
+| Area | Status | Actual repository finding |
+| --- | --- | --- |
+| Current JRA fetch | PLACEHOLDER | scripts/fetch_jra.py returns a hard-coded Race and makes no request. |
+| Current JRA parser | UNSUPPORTED | No JRA parser, official URL parser, supplied response, capture/archive, or normalizer exists. |
+| Current JRA official source | PARTIAL | Official page families were probed, but no trusted JRA boundary exists. |
+| Current JRA external identity | PARTIAL | Official opaque CNAME anchors exist, but are not implemented or bridged from NAR. |
+| Current JRA historical source | UNSUPPORTED | No causally eligible JRA past_race source record can be produced. |
+
+scripts/fetch_races.py selects the placeholder fetcher on weekends. scripts/database.py, scripts/parsers/horse_parser.py, and scripts/fetch_past_races.py are legacy local-ID/REAL persistence paths and are forbidden as trusted JRA fallback.
+
+### Official JRA findings
+
+Only www.jra.go.jp was probed. Valid accessD, accessS, and accessU requests returned 200 without redirect, with Content-Type text/html, no Content-Encoding, no declared charset, and body bytes that decoded as CP932. Bare JRADB family paths redirected to /error/error013.html; an opaque CNAME is required.
+
+* Target page: https://www.jra.go.jp/JRADB/accessD.html?CNAME=<opaque-accessD-cname>, title 出馬表. Its four recent-race columns are RECENT_DISPLAY_CONTEXT only.
+* Result page: https://www.jra.go.jp/JRADB/accessS.html?CNAME=<opaque-accessS-cname>, title レース結果. Observed result CNAME form is pw01sde10 plus 20 ASCII digits, slash, and two uppercase hex characters.
+* Horse profile/history: https://www.jra.go.jp/JRADB/accessU.html?CNAME=<opaque-accessU-cname>, title 競走馬情報. Observed profile CNAME form is pw01dud10 plus 10 ASCII digits, slash, and two uppercase hex characters; its 出走レース rows link to accessS.
+* AccessS result rows link to accessU profile keys and provide finish, time, textual 着差, row-local corner order, body weight/change, jockey, and win popularity. accessO is a separate odds page family.
+
+Raw slash and uppercase %2F CNAME delimiter spellings returned identical official accessS bytes. A future validator may accept precisely either, decode exactly one CNAME, and canonicalize only the delimiter as %2F. It must preserve the decoded opaque token and reject duplicate/unknown query keys, plus, malformed escapes, credentials, fragment, non-HTTPS, foreign host, and non-default port.
+
+JRA_STABLE_RACE_ID = PROVEN: jra:race:<exact-accessS-CNAME>.
+JRA_STABLE_HORSE_ID = PROVEN: jra:horse:<exact-accessU-CNAME>.
+JRA_STABLE_ENTRY_ID = PROVEN: jra:race:<exact-accessS-CNAME>:entry:<positive-row-local-horseNo>, only alongside the exact horse profile link.
+Do not decompose, generate, case-fold, or infer opaque CNAMEs. accessD and accessS CNAMEs are not assumed interchangeable.
+
+NAR_JRA_EVENT_TO_JRA_RESULT_RESOLUTION = NOT_PROVEN. c1 discovery records jra:event:{YYYYMMDD}:{NAR-display-place}:{raceNo}; this cannot resolve the accessS CNAME.
+NAR_LINEAGE_TO_JRA_HORSE_ID_LINK = NOT_PROVEN. Horse-name, date/place, and local-ID linkage remain forbidden.
+JRA_HORSE_HISTORY_PAGE = accessU.html?CNAME=<profile-CNAME>; JRA_HORSE_HISTORY_COMPLETENESS = UNPROVEN.
+JRA_DEBATABLE_RECENT_COLUMNS_AS_COMPLETE_HISTORY = FORBIDDEN.
+
+### Field, evidence, and capture blockers
+
+AccessS is the candidate authority for race facts and the matched-row facts. Race name/class require separate official nodes; body weight is not assigned weight; allowance symbols must not be silently removed. Passing order is row-local only. Fourth-corner position is NOT_PROVEN pending labelled race-level corner/component mapping. AccessS has popularity but no exact per-horse win odds; final historical odds must never backfill target pre-race odds.
+
+REFERENCE_TIME_DIFFERENCE_STATUS = FIELD_DOMAIN_CONTRACT_GAP.
+HISTORICAL_PAST_RACE_DOMAIN_CHANGE_REQUIRED = YES.
+AccessS has exact times but only textual 着差. Textual margins such as クビ, ハナ, and fractions must not be converted to Decimal seconds; a time subtraction would be a new provider-neutral semantic whose reference meaning is not proven equivalent to NAR. No JRA past_race implementation is authorized until this domain phase is reviewed.
+
+JRA_PAST_RACE_EVIDENCE_COUNT = AT_LEAST_2_NOT_YET_SOURCE_PROVEN. Since accessS lacks exact per-horse odds and c1a requires odds, a truthful JRA source needs accessS plus an authoritative separate odds response if one exists.
+C1A_EVIDENCE_ROLE_EXTENSION_REQUIRED = YES: existing context/result roles cannot truthfully label a third odds response. This is a blocker, not authorization to change c1a.
+
+JRA_SPECIFIC_SUPPLIED_RESPONSE = REQUIRED. The future value must retain exact bytes, canonical JRA URL, explicit CP932 charset, and supplied observed_at; SHA-256 precedes decoding.
+CAPTURE_ARCHITECTURE_DECISION = JRA_SPECIFIC.
+CAPTURE_DATABASE_DECISION = SEPARATE_JRA_CAPTURE_DATABASE.
+JRA_CAPTURE_REUSE_OF_NAR_DOMAIN = FORBIDDEN.
+JRA_CHARSET_POLICY = EXPLICIT_CP932_ONLY_UNTIL_FUTURE_OFFICIAL_PROBE.
+JRA_CONTENT_ENCODING_POLICY = INITIAL_IDENTITY_ONLY.
+JRA_REDIRECT_POLICY = DISALLOW_UNTIL_SEPARATELY_APPROVED.
+JRA_AVAILABLE_AT_POLICY = None.
+Use requested_at <= observed_at <= stored_at; current live bytes are not evidence for an earlier cutoff.
+JRA_REQUEST_PACING_POLICY = SERIAL_SINGLE_REQUESTS_WITHOUT_RETRY_OR_CONCURRENCY_IN_FIRST_CAPTURE_BOUNDARY. No official numeric limit was found, so none is invented.
+
+JRA_TARGET_ODDS_HISTORICAL_BACKFILL_FROM_FINAL = FORBIDDEN.
+ABILITY_REFERENCE_DATE_STATUS = FUTURE_LEAKAGE_BLOCKER_IN_CURRENT_PERSISTED_COMPOSITION.
+JOCKEY_REFERENCE_DATE_STATUS = FUTURE_LEAKAGE_BLOCKER_IN_CURRENT_PERSISTED_COMPOSITION.
+TIME_DIFFERENCE_TO_PREDICTION_ADAPTER_STATUS = NO_ADAPTER_CONTRACT_GAP.
+
+### Required sequence
+
+1. 4C-2d3b1i6d1a domain compatibility PREPARE: docs/CURRENT_PHASE.md and docs/LATEST_CODEX_REPORT.md only.
+2. 4C-2d3b1i6d1b NAR/JRA opaque identity bridge PREPARE: docs/CURRENT_PHASE.md and docs/LATEST_CODEX_REPORT.md only.
+3. 4C-2d3b1i6d1c JRA capture/archive: scripts/simulation/jra_official_response_capture.py; scripts/simulation/jra_official_response_capture_migration.py; scripts/simulation/jra_official_response_capture_migration_runner.py; scripts/simulation/jra_official_response_live_capture.py; scripts/simulation/repositories/sqlite_jra_official_response_capture_repository.py; tests/test_jra_official_response_capture.py; tests/test_jra_official_response_capture_migration.py; tests/test_jra_official_response_live_capture.py; tests/test_sqlite_jra_official_response_capture_repository.py; and the two docs.
+4. 4C-2d3b1i6d1d JRA result normalizer: scripts/simulation/jra_historical_past_race_source.py; tests/test_jra_historical_past_race_source.py; approved authentic tests/fixtures/jra/ files; and docs.
+5. Only after those approvals may d3b2c2 mixed-history collection be designed.
+
+Status is DRAFT_FOR_REVIEW. Stop for independent architecture review.
