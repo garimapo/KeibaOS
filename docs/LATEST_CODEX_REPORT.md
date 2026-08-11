@@ -3290,3 +3290,54 @@ The proposed responsibility split is: d3b2c1 pure discovery/zero absence normali
 d3b2c2 injected one-race collection; d3b2c3 capture/main-database snapshot composition. The primary review blockers
 are explicit approval of the five-actual-start depth and a provider-complete zero-history/pagination proof. Status is
 `DRAFT_FOR_REVIEW`; no implementation is authorized.
+
+### d3b2c Architecture Review Correction
+
+The collection design no longer proposes a five-race acquisition cap. Inspection of the existing prediction path
+confirms that AbilityEngine evaluates every supplied eligible past race, PaceEngine uses every supplied past race with
+usable corner/passing information, and JockeyEngine uses all eligible matching-jockey races for its rate/confidence
+metrics; only JockeyEngine's recent-score component has a five-race sub-limit. Therefore
+`PAST_RACE_HISTORY_DEPTH = UNRESOLVED`,
+`PAST_RACE_HISTORY_DEPTH_5 = NOT_APPROVED_AS_COLLECTION_ONLY_CHANGE`, and
+`COLLECTOR_MAY_SILENTLY_CHANGE_MODEL_HISTORY_WINDOW = NO`.
+
+The corrected design separates source-acquisition retention from the prediction history-window policy. A later fetch
+cannot causally add omitted old pages to a historical target, so depth is a long-term replay/data-retention decision.
+New d3b2c0 is required to decide all causal actual starts, a deliberate recent-N actual-start window, or a larger
+archive window with a separately configurable prediction window. It must compare model experimentation, network and
+archive volume, cross-collection reuse, JRA support, and causal non-backfill before c1/c2 are implemented.
+
+Historical-event taxonomy is now explicit. A valid NAR RaceMarkTable navigation identifies a NAR actual start; a
+row-local official JRA representation identifies a JRA actual start; a started but nonstandard outcome such as
+`中止`, `失格`, or `降着` is an unsupported actual start and consumes its place; a row-local official `取消`, `除外`,
+or `競走除外` non-start does not consume a window position. c0 must prove those token/result-link semantics from
+official representative structures—labels, jockey affiliation, page-global text, names, and row position alone are
+not enough. NAR/JRA filtering follows actual-start window selection; no unsupported or JRA start may be skipped to
+use older history.
+
+The stronger non-persisted official investigation found each HorseMarkInfo page contains a row-local RaceHorseInfo
+link of the form
+`/KeibaWeb/DataRoom/RaceHorseInfo?k_lineageLoginCode=<lineage>&k_activeCode=1`. Four representative count checks
+matched the HorseMarkInfo row count to RaceHorseInfo `生涯`/`合計`: mixed NAR/JRA high-career `30074407776` 34/34,
+current NAR `30039401296` 14/14, mixed high-career `30036406666` 39/39, and high-career NAR `30038401876` 36/36.
+Each inspected HorseMarkInfo page had one expected table, descending dates, and no visible continuation control.
+The signal is usable as a representative lifetime-count cross-check, but no vetted fewer-than-five or debut/zero-start
+case was available and generic completeness is not proven.
+
+`ZERO_HISTORY_PROOF_AVAILABLE = NO`, `SHORT_HISTORY_COMPLETENESS_PROOF_AVAILABLE = NO`, and
+`PAST_RACE_ABSENCE_IMPLEMENTATION = BLOCKED`. RaceHorseInfo is not silently added: whether it is needed at runtime is
+unresolved. If it is required, the current closed capture vocabulary, page-kind schema/migration, live-capture tests,
+and one-HorseMark absence evidence audit must be separately redesigned; a c1a evidence/schema revision may be needed.
+
+c2's public surface is now exact: `NARHistoricalSourceCollection`, optional narrow
+`NARHistoricalSourceCollectionError`, and `collect_nar_historical_input_source_records`; pacing is a private injected
+collaborator. `PACING_CORE_COLLECTOR = INJECTED`, `PACING_DEFAULT_IMPLEMENTATION = COMPOSITION_OWNED`, and
+`PACING_OFFICIAL_RATE_LIMIT_CLAIM = NONE`. Successful record order is exact: track, then each target horse ascending
+by horse number as entry/jockey/odds-win followed by newest-to-oldest past races or one proven absence. c2 validates
+this completeness before the final provider-neutral source-set validation.
+
+d3b2c3 is narrowed to capture database/live collector composition only. Main database mapping, cutoff policy,
+snapshot building, and snapshot persistence move to later d3b2d. The trusted pre-cutoff capture limitation is recorded
+as operational—not an architecture blocker for live collection. Architecture blockers are the unresolved history
+window, HorseMark completeness for zero/short history, and possible RaceHorseInfo runtime dependency. Status remains
+`DRAFT_FOR_REVIEW`; no implementation is authorized.
