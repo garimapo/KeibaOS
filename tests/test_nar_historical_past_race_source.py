@@ -130,9 +130,9 @@ class NarHistoricalPastRaceSourceTests(unittest.TestCase):
 
     def test_authentic_pair_maps_every_field_and_two_raw_evidence_responses(self) -> None:
         record = _normalize()
-        self.assertEqual(record.schema_version, 3)
+        self.assertEqual(record.schema_version, 4)
         self.assertEqual(validate_historical_input_source_record_set(records=(record,)), (record,))
-        self.assertTrue(record.source_id.startswith("his-v3:past_race:"))
+        self.assertTrue(record.source_id.startswith("his-v4:past_race:"))
         self.assertEqual(record.external_race_id, TARGET_RACE)
         self.assertEqual(record.external_entry_id, TARGET_ENTRY)
         self.assertEqual(record.provider_record_id, "nar:result:20260503:31:1:horse:30074407776")
@@ -141,7 +141,7 @@ class NarHistoricalPastRaceSourceTests(unittest.TestCase):
             {
                 "race_date": date(2026, 5, 3), "place": "高知", "race_name": "Ｃ２－８", "race_class": "Ｃ２",
                 "distance_m": 1400, "track": "ダート", "weather": "雨", "track_condition": "不良", "finish": 9,
-                "reference_time_difference_seconds": Decimal("2.6"), "race_time": "1:32.4", "weight": Decimal("495"),
+                "race_time": "1:32.4", "weight": Decimal("495"),
                 "weight_diff": Decimal("1"), "jockey": "妹尾浩", "popularity": 8, "odds": Decimal("42.5"),
                 "passing_order": "9-9-9-11", "fourth_corner_position": 11,
             },
@@ -208,13 +208,13 @@ class NarHistoricalPastRaceSourceTests(unittest.TestCase):
                 target_entry_record=_entry(), horse_history_response=_responses()[0], race_result_response=object()
             )
 
-    def test_direct_difference_and_racemark_margin_are_separate(self) -> None:
+    def test_direct_difference_is_not_a_v4_factual_key_but_raw_evidence_still_matters(self) -> None:
         normal = _normalize()
-        changed_margin = _normalize(race_body=RACE_BODY.replace(b"1.1/2", b"\xe3\x82\xaf\xe3\x83\x93", 1))
-        self.assertEqual(normal.record_values["reference_time_difference_seconds"], Decimal("2.6"))
-        self.assertEqual(changed_margin.record_values["reference_time_difference_seconds"], Decimal("2.6"))
-        zero = _normalize(horse_body=HORSE_BODY.replace(b">2.6</td>", b">0</td>", 1))
-        self.assertEqual(zero.record_values["reference_time_difference_seconds"], Decimal("0"))
+        changed_difference = _normalize(horse_body=HORSE_BODY.replace(b">2.6</td>", b">0</td>", 1))
+        self.assertNotIn("reference_time_difference_seconds", normal.record_values)
+        self.assertEqual(normal.record_values, changed_difference.record_values)
+        self.assertNotEqual(normal.evidence[0].response_sha256, changed_difference.evidence[0].response_sha256)
+        self.assertNotEqual(normal.source_id, changed_difference.source_id)
 
     def test_weight_jockey_and_result_state_contracts(self) -> None:
         for display, weight, change in ((b"495<span>(1)", Decimal("495"), Decimal("1")), (b"495<span>(-2)", Decimal("495"), Decimal("-2")), (b"495<span>(+3)", Decimal("495"), Decimal("3")), (b"495<span>(0)", Decimal("495"), Decimal("0"))):
@@ -228,8 +228,6 @@ class NarHistoricalPastRaceSourceTests(unittest.TestCase):
                 _normalize(race_body=RACE_BODY.replace(old, new, 1))
         with self.assertRaises(NarHistoricalInputSourceUnsupportedError):
             _normalize(horse_body=HORSE_BODY.replace("Ｃ２</td>".encode(), b"</td>", 1))
-        with self.assertRaises(NarHistoricalInputSourceUnsupportedError):
-            _normalize(horse_body=HORSE_BODY.replace(b">2.6</td>", b"></td>", 1))
 
     def test_corner_labels_are_positional_and_fail_closed(self) -> None:
         four = _normalize(race_body=RACE_BODY.replace(b"9-9-9-11", b"8-8-6-5", 1))
@@ -314,7 +312,7 @@ class NarHistoricalPastRaceSourceTests(unittest.TestCase):
         odds = HistoricalInputSourceRecord(record_kind="odds_win", organization="NAR", source_system="nar_official", external_race_id=TARGET_RACE, external_entry_id=TARGET_ENTRY, provider_record_id=None, record_values={"external_entry_id": TARGET_ENTRY, "horse_no": 7, "win_odds": Decimal("3.5")}, evidence=_evidence("odds_win", "target-odds"))
         snapshot = build_historical_input_snapshot(dataset_id="dataset", internal_race_id=1, captured_at=datetime(2026, 6, 1, tzinfo=timezone.utc), information_cutoff=datetime(2026, 6, 2, tzinfo=timezone.utc), source_records=(track, entry, jockey, odds, past), race_entry_id_by_external_entry_id={TARGET_ENTRY: 99})
         self.assertEqual(snapshot.entries[0].external_entry_identity.external_horse_id, LINEAGE)
-        self.assertEqual((snapshot.past_races[0].race_entry_id, snapshot.past_races[0].reference_time_difference_seconds), (99, Decimal("2.6")))
+        self.assertEqual((snapshot.past_races[0].race_entry_id, snapshot.past_races[0].race_time), (99, "1:32.4"))
         late_horse, race = _responses(horse_observed=datetime(2026, 6, 3, tzinfo=timezone.utc))
         late = normalize_nar_historical_past_race_source_record(target_entry_record=entry, horse_history_response=late_horse, race_result_response=race)
         with self.assertRaises(HistoricalInputSnapshotAssemblyError):

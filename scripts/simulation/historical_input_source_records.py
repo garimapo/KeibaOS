@@ -83,7 +83,6 @@ _RECORD_VALUE_KEYS = {
             "weather",
             "track_condition",
             "finish",
-            "reference_time_difference_seconds",
             "race_time",
             "weight",
             "weight_diff",
@@ -299,11 +298,6 @@ def _validate_past_race_values(values: _Mapping[str, object]) -> dict[str, objec
         "weather": _normalize_required_text(values["weather"], "weather"),
         "track_condition": _normalize_required_text(values["track_condition"], "track_condition"),
         "finish": _require_positive_int(values["finish"], "finish"),
-        "reference_time_difference_seconds": _normalize_decimal(
-            values["reference_time_difference_seconds"],
-            "reference_time_difference_seconds",
-            non_negative=True,
-        ),
         "race_time": _normalize_required_text(values["race_time"], "race_time"),
         "weight": _normalize_decimal(values["weight"], "weight", non_negative=True),
         "weight_diff": _normalize_decimal(values["weight_diff"], "weight_diff"),
@@ -439,12 +433,12 @@ def _source_id_from_payload(*, record_kind: str, payload: dict[str, object]) -> 
         separators=(",", ":"),
         allow_nan=False,
     ).encode("utf-8")
-    return f"his-v3:{record_kind}:{_hashlib.sha256(encoded).hexdigest()}"
+    return f"his-v4:{record_kind}:{_hashlib.sha256(encoded).hexdigest()}"
 
 
 @_dataclass(frozen=True, slots=True)
 class HistoricalInputSourceRecord:
-    schema_version: int = _field(default=3, init=False)
+    schema_version: int = _field(default=4, init=False)
     record_kind: SourceRecordKind
     organization: str
     source_system: str

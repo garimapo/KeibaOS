@@ -8,6 +8,7 @@ from .versions import (
     v010_historical_input_snapshot_schema,
     v011_historical_past_race_time_difference_schema,
     v012_historical_input_evidence_schema,
+    v013_historical_past_race_race_time_domain_schema,
 )
 
 MIGRATIONS = (
@@ -16,6 +17,7 @@ MIGRATIONS = (
     v010_historical_input_snapshot_schema,
     v011_historical_past_race_time_difference_schema,
     v012_historical_input_evidence_schema,
+    v013_historical_past_race_race_time_domain_schema,
 )
 
 def _enable_foreign_keys(connection: sqlite3.Connection) -> None:

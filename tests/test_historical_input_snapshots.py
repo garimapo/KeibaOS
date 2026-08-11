@@ -84,7 +84,6 @@ def _past(*, race_entry_id: int = 10, index: int = 0, passing_order: str = "1-1-
         weather="sunny",
         track_condition="good",
         finish=1,
-        reference_time_difference_seconds=Decimal("0.00"),
         race_time="1:32.0",
         weight=Decimal("480.0"),
         weight_diff=Decimal("0.0"),
@@ -206,7 +205,7 @@ class HistoricalInputSnapshotsTest(unittest.TestCase):
             HistoricalInputSnapshotIdentity: ("dataset_id", "source_identity", "captured_at"),
             HistoricalRaceSnapshot: ("target_race_date", "scheduled_start_at", "place", "distance_m", "track", "track_condition", "race_name", "race_class", "weather"),
             HistoricalRaceEntrySnapshot: ("race_entry_id", "external_entry_identity", "horse_no", "jockey", "win_odds", "entry_order"),
-            HistoricalPastRaceSnapshot: ("race_entry_id", "past_race_index", "race_date", "place", "race_name", "race_class", "distance_m", "track", "weather", "track_condition", "finish", "reference_time_difference_seconds", "race_time", "weight", "weight_diff", "jockey", "popularity", "odds", "passing_order", "fourth_corner_position"),
+            HistoricalPastRaceSnapshot: ("race_entry_id", "past_race_index", "race_date", "place", "race_name", "race_class", "distance_m", "track", "weather", "track_condition", "finish", "race_time", "weight", "weight_diff", "jockey", "popularity", "odds", "passing_order", "fourth_corner_position"),
             HistoricalInputProvenance: ("input_type", "audit_key", "source", "source_id", "race_entry_id", "evidence", "past_race_index"),
             HistoricalInputSnapshot: ("identity", "internal_race_id", "information_cutoff", "race", "entries", "past_races", "provenance", "content_sha256"),
         }
@@ -285,12 +284,12 @@ class HistoricalInputSnapshotsTest(unittest.TestCase):
         self.assertEqual(_entry().win_odds, Decimal("2"))
         past = _past(passing_order="")
         self.assertEqual(past.passing_order, "")
-        self.assertEqual(past.reference_time_difference_seconds, Decimal("0"))
+        self.assertFalse(hasattr(past, "reference_time_difference_seconds"))
         self.assertFalse(hasattr(past, "margin"))
-        for invalid in (0, True, 0.0, Decimal("-0.01"), Decimal("NaN"), Decimal("Infinity"), Decimal("-Infinity")):
-            with self.subTest(reference_time_difference_seconds=invalid):
+        for invalid in ("", 0, True, Decimal("1.0")):
+            with self.subTest(race_time=invalid):
                 with self.assertRaises(ValueError):
-                    replace(past, reference_time_difference_seconds=invalid)
+                    replace(past, race_time=invalid)
         self.assertEqual(past.weight, Decimal("480"))
 
     def test_provenance_has_no_scalar_audit_adapter(self) -> None:
@@ -517,11 +516,11 @@ class HistoricalInputSnapshotsTest(unittest.TestCase):
         self.assertEqual(tuple(payload["race"]), ("target_race_date", "scheduled_start_at", "place", "distance_m", "track", "track_condition", "race_name", "race_class", "weather"))
         self.assertEqual(tuple(payload["entries"][0]), ("race_entry_id", "external_entry_identity", "horse_no", "jockey", "win_odds", "entry_order"))
         self.assertEqual(tuple(payload["entries"][0]["external_entry_identity"]), ("organization", "source_system", "external_race_id", "external_entry_id", "external_horse_id"))
-        self.assertEqual(payload["schema_version"], 3)
-        self.assertEqual(tuple(payload["past_races"][0]), ("race_entry_id", "past_race_index", "race_date", "place", "race_name", "race_class", "distance_m", "track", "weather", "track_condition", "finish", "reference_time_difference_seconds", "race_time", "weight", "weight_diff", "jockey", "popularity", "odds", "passing_order", "fourth_corner_position"))
+        self.assertEqual(payload["schema_version"], 4)
+        self.assertEqual(tuple(payload["past_races"][0]), ("race_entry_id", "past_race_index", "race_date", "place", "race_name", "race_class", "distance_m", "track", "weather", "track_condition", "finish", "race_time", "weight", "weight_diff", "jockey", "popularity", "odds", "passing_order", "fourth_corner_position"))
         self.assertEqual(tuple(payload["provenance"][0]), ("input_type", "audit_key", "source", "source_id", "race_entry_id", "past_race_index", "evidence"))
         self.assertEqual(payload["entries"][0]["win_odds"], "2")
-        self.assertEqual(payload["past_races"][0]["reference_time_difference_seconds"], "0")
+        self.assertEqual(payload["past_races"][0]["race_time"], "1:32.0")
         self.assertEqual(compute_historical_input_snapshot_content_sha256(snapshot=snapshot), snapshot.content_sha256)
         self.assertEqual(snapshot.content_sha256, _snapshot().content_sha256)
         changed_url = _snapshot(source_url="https://changed.test")

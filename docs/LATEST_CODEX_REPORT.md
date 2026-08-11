@@ -3276,3 +3276,47 @@ related and full-suite reruns. Status remains `READY_FOR_REVIEW`.
 Correction verification completed under Python 3.14.5 / pytest 8.3.5: dedicated discovery/absence tests 11 passed;
 related c1a/NAR/capture/snapshot tests 87 passed; full suite 2521 passed. Package-root export and forbidden
 dependency/source/AST checks passed. Status remains `READY_FOR_REVIEW`; stop for independent re-review.
+
+## Phase 4C-2d3b1i6d1a1 Implementation Stop — Out-of-Scope Global Namespace Regressions
+
+Implemented the allowed v4 source/snapshot/migration changes in the uncommitted d1a1 worktree and verified the
+in-scope source/snapshot/builder/NAR suite (52 passed) and SQLite/migration suite (77 passed). The required broader
+source-producer run then found two failures caused solely by hard-coded `his-v3` expectations outside the approved
+Allowed Files:
+
+* `tests/test_nar_historical_input_source.py::NarHistoricalInputSourceTests::test_lineage_change_isolates_factual_payload_but_changes_shared_response_source_ids`
+* `tests/test_nar_historical_past_race_absence_source.py::NARHistoricalPastRaceAbsenceSourceTests::test_zero_fixture_creates_exact_c1a_absence_record`
+
+The d1a1 contract requires every record kind to use `his-v4`, including c1b and past-race-absence records, but the
+authorized list does not permit updating either failed test. Per the phase stop rule, no out-of-scope edit, commit,
+push, full-suite run, or formal integration was performed. The uncommitted allowed-file implementation is preserved
+unchanged pending an explicit scope extension.
+
+Scope extension verification updated only the two authorized stale `his-v3` assertions. Those tests pass (16
+passed), as do the d1a1 source/snapshot/builder/NAR suite (82 passed) and SQLite/migration suite (77 passed). The
+fresh full suite then collected 2523 tests and produced 2522 passed, one failure:
+
+* `tests/test_nar_official_response_capture_migration.py::CaptureMigrationTests::test_runner_creates_exact_dedicated_schema_and_no_global_tables`
+
+Its dedicated NAR capture schema is unaffected; the failure is solely its hard-coded global `MIGRATIONS` tuple
+`(8, 9, 10, 11, 12)`, which now correctly contains v013. That test is outside the authorized 20-file scope. Per the
+stop condition, no change to it, no commit, and no push were made. The complete allowed-file worktree remains
+preserved for an explicit additional scope decision.
+
+## Phase 4C-2d3b1i6d1a1 Provider-Neutral Historical Race-Time Domain Implementation
+
+Implemented the approved global historical source transition on formal base
+`7b4a0f5e28311c2d64685f6d3309f68556e67f8b`. c1a schema version is now 4 and all six record kinds use the `his-v4`
+source-ID namespace. Snapshot canonical payload schema version is 4. `reference_time_difference_seconds` has been
+removed from c1a past-race values, `HistoricalPastRaceSnapshot`, builder mapping, SQLite persistence/reconstruction,
+and the NAR pair normalizer; exact normalized official `race_time` text remains.
+
+Added empty-store-only v013, `v013_historical_past_race_race_time_domain_schema`, which removes
+`reference_time_difference_seconds_text`. It refuses nonempty snapshot stores before schema mutation and preserves
+identity/linkage rows on empty stores. v011/v012 remain unchanged. No legacy prediction adapter, race-time
+calculation, textual-margin conversion, provider acquisition, JRA production work, or reference-date fix was added.
+
+The two approved namespace test extensions now assert `his-v4`; the capture migration extension asserts the global
+registry `(8, 9, 10, 11, 12, 13)` while preserving its dedicated capture-registry isolation checks. Fresh verification
+under Python 3.14.5 / pytest 8.3.5 passed: capture migration 8, core targeted d1a1 suite 82, related suite 93, and
+full suite 2523. Status is `READY_FOR_REVIEW`; stop for independent implementation review.

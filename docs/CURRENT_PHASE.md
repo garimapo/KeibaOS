@@ -6,82 +6,89 @@ READY_FOR_REVIEW
 
 ## Phase and Base
 
-Phase `4C-2d3b1i6c1d3b2c1` — pure NAR HorseMarkInfo complete-history discovery and zero-history absence normalization.
+Phase `4C-2d3b1i6d1a1` — provider-neutral historical race-time domain implementation.
 
-Formal base: `93fad49e7b188e3b4492cc7fe0eb61d36d16b735`.
+Formal base: `7b4a0f5e28311c2d64685f6d3309f68556e67f8b`.
 
-Implementation review branch: `review/4c-2d3b1i6c1d3b2c1-implementation`.
+Implementation review branch: `review/4c-2d3b1i6d1a1-implementation`.
 
-Approved completeness design: `db9329ac6febddabf7f5289f6440250e6cdba5fb`.
+Approved preparation: `bcac7efbc6eb0ff149100225cbc1e6e53910d0cf`.
 
-## Implemented Pure Boundaries
-
-`discover_nar_historical_past_race_history` accepts exactly one validated target track record, target entry record,
-and supplied UTF-8 HorseMarkInfo response. It returns the complete official row order without NAR filtering or a
-5/10/20-race truncation. The target race date comes only from the target track record and every discovered event must
-strictly precede it; the supplied observation must also be no later than the target scheduled start.
-
-The public discovery domain is exactly:
+## Implemented Source Contract
 
 ```text
-NARHistoricalEventKind
-NARHistoricalPastRaceReference
-NARHistoricalPastRaceDiscovery
-NARHistoricalPastRaceDiscoveryError
-NARHistoricalPastRaceDiscoveryValidationError
-NARHistoricalPastRaceDiscoveryUnsupportedError
-discover_nar_historical_past_race_history
+C1A_SCHEMA_VERSION = 4
+SOURCE_ID_NAMESPACE = his-v4
+SNAPSHOT_SCHEMA_VERSION = 4
+GLOBAL_MIGRATION_FINAL_VERSION = 13
+REFERENCE_TIME_DIFFERENCE_SOURCE_FIELD = REMOVED
+RACE_TIME_SOURCE_FIELD = RETAINED_EXACT_TEXT
+HISTORICAL_DOMAIN_DERIVED_VALUES_POLICY = DIRECT_OFFICIAL_SOURCE_FACTS_ONLY
+TIME_DIFFERENCE_TO_PREDICTION_ADAPTER_STATUS = CONTRACT_GAP
 ```
 
-The closed event vocabulary is `NAR_ACTUAL_START`, `JRA_ACTUAL_START`, `PROVEN_NON_START`, and
-`UNSUPPORTED_ACTUAL_START`. NAR rows use `nar:event:{YYYYMMDD}:{babaCode}:{raceNo}` and reconstruct the canonical
-`www.keiba.go.jp` RaceMarkTable URL from the proven row-local identity. Structurally recognized JRA starts remain in
-the complete sequence with a deterministic row-local date/place/R identity and no NAR result URL. The approved
-`取消`/`取止` non-result pattern is retained as `PROVEN_NON_START` with its NAR event identity and audit URL, but it
-is not an actual start and is not a later RaceMark capture candidate. Unknown or unapproved states fail closed.
+All six c1a record kinds now construct source IDs in the exact `his-v4:{record_kind}:{sha256}` namespace. This is
+intentional global source-ID churn; no v3 payload mode, alias, compatibility read, or dual-write exists.
 
-HorseMarkInfo accepts canonical `www.keiba.go.jp` and `www2.keiba.go.jp` inputs while preserving the supplied host
-identity. It requires the exact target lineage, expected document identity, one complete official table or the exact
-zero-history layout (never both), complete parseable rows, unique event IDs, non-increasing official chronology, and
-no continuation, pagination, extra table, or hidden additional history marker.
+`past_race` now contains exactly the retained official factual fields, including required NFC-normalized `race_time`
+text and excluding `reference_time_difference_seconds`. `HistoricalPastRaceSnapshot`, the builder, canonical
+snapshot payload, digest, and SQLite repository likewise contain no comparison field, property alias, default, or
+fallback. Snapshot canonical payload schema version is 4.
 
-The HISTORY_TABLE schema is now fail-closed: its normalized 21-heading tuple must equal the approved fixture order
-exactly. Unknown, duplicate, missing, or reordered headings are rejected. `天候・馬場` is the only span and must be
-exactly `colspan="3"`; no heading may have `rowspan`, and no other heading may have `colspan`. Every history row has
-exactly 23 direct unspanned `td` cells. The stricter schema applies only to the HISTORY_TABLE state; the exact
-no-table zero-history state is unchanged.
+The NAR pair normalizer retains the exact official race-time display (the representative result remains `1:32.4`) and
+unchanged two-response evidence roles, raw-byte SHA-256, and timestamp semantics. HorseMarkInfo direct `差` is no
+longer a factual c1a output key. Changing that raw response bytes still changes evidence SHA and therefore source ID;
+it does not reintroduce a comparison fact.
 
-`normalize_nar_historical_past_race_absence_source_record` accepts the same three inputs and internally reruns
-discovery; it never trusts a caller-provided empty sequence. Only the exact official zero-history layout creates one
-v3 `past_race_absence` record. Its c1a payload is exactly the target entry scope, target race date,
-`strictly_before_target_race=True`, and `result_count=0`; its sole evidence is the exact HorseMarkInfo response body
-SHA-256, canonical supplied URL, `available_at=None`, and supplied `observed_at`.
+## Migration
 
-## Fixture and Scope Decision
+`v013_historical_past_race_race_time_domain_schema` is registered after v012. It removes
+`reference_time_difference_seconds_text` only when `historical_input_snapshots` is empty. A nonempty store raises
+before schema mutation, leaves v013 unapplied, and retains the old column. Identity and linkage rows may remain and
+are preserved. v011 and v012 are unchanged.
 
-Both fixtures are `MINIMIZED_AUTHENTIC_STRUCTURAL_FIXTURE`s: official HorseMarkInfo page/table, result-link,
-JRA-row, and zero-layout semantics were retained. They are parser fixtures only, not trusted historical captures.
-No production network, archive, SQLite, filesystem, clock, JRA result normalization, collection, snapshot building,
-or prediction configuration was added.
+The dedicated NAR capture migration registry and schema remain separate and unchanged. The global registry is exactly
+`(8, 9, 10, 11, 12, 13)`; v013 is not registered in the dedicated capture runner.
 
-`HORSE_MARK_COMPLETE_ACTUAL_START_SOURCE = YES`; `RACE_HORSE_INFO_RUNTIME_REQUIRED = NO`; and
-`PAST_RACE_ABSENCE_PROOF_SOURCE = HORSEMARKINFO_ONLY` remain frozen. JRA result normalization is not implemented,
-and complete mixed-history collection remains blocked until its separate official source support exists.
+## Explicitly Unchanged and Out of Scope
+
+No legacy `PastRace.margin` adapter, AbilityEngine, JockeyEngine, JRA normalizer, JRA capture, prediction feature,
+time subtraction, winner/second comparison, textual-margin conversion, provider acquisition, discovery, absence
+logic, package export, database data, or logs changed.
+
+```text
+ABILITY_REFERENCE_DATE_STATUS = FUTURE_LEAKAGE_BLOCKER_IN_CURRENT_PERSISTED_COMPOSITION
+JOCKEY_REFERENCE_DATE_STATUS = FUTURE_LEAKAGE_BLOCKER_IN_CURRENT_PERSISTED_COMPOSITION
+```
 
 ## Allowed Files
 
 ```text
-scripts/simulation/nar_historical_past_race_discovery.py
-scripts/simulation/nar_historical_past_race_absence_source.py
-tests/test_nar_historical_past_race_discovery.py
+scripts/simulation/historical_input_source_records.py
+scripts/simulation/historical_input_snapshots.py
+scripts/simulation/historical_input_snapshot_builder.py
+scripts/simulation/repositories/sqlite_historical_input_snapshot_repository.py
+scripts/migrations/runner.py
+scripts/migrations/versions/v013_historical_past_race_race_time_domain_schema.py
+scripts/simulation/nar_historical_past_race_source.py
+tests/test_historical_input_source_records.py
+tests/test_historical_input_snapshots.py
+tests/test_historical_input_snapshot_builder.py
+tests/test_sqlite_historical_input_snapshot_repository.py
+tests/test_historical_input_snapshot_migration.py
+tests/test_simulation_migrations.py
+tests/test_simulation_bet_plan_migration.py
+tests/test_sqlite_persisted_simulation_application.py
+tests/test_nar_historical_past_race_source.py
+tests/test_nar_historical_input_source.py
 tests/test_nar_historical_past_race_absence_source.py
-tests/fixtures/nar/horse_mark_info_history_discovery.html
-tests/fixtures/nar/horse_mark_info_zero_history.html
+tests/test_nar_official_response_capture_migration.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-## Stop Condition
+## Verification and Stop Condition
 
-Stop after one review commit and independent implementation review. Do not start JRA historical result normalization,
-d3b2c2 collection, d3b2c3 composition, d3b2d prediction integration, or formal integration.
+Python 3.14.5 / pytest 8.3.5 verification passed: capture migration 8, core d1a1 targeted suite 82, related
+migration/source suite 93, and full suite 2523. Stop for independent implementation review. Do not integrate formal
+or begin d1b.

@@ -14,6 +14,7 @@ from scripts.migrations.versions import (
     v010_historical_input_snapshot_schema,
     v011_historical_past_race_time_difference_schema,
     v012_historical_input_evidence_schema,
+    v013_historical_past_race_race_time_domain_schema,
 )
 
 
@@ -97,10 +98,10 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         connection.execute(
             """INSERT INTO historical_input_snapshot_past_races(
                 snapshot_id, race_entry_id, past_race_index, race_date, place, race_name, race_class,
-                distance_m, track, weather, track_condition, finish, reference_time_difference_seconds_text, race_time, weight_text,
+                distance_m, track, weather, track_condition, finish, race_time, weight_text,
                 weight_diff_text, jockey, popularity, odds_text, passing_order, fourth_corner_position
-            ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (snapshot_id, race_entry_id, index, "2026-08-04", "Tokyo", "Prior", "Open", 1600, "turf", "sunny", "good", finish, "0", "1:32.0", "480", "0", "Jockey", 0, "2", passing_order, 0),
+            ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (snapshot_id, race_entry_id, index, "2026-08-04", "Tokyo", "Prior", "Open", 1600, "turf", "sunny", "good", finish, "1:32.0", "480", "0", "Jockey", 0, "2", passing_order, 0),
         )
 
     def provenance(self, connection: sqlite3.Connection, *, input_type: str, audit_key: str, race_entry_id: int | None, past_race_index: int | None = None) -> None:
@@ -128,10 +129,12 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         self.assertEqual(v011_historical_past_race_time_difference_schema.NAME, "v011_historical_past_race_time_difference_schema")
         self.assertEqual(v012_historical_input_evidence_schema.VERSION, 12)
         self.assertEqual(v012_historical_input_evidence_schema.NAME, "v012_historical_input_evidence_schema")
-        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS), (8, 9, 10, 11, 12))
+        self.assertEqual(v013_historical_past_race_race_time_domain_schema.VERSION, 13)
+        self.assertEqual(v013_historical_past_race_race_time_domain_schema.NAME, "v013_historical_past_race_race_time_domain_schema")
+        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS), (8, 9, 10, 11, 12, 13))
         self.assertEqual(
             get_applied_versions(connection),
-            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema"},
+            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema"},
         )
         self.assertEqual(
             {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'historical_input_%'")},
@@ -155,7 +158,7 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         apply_migrations(connection)
         self.assertEqual(
             connection.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall(),
-            [(8,), (9,), (10,), (11,), (12,)],
+            [(8,), (9,), (10,), (11,), (12,), (13,)],
         )
         self.assertEqual(connection.execute("SELECT count(*) FROM historical_input_snapshots").fetchone()[0], 0)
         for table in HISTORICAL_TABLES:
@@ -257,14 +260,14 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         types = {row[1]: row[2] for row in connection.execute("PRAGMA table_info(historical_input_snapshot_entries)")}
         self.assertEqual(types["win_odds_text"], "TEXT")
         past_types = {row[1]: row[2] for row in connection.execute("PRAGMA table_info(historical_input_snapshot_past_races)")}
-        self.assertEqual({past_types[name] for name in ("reference_time_difference_seconds_text", "weight_text", "weight_diff_text", "odds_text")}, {"TEXT"})
+        self.assertEqual({past_types[name] for name in ("weight_text", "weight_diff_text", "odds_text")}, {"TEXT"})
+        self.assertNotIn("reference_time_difference_seconds_text", past_types)
 
     def test_v011_keeps_identity_linkage_rows_when_snapshot_store_is_empty(self) -> None:
         connection = self.db()
-        apply_migrations(connection, MIGRATIONS[:-1])
+        apply_migrations(connection, MIGRATIONS[:4])
         self.source_and_external_mapping(connection)
         connection.commit()
-        apply_migrations(connection)
         columns = {row[1] for row in connection.execute("PRAGMA table_info(historical_input_snapshot_past_races)")}
         self.assertNotIn("margin_text", columns)
         self.assertIn("reference_time_difference_seconds_text", columns)
@@ -276,7 +279,7 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
 
     def test_v012_rejects_nonempty_snapshot_store_atomically(self) -> None:
         connection = self.db()
-        apply_migrations(connection, MIGRATIONS[:-1])
+        apply_migrations(connection, MIGRATIONS[:4])
         self.source_and_external_mapping(connection)
         self.header(connection)
         connection.commit()
@@ -295,6 +298,36 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         self.assertNotIn("historical_input_snapshot_provenance_evidence", tables)
         self.assertNotIn("historical_input_snapshot_provenance_v2", tables)
+        self.assertFalse(connection.in_transaction)
+
+    def test_v013_removes_obsolete_column_from_empty_store_and_preserves_linkage(self) -> None:
+        connection = self.db()
+        apply_migrations(connection, MIGRATIONS[:5])
+        self.source_and_external_mapping(connection)
+        connection.commit()
+        before = {row[1] for row in connection.execute("PRAGMA table_info(historical_input_snapshot_past_races)")}
+        self.assertIn("reference_time_difference_seconds_text", before)
+        apply_migrations(connection)
+        after = {row[1] for row in connection.execute("PRAGMA table_info(historical_input_snapshot_past_races)")}
+        self.assertNotIn("reference_time_difference_seconds_text", after)
+        self.assertEqual(get_applied_versions(connection)[13], "v013_historical_past_race_race_time_domain_schema")
+        self.assertEqual(connection.execute("SELECT COUNT(*) FROM historical_input_snapshots").fetchone()[0], 0)
+        self.assertEqual(connection.execute("SELECT COUNT(*) FROM historical_input_source_identities").fetchone()[0], 1)
+        self.assertEqual(connection.execute("SELECT COUNT(*) FROM historical_input_external_races").fetchone()[0], 1)
+        self.assertEqual(connection.execute("SELECT COUNT(*) FROM historical_input_external_entries").fetchone()[0], 1)
+
+    def test_v013_rejects_nonempty_snapshot_store_before_schema_mutation(self) -> None:
+        connection = self.db()
+        apply_migrations(connection, MIGRATIONS[:5])
+        self.source_and_external_mapping(connection)
+        self.header(connection)
+        connection.commit()
+        with self.assertRaisesRegex(RuntimeError, "nonempty historical input snapshot store"):
+            apply_migrations(connection)
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(historical_input_snapshot_past_races)")}
+        self.assertIn("reference_time_difference_seconds_text", columns)
+        self.assertNotIn(13, get_applied_versions(connection))
+        self.assertEqual(connection.execute("SELECT COUNT(*) FROM historical_input_snapshots").fetchone()[0], 1)
         self.assertFalse(connection.in_transaction)
 
     def test_date_datetime_and_nonempty_text_checks_do_not_trim(self) -> None:
