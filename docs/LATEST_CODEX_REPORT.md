@@ -3234,3 +3234,50 @@ past-race, and provenance tuple orders. Status remains `DRAFT_FOR_REVIEW`; imple
 
 blocker: c1b supplies no past-race or past-race-absence evidence, so no complete HistoricalInputSnapshot can yet be
 assembled from its DebaTable-only output.
+
+## Phase 4C-2d3b1i6c1d3b2c0 Historical Prediction/Source Window Contract Preparation
+
+This docs-only design resolves the provider-neutral policy boundary: source acquisition is
+`ALL_CAUSALLY_AVAILABLE_ACTUAL_PRIOR_STARTS`; prediction history is separately configurable; the initial prediction
+default is `ALL_AVAILABLE`; and an immutable historical snapshot stores all acquired causally eligible history. This
+keeps source data identity separate from model configuration: the same snapshot may be evaluated using all, recent 5,
+recent 10, recent 20, time-bounded, or future selection policies, while a changed selection affects deterministic
+model/run configuration identity rather than snapshot content SHA.
+
+The decision follows repository behavior, not JockeyEngine convenience. AbilityEngine and PaceEngine use every
+supplied eligible/useful past race. JockeyEngine's win/quinella/show rates and confidence use all eligible matching
+jockey races; only its `recent_score` uses five. A five-start acquisition cap would make old prediction corpora
+irreversibly shallow: any subsequently captured older page has an observation time later than the old cutoff and is
+causally unusable. All-history collection costs more requests/archive storage and exposes JRA/unsupported starts, but
+preserves later strategy research.
+
+Actual-start identity precedes provider filtering across organizations. NAR and JRA actual starts, unsupported started
+outcomes, and proven non-start/cancelled entries are distinct. Non-starts do not consume the start sequence; JRA and
+other unsupported actual starts do consume it and cannot be skipped for older NAR history. A mixed NAR/JRA horse
+cannot yield a complete all-history NAR-only source set until JRA capture/normalization exists; placeholder records and
+partial returns are forbidden.
+
+The parent HorseMarkInfo/RaceHorseInfo investigation remains promising but incomplete. Four representative history
+counts matched RaceHorseInfo lifetime totals (34/34, 14/14, 39/39, 36/36); inspected pages had one expected table,
+descending dates, and no visible continuation control. That is a representative cross-check, not universal proof for
+zero/short histories. `HORSE_MARK_COMPLETE_ACTUAL_START_SOURCE = UNRESOLVED`; zero/short proof and absence
+normalization remain blocked. RaceHorseInfo is not added to production: if it becomes a runtime proof, its trusted
+capture vocabulary, archive schema/migration, live-capture tests, and c1a absence evidence must be separately
+reviewed.
+
+For 12 entries, illustrative no-sharing request bounds are 73 at five starts each, 133 at ten, and 253 at twenty:
+one DebaTable plus twelve HorseMarkInfo pages plus RaceMarkTable pages. Actual all-history volume varies by career
+length and shared RaceMarkTable identities. Initial cross-collection reuse remains deferred; HorseMarkInfo is mutable,
+so fresh capture is preferred, and RaceMark reuse cannot assume provider immutability.
+
+Two downstream design gaps were found. AbilityEngine and JockeyEngine default `reference_date` to `date.today()`;
+the existing persisted simulation application injects its document date only into TrackEngine, so historical
+Ability/Jockey composition has a future-leakage blocker. Separately, HistoricalInputSnapshot stores Decimal
+`reference_time_difference_seconds`, while the existing PastRaceInput/AbilityEngine path requires legacy float
+`margin`; no adapter exists and time difference must not be silently converted to margin. Neither is changed here.
+
+The updated roadmap is: settle HorseMarkInfo completeness (or separately extend RaceHorseInfo capture/evidence), pure
+complete actual-start discovery, JRA historical support before mixed all-history collection, the injected NAR
+collector, capture composition, then a main-identity/snapshot-to-prediction phase that designs deterministic date
+injection, model window configuration identity, and any time-difference adapter. Status is `DRAFT_FOR_REVIEW`; no
+production code, tests, fixtures, captures, database, or migration changed.
