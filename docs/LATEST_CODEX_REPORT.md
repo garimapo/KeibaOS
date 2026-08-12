@@ -3387,3 +3387,21 @@ The validator still fails closed without registry/table repair or adoption. The 
 stops at the final approved review tip rather than prescribing an obsolete one-review-commit count. Fresh migration
 verification passed 7 tests; the remaining dedicated, related, static, and full-suite checks are required before
 publication.
+
+## Phase 4C-2d3b1i6d1c2 JRA Trusted Live HTTPS Capture Implementation
+
+Implemented the approved live JRA acquisition boundary on formal base
+`93da236d319f686fd06842b46404b780e73dff72`. The new service accepts only a caller-declared supported page kind and
+an already-resolved official accessS/accessU URL, canonicalizes the URL before any clock, network, or archive action,
+then captures one complete raw HTTP entity and archives the immutable c1 value before returning it.
+
+The private requests transport disables redirects, requires TLS verification, uses ten-second connect/read timeouts,
+sets `Accept-Encoding: identity`, and configures no automatic retries. It accepts only 200 responses and absent or
+identity Content-Encoding; it rejects noncanonical Content-Length, mismatched/oversized bodies, unsupported coding,
+effective-URL disagreement, and incomplete transport failures while always closing the response. Raw streaming has
+content decoding disabled and no text, CP932, UTF-8, or normalization round-trip occurs in the live layer. c1 remains
+the sole owner of strict CP932 validation, raw SHA, and immutable capture identity.
+
+The live service owns no pacing, discovery, field parsing, source normalization, database path, global migration,
+NAR behavior, or NAR-to-JRA bridge. Status is `READY_FOR_REVIEW`; no formal integration, JRA result normalizer, race
+history discovery, or bridge work has begun.
