@@ -6,89 +6,92 @@ READY_FOR_REVIEW
 
 ## Phase and Base
 
-Phase `4C-2d3b1i6d1a1` — provider-neutral historical race-time domain implementation.
+Phase `4C-2d3b1i6d1b3` — pure JRA official race/horse identity implementation.
 
-Formal base: `7b4a0f5e28311c2d64685f6d3309f68556e67f8b`.
+Formal base: `04c0fbcad2ea13b2e325e795e6de022718edb01a`.
 
-Implementation review branch: `review/4c-2d3b1i6d1a1-implementation`.
+Implementation review branch: `review/4c-2d3b1i6d1b3-implementation`.
 
-Approved preparation: `bcac7efbc6eb0ff149100225cbc1e6e53910d0cf`.
+Approved race-identity design: `9802d37cb443c6990cacef6c4cb5650273e145b1`.
 
-## Implemented Source Contract
+Approved bridge design: `dd87ffabd831fd9cfcf483260bce23b596511145`.
+
+## Implemented Pure Identity Contract
 
 ```text
-C1A_SCHEMA_VERSION = 4
-SOURCE_ID_NAMESPACE = his-v4
-SNAPSHOT_SCHEMA_VERSION = 4
-GLOBAL_MIGRATION_FINAL_VERSION = 13
-REFERENCE_TIME_DIFFERENCE_SOURCE_FIELD = REMOVED
-RACE_TIME_SOURCE_FIELD = RETAINED_EXACT_TEXT
-HISTORICAL_DOMAIN_DERIVED_VALUES_POLICY = DIRECT_OFFICIAL_SOURCE_FACTS_ONLY
-TIME_DIFFERENCE_TO_PREDICTION_ADAPTER_STATUS = CONTRACT_GAP
+JRA_IDENTITY_MODULE = IMPLEMENTED_FOR_REVIEW
+JRA_RACE_NATIVE_KEY_STATUS = PROVEN
+JRA_RACE_NATIVE_KEY_GRAMMAR = [0-9]{4}:(?:0[1-9]|10):(?:0[1-9]|[1-9][0-9]):(?:0[1-9]|1[0-2]):(?:0[1-9]|1[0-2])
+JRA_STABLE_RACE_ID = IMPLEMENTED
+JRA_STABLE_HORSE_ID = IMPLEMENTED
+JRA_STABLE_ENTRY_ID = IMPLEMENTED
+JRA_PROVIDER_RECORD_ID = IMPLEMENTED
+ACCESS_S_ALIAS_COLLAPSE = PASS
+ACCESS_U_ALIAS_COLLAPSE = PASS
+PHYSICAL_RACE_EXISTENCE = SEPARATE_OFFICIAL_PAGE_VALIDATION
 ```
 
-All six c1a record kinds now construct source IDs in the exact `his-v4:{record_kind}:{sha256}` namespace. This is
-intentional global source-ID churn; no v3 payload mode, alias, compatibility read, or dual-write exists.
+`scripts/simulation/jra_official_identity.py` defines exactly the approved public API:
 
-`past_race` now contains exactly the retained official factual fields, including required NFC-normalized `race_time`
-text and excluding `reference_time_difference_seconds`. `HistoricalPastRaceSnapshot`, the builder, canonical
-snapshot payload, digest, and SQLite repository likewise contain no comparison field, property alias, default, or
-fallback. Snapshot canonical payload schema version is 4.
+```text
+JRAOfficialIdentityError
+JRAOfficialIdentityValidationError
+JRAExternalRaceIdentity
+JRAExternalHorseIdentity
+parse_jra_external_race_id
+parse_jra_external_horse_id
+parse_jra_result_url_identity
+parse_jra_horse_profile_url_identity
+build_jra_external_entry_id
+build_jra_provider_record_id
+```
 
-The NAR pair normalizer retains the exact official race-time display (the representative result remains `1:32.4`) and
-unchanged two-response evidence roles, raw-byte SHA-256, and timestamp semantics. HorseMarkInfo direct `差` is no
-longer a factual c1a output key. Changing that raw response bytes still changes evidence SHA and therefore source ID;
-it does not reintroduce a comparison fact.
+The frozen/slotted race identity retains five canonical lexical strings: JRA racing year, venue code, meeting
+number, meeting day, and race number. It emits only `jra:race:<YYYY>:<VV>:<MM>:<DD>:<RR>`. Venue codes are
+`01` through `10`; meeting numbers use positive two-digit lexical syntax without claiming a provider-wide upper
+bound; meeting days and race numbers are exactly `01` through `12`. No integer conversion, Unicode digits, signs,
+whitespace, aliases, or zero-padding repair exists.
 
-## Migration
+The horse identity retains only the ten-ASCII-digit accessU profile key and emits `jra:horse:<key>`. The entry ID is
+race-local, `<external_race_id>:entry:<positive canonical horse_no>`, and intentionally does not contain a horse
+profile key. The result ID is `jra:result:<YYYY>:<VV>:<MM>:<DD>:<RR>:horse:<key>`.
 
-`v013_historical_past_race_race_time_domain_schema` is registered after v012. It removes
-`reference_time_difference_seconds_text` only when `historical_input_snapshots` is empty. A nonempty store raises
-before schema mutation, leaves v013 unapplied, and retains the old column. Identity and linkage rows may remain and
-are preserved. v011 and v012 are unchanged.
+## Official URL Boundary
 
-The dedicated NAR capture migration registry and schema remain separate and unchanged. The global registry is exactly
-`(8, 9, 10, 11, 12, 13)`; v013 is not registered in the dedicated capture runner.
+The accessS parser accepts only resolved HTTPS `www.jra.go.jp/JRADB/accessS.html` URLs with one `CNAME`, exact
+observed `pw01sde01` or `pw01sde10` selector families, a validated five-token race segment, a valid calendar-date
+token whose year agrees with the native race year, and an opaque uppercase `[0-9A-F]{2}` tail. Raw `/` and one
+uppercase `%2F` spelling are accepted; `%252F`, lowercase encoding, `+`, unknown/duplicate parameters, ports,
+credentials, fragments, noncanonical hosts, malformed percent encoding, and unobserved selector/tail forms fail
+closed. Selector, calendar date, and tail never enter `external_race_id`.
+
+The accessU parser has the matching strict resolved URL boundary, accepting only observed `pw01dud00` or
+`pw01dud10` CNAME selector families, a ten-digit profile key, and opaque uppercase two-hex tail. Context/tail
+aliases for the same key collapse to equal horse identities. The implementation never performs network access or
+assumes that a lexically valid race identity proves a race exists.
 
 ## Explicitly Unchanged and Out of Scope
 
-No legacy `PastRace.margin` adapter, AbilityEngine, JockeyEngine, JRA normalizer, JRA capture, prediction feature,
-time subtraction, winner/second comparison, textual-margin conversion, provider acquisition, discovery, absence
-logic, package export, database data, or logs changed.
-
 ```text
-ABILITY_REFERENCE_DATE_STATUS = FUTURE_LEAKAGE_BLOCKER_IN_CURRENT_PERSISTED_COMPOSITION
-JOCKEY_REFERENCE_DATE_STATUS = FUTURE_LEAKAGE_BLOCKER_IN_CURRENT_PERSISTED_COMPOSITION
+NAR_LINEAGE_TO_JRA_HORSE_ID_LINK = NOT_PROVEN
+MIXED_HISTORY_COLLECTION_READY = NO
 ```
+
+There is no NAR code, cross-provider bridge, horse-name fallback, provider capture, race discovery, HTML parsing,
+historical normalization, SQLite access, clock, or package-root export. The b2 conclusion remains binding: pure JRA
+identity work does not attach an NAR horse to a JRA result row.
 
 ## Allowed Files
 
 ```text
-scripts/simulation/historical_input_source_records.py
-scripts/simulation/historical_input_snapshots.py
-scripts/simulation/historical_input_snapshot_builder.py
-scripts/simulation/repositories/sqlite_historical_input_snapshot_repository.py
-scripts/migrations/runner.py
-scripts/migrations/versions/v013_historical_past_race_race_time_domain_schema.py
-scripts/simulation/nar_historical_past_race_source.py
-tests/test_historical_input_source_records.py
-tests/test_historical_input_snapshots.py
-tests/test_historical_input_snapshot_builder.py
-tests/test_sqlite_historical_input_snapshot_repository.py
-tests/test_historical_input_snapshot_migration.py
-tests/test_simulation_migrations.py
-tests/test_simulation_bet_plan_migration.py
-tests/test_sqlite_persisted_simulation_application.py
-tests/test_nar_historical_past_race_source.py
-tests/test_nar_historical_input_source.py
-tests/test_nar_historical_past_race_absence_source.py
-tests/test_nar_official_response_capture_migration.py
+scripts/simulation/jra_official_identity.py
+tests/test_jra_official_identity.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
 ## Verification and Stop Condition
 
-Python 3.14.5 / pytest 8.3.5 verification passed: capture migration 8, core d1a1 targeted suite 82, related
-migration/source suite 93, and full suite 2523. Stop for independent implementation review. Do not integrate formal
-or begin d1b.
+Dedicated, related, full-suite, static, package-export, and diff checks are required before review publication.
+Stop for independent implementation review after the one review commit; do not integrate formal or begin capture,
+bridge, discovery, or a JRA normalizer.

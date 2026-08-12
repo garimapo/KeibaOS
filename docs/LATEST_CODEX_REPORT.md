@@ -3320,3 +3320,23 @@ The two approved namespace test extensions now assert `his-v4`; the capture migr
 registry `(8, 9, 10, 11, 12, 13)` while preserving its dedicated capture-registry isolation checks. Fresh verification
 under Python 3.14.5 / pytest 8.3.5 passed: capture migration 8, core targeted d1a1 suite 82, related suite 93, and
 full suite 2523. Status is `READY_FOR_REVIEW`; stop for independent implementation review.
+
+## Phase 4C-2d3b1i6d1b3 Pure JRA Official Race/Horse Identity Implementation
+
+Implemented the pure supplied-string JRA identity domain on formal base `04c0fbcad2ea13b2e325e795e6de022718edb01a`.
+The new module owns only strict race, horse, entry, and result identity construction plus resolved accessS/accessU
+URL validation. It uses the b1 native key grammar exactly and preserves canonical lexical tokens without integer
+normalization. `jra:race:<YYYY>:<VV>:<MM>:<DD>:<RR>`, `jra:horse:<10-digit-key>`, race-local entry IDs, and
+`jra:result:<...>:horse:<key>` are the only output spellings.
+
+Officially observed accessS aliases with selectors `01` and `10`, raw or `%2F` CNAME separators, and distinct
+opaque tails collapse to the same JRA race identity. The accessU `00` and `10` selector forms likewise collapse to
+the same ten-digit horse identity. All inputs are fail-closed: non-JRA hosts, ports, credentials, fragments,
+duplicate/unknown query keys, ambiguous encoding, unobserved selector families, lowercase/non-hex tails, invalid
+token domains, and malformed types are rejected. The calendar CNAME date is validated only as date material and
+year consistency; it never becomes entity identity or a reconstructed meeting date.
+
+No network, capture, storage, clock, HTML parser, provider lookup, bridge, race discovery, normalizer, NAR code,
+or package-root export was added. The b2 blocker remains exact: `NAR_LINEAGE_TO_JRA_HORSE_ID_LINK = NOT_PROVEN`;
+mixed-history collection remains unsupported. Status is `READY_FOR_REVIEW` pending independent implementation
+review.
