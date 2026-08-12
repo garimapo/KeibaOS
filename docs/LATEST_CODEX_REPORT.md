@@ -3430,3 +3430,24 @@ passed 43 tests; the related source/snapshot/builder/NAR suite passed 67 tests; 
 Package-root export, forbidden dependency/source/AST, migration/global-version unchanged, repository unchanged, NAR
 production unchanged, and `git diff --check` checks all passed. Status is `READY_FOR_REVIEW`; stop for independent
 implementation review.
+
+## Phase 4C-2d3b1i6d1d4 JRA Final-Win-Odds Trusted Capture PREPARE
+
+Official JRA investigation proves that completed-race final odds are reached from accessS navigation by POST, not by
+GET: the official `doAction` helper fills the `commForm01` hidden lower-case `cname` field and submits
+`application/x-www-form-urlencoded` to `https://www.jra.go.jp/JRADB/accessO.html`. The observed accessO CNAME
+`pw151ou1006202601021220260105Z/2E` returned a server-rendered strict-CP932 final-odds page with 200/no redirect,
+the same effective endpoint URL, visible race identity, and `table.tanpuku` horse-number and direct single-win-odds
+cells. A direct request did not require a cookie, session, or referrer in the observed flow.
+
+The selected JRA-specific design is a validated immutable POST request locator containing the exact endpoint, POST
+method, `cname` field, and official CNAME navigation value. It must never synthesize CNAME from race identity. The
+future archive would require v002 request-method/CNAME columns and a v2 capture-ID namespace while retaining every
+v001 ID, body, GET row, accessS/accessU API, NAR behavior, global migration version 13, and d1d3 evidence-role
+contract unchanged.
+
+However, the current provider-neutral evidence tuple carries only `canonical_source_url`. An accessO GET query URL
+would be false, while the actual POST endpoint alone cannot distinguish different form requests. The exact outcome is
+`PROVIDER_NEUTRAL_EVIDENCE_LOCATOR_BLOCKER`; no JRA v002, archive, live POST, capture, normalizer, bridge, or
+migration implementation is authorized. The recommended next work is a separate provider-neutral request-aware
+evidence-locator PREPARE before returning to JRA final-odds capture.
