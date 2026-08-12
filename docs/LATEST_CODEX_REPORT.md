@@ -3405,3 +3405,52 @@ the sole owner of strict CP932 validation, raw SHA, and immutable capture identi
 The live service owns no pacing, discovery, field parsing, source normalization, database path, global migration,
 NAR behavior, or NAR-to-JRA bridge. Status is `READY_FOR_REVIEW`; no formal integration, JRA result normalizer, race
 history discovery, or bridge work has begun.
+
+## Phase 4C-2d3b1i6d1d JRA Historical Result Normalizer PREPARE
+
+Status: `DRAFT_FOR_REVIEW` on review branch `review/4c-2d3b1i6d1d-prepare`, based exactly on formal
+`0135cee4ad8e578e6bd20940b16198a576172c04`.
+
+This investigation selects the future pure supplied-response boundary
+`normalize_jra_historical_past_race_source_record(*, target_track_record, target_entry_record,
+race_result_response)`.  The target track record is required because the canonical JRA race identity has no calendar
+date: its validated `record_values["target_race_date"]` is the authoritative target chronology input.  The target
+entry provides the target external race/entry and canonical `jra:horse:<10 digits>` identity; no free identity/date,
+horse name, trainer, jockey, historical horse number, local ID, archive lookup, HTTP, filesystem, database, or clock
+input is permitted.  The entry ID is reconstructed from the parsed target race identity and its committed `horse_no`
+to prove internal target-entry coherence.
+
+The supplied exact `JRASuppliedOfficialResponse` accessS URL is first validated through public
+`parse_jra_result_url_identity`.  A narrow parser may then extract only the already-validated CNAME calendar date;
+no JRA identity API change is required.  It must be strictly earlier than the target-track date.  Official visible
+accessS identity is independently cross-checked through one race header: date, Japanese venue against the frozen
+01=札幌/02=函館/03=福島/04=新潟/05=東京/06=中山/07=中京/08=京都/09=阪神/10=小倉 mapping, meeting number,
+meeting day, and race number all agree with CNAME identity.
+
+Historical horse selection is lineage-equivalent JRA stable identity only: exactly one row-local `td.horse a[href]`,
+resolved against accessS and parsed by public `parse_jra_horse_profile_url_identity`, must equal the target entry's
+canonical accessU horse identity.  The output remains target-entry scoped and uses
+`build_jra_provider_record_id(historical_access_s_identity, matched_access_u_identity)`.
+
+c1a v4 permits the required `historical_race_context` and `historical_race_result` roles to bind the same underlying
+accessS response when canonical URL/raw SHA/available-at/observed-at agree.  The future normalizer therefore uses the
+same canonical accessS URL and exact raw CP932-body SHA-256 for both roles, keeps `available_at=None`, and preserves
+the supplied observation unchanged.  Raw bytes change source identity; timestamps alone do not.  Snapshot assembly
+remains the sole causality owner.
+
+Official accessS structural investigation established direct authorities for race/header facts, matched-row finish,
+time, body weight/change, jockey, popularity, and row-local corner positions.  It supports label-based 4th-corner
+mapping from each `li` title rather than a fixed or final component: observed ordinary layouts include `[1,2,3,4]`
+and `[3,4]`.  Obstacle and special/mixed layouts, nonnumeric results, cancellations, missing class/time/body-weight
+change/popularity, and ambiguous corners remain fail-closed unsupported states.  `着差` is never converted into a
+time value, `負担重量` is never body weight, and `単勝人気` is never odds.
+
+The decisive prerequisite is that the official accessS result table exposes `単勝人気` but no horse-level historical
+single-win odds.  The frozen c1a `past_race` payload requires Decimal `odds`; popularity, payout, a present-day odds
+page, a derivative, or an estimate cannot fill it.  Thus `ACCESS_S_ONLY_JRA_PAST_RACE_NORMALIZER = BLOCKED` and no
+normalizer implementation may begin.  The recommended next phase is
+`4C-2d3b1i6d1d1 — JRA historical odds evidence/domain PREPARE`, to resolve authoritative immutable historical odds
+and any necessary evidence-role architecture before a JRA result normalizer is authorized.
+
+`NAR_LINEAGE_TO_JRA_HORSE_ID_LINK = NOT_PROVEN` and `MIXED_HISTORY_COLLECTION_READY = NO` remain unchanged.  No
+production code, tests, fixtures, capture/archive code, migration, database, or NAR files changed in this PREPARE.
