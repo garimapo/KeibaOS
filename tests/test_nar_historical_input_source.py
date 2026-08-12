@@ -401,8 +401,8 @@ class NarHistoricalInputSourceTests(unittest.TestCase):
             },
             set(baseline_by_key),
         )
-        self.assertTrue(all(record.source_id.startswith(f"his-v3:{record.record_kind}:") for record in baseline))
-        self.assertTrue(all(record.source_id.startswith(f"his-v3:{record.record_kind}:") for record in changed))
+        self.assertTrue(all(record.source_id.startswith(f"his-v4:{record.record_kind}:") for record in baseline))
+        self.assertTrue(all(record.source_id.startswith(f"his-v4:{record.record_kind}:") for record in changed))
 
     def test_horse_anchor_href_contract_fails_closed_and_keeps_lexical_tokens(self) -> None:
         default_href = "../DataRoom/HorseMarkInfo?k_lineageLoginCode=30000000001"

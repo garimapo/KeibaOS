@@ -296,9 +296,6 @@ def build_historical_input_snapshot(
                         weather=values["weather"],
                         track_condition=values["track_condition"],
                         finish=values["finish"],
-                        reference_time_difference_seconds=values[
-                            "reference_time_difference_seconds"
-                        ],
                         race_time=values["race_time"],
                         weight=values["weight"],
                         weight_diff=values["weight_diff"],

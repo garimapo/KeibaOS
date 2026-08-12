@@ -214,7 +214,6 @@ class HistoricalPastRaceSnapshot:
     weather: str
     track_condition: str
     finish: int
-    reference_time_difference_seconds: _Decimal
     race_time: str
     weight: _Decimal
     weight_diff: _Decimal
@@ -233,15 +232,6 @@ class HistoricalPastRaceSnapshot:
         object.__setattr__(self, "passing_order", _normalize_text_allow_empty(self.passing_order, "passing_order"))
         object.__setattr__(self, "distance_m", _positive_int(self.distance_m, "distance_m"))
         object.__setattr__(self, "finish", _positive_int(self.finish, "finish"))
-        object.__setattr__(
-            self,
-            "reference_time_difference_seconds",
-            _normalize_decimal(
-                self.reference_time_difference_seconds,
-                "reference_time_difference_seconds",
-                non_negative=True,
-            ),
-        )
         object.__setattr__(self, "weight", _normalize_decimal(self.weight, "weight", non_negative=True))
         object.__setattr__(self, "weight_diff", _normalize_decimal(self.weight_diff, "weight_diff"))
         object.__setattr__(self, "popularity", _non_negative_int(self.popularity, "popularity"))
@@ -398,7 +388,7 @@ def _build_unchecked_historical_input_snapshot_content_payload(
 ) -> dict[str, object]:
     source = snapshot.identity.source_identity
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "snapshot_identity": {
             "dataset_id": snapshot.identity.dataset_id,
             "organization": source.organization,
@@ -455,9 +445,6 @@ def _build_unchecked_historical_input_snapshot_content_payload(
                 "weather": item.weather,
                 "track_condition": item.track_condition,
                 "finish": item.finish,
-                "reference_time_difference_seconds": _format_decimal(
-                    item.reference_time_difference_seconds
-                ),
                 "race_time": item.race_time,
                 "weight": _format_decimal(item.weight),
                 "weight_diff": _format_decimal(item.weight_diff),

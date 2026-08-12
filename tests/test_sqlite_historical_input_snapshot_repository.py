@@ -104,7 +104,7 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
             past_races = (
                 HistoricalPastRaceSnapshot(
                     entry_id, 0, date(2026, 8, 4), "Tokyo", "Prior", "Open", 1400, "dirt", "cloudy",
-                    "good", 1, Decimal("0.00"), "1:22.2", Decimal("480.0"), Decimal("-2.0"),
+                    "good", 1, "1:22.2", Decimal("480.0"), Decimal("-2.0"),
                     "Jockey", 0, Decimal("3.40"), "", 0,
                 ),
             )
@@ -210,11 +210,11 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
         self.assertEqual(
             connection.execute(
                 """SELECT race_entry_id,past_race_index,race_date,place,race_name,race_class,distance_m,track,
-                          weather,track_condition,finish,reference_time_difference_seconds_text,race_time,weight_text,weight_diff_text,
+                          weather,track_condition,finish,race_time,weight_text,weight_diff_text,
                           jockey,popularity,odds_text,passing_order,fourth_corner_position
                    FROM historical_input_snapshot_past_races"""
             ).fetchone(),
-            (11, 0, "2026-08-04", "Tokyo", "Prior", "Open", 1400, "dirt", "cloudy", "good", 1, "0", "1:22.2", "480", "-2", "Jockey", 0, "3.4", "", 0),
+            (11, 0, "2026-08-04", "Tokyo", "Prior", "Open", 1400, "dirt", "cloudy", "good", 1, "1:22.2", "480", "-2", "Jockey", 0, "3.4", "", 0),
         )
         self.assertEqual(
             connection.execute(
@@ -501,7 +501,7 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
         self.assertEqual(loaded.identity.source_identity.source_url, "https://example.test/race-1")
         self.assertEqual(loaded.entries[0].external_entry_identity.external_horse_id, "horse-11")
         self.assertEqual(loaded.entries[0].win_odds, Decimal("2.5"))
-        self.assertEqual(loaded.past_races[0].reference_time_difference_seconds, Decimal("0"))
+        self.assertEqual(loaded.past_races[0].race_time, "1:22.2")
         self.assertEqual(loaded.past_races[0].passing_order, "")
         self.assertEqual(loaded.provenance[0].audit_key, "entry/11")
         self.assertEqual(loaded.provenance[-1].audit_key, "track")

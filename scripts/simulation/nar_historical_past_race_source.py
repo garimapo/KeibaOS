@@ -579,7 +579,6 @@ def normalize_nar_historical_past_race_source_record(
     labels = _corner_labels(race_soup)
     result = _result_values(_result_row(_result_table(race_soup), lineage, race_url), labels)
     _cross_check(history, race_date, race_no, place, facts, result)
-    difference = _decimal(history["difference"], "HorseMarkInfo difference")
     evidence = (
         _HistoricalInputEvidenceReference(
             "historical_race_context", horse_url, horse_sha256, None, horse_history_response.observed_at
@@ -605,7 +604,6 @@ def normalize_nar_historical_past_race_source_record(
             "weather": facts["weather"],
             "track_condition": facts["track_condition"],
             "finish": result["finish"],
-            "reference_time_difference_seconds": difference,
             "race_time": result["race_time"],
             "weight": result["weight"],
             "weight_diff": result["weight_diff"],

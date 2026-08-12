@@ -85,7 +85,7 @@ class NARHistoricalPastRaceAbsenceSourceTests(unittest.TestCase):
         self.assertEqual(record.external_entry_id, ENTRY_ID)
         self.assertIsNone(record.provider_record_id)
         self.assertEqual(dict(record.record_values), {"external_entry_id": ENTRY_ID, "query_scope": {"external_entry_id": ENTRY_ID, "target_race_date": date(2026, 7, 4), "strictly_before_target_race": True}, "result_count": 0})
-        self.assertTrue(record.source_id.startswith("his-v3:past_race_absence:"))
+        self.assertTrue(record.source_id.startswith("his-v4:past_race_absence:"))
         self.assertEqual(len(record.evidence), 1)
         evidence = record.evidence[0]
         self.assertEqual(evidence.evidence_role, "past_race_absence_query")

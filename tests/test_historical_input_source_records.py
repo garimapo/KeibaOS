@@ -58,7 +58,6 @@ def _values(kind: str, *, entry_id: str = "nar:20260805:1:1:entry:1") -> dict[st
             "weather": "sunny",
             "track_condition": "good",
             "finish": 1,
-            "reference_time_difference_seconds": Decimal("0.00"),
             "race_time": "1:32.0",
             "weight": Decimal("480.0"),
             "weight_diff": Decimal("0.0"),
@@ -245,7 +244,7 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
             ),
         )
         field_map = {item.name: item for item in fields(HistoricalInputSourceRecord)}
-        self.assertEqual(field_map["schema_version"].default, 3)
+        self.assertEqual(field_map["schema_version"].default, 4)
         self.assertFalse(field_map["schema_version"].init)
         self.assertFalse(field_map["source_id"].init)
         hints = get_type_hints(HistoricalInputSourceRecord)
@@ -285,7 +284,7 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
             "entry": {"external_entry_id", "external_horse_id", "horse_no"},
             "jockey": {"external_entry_id", "jockey"},
             "odds_win": {"external_entry_id", "horse_no", "win_odds"},
-            "past_race": {"race_date", "place", "race_name", "race_class", "distance_m", "track", "weather", "track_condition", "finish", "reference_time_difference_seconds", "race_time", "weight", "weight_diff", "jockey", "popularity", "odds", "passing_order", "fourth_corner_position"},
+            "past_race": {"race_date", "place", "race_name", "race_class", "distance_m", "track", "weather", "track_condition", "finish", "race_time", "weight", "weight_diff", "jockey", "popularity", "odds", "passing_order", "fourth_corner_position"},
             "past_race_absence": {"external_entry_id", "query_scope", "result_count"},
         }
         for kind, keys in expected_keys.items():
@@ -306,8 +305,8 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
                 self.assertNotIn("observed_at", payload)
                 self.assertNotIn("race_id", payload)
                 self.assertNotIn("race_entry_id", payload)
-                self.assertEqual(payload["schema_version"], 3)
-                self.assertTrue(record.source_id.startswith(f"his-v3:{kind}:"))
+                self.assertEqual(payload["schema_version"], 4)
+                self.assertTrue(record.source_id.startswith(f"his-v4:{kind}:"))
                 self.assertIsInstance(record.record_values, MappingProxyType)
                 if kind == "track":
                     self.assertIsNone(payload["external_entry_id"])
@@ -359,13 +358,13 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
         with self.assertRaises(HistoricalInputSourceValidationError): _record("odds_win", record_values=values)
         values = _values("odds_win"); values["win_odds"] = Decimal("0")
         with self.assertRaises(HistoricalInputSourceValidationError): _record("odds_win", record_values=values)
-        for bad in (Decimal("NaN"), Decimal("Infinity"), Decimal("-Infinity"), Decimal("-0.01"), 0, True, 0.0):
-            with self.subTest(decimal=bad):
-                values = _values("past_race"); values["reference_time_difference_seconds"] = bad
+        for bad in ("", 0, True, Decimal("1.0")):
+            with self.subTest(race_time=bad):
+                values = _values("past_race"); values["race_time"] = bad
                 with self.assertRaises(HistoricalInputSourceValidationError): _record("past_race", record_values=values)
         values = _values("past_race"); values["margin"] = Decimal("0")
         with self.assertRaises(HistoricalInputSourceValidationError): _record("past_race", record_values=values)
-        values = _values("past_race"); values["margin"] = Decimal("0"); values["reference_time_difference_seconds"] = Decimal("0")
+        values = _values("past_race"); values["reference_time_difference_seconds"] = Decimal("0")
         with self.assertRaises(HistoricalInputSourceValidationError): _record("past_race", record_values=values)
         values = _values("past_race_absence"); values["result_count"] = False
         with self.assertRaises(HistoricalInputSourceValidationError): _record("past_race_absence", record_values=values)
@@ -377,9 +376,8 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
         values["passing_order"] = ""
         record = _record("past_race", record_values=values)
         self.assertEqual(record.record_values["passing_order"], "")
-        self.assertEqual(record.record_values["reference_time_difference_seconds"], Decimal("0"))
         self.assertEqual(record.record_values["weight"], Decimal("480"))
-        self.assertEqual(canonical_historical_input_source_payload(record=record)["record_values"]["reference_time_difference_seconds"], "0")
+        self.assertEqual(canonical_historical_input_source_payload(record=record)["record_values"]["race_time"], "1:32.0")
         normalized = _record("jockey", record_values={"external_entry_id": "nar:20260805:1:1:entry:1", "jockey": "Cafe\u0301"})
         self.assertEqual(normalized.record_values["jockey"], "Café")
         tokyo = timezone(timedelta(hours=9))
@@ -437,10 +435,10 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
         changed_values = _values("odds_win"); changed_values["win_odds"] = Decimal("3")
         changed = _record("odds_win", record_values=changed_values)
         self.assertNotEqual(one.source_id, changed.source_id)
-        self.assertTrue(one.source_id.startswith("his-v3:odds_win:"))
+        self.assertTrue(one.source_id.startswith("his-v4:odds_win:"))
         self.assertEqual(len(one.source_id.rsplit(":", 1)[1]), 64)
 
-    def test_v3_past_race_factual_change_isolated_to_its_source_id(self) -> None:
+    def test_v4_past_race_factual_change_isolated_to_its_source_id(self) -> None:
         baseline = (
             _record("track"),
             _record("entry"),
@@ -449,15 +447,15 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
             _record("past_race"),
         )
         changed_values = _values("past_race")
-        changed_values["reference_time_difference_seconds"] = Decimal("0.2")
+        changed_values["race_time"] = "1:32.1"
         changed_past_race = _record("past_race", record_values=changed_values)
         changed = baseline[:-1] + (changed_past_race,)
 
         self.assertEqual(validate_historical_input_source_record_set(records=baseline), baseline)
         self.assertEqual(validate_historical_input_source_record_set(records=changed), changed)
         for record in baseline + changed:
-            self.assertEqual(record.schema_version, 3)
-            self.assertTrue(record.source_id.startswith(f"his-v3:{record.record_kind}:"))
+            self.assertEqual(record.schema_version, 4)
+            self.assertTrue(record.source_id.startswith(f"his-v4:{record.record_kind}:"))
 
         for original, replacement in zip(baseline[:-1], changed[:-1], strict=True):
             self.assertEqual(original.source_id, replacement.source_id)
@@ -472,11 +470,11 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
         after = canonical_historical_input_source_payload(record=changed_past_race)
         self.assertEqual({key: value for key, value in before.items() if key != "record_values"}, {key: value for key, value in after.items() if key != "record_values"})
         self.assertEqual(
-            {key: value for key, value in before["record_values"].items() if key != "reference_time_difference_seconds"},
-            {key: value for key, value in after["record_values"].items() if key != "reference_time_difference_seconds"},
+            {key: value for key, value in before["record_values"].items() if key != "race_time"},
+            {key: value for key, value in after["record_values"].items() if key != "race_time"},
         )
-        self.assertEqual(before["record_values"]["reference_time_difference_seconds"], "0")
-        self.assertEqual(after["record_values"]["reference_time_difference_seconds"], "0.2")
+        self.assertEqual(before["record_values"]["race_time"], "1:32.0")
+        self.assertEqual(after["record_values"]["race_time"], "1:32.1")
 
     def test_conflicts_and_set_order(self) -> None:
         track = _record("track")

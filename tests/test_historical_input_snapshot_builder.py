@@ -64,7 +64,6 @@ def _past_values(race_date: date) -> dict[str, object]:
         "weather": "sunny",
         "track_condition": "good",
         "finish": 1,
-        "reference_time_difference_seconds": Decimal("0"),
         "race_time": "1:32.0",
         "weight": Decimal("480"),
         "weight_diff": Decimal("0"),
