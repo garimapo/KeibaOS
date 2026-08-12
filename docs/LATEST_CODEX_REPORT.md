@@ -3320,3 +3320,24 @@ The two approved namespace test extensions now assert `his-v4`; the capture migr
 registry `(8, 9, 10, 11, 12, 13)` while preserving its dedicated capture-registry isolation checks. Fresh verification
 under Python 3.14.5 / pytest 8.3.5 passed: capture migration 8, core targeted d1a1 suite 82, related suite 93, and
 full suite 2523. Status is `READY_FOR_REVIEW`; stop for independent implementation review.
+
+## Phase 4C-2d3b1i6d1b1 JRA Race Native-Key and Canonical Result URL Investigation
+
+Docs-only PREPARE on formal base `04c0fbcad2ea13b2e325e795e6de022718edb01a`. Official JRA `accessS` and
+`accessD` result pages establish a stable lexical race-native key:
+`YYYY:VV:MM:DD:RR`, rendered as `jra:race:<YYYY>:<VV>:<MM>:<DD>:<RR>`. The same official 2025-09-13 Nakayama
+4R appeared under two distinct accessS CNAME forms and an accessD form. The CNAME view selector and terminal
+two-hex text are opaque navigation material, not race identity; the eight-digit CNAME race date is a required
+visible-page validation cross-check rather than a sixth canonical-key component.
+
+The resolved capture URL remains a validated supplied `accessS` URL only and is not reconstructable from the key.
+Canonical URL rendering preserves the official host and uses one uppercase `%2F` separator. The direct official
+mapping proof is intentionally partial: inspected codes prove only Sapporo, Tokyo, Nakayama, Chukyo, Kyoto,
+Hanshin, and Kokura. General date/venue/race-number lookup uniqueness is not proven.
+
+The prior accessU finding remains: a ten-ASCII-digit profile key is a stable `jra:horse` identity and an official
+accessS row-local accessU anchor proves row-to-horse linkage. The inspected NAR fixture's `Ｊ中山`, 2025-09-13,
+4R event matches the one JRA race investigated, but this is not a general NAR-to-JRA result resolver and no
+NAR-lineage-to-JRA-horse bridge is proven. Horse-name linkage remains forbidden. `JRA_IDENTITY_IMPLEMENTATION_READY`
+is YES for a separately authorized pure identity boundary; mixed-history collection is NO. Status is
+`DRAFT_FOR_REVIEW`; no production code, tests, fixtures, capture, CP932 work, schema, migration, or builder changed.
