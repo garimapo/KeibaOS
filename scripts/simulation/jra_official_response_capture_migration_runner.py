@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sqlite3 as _sqlite3
-import re as _re
 
 from scripts.simulation import jra_official_response_capture_migration as _v001
 
@@ -33,6 +32,10 @@ def _registry(connection: _sqlite3.Connection) -> None:
     columns = connection.execute(f"PRAGMA table_info({_TABLE})").fetchall()
     if [(item[1], item[2], item[3], item[5]) for item in columns] != [("version", "INTEGER", 1, 1), ("name", "TEXT", 1, 0)]:
         raise RuntimeError("JRA capture migration registry schema is invalid")
+    table_rows = connection.execute("PRAGMA table_list").fetchall()
+    table = [item for item in table_rows if item[0] == "main" and item[1] == _TABLE]
+    if table != [("main", _TABLE, "table", 2, 1, 0)]:
+        raise RuntimeError("JRA capture migration registry WITHOUT ROWID schema is invalid")
     indexes = connection.execute(f"PRAGMA index_list({_TABLE})").fetchall()
     unique_name_indexes = [item[1] for item in indexes if item[2] == 1 and item[3] == "u"]
     if len(unique_name_indexes) != 1:
@@ -40,17 +43,54 @@ def _registry(connection: _sqlite3.Connection) -> None:
     index_columns = connection.execute(f"PRAGMA index_info({unique_name_indexes[0]})").fetchall()
     if [(item[0], item[2]) for item in index_columns] != [(0, "name")]:
         raise RuntimeError("JRA capture migration registry unique constraint is invalid")
-    sql = row[0]
-    if type(sql) is not str:
-        raise RuntimeError("JRA capture migration registry is invalid")
-    normalized = _re.sub(r"\s+", "", sql).lower()
-    required = (
-        "withoutrowid",
-        "check(typeof(version)='integer'andversion>0)",
-        "check(typeof(name)='text'andlength(name)>0)",
-    )
-    if any(item not in normalized for item in required):
-        raise RuntimeError("JRA capture migration registry checks are invalid")
+    _probe_registry_constraints(connection)
+
+
+def _probe_registry_constraints(connection: _sqlite3.Connection) -> None:
+    if connection.execute(f"SELECT 1 FROM {_TABLE} WHERE version IN (0,-1)").fetchone() is not None:
+        raise RuntimeError("JRA capture migration registry rows are invalid")
+    if connection.execute(f"SELECT 1 FROM {_TABLE} WHERE name=''").fetchone() is not None:
+        raise RuntimeError("JRA capture migration registry rows are invalid")
+    versions = _probe_versions(connection)
+    name = _probe_name(connection)
+    connection.execute("SAVEPOINT jra_capture_registry_constraint_probe")
+    try:
+        _probe_rejected(connection, 0, name)
+        _probe_rejected(connection, -1, name)
+        _probe_rejected(connection, "not-an-integer", name)
+        _probe_rejected(connection, versions[0], "")
+        _probe_rejected(connection, versions[0], _sqlite3.Binary(b"not-text"))
+        connection.execute(f"INSERT INTO {_TABLE}(version,name) VALUES(?,?)", (versions[0], name))
+        _probe_rejected(connection, versions[1], name)
+    finally:
+        connection.execute("ROLLBACK TO jra_capture_registry_constraint_probe")
+        connection.execute("RELEASE jra_capture_registry_constraint_probe")
+
+
+def _probe_versions(connection: _sqlite3.Connection) -> tuple[int, int]:
+    values: list[int] = []
+    for candidate in range(9_223_372_036_854_775_807, 9_223_372_036_854_774_783, -1):
+        if connection.execute(f"SELECT 1 FROM {_TABLE} WHERE version=?", (candidate,)).fetchone() is None:
+            values.append(candidate)
+            if len(values) == 2:
+                return values[0], values[1]
+    raise RuntimeError("unable to allocate JRA capture migration registry probe versions")
+
+
+def _probe_name(connection: _sqlite3.Connection) -> str:
+    for suffix in range(1, 1025):
+        value = f"__jra_capture_registry_probe_{suffix}__"
+        if connection.execute(f"SELECT 1 FROM {_TABLE} WHERE name=?", (value,)).fetchone() is None:
+            return value
+    raise RuntimeError("unable to allocate JRA capture migration registry probe name")
+
+
+def _probe_rejected(connection: _sqlite3.Connection, version: object, name: object) -> None:
+    try:
+        connection.execute(f"INSERT INTO {_TABLE}(version,name) VALUES(?,?)", (version, name))
+    except _sqlite3.IntegrityError:
+        return
+    raise RuntimeError("JRA capture migration registry constraints are invalid")
 
 
 def get_applied_jra_capture_schema_versions(connection: _sqlite3.Connection) -> dict[int, str]:

@@ -3374,3 +3374,16 @@ No registry/table adoption, alteration, drop, or automatic repair is permitted; 
 Fresh migration verification passed 6 tests under Python 3.14.5 / pytest 8.3.5. The correction remains
 `READY_FOR_REVIEW`; full dedicated, related, static, and full-suite verification is required before publishing the
 review correction. No live capture, provider bridge, NAR change, global migration, or formal integration has begun.
+
+## Phase 4C-2d3b1i6d1c1 Final Registry Semantic Hardening
+
+The JRA capture registry validator now proves the required database constraint behavior with rollback-only savepoint
+probes rather than trusting CHECK text from `sqlite_master.sql`. It requires SQLite to reject zero and negative
+versions, a non-integer version value, empty and non-text names, and duplicate names, while rolling back every probe
+write. `PRAGMA table_list`, `table_info`, and `index_list` retain the exact structural checks, including `WITHOUT ROWID`.
+A weaker registry whose SQL comment merely contains the approved CHECK text is rejected.
+
+The validator still fails closed without registry/table repair or adoption. The review documentation now correctly
+stops at the final approved review tip rather than prescribing an obsolete one-review-commit count. Fresh migration
+verification passed 7 tests; the remaining dedicated, related, static, and full-suite checks are required before
+publication.

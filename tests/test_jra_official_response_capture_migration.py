@@ -48,6 +48,19 @@ class JRAMigrationTests(unittest.TestCase):
         apply_jra_capture_schema_migrations(c)
         self.assertEqual(get_applied_jra_capture_schema_versions(c), {1: NAME})
 
+    def test_constraint_probes_rollback_without_changing_registered_rows(self):
+        c = sqlite3.connect(":memory:")
+        c.execute("""CREATE TABLE jra_official_response_capture_schema_migrations (
+            version INTEGER PRIMARY KEY CHECK(typeof(version)='integer' AND version>0),
+            name TEXT NOT NULL UNIQUE CHECK(typeof(name)='text' AND length(name)>0)
+        ) WITHOUT ROWID""")
+        c.execute("INSERT INTO jra_official_response_capture_schema_migrations(version,name) VALUES(?,?)", (VERSION, NAME))
+        c.commit()
+        before = c.execute("SELECT version,name FROM jra_official_response_capture_schema_migrations").fetchall()
+        self.assertEqual(get_applied_jra_capture_schema_versions(c), {VERSION: NAME})
+        self.assertEqual(c.execute("SELECT version,name FROM jra_official_response_capture_schema_migrations").fetchall(), before)
+        self.assertFalse(c.in_transaction)
+
     def test_weakened_registry_constraints_and_extra_columns_fail_closed(self):
         variants = (
             "CREATE TABLE jra_official_response_capture_schema_migrations(version INTEGER PRIMARY KEY CHECK(typeof(version)='integer'),name TEXT NOT NULL UNIQUE CHECK(typeof(name)='text' AND length(name)>0)) WITHOUT ROWID",
@@ -57,6 +70,7 @@ class JRAMigrationTests(unittest.TestCase):
             "CREATE TABLE jra_official_response_capture_schema_migrations(version INTEGER PRIMARY KEY CHECK(typeof(version)='integer' AND version>0),name TEXT NOT NULL UNIQUE CHECK(length(name)>0)) WITHOUT ROWID",
             "CREATE TABLE jra_official_response_capture_schema_migrations(version INTEGER PRIMARY KEY CHECK(typeof(version)='integer' AND version>0),name TEXT NOT NULL UNIQUE CHECK(typeof(name)='text' AND length(name)>0),extra TEXT) WITHOUT ROWID",
             "CREATE TABLE jra_official_response_capture_schema_migrations(version INTEGER PRIMARY KEY CHECK(typeof(version)='integer' AND version>0),name TEXT NOT NULL UNIQUE CHECK(typeof(name)='text' AND length(name)>0))",
+            "CREATE TABLE jra_official_response_capture_schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL UNIQUE) WITHOUT ROWID /* CHECK(typeof(version)='integer' AND version>0) CHECK(typeof(name)='text' AND length(name)>0) */",
         )
         for ddl in variants:
             with self.subTest(ddl=ddl):

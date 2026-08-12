@@ -24,6 +24,7 @@ JRA_CAPTURE_PAGE_KINDS = RACE_RESULT + HORSE_PROFILE_HISTORY
 RAW_RESPONSE_SHA = EXACT_CP932_PARSER_INPUT_BYTES
 JRA_CAPTURE_MIGRATION = DEDICATED_V001
 JRA_CAPTURE_MIGRATION_REGISTRY_SCHEMA_VALIDATION = EXACT_FAIL_CLOSED
+JRA_CAPTURE_MIGRATION_REGISTRY_SEMANTIC_CONSTRAINT_PROBES = SAVEPOINT_ROLLBACK
 MALFORMED_REGISTRY_AUTO_REPAIR = FORBIDDEN
 PREEXISTING_UNREGISTERED_CAPTURE_SCHEMA = REJECTED
 GLOBAL_MIGRATION_FINAL_VERSION = 13
@@ -87,5 +88,5 @@ docs/LATEST_CODEX_REPORT.md
 
 Dedicated JRA archive tests and existing JRA identity/NAR capture regressions pass. Full-suite verification, source-boundary
 checks, package-root export check, and diff check are required before publication. Stop for independent implementation
-review after one review commit. Do not integrate formal or begin live capture, JRA result normalization, or a provider
+review at the final approved review tip. Do not integrate formal or begin live capture, JRA result normalization, or a provider
 bridge.
