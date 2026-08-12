@@ -3340,3 +3340,40 @@ No network, capture, storage, clock, HTML parser, provider lookup, bridge, race 
 or package-root export was added. The b2 blocker remains exact: `NAR_LINEAGE_TO_JRA_HORSE_ID_LINK = NOT_PROVEN`;
 mixed-history collection remains unsupported. Status is `READY_FOR_REVIEW` pending independent implementation
 review.
+
+## Phase 4C-2d3b1i6d1c JRA Trusted Official-Response Capture Architecture Preparation
+
+Prepared a JRA-specific trusted raw-response capture/archive design on formal base
+`7632a1381c77403e55284e027392d0fbc1f5a346`; no production, test, fixture, migration, database, or NAR-capture file
+changed. The proposed boundary deliberately keeps NAR capture frozen and uses a separate composition-owned SQLite
+database, its own v001 migration registry, immutable capture observations, content-addressed raw-body deduplication,
+and exact evidence replay keyed by canonical URL, SHA-256, and observed UTC timestamp. Global migration version stays
+13; no global migration is added.
+
+The initial page vocabulary is deliberately minimal: `RACE_RESULT` for accessS and `HORSE_PROFILE_HISTORY` for accessU.
+accessD and accessO are deferred. JRA entity identities stay separate from capture URLs: capture accepts only already
+resolved accessS/accessU CNAME URLs validated by the completed public JRA identity module and preserves valid selector
+and opaque-tail retrieval identity. The capture canonical form changes only a single raw CNAME slash to uppercase
+`%2F`; it never invents CNAMEs from stable race/horse IDs or double-decodes query text.
+
+Official live probes, made without persisting bodies, returned HTTP 200 without redirects for representative accessS
+and accessU URLs. Both reported `Content-Type: text/html`, absent `Content-Encoding` and `Content-Length`, strict
+CP932 decoding with `Shift_JIS` HTML metadata, and raw entity sizes of 94,570 and 55,797 bytes respectively. The
+future live contract therefore sends `Accept-Encoding: identity`, accepts only absent/identity content coding, hashes
+the exact untransformed parser-input entity bytes before CP932 decode, requires strict `cp932`, restricts the HTML
+media type, accepts exactly HTTP 200, disables redirects, verifies TLS, uses 10-second connect/read timeouts, has no
+automatic retry, and fails closed above 4 MiB or on a present mismatching Content-Length.
+
+`JRASuppliedOfficialResponse` will retain only canonical URL, exact nonempty raw bytes, exact `cp932`, and observed
+UTC time. `JRAOfficialResponseCapture` separately records requested/observed/stored UTC timestamps, selected HTTP
+audit metadata, raw SHA, canonical URL, page kind, and deterministic `jra-capture-v1:<sha256>` identity. Timestamps
+must be monotonic; `available_at` remains None. Valid capture bytes persist before later racing-field normalization,
+but invalid URL, HTTP status, encoding, CP932, incomplete, or oversize input is never captured successfully. Current
+captures cannot be backdated to historical prediction cutoffs; growing accessU history and non-assumed result-page
+immutability make pre-cutoff raw archives mandatory for trusted replay.
+
+The recommended follow-on split is d1c1 for capture domain plus dedicated archive, then d1c2 for injected,
+single-request live HTTPS capture. Planned capacity using observed bytes and 14 entries with five starts each is about
+7.06 MiB per target race before overhead/deduplication, or about 0.74 / 7.40 / 74.01 GB raw annually for 100 / 1,000 /
+10,000 target races. The archive has no update/delete/repair/retention API and needs separate backup. The NAR lineage
+to JRA horse-ID bridge remains `NOT_PROVEN`, and mixed-history collection remains `NO`.
