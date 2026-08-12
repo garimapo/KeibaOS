@@ -52,9 +52,14 @@ _EVIDENCE_ROLES = {
     "entry": ("entry",),
     "jockey": ("jockey",),
     "odds_win": ("odds_win",),
-    "past_race": ("historical_race_context", "historical_race_result"),
     "past_race_absence": ("past_race_absence_query",),
 }
+_PAST_RACE_EVIDENCE_ROLE_SETS = frozenset(
+    {
+        ("historical_race_context", "historical_race_result"),
+        ("historical_race_context", "historical_race_final_odds", "historical_race_result"),
+    }
+)
 _RECORD_VALUE_KEYS = {
     "track": frozenset(
         {
@@ -383,7 +388,12 @@ def _canonical_evidence(
             raise _validation_error("evidence item must be HistoricalInputEvidenceReference")
     ordered = tuple(sorted(value, key=lambda item: item.evidence_role))
     roles = tuple(item.evidence_role for item in ordered)
-    if roles != _EVIDENCE_ROLES[record_kind] or len(set(roles)) != len(roles):
+    roles_are_valid = (
+        roles in _PAST_RACE_EVIDENCE_ROLE_SETS
+        if record_kind == "past_race"
+        else roles == _EVIDENCE_ROLES[record_kind]
+    )
+    if not roles_are_valid or len(set(roles)) != len(roles):
         raise _validation_error("evidence roles are invalid")
     observations: dict[tuple[str | None, str], tuple[_datetime | None, _datetime]] = {}
     for item in ordered:

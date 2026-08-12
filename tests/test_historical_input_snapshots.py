@@ -148,6 +148,36 @@ def _protocol_method_node(protocol: type[object], method_name: str) -> ast.Funct
 
 
 class HistoricalInputSnapshotsTest(unittest.TestCase):
+    def test_past_race_final_odds_provenance_preserves_two_role_snapshot_baseline(self) -> None:
+        baseline = _snapshot()
+        self.assertEqual(baseline.content_sha256, "df128033bb9bf966a9ed391958fc23b489e3268553ca945bae0a68fc7af20973")
+        past = baseline.provenance[-1]
+        with_final_odds = replace(
+            past,
+            evidence=_evidence("historical_race_result", "historical_race_final_odds", "historical_race_context"),
+        )
+        self.assertEqual(
+            tuple(item.evidence_role for item in with_final_odds.evidence),
+            ("historical_race_context", "historical_race_final_odds", "historical_race_result"),
+        )
+        extended = replace(baseline, provenance=baseline.provenance[:-1] + (with_final_odds,))
+        self.assertNotEqual(extended.content_sha256, baseline.content_sha256)
+        payload = build_historical_input_snapshot_content_payload(snapshot=extended)
+        past_payload = next(item for item in payload["provenance"] if item["input_type"] == "past_race")
+        self.assertEqual(
+            tuple(item["evidence_role"] for item in past_payload["evidence"]),
+            ("historical_race_context", "historical_race_final_odds", "historical_race_result"),
+        )
+        for roles in (
+            ("historical_race_context",),
+            ("historical_race_final_odds", "historical_race_result"),
+            ("historical_race_context", "historical_race_final_odds"),
+            ("historical_race_context", "historical_race_final_odds", "historical_race_result", "unknown"),
+            ("historical_race_context", "historical_race_context", "historical_race_result"),
+        ):
+            with self.subTest(roles=roles), self.assertRaises(ValueError):
+                replace(past, evidence=_evidence(*roles))
+
     def test_past_race_provenance_requires_consistent_same_response_observations(self) -> None:
         baseline = _provenance()[4]
         same_response = (
@@ -170,6 +200,27 @@ class HistoricalInputSnapshotsTest(unittest.TestCase):
                     replace(baseline.evidence[1], canonical_source_url=baseline.evidence[0].canonical_source_url,
                             response_sha256=baseline.evidence[0].response_sha256,
                             observed_at=baseline.evidence[0].observed_at + timedelta(seconds=1)),
+                ),
+            )
+        three_roles = _evidence("historical_race_context", "historical_race_final_odds", "historical_race_result")
+        same_response_three_roles = (
+            three_roles[0],
+            replace(three_roles[1], canonical_source_url=three_roles[0].canonical_source_url,
+                    response_sha256=three_roles[0].response_sha256, available_at=three_roles[0].available_at,
+                    observed_at=three_roles[0].observed_at),
+            replace(three_roles[2], canonical_source_url=three_roles[0].canonical_source_url,
+                    response_sha256=three_roles[0].response_sha256, available_at=three_roles[0].available_at,
+                    observed_at=three_roles[0].observed_at),
+        )
+        accepted_three_roles = replace(baseline, evidence=same_response_three_roles)
+        self.assertEqual(len(accepted_three_roles.evidence), 3)
+        with self.assertRaises(ValueError):
+            replace(
+                baseline,
+                evidence=(
+                    same_response_three_roles[0],
+                    replace(same_response_three_roles[1], observed_at=CAPTURED),
+                    same_response_three_roles[2],
                 ),
             )
         with self.assertRaises(ValueError):

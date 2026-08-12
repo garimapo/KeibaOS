@@ -3405,3 +3405,28 @@ the sole owner of strict CP932 validation, raw SHA, and immutable capture identi
 The live service owns no pacing, discovery, field parsing, source normalization, database path, global migration,
 NAR behavior, or NAR-to-JRA bridge. Status is `READY_FOR_REVIEW`; no formal integration, JRA result normalizer, race
 history discovery, or bridge work has begun.
+
+## Phase 4C-2d3b1i6d1d3 Historical Final-Odds Evidence Role Implementation
+
+Implemented the approved provider-neutral final-odds evidence extension on formal base
+`0135cee4ad8e578e6bd20940b16198a576172c04`. Only the c1a source-record and snapshot-provenance validators changed.
+Past-race records now accept exactly the legacy two-role tuple or the complete lexical three-role tuple containing
+`historical_race_final_odds`; all other role contracts and source payload structure remain unchanged.
+
+The formal-base NAR-style two-role source payload and `his-v4` source ID are frozen as literal regressions, as is a
+complete two-role snapshot digest. Final odds changes new source IDs and snapshot digests, while timestamp-only
+changes remain excluded from c1a source identity. Same-response reuse across all three roles requires exactly equal
+timestamps. Competing past-race records with the same result identity and differing final-odds evidence still raise
+the existing conflict error.
+
+The builder production module is unchanged. Regression coverage proves it propagates the third role to provenance,
+accepts it when causally eligible, and rejects a late final-odds observation. No evidence-domain module, repository,
+migration, NAR/JRA normalizer, capture module, package export, database, or fixture changed. Focused source,
+snapshot, and builder verification passed 43 tests under Python 3.14.5 / pytest 8.3.5. Remaining related, full-suite,
+and static verification is required before review publication.
+
+Fresh implementation verification completed under Python 3.14.5 / pytest 8.3.5: dedicated changed-domain suites
+passed 43 tests; the related source/snapshot/builder/NAR suite passed 67 tests; and the full suite passed 2555 tests.
+Package-root export, forbidden dependency/source/AST, migration/global-version unchanged, repository unchanged, NAR
+production unchanged, and `git diff --check` checks all passed. Status is `READY_FOR_REVIEW`; stop for independent
+implementation review.

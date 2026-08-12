@@ -89,6 +89,7 @@ def _record(
     provider_record_id: str | None = None,
     available_at: datetime | None = AVAILABLE,
     observed_at: datetime = OBSERVED,
+    evidence_roles: tuple[str, ...] | None = None,
 ) -> HistoricalInputSourceRecord:
     entry_id = "nar:20260805:1:1:entry:1"
     if kind != "track" and external_entry_id is None:
@@ -97,7 +98,7 @@ def _record(
         provider_record_id = "official-past-race-1"
     if kind == "past_race_absence" and canonical_source_url is None:
         canonical_source_url = "https://EXAMPLE.test/history?z=2&a=1"
-    roles = {
+    roles = evidence_roles if evidence_roles is not None else {
         "track": ("track",),
         "entry": ("entry",),
         "jockey": ("jockey",),
@@ -156,7 +157,7 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     HistoricalInputEvidenceReference(**values)
 
-    def test_evidence_roles_order_timestamps_and_raw_digest_drive_v3_identity(self) -> None:
+    def test_evidence_roles_order_timestamps_and_raw_digest_drive_v4_identity(self) -> None:
         baseline = _record("past_race", canonical_source_url="https://example.test/past")
         reversed_roles = tuple(reversed(baseline.evidence))
         reordered = HistoricalInputSourceRecord(
@@ -223,6 +224,83 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
                 external_race_id=baseline.external_race_id, external_entry_id=baseline.external_entry_id,
                 provider_record_id=baseline.provider_record_id, record_values=baseline.record_values, evidence=available_conflict,
             )
+
+    def test_past_race_final_odds_role_preserves_two_role_baseline_and_fails_closed(self) -> None:
+        baseline = _record("past_race", canonical_source_url="https://example.test/past")
+        self.assertEqual(baseline.source_id, "his-v4:past_race:641c785c037bdfe09c94bd7d1cc656febccd54965ec3505b09d24aafd1b9aa92")
+        self.assertEqual(
+            canonical_historical_input_source_payload(record=baseline),
+            {
+                "schema_version": 4,
+                "source_system": "nar_official",
+                "record_kind": "past_race",
+                "organization": "NAR",
+                "external_race_id": "nar:20260805:1:1",
+                "external_entry_id": "nar:20260805:1:1:entry:1",
+                "provider_record_id": "official-past-race-1",
+                "record_values": {
+                    "race_date": "2026-08-01", "place": "Tokyo", "race_name": "Prior Race", "race_class": "Open",
+                    "distance_m": 1600, "track": "turf", "weather": "sunny", "track_condition": "good",
+                    "finish": 1, "race_time": "1:32.0", "weight": "480", "weight_diff": "0", "jockey": "Jockey",
+                    "popularity": 0, "odds": "2", "passing_order": "", "fourth_corner_position": 0,
+                },
+                "evidence": [
+                    {"evidence_role": "historical_race_context", "canonical_source_url": "https://example.test/past", "response_sha256": "1" * 64},
+                    {"evidence_role": "historical_race_result", "canonical_source_url": "https://example.test/past", "response_sha256": "2" * 64},
+                ],
+            },
+        )
+        extended = _record(
+            "past_race",
+            canonical_source_url="https://example.test/past",
+            evidence_roles=("historical_race_result", "historical_race_final_odds", "historical_race_context"),
+        )
+        self.assertEqual(
+            tuple(item.evidence_role for item in extended.evidence),
+            ("historical_race_context", "historical_race_final_odds", "historical_race_result"),
+        )
+        self.assertNotEqual(extended.source_id, baseline.source_id)
+        shifted = HistoricalInputSourceRecord(
+            record_kind=extended.record_kind, organization=extended.organization, source_system=extended.source_system,
+            external_race_id=extended.external_race_id, external_entry_id=extended.external_entry_id,
+            provider_record_id=extended.provider_record_id, record_values=extended.record_values,
+            evidence=tuple(replace(item, observed_at=item.observed_at + timedelta(minutes=1)) for item in extended.evidence),
+        )
+        self.assertEqual(shifted.source_id, extended.source_id)
+        same_response = (
+            extended.evidence[0],
+            replace(extended.evidence[1], canonical_source_url=extended.evidence[0].canonical_source_url,
+                    response_sha256=extended.evidence[0].response_sha256, available_at=extended.evidence[0].available_at,
+                    observed_at=extended.evidence[0].observed_at),
+            replace(extended.evidence[2], canonical_source_url=extended.evidence[0].canonical_source_url,
+                    response_sha256=extended.evidence[0].response_sha256, available_at=extended.evidence[0].available_at,
+                    observed_at=extended.evidence[0].observed_at),
+        )
+        accepted = HistoricalInputSourceRecord(
+            record_kind=extended.record_kind, organization=extended.organization, source_system=extended.source_system,
+            external_race_id=extended.external_race_id, external_entry_id=extended.external_entry_id,
+            provider_record_id=extended.provider_record_id, record_values=extended.record_values, evidence=same_response,
+        )
+        self.assertEqual(len(accepted.evidence), 3)
+        with self.assertRaises(HistoricalInputSourceValidationError):
+            HistoricalInputSourceRecord(
+                record_kind=extended.record_kind, organization=extended.organization, source_system=extended.source_system,
+                external_race_id=extended.external_race_id, external_entry_id=extended.external_entry_id,
+                provider_record_id=extended.provider_record_id, record_values=extended.record_values,
+                evidence=(same_response[0], replace(same_response[1], observed_at=OBSERVED + timedelta(seconds=1)), same_response[2]),
+            )
+        for roles in (
+            ("historical_race_context",),
+            ("historical_race_result",),
+            ("historical_race_context", "historical_race_final_odds"),
+            ("historical_race_final_odds", "historical_race_result"),
+            ("historical_race_context", "historical_race_final_odds", "historical_race_result", "unknown"),
+            ("historical_race_context", "historical_race_context", "historical_race_result"),
+        ):
+            with self.subTest(roles=roles), self.assertRaises(HistoricalInputSourceValidationError):
+                _record("past_race", evidence_roles=roles)
+        with self.assertRaises(HistoricalInputSourceValidationError):
+            _record("track", evidence_roles=("track", "historical_race_final_odds"))
 
     def test_public_api_field_contract_and_no_package_export(self) -> None:
         import scripts.simulation.historical_input_source_records as module
@@ -488,6 +566,23 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
         self.assertNotEqual(first.source_id, second.source_id)
         with self.assertRaises(HistoricalInputSourceConflictError):
             validate_historical_input_source_record_set(records=(first, second))
+        final_odds = _record(
+            "past_race",
+            provider_record_id=first.provider_record_id,
+            evidence_roles=("historical_race_context", "historical_race_final_odds", "historical_race_result"),
+        )
+        changed_final_odds = HistoricalInputSourceRecord(
+            record_kind=final_odds.record_kind, organization=final_odds.organization, source_system=final_odds.source_system,
+            external_race_id=final_odds.external_race_id, external_entry_id=final_odds.external_entry_id,
+            provider_record_id=final_odds.provider_record_id, record_values=final_odds.record_values,
+            evidence=tuple(
+                replace(item, response_sha256="f" * 64) if item.evidence_role == "historical_race_final_odds" else item
+                for item in final_odds.evidence
+            ),
+        )
+        self.assertNotEqual(final_odds.source_id, changed_final_odds.source_id)
+        with self.assertRaises(HistoricalInputSourceConflictError):
+            validate_historical_input_source_record_set(records=(final_odds, changed_final_odds))
         with self.assertRaises(HistoricalInputSourceValidationError):
             validate_historical_input_source_record_set(records="not-records")  # type: ignore[arg-type]
 

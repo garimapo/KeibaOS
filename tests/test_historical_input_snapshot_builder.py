@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+from dataclasses import replace
 from datetime import date, datetime, timedelta, timezone, tzinfo
 from decimal import Decimal
 import inspect
@@ -90,6 +91,7 @@ def _record(
     absence_target_race_date: date = RACE_DATE,
     observed_at: datetime = OBSERVED,
     available_at: datetime | None = AVAILABLE,
+    include_final_odds: bool = False,
 ) -> HistoricalInputSourceRecord:
     if kind == "track":
         values = _track_values()
@@ -134,6 +136,8 @@ def _record(
         "past_race": ("historical_race_context", "historical_race_result"),
         "past_race_absence": ("past_race_absence_query",),
     }[kind]
+    if kind == "past_race" and include_final_odds:
+        roles = ("historical_race_context", "historical_race_final_odds", "historical_race_result")
     evidence = tuple(
         HistoricalInputEvidenceReference(
             evidence_role=role,
@@ -156,18 +160,22 @@ def _record(
     )
 
 
-def _complete_records(*, track_url: str | None = "https://example.test/target") -> tuple[HistoricalInputSourceRecord, ...]:
+def _complete_records(
+    *,
+    track_url: str | None = "https://example.test/target",
+    include_final_odds: bool = False,
+) -> tuple[HistoricalInputSourceRecord, ...]:
     first = "entry-a"
     second = "entry-b"
     return (
         _record("odds_win", external_entry_id=first, horse_no=2, canonical_source_url="https://example.test/odds-a"),
-        _record("past_race", external_entry_id=first, horse_no=2, race_date=date(2026, 7, 1), canonical_source_url="https://example.test/past-a-1"),
+        _record("past_race", external_entry_id=first, horse_no=2, race_date=date(2026, 7, 1), canonical_source_url="https://example.test/past-a-1", include_final_odds=include_final_odds),
         _record("track", canonical_source_url=track_url),
         _record("jockey", external_entry_id=second, horse_no=1, canonical_source_url="https://example.test/jockey-b"),
         _record("entry", external_entry_id=first, horse_no=2, external_horse_id="horse-a", canonical_source_url="https://example.test/entry-a"),
-        _record("past_race", external_entry_id=second, horse_no=1, race_date=date(2026, 8, 1), canonical_source_url="https://example.test/past-b"),
+        _record("past_race", external_entry_id=second, horse_no=1, race_date=date(2026, 8, 1), canonical_source_url="https://example.test/past-b", include_final_odds=include_final_odds),
         _record("odds_win", external_entry_id=second, horse_no=1, canonical_source_url="https://example.test/odds-b"),
-        _record("past_race", external_entry_id=first, horse_no=2, race_date=date(2026, 8, 2), canonical_source_url="https://example.test/past-a-2"),
+        _record("past_race", external_entry_id=first, horse_no=2, race_date=date(2026, 8, 2), canonical_source_url="https://example.test/past-a-2", include_final_odds=include_final_odds),
         _record("jockey", external_entry_id=first, horse_no=2, canonical_source_url="https://example.test/jockey-a"),
         _record("entry", external_entry_id=second, horse_no=1, external_horse_id="horse-b", canonical_source_url="https://example.test/entry-b"),
     )
@@ -229,6 +237,38 @@ class HistoricalInputSnapshotBuilderTests(unittest.TestCase):
             self.assertEqual(item.source, "nar_official")
             self.assertEqual(item.evidence[0].available_at, AVAILABLE)
             self.assertEqual(item.evidence[0].observed_at, OBSERVED)
+
+    def test_final_odds_evidence_role_propagates_and_is_independently_causal(self) -> None:
+        records = _complete_records(include_final_odds=True)
+        snapshot = _build(records)
+        past_provenance = tuple(item for item in snapshot.provenance if item.input_type == "past_race")
+        self.assertTrue(past_provenance)
+        self.assertTrue(
+            all(
+                tuple(item.evidence_role for item in provenance.evidence)
+                == ("historical_race_context", "historical_race_final_odds", "historical_race_result")
+                for provenance in past_provenance
+            )
+        )
+        target = next(record for record in records if record.record_kind == "past_race")
+        late = HistoricalInputSourceRecord(
+            record_kind=target.record_kind,
+            organization=target.organization,
+            source_system=target.source_system,
+            external_race_id=target.external_race_id,
+            external_entry_id=target.external_entry_id,
+            provider_record_id=target.provider_record_id,
+            record_values=target.record_values,
+            evidence=tuple(
+                replace(item, observed_at=CAPTURED + timedelta(seconds=1))
+                if item.evidence_role == "historical_race_final_odds"
+                else item
+                for item in target.evidence
+            ),
+        )
+        late_records = tuple(late if record is target else record for record in records)
+        with self.assertRaises(HistoricalInputSnapshotAssemblyError):
+            _build(late_records)
 
     def test_source_url_none_and_non_track_urls_do_not_change_selection(self) -> None:
         self.assertIs(_build(_complete_records(track_url=None)).identity.source_identity.source_url, None)
