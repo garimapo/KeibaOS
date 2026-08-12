@@ -3430,3 +3430,38 @@ passed 43 tests; the related source/snapshot/builder/NAR suite passed 67 tests; 
 Package-root export, forbidden dependency/source/AST, migration/global-version unchanged, repository unchanged, NAR
 production unchanged, and `git diff --check` checks all passed. Status is `READY_FOR_REVIEW`; stop for independent
 implementation review.
+
+## Phase 4C-2d3b1i6d1d4a Provider-Neutral Request-Aware Evidence Locator PREPARE
+
+On formal base `41f2298820fe029bc06f024ff6da028f21ed5c7c`, inspected the exact c1a evidence/source-ID contract,
+snapshot provenance/digest contract, builder, v012 evidence schema, SQLite repository, migration registry, related
+tests, and NAR/JRA GET evidence producers. They currently use `(canonical_source_url, response_sha256)` as their
+same-response identity; the provenance-evidence table has no request identity column. That cannot truthfully
+distinguish the d1d4 JRA accessO POST requests, whose actual endpoint URL alone omits their provider-owned request
+material.
+
+The selected smallest provider-neutral mechanism is optional
+`HistoricalInputEvidenceReference.request_identity_sha256: str | None = None`. It is only an exact lowercase SHA-256
+fingerprint of provider-owned canonical request identity material; the neutral layer does not know JRA `cname`, form
+fields, request bodies, or methods. A non-null fingerprint requires a real canonical HTTPS endpoint URL. Request-aware
+same-response identity becomes `(canonical_source_url, request_identity_sha256, response_sha256)`, while legacy GET
+evidence has `request_identity_sha256=None`. Equal endpoint/body bytes with different request fingerprints are
+therefore distinct; timestamps remain excluded from c1a source IDs.
+
+To retain every existing payload/source ID/snapshot digest byte-for-byte, the new field is omitted from serialized
+source and snapshot evidence payloads when it is NULL, rather than serialized as a new null key. It is present for
+new request-aware evidence and changes its c1a source ID and snapshot digest. Source schema version stays `4`,
+namespace stays `his-v4`, snapshot schema stays `4`, existing NAR and JRA accessS/accessU GET production remains
+unchanged, and the builder requires no production change.
+
+The smallest truthful persistence work is global v014,
+`v014_historical_input_request_identity_schema`: add nullable, strict-lowercase-SHA-256
+`request_identity_sha256` to `historical_input_snapshot_provenance_evidence`. This additive operation applies to
+nonempty stores without rebuilding or rewriting them; legacy rows remain NULL. Repository reads/writes must round
+trip it and fail closed on malformed stored non-null identities. A later request-aware archive lookup must use
+endpoint URL, request fingerprint, raw-body SHA, and observed timestamp; legacy GET lookup remains URL/SHA/observed.
+
+This docs-only phase is `DRAFT_FOR_REVIEW`. Recommended next work is d1d4a1, a provider-neutral implementation
+covering the evidence domain, source/snapshot canonical payloads, SQLite repository, global v014, and focused
+legacy/request-aware/migration/corruption tests. JRA accessO capture, archive v002, live POST transport, normalizer,
+bridge, acquisition, production code, tests, migrations, and schema changes remain unimplemented.
