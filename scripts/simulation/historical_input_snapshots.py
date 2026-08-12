@@ -15,6 +15,14 @@ from scripts.simulation.historical_input_evidence import (
 )
 
 
+_PAST_RACE_EVIDENCE_ROLE_SETS = frozenset(
+    {
+        ("historical_race_context", "historical_race_result"),
+        ("historical_race_context", "historical_race_final_odds", "historical_race_result"),
+    }
+)
+
+
 def _require_exact(value: object, expected: type[object], name: str) -> object:
     if type(value) is not expected:
         raise ValueError(f"{name} must be {expected.__name__}")
@@ -292,9 +300,10 @@ def _validate_provenance_shape(provenance: HistoricalInputProvenance) -> None:
     else:
         if provenance.audit_key != f"past_race/{provenance.race_entry_id}/{provenance.past_race_index}":
             raise ValueError("past-race provenance shape is invalid")
-        required = ("historical_race_context", "historical_race_result")
+        required = _PAST_RACE_EVIDENCE_ROLE_SETS
     roles = tuple(item.evidence_role for item in provenance.evidence)
-    if roles != required or len(set(roles)) != len(roles):
+    roles_are_valid = roles in required if provenance.input_type == "past_race" and provenance.past_race_index is not None else roles == required
+    if not roles_are_valid or len(set(roles)) != len(roles):
         raise ValueError("provenance evidence roles are invalid")
     observations: dict[tuple[str | None, str], tuple[_datetime | None, _datetime]] = {}
     for item in provenance.evidence:
