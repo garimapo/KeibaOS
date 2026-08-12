@@ -3405,3 +3405,39 @@ the sole owner of strict CP932 validation, raw SHA, and immutable capture identi
 The live service owns no pacing, discovery, field parsing, source normalization, database path, global migration,
 NAR behavior, or NAR-to-JRA bridge. Status is `READY_FOR_REVIEW`; no formal integration, JRA result normalizer, race
 history discovery, or bridge work has begun.
+
+## Phase 4C-2d3b1i6d1d2 Historical Final-Odds Evidence Role PREPARE
+
+Status: `DRAFT_FOR_REVIEW` on `review/4c-2d3b1i6d1d2-evidence-prepare`, based exactly on formal
+`0135cee4ad8e578e6bd20940b16198a576172c04` and d1d/d1d1 approved review references.
+
+The smallest provider-neutral extension is ready. `historical_race_final_odds` means a direct official final-odds
+response used for a historical past-race odds fact; it is not target odds, popularity, payout, probability, or a
+model value. The only permitted past-race role sets will be the existing lexical tuple
+`(historical_race_context, historical_race_result)` and the extended lexical tuple
+`(historical_race_context, historical_race_final_odds, historical_race_result)`. Context/result always remain
+required, final odds is allowed exactly once only as the complete third role, all other record kinds are unchanged,
+and same-response role reuse still requires identical URL/SHA/available/observed identity semantics.
+
+No schema payload change is needed. c1a source records already serialize an ordered evidence list of role, URL, and
+raw SHA, excluding timestamps; snapshots already serialize each ordered evidence item including timestamps. Thus
+schema version 4, `his-v4`, snapshot schema version 4, all old two-role NAR canonical payloads/source IDs, and all
+old snapshot content hashes remain exactly unchanged. A final-odds reference intentionally changes its new source
+record source ID and the resulting snapshot digest, while timestamp-only changes retain the source ID.
+
+`validate_historical_input_source_record_set` needs no change: its existing official past-result conflict identity
+will reject two competing records for the same provider result whose final-odds evidence differs, rather than
+silently selecting a latest observation. `HistoricalInputProvenance` must gain the same two-or-three-role acceptance
+as c1a. The builder already carries evidence unchanged and independently checks every evidence item's causal
+timestamps, so it requires no production edit.
+
+The snapshot evidence table stores role as generic nonempty TEXT with ordered child rows and a unique role constraint;
+the repository reads/writes arbitrary evidence tuples. No global, source-repository, or snapshot-repository migration
+is needed. The separate JRA accessO capture v002 remains outside this domain phase.
+
+Frozen conclusions: `EVIDENCE_ROLE_EXTENSION_READY=YES`, source/snapshot schema bumps `NO`, builder production
+change `NO`, global/source/snapshot repository migrations `NO`, existing NAR source IDs and snapshot hashes
+preserved `YES`, and final-odds evidence changes new source IDs and snapshot digests `YES`. The recommended next
+phase is `4C-2d3b1i6d1d3 — historical final-odds evidence-role IMPLEMENTATION`, limited to the two neutral
+validators, their source/snapshot/builder regression modules, and phase docs. No production code, tests, fixtures,
+capture, migration, database, NAR normalizer, or JRA normalizer changed in this PREPARE.
