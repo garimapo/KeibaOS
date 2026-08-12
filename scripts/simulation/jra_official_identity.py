@@ -225,4 +225,3 @@ def build_jra_provider_record_id(
 
 if "annotations" in globals():
     del annotations
-
