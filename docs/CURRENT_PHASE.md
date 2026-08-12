@@ -18,7 +18,12 @@ Parent investigation: `1238018a41fd3336663e31a856f8887d0bb6d45c`.
 
 ```text
 JRA_RACE_NATIVE_KEY_STATUS = PROVEN
-JRA_RACE_NATIVE_KEY_GRAMMAR = [0-9]{4}:[0-9]{2}:[0-9]{2}:[0-9]{2}:(?:0[1-9]|1[0-2])
+JRA_VENUE_CODE_MAPPING_STATUS = PROVEN_ALL_10_CENTRAL_VENUES
+JRA_VENUE_CODE_GRAMMAR = (?:0[1-9]|10)
+JRA_MEETING_NUMBER_GRAMMAR = (?:0[1-9]|[1-9][0-9])
+JRA_MEETING_DAY_GRAMMAR = (?:0[1-9]|1[0-2])
+JRA_RACE_NUMBER_GRAMMAR = (?:0[1-9]|1[0-2])
+JRA_RACE_NATIVE_KEY_GRAMMAR = [0-9]{4}:(?:0[1-9]|10):(?:0[1-9]|[1-9][0-9]):(?:0[1-9]|1[0-2]):(?:0[1-9]|1[0-2])
 JRA_STABLE_RACE_ID = jra:race:<YYYY>:<VV>:<MM>:<DD>:<RR>
 JRA_RACE_KEY_RECONSTRUCTION = IDENTITY_PROVEN_CAPTURE_CNAME_NOT_RECONSTRUCTABLE
 SAME_RACE_DIFFERENT_CNAME_FORM = PROVEN
@@ -28,10 +33,22 @@ ACCESS_S_TAIL_IDENTITY_STATUS = NOT_ENTITY_IDENTITY_OPAQUE_NAVIGATION_MATERIAL
 ```
 
 Official `accessS` and `accessD` pages prove that the stable native race identity is the lexical five-token
-tuple `YYYY:VV:MM:DD:RR`: four-digit racing year, two-digit JRA venue code, two-digit meeting number,
-two-digit meeting day, and two-digit race number. Preserve every token lexically; do not parse through `int()`
-or strip zeroes. The eight-digit CNAME race date is a mandatory visible-page validation cross-check, not a sixth
-stable-ID token because it is redundant with the meeting tuple.
+tuple `YYYY:VV:MM:DD:RR`: JRA racing year, JRA central venue code, meeting number, meeting day number, and
+race number. `DD` is a meeting day, not a calendar day of month. Preserve every token lexically; do not parse
+through `int()` or strip zeroes. The calendar race date is not part of canonical entity identity because the
+proven provider tuple identifies the physical race; it remains an independent mandatory official consistency
+cross-check and is not assumed mathematically reconstructable from the tuple.
+
+```text
+RACE_DATE_IDENTITY_COMPONENT = NO
+RACE_DATE_VALIDATION_CROSSCHECK = REQUIRED
+LEXICAL_IDENTITY_VALIDITY = STRICT_ASCII_TOKEN_DOMAIN_ONLY
+PHYSICAL_RACE_EXISTENCE = SEPARATE_OFFICIAL_PAGE_VALIDATION
+```
+
+The pure future parser must reject invalid token width, zeroes, signs, whitespace, Unicode digits, missing
+zero padding, extra separators, venue `00`/`11`/`99`, meeting `00`, meeting day `00`/`13`/`99`, and race
+`00`/`13`/`99`. A lexically valid key does not itself prove that a physical race existed.
 
 For the same 2025-09-13 Nakayama 4R, official accessS CNAMEs with `sde01` and `sde10` prefixes and different
 opaque tails rendered the same race, while an accessD CNAME rendered the same race too. The selector and tail
@@ -39,13 +56,27 @@ therefore identify navigation/capture context, never the race entity. A complete
 `external_race_id` or as a provider-record identity.
 
 ```text
-JRA_VENUE_CODE_MAPPING_STATUS = PARTIAL_DIRECT_OFFICIAL_PROOF
+01 = 札幌
+02 = 函館
+03 = 福島
+04 = 新潟
+05 = 東京
+06 = 中山
+07 = 中京
+08 = 京都
+09 = 阪神
+10 = 小倉
+MEETING_NUMBER_ZERO = REJECTED
+MEETING_NUMBER_UPPER_BOUND = NOT_PROVEN_PROVIDER_WIDE
+MEETING_DAY_ZERO_OR_ABOVE_12 = REJECTED
+RACE_NUMBER_ZERO_OR_ABOVE_12 = REJECTED
 DATE_VENUE_RACE_NO_LOOKUP_UNIQUENESS = NOT_PROVEN_AS_A_GENERAL_DISCOVERY_CONTRACT
 ```
 
-Direct official examples prove the inspected venue codes only (`01` Sapporo, `05` Tokyo, `06` Nakayama,
-`07` Chukyo, `08` Kyoto, `09` Hanshin, `10` Kokura). No complete venue-code table, schedule lookup, or general
-date/place/R resolution service is approved by this investigation.
+Official JRA/JRADB evidence establishes the complete central-venue map above. No code outside `01` through `10`
+is accepted. The meeting-number grammar is deliberately lexical-positive two-digit syntax, not a claim that a
+meeting `99` exists. Official programs establish meeting days and races through 12; only `01` through `12` are
+currently supported for those two tokens.
 
 ## Resolved accessS Capture URL
 

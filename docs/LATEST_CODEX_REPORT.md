@@ -3341,3 +3341,23 @@ accessS row-local accessU anchor proves row-to-horse linkage. The inspected NAR 
 NAR-lineage-to-JRA-horse bridge is proven. Horse-name linkage remains forbidden. `JRA_IDENTITY_IMPLEMENTATION_READY`
 is YES for a separately authorized pure identity boundary; mixed-history collection is NO. Status is
 `DRAFT_FOR_REVIEW`; no production code, tests, fixtures, capture, CP932 work, schema, migration, or builder changed.
+
+## Phase 4C-2d3b1i6d1b1 Race-Key Domain Tightening
+
+Independent design review accepted the stable five-token JRA race-key architecture but required strict lexical
+domains before identity parsing is implementation-ready. Official JRA/JRADB investigation now freezes the complete
+central venue map: `01` Sapporo, `02` Hakodate, `03` Fukushima, `04` Niigata, `05` Tokyo, `06` Nakayama, `07`
+Chukyo, `08` Kyoto, `09` Hanshin, and `10` Kokura. Thus `VV` is exactly `(?:0[1-9]|10)`; no other code is accepted.
+
+The sole authoritative native-key grammar is
+`[0-9]{4}:(?:0[1-9]|10):(?:0[1-9]|[1-9][0-9]):(?:0[1-9]|1[0-2]):(?:0[1-9]|1[0-2])` for racing year, venue,
+meeting number, meeting day, and race number. The meeting-number upper bound is not claimed: its positive
+two-digit domain is lexical validity only. Official programs prove the supported meeting-day and race-number range
+through 12, so zero and values above 12 are rejected for those fields. No integer conversion, Unicode digits,
+signs, whitespace, missing padding, aliases, or extra separators are permitted.
+
+The calendar race date is not a canonical identity component and is not asserted reconstructable from the tuple;
+it remains a mandatory independent official-page consistency check. Physical-race existence is later page validation,
+not a pure lexical-parser result. The earlier bridge limits remain unchanged: general NAR JRA-event resolution and
+NAR-lineage-to-JRA-horse linkage are not proven, and mixed-history collection is not ready. This correction changes
+only the phase docs; status remains `DRAFT_FOR_REVIEW`.
