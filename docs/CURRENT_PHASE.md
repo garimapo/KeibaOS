@@ -23,6 +23,9 @@ JRA_CAPTURE_DATABASE = SEPARATE
 JRA_CAPTURE_PAGE_KINDS = RACE_RESULT + HORSE_PROFILE_HISTORY
 RAW_RESPONSE_SHA = EXACT_CP932_PARSER_INPUT_BYTES
 JRA_CAPTURE_MIGRATION = DEDICATED_V001
+JRA_CAPTURE_MIGRATION_REGISTRY_SCHEMA_VALIDATION = EXACT_FAIL_CLOSED
+MALFORMED_REGISTRY_AUTO_REPAIR = FORBIDDEN
+PREEXISTING_UNREGISTERED_CAPTURE_SCHEMA = REJECTED
 GLOBAL_MIGRATION_FINAL_VERSION = 13
 NAR_CAPTURE = UNCHANGED
 JRA_LIVE_CAPTURE = NOT_IMPLEMENTED
@@ -57,8 +60,11 @@ to the approved `text/html` family, coding is absent or `identity`, and auxiliar
 metadata. No decoded text is retained or hashed.
 
 The dedicated v001 registry is `jra_official_response_capture_schema_migrations`; its body and capture tables are
-`jra_official_response_bodies` and `jra_official_response_captures`. The registry is structurally validated, is
-separate from both global and NAR registries, and no global migration is added. The connection-injected repository is
+`jra_official_response_bodies` and `jra_official_response_captures`. Its structural validation is exact and
+fail-closed: the two-column `WITHOUT ROWID` table, typed positive version check, typed nonempty unique name check,
+and registered migration rows must all match the approved contract. A malformed registry or pre-existing unregistered
+JRA capture table is rejected without adoption, alteration, or repair. The registry is separate from both global and
+NAR registries, and no global migration is added. The connection-injected repository is
 append-only, body-deduplicated, atomic, and fail-closed for malformed registry/tables, missing/corrupt bodies,
 nonunique evidence tuples, or derived-identity mismatch. Exact replay is only by canonical URL, SHA, and observed UTC;
 there is no latest/nearest/network fallback or repair-on-save.

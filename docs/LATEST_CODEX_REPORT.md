@@ -3362,3 +3362,15 @@ Verification so far under Python 3.14.5 / pytest 8.3.5: dedicated JRA domain/mig
 existing JRA identity plus NAR capture/migration/repository regressions 35 passed. Full-suite and static verification
 remain required before this review branch is published. Status is `READY_FOR_REVIEW`; no formal integration or d1c2
 live-capture work has begun.
+
+## Phase 4C-2d3b1i6d1c1 Migration Registry Hardening Correction
+
+The dedicated JRA capture migration runner now validates the pre-existing registry schema exactly and fail-closed:
+the approved two-column `WITHOUT ROWID` shape, positive integer version check, unique typed nonempty name check,
+and registered migration rows are all required. Missing constraints, extra columns, wrong or unknown registrations,
+and malformed rows are rejected. Pre-existing JRA body or capture tables without a valid registry are also rejected.
+No registry/table adoption, alteration, drop, or automatic repair is permitted; the migration transaction rolls back.
+
+Fresh migration verification passed 6 tests under Python 3.14.5 / pytest 8.3.5. The correction remains
+`READY_FOR_REVIEW`; full dedicated, related, static, and full-suite verification is required before publishing the
+review correction. No live capture, provider bridge, NAR change, global migration, or formal integration has begun.

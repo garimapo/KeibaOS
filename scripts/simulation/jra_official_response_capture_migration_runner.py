@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3 as _sqlite3
+import re as _re
 
 from scripts.simulation import jra_official_response_capture_migration as _v001
 
@@ -19,6 +20,11 @@ def _connection(value: object) -> _sqlite3.Connection:
 def _registry(connection: _sqlite3.Connection) -> None:
     row = connection.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (_TABLE,)).fetchone()
     if row is None:
+        collisions = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('jra_official_response_bodies','jra_official_response_captures')"
+        ).fetchall()
+        if collisions:
+            raise RuntimeError("unregistered JRA capture schema is invalid")
         connection.execute("""CREATE TABLE jra_official_response_capture_schema_migrations (
             version INTEGER PRIMARY KEY CHECK(typeof(version)='integer' AND version>0),
             name TEXT NOT NULL UNIQUE CHECK(typeof(name)='text' AND length(name)>0)
@@ -27,9 +33,24 @@ def _registry(connection: _sqlite3.Connection) -> None:
     columns = connection.execute(f"PRAGMA table_info({_TABLE})").fetchall()
     if [(item[1], item[2], item[3], item[5]) for item in columns] != [("version", "INTEGER", 1, 1), ("name", "TEXT", 1, 0)]:
         raise RuntimeError("JRA capture migration registry schema is invalid")
+    indexes = connection.execute(f"PRAGMA index_list({_TABLE})").fetchall()
+    unique_name_indexes = [item[1] for item in indexes if item[2] == 1 and item[3] == "u"]
+    if len(unique_name_indexes) != 1:
+        raise RuntimeError("JRA capture migration registry unique constraint is invalid")
+    index_columns = connection.execute(f"PRAGMA index_info({unique_name_indexes[0]})").fetchall()
+    if [(item[0], item[2]) for item in index_columns] != [(0, "name")]:
+        raise RuntimeError("JRA capture migration registry unique constraint is invalid")
     sql = row[0]
-    if type(sql) is not str or "WITHOUT ROWID" not in sql.upper():
+    if type(sql) is not str:
         raise RuntimeError("JRA capture migration registry is invalid")
+    normalized = _re.sub(r"\s+", "", sql).lower()
+    required = (
+        "withoutrowid",
+        "check(typeof(version)='integer'andversion>0)",
+        "check(typeof(name)='text'andlength(name)>0)",
+    )
+    if any(item not in normalized for item in required):
+        raise RuntimeError("JRA capture migration registry checks are invalid")
 
 
 def get_applied_jra_capture_schema_versions(connection: _sqlite3.Connection) -> dict[int, str]:
