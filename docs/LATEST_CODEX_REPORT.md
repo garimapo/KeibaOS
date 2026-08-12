@@ -3320,3 +3320,26 @@ The two approved namespace test extensions now assert `his-v4`; the capture migr
 registry `(8, 9, 10, 11, 12, 13)` while preserving its dedicated capture-registry isolation checks. Fresh verification
 under Python 3.14.5 / pytest 8.3.5 passed: capture migration 8, core targeted d1a1 suite 82, related suite 93, and
 full suite 2523. Status is `READY_FOR_REVIEW`; stop for independent implementation review.
+
+## Phase 4C-2d3b1i6d1b2 NAR-Lineage to JRA Stable-Horse Identity Bridge Investigation
+
+Docs-only PREPARE on formal base `04c0fbcad2ea13b2e325e795e6de022718edb01a`, materializing the approved b1
+race/horse identity conclusions without using the b1 review branch as a code base. Official raw-page inspections
+used two independent NAR mixed-history examples: HorseMarkInfo lineage `30074407776` (multiple JRA rows) and
+`30038401876` (multiple JRA rows), plus JRA accessU research candidates whose URL keys were `2020102902` and
+`2020104270`. These paired names were navigation clues only and are explicitly not a provider bridge.
+
+NAR JRA-history rows expose only display cells. Raw row markup did not contain an accessU href, JRA 10-digit key,
+common registration value, hidden value, data attribute, or navigation argument. NAR HorseMarkInfo/RaceHorseInfo
+did not directly link the lineage profile to JRA. Conversely, inspected JRA accessU pages can show NAR history and
+`JRAより転出`/`JRAへ転入` markers, but those row-local structures expose display facts only: no NAR URL, NAR lineage,
+or shared registration identifier. `COMMON_OFFICIAL_HORSE_IDENTIFIER` is therefore none on the inspected pages;
+both direct lineage-to-JRA-profile and event-scoped bridges remain NOT_PROVEN.
+
+The sole bridge conclusion is `NO_OFFICIAL_BRIDGE_PROVEN`. A separately captured authoritative official common-ID
+source is required before any bridge implementation. It must become a separately audited identity-link artifact,
+not a third past-race evidence role. Identity evidence follows the normal causality rule and must be observed on or
+before the prediction cutoff; current-page lookup cannot leak mutable fields or future history into replay. The
+provider-wide mapping cardinality remains unproven, so any future link must fail closed on a competing mapping in
+either direction. Pure JRA identity parsing remains independently ready; mixed history collection is not. No
+production code, tests, fixtures, captures, migrations, or manual mapping changed.
