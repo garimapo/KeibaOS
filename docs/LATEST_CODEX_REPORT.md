@@ -3405,3 +3405,45 @@ the sole owner of strict CP932 validation, raw SHA, and immutable capture identi
 The live service owns no pacing, discovery, field parsing, source normalization, database path, global migration,
 NAR behavior, or NAR-to-JRA bridge. Status is `READY_FOR_REVIEW`; no formal integration, JRA result normalizer, race
 history discovery, or bridge work has begun.
+
+## Phase 4C-2d3b1i6d1d1 JRA Historical Odds Evidence/Domain PREPARE
+
+Status: `DRAFT_FOR_REVIEW` on `review/4c-2d3b1i6d1d1-odds-prepare`, based exactly on formal
+`0135cee4ad8e578e6bd20940b16198a576172c04` and the approved d1d PREPARE reference
+`3e7de6780c9fb8af6169d015b942bd4d72dde576`.
+
+Official JRA investigation proved the missing historical odds surface.  JRA's own FAQ says a completed race's final
+odds are available from race results.  A completed accessS page's race-specific `オッズ` navigation submits a form
+POST to `/JRADB/accessO.html` with a CNAME copied from that official page, such as
+`pw151ou1006202601050720260112Z/E1`.  The server returns strict CP932 HTML, titled
+`単勝・複勝オッズ（馬番順）`, whose `table.tanpuku` directly maps every `馬番` to a final `単勝` decimal.  It is
+not a JavaScript-loaded payload.  The accessO CNAME carries the same venue/year/meeting/day/race/calendar-date
+identity material as accessS, with observed exact family `pw151ou10<VV><YYYY><MM><DD><RR><YYYYMMDD>Z/<TT>`.
+
+The provider-neutral semantic decision is exact: `past_race.odds` means direct official final single-win odds.  It
+is parsed directly to finite positive Decimal and never derived from popularity, payout, probability, a margin, a
+model, or a current substitute.  Stable horse identity remains the accessS row-local accessU identity; accessS
+matched `td.num` must equal the unique accessO odds-row `td.num`.  No horse-name identity fallback exists.
+
+This finding creates two prerequisites.  First, current JRA capture supports GET accessS/accessU only.  accessO is
+POST navigation, so a dedicated capture v002 must add a `final_win_odds` kind, strict observed CNAME identity,
+canonical request locator, CP932 supplied-response/archive support, and a page-kind-directed POST live transport.
+The existing v001 `page_kind` CHECK requires an atomic dedicated JRA archive migration; global simulator migrations
+remain untouched.  Second, current c1a allows exactly `historical_race_context` plus `historical_race_result` for
+each past race.  Recasting official accessS as context and accessO as result would be semantically misleading and
+would obscure source ownership.  The selected future direction is an explicit `historical_race_final_odds` role,
+while retaining every NAR two-role record unchanged.  Its provider-neutral role-set/source-ID/snapshot transition
+must be independently designed before any normalizer implementation.
+
+Therefore `ARCHITECTURE_DECISION = BOTH_EXTENSIONS_REQUIRED`, `JRA_CAPTURE_EXTENSION_REQUIRED = YES`,
+`C1A_EVIDENCE_EXTENSION_REQUIRED = YES`, and `MIGRATION_REQUIRED = YES` (dedicated JRA archive v002 only).
+`available_at=None`; supplied observed time is never altered, and existing snapshot causality remains the sole
+historical eligibility rule.  A current capture is not historical replay evidence merely because the represented
+race is old.
+
+The recommended next phase is docs-only
+`4C-2d3b1i6d1d2 — provider-neutral historical final-odds evidence-role PREPARE`.  It must settle the exact c1a
+role-set, schema/source-ID, snapshot-provenance, and transition policy before accessO capture or the JRA historical
+normalizer can be authorized.  NAR remains unchanged;
+`NAR_LINEAGE_TO_JRA_HORSE_ID_LINK = NOT_PROVEN` and `MIXED_HISTORY_COLLECTION_READY = NO` remain unchanged.  No
+production code, tests, fixtures, capture/archive implementation, migration, database, or NAR files changed.
