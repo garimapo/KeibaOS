@@ -6,92 +6,80 @@ READY_FOR_REVIEW
 
 ## Phase and Base
 
-Phase `4C-2d3b1i6d1b3` — pure JRA official race/horse identity implementation.
+Phase `4C-2d3b1i6d1c1` — JRA supplied-response/capture domain plus dedicated SQLite archive implementation.
 
-Formal base: `04c0fbcad2ea13b2e325e795e6de022718edb01a`.
+Formal base: `7632a1381c77403e55284e027392d0fbc1f5a346`.
 
-Implementation review branch: `review/4c-2d3b1i6d1b3-implementation`.
+Implementation review branch: `review/4c-2d3b1i6d1c1-implementation`.
 
-Approved race-identity design: `9802d37cb443c6990cacef6c4cb5650273e145b1`.
+Approved preparation: `7cf4083e27fd4d0df256c55b0487179ea28baeb4`.
 
-Approved bridge design: `dd87ffabd831fd9cfcf483260bce23b596511145`.
-
-## Implemented Pure Identity Contract
+## Implemented Contract
 
 ```text
-JRA_IDENTITY_MODULE = IMPLEMENTED_FOR_REVIEW
-JRA_RACE_NATIVE_KEY_STATUS = PROVEN
-JRA_RACE_NATIVE_KEY_GRAMMAR = [0-9]{4}:(?:0[1-9]|10):(?:0[1-9]|[1-9][0-9]):(?:0[1-9]|1[0-2]):(?:0[1-9]|1[0-2])
-JRA_STABLE_RACE_ID = IMPLEMENTED
-JRA_STABLE_HORSE_ID = IMPLEMENTED
-JRA_STABLE_ENTRY_ID = IMPLEMENTED
-JRA_PROVIDER_RECORD_ID = IMPLEMENTED
-ACCESS_S_ALIAS_COLLAPSE = PASS
-ACCESS_U_ALIAS_COLLAPSE = PASS
-PHYSICAL_RACE_EXISTENCE = SEPARATE_OFFICIAL_PAGE_VALIDATION
-```
-
-`scripts/simulation/jra_official_identity.py` defines exactly the approved public API:
-
-```text
-JRAOfficialIdentityError
-JRAOfficialIdentityValidationError
-JRAExternalRaceIdentity
-JRAExternalHorseIdentity
-parse_jra_external_race_id
-parse_jra_external_horse_id
-parse_jra_result_url_identity
-parse_jra_horse_profile_url_identity
-build_jra_external_entry_id
-build_jra_provider_record_id
-```
-
-The frozen/slotted race identity retains five canonical lexical strings: JRA racing year, venue code, meeting
-number, meeting day, and race number. It emits only `jra:race:<YYYY>:<VV>:<MM>:<DD>:<RR>`. Venue codes are
-`01` through `10`; meeting numbers use positive two-digit lexical syntax without claiming a provider-wide upper
-bound; meeting days and race numbers are exactly `01` through `12`. No integer conversion, Unicode digits, signs,
-whitespace, aliases, or zero-padding repair exists.
-
-The horse identity retains only the ten-ASCII-digit accessU profile key and emits `jra:horse:<key>`. The entry ID is
-race-local, `<external_race_id>:entry:<positive canonical horse_no>`, and intentionally does not contain a horse
-profile key. The result ID is `jra:result:<YYYY>:<VV>:<MM>:<DD>:<RR>:horse:<key>`.
-
-## Official URL Boundary
-
-The accessS parser accepts only resolved HTTPS `www.jra.go.jp/JRADB/accessS.html` URLs with one `CNAME`, exact
-observed `pw01sde01` or `pw01sde10` selector families, a validated five-token race segment, a valid calendar-date
-token whose year agrees with the native race year, and an opaque uppercase `[0-9A-F]{2}` tail. Raw `/` and one
-uppercase `%2F` spelling are accepted; `%252F`, lowercase encoding, `+`, unknown/duplicate parameters, ports,
-credentials, fragments, noncanonical hosts, malformed percent encoding, and unobserved selector/tail forms fail
-closed. Selector, calendar date, and tail never enter `external_race_id`.
-
-The accessU parser has the matching strict resolved URL boundary, accepting only observed `pw01dud00` or
-`pw01dud10` CNAME selector families, a ten-digit profile key, and opaque uppercase two-hex tail. Context/tail
-aliases for the same key collapse to equal horse identities. The implementation never performs network access or
-assumes that a lexically valid race identity proves a race exists.
-
-## Explicitly Unchanged and Out of Scope
-
-```text
+JRA_CAPTURE_DOMAIN = IMPLEMENTED_FOR_REVIEW
+JRA_CAPTURE_SCHEMA_VERSION = 1
+JRA_CAPTURE_DATABASE = SEPARATE
+JRA_CAPTURE_PAGE_KINDS = RACE_RESULT + HORSE_PROFILE_HISTORY
+RAW_RESPONSE_SHA = EXACT_CP932_PARSER_INPUT_BYTES
+JRA_CAPTURE_MIGRATION = DEDICATED_V001
+GLOBAL_MIGRATION_FINAL_VERSION = 13
+NAR_CAPTURE = UNCHANGED
+JRA_LIVE_CAPTURE = NOT_IMPLEMENTED
 NAR_LINEAGE_TO_JRA_HORSE_ID_LINK = NOT_PROVEN
 MIXED_HISTORY_COLLECTION_READY = NO
 ```
 
-There is no NAR code, cross-provider bridge, horse-name fallback, provider capture, race discovery, HTML parsing,
-historical normalization, SQLite access, clock, or package-root export. The b2 conclusion remains binding: pure JRA
-identity work does not attach an NAR horse to a JRA result row.
+The module `scripts/simulation/jra_official_response_capture.py` exposes exactly:
+
+```text
+JRAOfficialPageKind
+JRAOfficialResponseCaptureError
+JRAOfficialResponseCaptureValidationError
+JRAOfficialResponseCaptureUnsupportedError
+JRAOfficialResponseCaptureMissingError
+JRASuppliedOfficialResponse
+JRAOfficialResponseCapture
+JRAOfficialResponseCaptureArchive
+canonicalize_jra_official_capture_url
+```
+
+The supported page kinds are only `race_result` / accessS and `horse_profile_history` / accessU. The canonicalizer
+uses the public JRA identity validators, preserves valid CNAME selector/date/tail retrieval identity, and renders the
+single CNAME delimiter as uppercase `%2F`; raw slash is an alias, while lowercase and double-encoded forms fail
+closed. Entity identities remain distinct from capture URLs.
+
+Both supplied and archived capture values require exact nonempty CP932 bytes, strict CP932 decode, canonical supported
+URL, exact `charset="cp932"`, and aware UTC observation. The capture derives page kind, raw lowercase SHA-256, and
+`jra-capture-v1:<sha256>` from canonical URL, page kind, raw SHA, observed UTC microsecond text, and schema version.
+Requested/observed/stored timestamps are monotonic; HTTP status is exact integer 200; HTML content type is normalized
+to the approved `text/html` family, coding is absent or `identity`, and auxiliary headers remain non-semantic audit
+metadata. No decoded text is retained or hashed.
+
+The dedicated v001 registry is `jra_official_response_capture_schema_migrations`; its body and capture tables are
+`jra_official_response_bodies` and `jra_official_response_captures`. The registry is structurally validated, is
+separate from both global and NAR registries, and no global migration is added. The connection-injected repository is
+append-only, body-deduplicated, atomic, and fail-closed for malformed registry/tables, missing/corrupt bodies,
+nonunique evidence tuples, or derived-identity mismatch. Exact replay is only by canonical URL, SHA, and observed UTC;
+there is no latest/nearest/network fallback or repair-on-save.
 
 ## Allowed Files
 
 ```text
-scripts/simulation/jra_official_identity.py
-tests/test_jra_official_identity.py
+scripts/simulation/jra_official_response_capture.py
+scripts/simulation/jra_official_response_capture_migration.py
+scripts/simulation/jra_official_response_capture_migration_runner.py
+scripts/simulation/repositories/sqlite_jra_official_response_capture_repository.py
+tests/test_jra_official_response_capture.py
+tests/test_jra_official_response_capture_migration.py
+tests/test_sqlite_jra_official_response_capture_repository.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
 ## Verification and Stop Condition
 
-Dedicated, related, full-suite, static, package-export, and diff checks are required before review publication.
-Stop for independent implementation review after the one review commit; do not integrate formal or begin capture,
-bridge, discovery, or a JRA normalizer.
+Dedicated JRA archive tests and existing JRA identity/NAR capture regressions pass. Full-suite verification, source-boundary
+checks, package-root export check, and diff check are required before publication. Stop for independent implementation
+review after one review commit. Do not integrate formal or begin live capture, JRA result normalization, or a provider
+bridge.

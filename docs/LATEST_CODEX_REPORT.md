@@ -3340,3 +3340,25 @@ No network, capture, storage, clock, HTML parser, provider lookup, bridge, race 
 or package-root export was added. The b2 blocker remains exact: `NAR_LINEAGE_TO_JRA_HORSE_ID_LINK = NOT_PROVEN`;
 mixed-history collection remains unsupported. Status is `READY_FOR_REVIEW` pending independent implementation
 review.
+
+
+## Phase 4C-2d3b1i6d1c1 JRA Capture Domain and Dedicated Archive Implementation
+
+Implemented the approved pure JRA capture domain, dedicated v001 schema/migration runner, and connection-injected
+append-only SQLite archive on formal base `7632a1381c77403e55284e027392d0fbc1f5a346`. The new capture boundary
+accepts only accessS race-result and accessU horse-profile/history URLs validated through the public JRA identity
+contract. It canonicalizes only the CNAME delimiter to uppercase `%2F`, preserves selector/date/tail URL identity,
+requires strict CP932 bytes, hashes the exact bytes before decoding, and derives deterministic
+`jra-capture-v1:<sha256>` identities. No live HTTP service, JRA result normalizer, NAR modification, bridge,
+global migration, package export, database file, or log changed.
+
+The separate archive has dedicated registry `jra_official_response_capture_schema_migrations`, raw-BLOB dedup table,
+and immutable capture-observation table. It uses exact evidence lookup by canonical URL, raw SHA, and observed UTC
+timestamp; exact reinserts are idempotent, differing immutable content conflicts, and missing/corrupt body rows,
+duplicate evidence, and malformed stored values fail closed without repair. The global migration sequence remains
+8 through 13 and NAR capture remains unchanged.
+
+Verification so far under Python 3.14.5 / pytest 8.3.5: dedicated JRA domain/migration/repository tests 7 passed;
+existing JRA identity plus NAR capture/migration/repository regressions 35 passed. Full-suite and static verification
+remain required before this review branch is published. Status is `READY_FOR_REVIEW`; no formal integration or d1c2
+live-capture work has begun.
