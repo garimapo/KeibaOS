@@ -2,93 +2,179 @@
 
 ## Status
 
-READY_FOR_REVIEW
+DRAFT_FOR_REVIEW
 
 ## Phase and Base
 
-Phase `4C-2d3b1i6d1a1` — provider-neutral historical race-time domain implementation.
+Phase `4C-2d3b1i6d1b` — JRA canonical race/horse identity and NAR-to-JRA bridge preparation.
 
-Formal base: `7b4a0f5e28311c2d64685f6d3309f68556e67f8b`.
+Formal base: `04c0fbcad2ea13b2e325e795e6de022718edb01a`.
 
-Implementation review branch: `review/4c-2d3b1i6d1a1-implementation`.
+Preparation review branch: `review/4c-2d3b1i6d1b-prepare`.
 
-Approved preparation: `bcac7efbc6eb0ff149100225cbc1e6e53910d0cf`.
-
-## Implemented Source Contract
+## Frozen Existing Contracts
 
 ```text
 C1A_SCHEMA_VERSION = 4
 SOURCE_ID_NAMESPACE = his-v4
 SNAPSHOT_SCHEMA_VERSION = 4
-GLOBAL_MIGRATION_FINAL_VERSION = 13
 REFERENCE_TIME_DIFFERENCE_SOURCE_FIELD = REMOVED
 RACE_TIME_SOURCE_FIELD = RETAINED_EXACT_TEXT
 HISTORICAL_DOMAIN_DERIVED_VALUES_POLICY = DIRECT_OFFICIAL_SOURCE_FACTS_ONLY
-TIME_DIFFERENCE_TO_PREDICTION_ADAPTER_STATUS = CONTRACT_GAP
+JRA_CHARSET_POLICY = CP932_FOR_APPROVED_PAGE_FAMILIES
+CAPTURE_ARCHITECTURE_DECISION = JRA_SPECIFIC
+CAPTURE_DATABASE_DECISION = SEPARATE_JRA_CAPTURE_DATABASE
+EXACT_CNAME_AS_STABLE_ENTITY_ID = REJECTED
 ```
 
-All six c1a record kinds now construct source IDs in the exact `his-v4:{record_kind}:{sha256}` namespace. This is
-intentional global source-ID churn; no v3 payload mode, alias, compatibility read, or dual-write exists.
+No JRA source record, capture, normalizer, migration, fixture, or public API is approved by this preparation.
+Identity validation and any future discovery/capture are separate: identity code is pure; official discovery may find a
+page; trusted capture preserves exact raw bytes and observed time; snapshot assembly remains the causal gate. A page
+fetched today is not evidence for an earlier historical cutoff.
 
-`past_race` now contains exactly the retained official factual fields, including required NFC-normalized `race_time`
-text and excluding `reference_time_difference_seconds`. `HistoricalPastRaceSnapshot`, the builder, canonical
-snapshot payload, digest, and SQLite repository likewise contain no comparison field, property alias, default, or
-fallback. Snapshot canonical payload schema version is 4.
+## Official Probe Record
 
-The NAR pair normalizer retains the exact official race-time display (the representative result remains `1:32.4`) and
-unchanged two-response evidence roles, raw-byte SHA-256, and timestamp semantics. HorseMarkInfo direct `差` is no
-longer a factual c1a output key. Changing that raw response bytes still changes evidence SHA and therefore source ID;
-it does not reintroduce a comparison fact.
+Only `www.jra.go.jp` was used for provider conclusions. Official result pages exposed, for example,
+`accessS.html?CNAME=pw01sde0107202601011220260314%2F77` for 2026-03-14 1回中京1日 12R and
+`accessS.html?CNAME=pw01sde1008202603041120260503%2F85` for 2026-05-03 3回京都4日 11R. Official entry pages
+use the distinct `accessD` family, for example `pw01dde0101202601010420260725%2F1A`. Their CNAMEs have differing
+page-family and opaque components. Replacing an accessS family prefix with accessD did not yield a valid official
+page; it produced a parameter error. The complete CNAME, including its final slash/tail, is therefore required
+navigation/capture material, not an approved race entity ID or reconstructable URL.
 
-## Migration
+The official Battle Born horse profile was independently returned by both
+`accessU.html?CNAME=pw01dud102019105193%2FEB` and
+`accessU.html?CNAME=pw01dud002019105193%2F04`. Both identify the same profile while the `dud` view selector and
+two-hex tail differ. Its official history link to
+`accessS.html?CNAME=pw01sde1005202401011120240127%2F9A` in turn contains the row-local horse anchor back to
+`pw01dud102019105193/EB`. Other official accessS rows expose distinct accessU keys. This is structural link evidence,
+not a name match.
 
-`v013_historical_past_race_race_time_domain_schema` is registered after v012. It removes
-`reference_time_difference_seconds_text` only when `historical_input_snapshots` is empty. A nonempty store raises
-before schema mutation, leaves v013 unapplied, and retains the old column. Identity and linkage rows may remain and
-are preserved. v011 and v012 are unchanged.
-
-The dedicated NAR capture migration registry and schema remain separate and unchanged. The global registry is exactly
-`(8, 9, 10, 11, 12, 13)`; v013 is not registered in the dedicated capture runner.
-
-## Explicitly Unchanged and Out of Scope
-
-No legacy `PastRace.margin` adapter, AbilityEngine, JockeyEngine, JRA normalizer, JRA capture, prediction feature,
-time subtraction, winner/second comparison, textual-margin conversion, provider acquisition, discovery, absence
-logic, package export, database data, or logs changed.
+## JRA Race Identity Result
 
 ```text
-ABILITY_REFERENCE_DATE_STATUS = FUTURE_LEAKAGE_BLOCKER_IN_CURRENT_PERSISTED_COMPOSITION
-JOCKEY_REFERENCE_DATE_STATUS = FUTURE_LEAKAGE_BLOCKER_IN_CURRENT_PERSISTED_COMPOSITION
+JRA_RACE_NATIVE_KEY_STATUS = NOT_PROVEN
+JRA_RACE_NATIVE_KEY_GRAMMAR = NONE_APPROVED
+SAME_RACE_DIFFERENT_CNAME_FORM = NOT_PROVEN
+JRA_STABLE_RACE_ID = NOT_PROVEN
+JRA_RACE_KEY_RECONSTRUCTION = NOT_PROVEN
+JRA_STABLE_ENTRY_ID = NOT_APPROVED
+JRA_PROVIDER_RECORD_ID = PROVISIONAL_NOT_APPROVED
+CANONICAL_ACCESS_S_URL = NOT_APPROVED
 ```
 
-## Allowed Files
+The observed accessS CNAMEs visibly correlate with official date, venue, meeting/day, and race displays, but no
+official multi-route proof identifies a stable race token or proves that a subset of CNAME is invariant for one race.
+The CNAME suffix is operationally significant and cannot be regenerated by a string substitution. Do not use any
+fixed character slice, title, date/place/R display tuple, local ID, finish, jockey, odds, or navigation state as a
+canonical `external_race_id`.
+
+No `jra:race:...`, `jra:result:...`, or JRA `external_entry_id` grammar is approved. A future entry identity can be
+considered only after a stable race identity exists; the preferred eventual shape remains
+`<external_race_id>:entry:<positive-row-local-horse-no>`, with horse number separate from horse identity.
+
+## JRA Horse Identity Result
 
 ```text
-scripts/simulation/historical_input_source_records.py
-scripts/simulation/historical_input_snapshots.py
-scripts/simulation/historical_input_snapshot_builder.py
-scripts/simulation/repositories/sqlite_historical_input_snapshot_repository.py
-scripts/migrations/runner.py
-scripts/migrations/versions/v013_historical_past_race_race_time_domain_schema.py
-scripts/simulation/nar_historical_past_race_source.py
-tests/test_historical_input_source_records.py
-tests/test_historical_input_snapshots.py
-tests/test_historical_input_snapshot_builder.py
-tests/test_sqlite_historical_input_snapshot_repository.py
-tests/test_historical_input_snapshot_migration.py
-tests/test_simulation_migrations.py
-tests/test_simulation_bet_plan_migration.py
-tests/test_sqlite_persisted_simulation_application.py
-tests/test_nar_historical_past_race_source.py
-tests/test_nar_historical_input_source.py
-tests/test_nar_historical_past_race_absence_source.py
-tests/test_nar_official_response_capture_migration.py
+JRA_HORSE_NATIVE_KEY_STATUS = PROVEN_FOR_ACCESU_PROFILE_LINKS
+JRA_HORSE_NATIVE_KEY_GRAMMAR = [0-9]{10}
+SAME_HORSE_DIFFERENT_CNAME_FORM = PROVEN
+JRA_STABLE_HORSE_ID = jra:horse:<10-ASCII-digit-accessU-profile-key>
+CANONICAL_ACCESS_U_URL = NOT_APPROVED
+```
+
+The stable key is the exact ten ASCII digits structurally retained between the official accessU profile CNAME view
+form and its tail: the two Battle Born CNAMEs above retain `2019105193` and render the same official profile. It is an
+opaque provider key, not a parsed birth date, registration-number claim, integer, or display-derived value. The
+surrounding page-family (`pw01dud`), view selector, separator, and final uppercase hexadecimal tail are capture/
+navigation components and are excluded from `external_horse_id`. The lexical key is preserved exactly; no integer
+conversion, leading-zero normalization, or horse-name fallback is allowed.
+
+Future accessU acceptance may only accept HTTPS `www.jra.go.jp`, exact path `/JRADB/accessU.html`, exactly one CNAME
+query key, no credentials, fragment, controls, whitespace, duplicate/unknown key, or malformed percent encoding.
+That is an input-validation candidate, not a canonical rendering rule: official evidence has not proven a single
+safe CNAME view/tail for every profile. `www` is the only observed/accepted host; no host alias is approved.
+
+```text
+ACCESS_S_ROW_TO_STABLE_HORSE_ID = PROVEN_FOR_OFFICIAL_ROW_LOCAL_ACCESSU_ANCHOR
+ACCESS_D_ROW_TO_STABLE_HORSE_ID = NOT_PROVEN
+```
+
+An accessS result row may be bound only through its own unique `accessU` horse anchor and the proven ten-digit key.
+Name matching is forbidden. The available official accessD probes did not establish a live target entry row with the
+same complete row-local proof, so no accessD target identity collection is approved.
+
+## NAR-to-JRA Bridge Result
+
+Current `scripts/simulation/nar_historical_past_race_discovery.py` creates a JRA event reference only when a NAR
+HorseMarkInfo row has a JRA display place, canonical decimal R, completed finish, and race time. Its identifier is
+exactly `jra:event:{YYYYMMDD}:{NAR-display-place}:{R}` and carries no result URL. It is a discovery audit reference,
+not a JRA canonical race identity; it is lossy and insufficient to resolve or attach a JRA result.
+
+The authentic NAR complete-history fixture's JRA row provides 2025-09-13, `Ｊ中山`, R4, display race/result facts,
+and no official JRA result/profile link, JRA horse key, JRA registration key, or NAR-to-JRA linkage token. The
+row-local jockey annotation `(JRA)` is affiliation text and is not race or horse identity.
+
+```text
+NAR_JRA_EVENT_CURRENT_IDENTITY = LOSSY_DISCOVERY_AUDIT_REFERENCE_ONLY
+NAR_JRA_EVENT_TO_JRA_RESULT_RESOLUTION = NOT_PROVEN
+NAR_JRA_BRIDGE_LOOKUP_KEY = NOT_APPROVED
+JRA_VENUE_CODE_MAPPING_STATUS = NOT_PROVEN
+NAR_LINEAGE_TO_JRA_HORSE_ID_LINK = NOT_PROVEN
+CROSS_PROVIDER_HORSE_BRIDGE_METHOD = NONE_APPROVED
+MIXED_NAR_JRA_HISTORY_PAGE = NOT_A_CROSS_PROVIDER_IDENTITY_PROOF
+FOREIGN_HORSE_COMPLETE_HISTORY_POLICY = UNSUPPORTED_FAIL_CLOSED
+```
+
+Neither NAR date + `Ｊ`-prefixed place + R nor names, jockeys, trainers, result facts, display titles, or an inferred
+venue table may bridge to a JRA result. A later discovery layer could use a proven all-official lookup tuple only to
+locate a result page; it must then take the final canonical identity from a separately proven JRA identity contract
+and prove the horse through a direct structural provider token. NAR lineage and the accessU key have no established
+common official token. Do not add target-entry evidence to a later past-race evidence role to mask this gap.
+
+## Architecture and Implementation Decision
+
+```text
+JRA_IDENTITY_IMPLEMENTATION_READY = NO
+MIXED_HISTORY_COLLECTION_READY = NO
+PAST_RACE_ABSENCE = UNSUPPORTED
+PURE_IDENTITY_VS_OFFICIAL_DISCOVERY = REQUIRED_SEPARATION
+```
+
+The candidate pure module `scripts/simulation/jra_official_identity.py` is not approved yet because its central race
+contract is missing. No public API, parser, or package export is frozen. If later justified it may own only pure URL
+and opaque-token validation; it must not make HTTP calls, access a database/filesystem/clock, or use fuzzy matching.
+Any `scripts/simulation/nar_jra_historical_identity_bridge.py` remains unapproved until direct bridge inputs exist.
+
+The next prerequisite is `4C-2d3b1i6d1b1 — JRA race native-key and canonical result URL investigation PREPARE`.
+It must prove one physical JRA race through accessS, accessD, schedule/results navigation, and history navigation;
+identify the invariant race key and its exact grammar; distinguish opaque capture CNAME from entity identity; and
+prove any deterministic result URL validation/reconstruction. Its allowed files are exactly:
+
+```text
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-## Verification and Stop Condition
+Only after that succeeds may a separate JRA identity implementation phase consider exactly
+`scripts/simulation/jra_official_identity.py`, `tests/test_jra_official_identity.py`, and the two documentation files.
+A cross-provider bridge is a separate subsequent prerequisite and must include no production path until direct
+official NAR/JRA common-token evidence is proven.
 
-Python 3.14.5 / pytest 8.3.5 verification passed: capture migration 8, core d1a1 targeted suite 82, related
-migration/source suite 93, and full suite 2523. Stop for independent implementation review. Do not integrate formal
-or begin d1b.
+## Future Regression Plan (Blocked)
+
+Future tests must prove same race through multiple official routes maps to one external race ID, distinct races differ,
+same accessU horse through profile/history/result links maps to one `jra:horse` ID, distinct horses differ, result-row
+identity uses its local accessU anchor, and no name/title/jockey/finish/odds/local-ID fallback exists. They must also
+prove raw CNAME context/tail is preserved for capture rather than promoted to entity identity, and that current live
+responses never bypass trusted-capture causality.
+
+## Allowed Files and Stop Condition
+
+```text
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+```
+
+Stop for independent architecture review. Do not implement JRA identity, JRA capture, a JRA normalizer, a bridge, or
+mixed-history collection.

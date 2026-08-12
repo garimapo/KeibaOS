@@ -3320,3 +3320,30 @@ The two approved namespace test extensions now assert `his-v4`; the capture migr
 registry `(8, 9, 10, 11, 12, 13)` while preserving its dedicated capture-registry isolation checks. Fresh verification
 under Python 3.14.5 / pytest 8.3.5 passed: capture migration 8, core targeted d1a1 suite 82, related suite 93, and
 full suite 2523. Status is `READY_FOR_REVIEW`; stop for independent implementation review.
+
+## Phase 4C-2d3b1i6d1b JRA Canonical Identity and NAR-to-JRA Bridge Preparation
+
+Investigated only official `www.jra.go.jp` pages and made no production, test, fixture, migration, capture, or
+schema change. The current NAR discovery reference was also inspected: its JRA event identifier is exactly
+`jra:event:{YYYYMMDD}:{NAR-display-place}:{R}` and intentionally has no result URL. It is a lossy discovery audit
+reference, not a canonical JRA race identity.
+
+Official accessS examples establish that CNAMEs contain page-family and opaque navigation material, including
+`pw01sde0107202601011220260314%2F77` (2026-03-14, 1回中京1日, 12R) and
+`pw01sde1008202603041120260503%2F85` (2026-05-03, 3回京都4日, 11R). Official accessD examples use a distinct `dde`
+family. Replacing an accessS family prefix with `dde` produced a JRA parameter error, so no subset of CNAME is yet
+proven as a stable race key and no result URL can be reconstructed safely. JRA race identity, entry identity,
+provider-result identity, venue-code mapping, and NAR-event-to-result resolution all remain unapproved.
+
+One narrow horse fact is proven. Official accessU URLs
+`pw01dud102019105193%2FEB` and `pw01dud002019105193%2F04` both render Battle Born while retaining the same opaque
+ten-digit profile key `2019105193`; only the view component and hexadecimal tail differ. The horse's official profile
+history links to an accessS result whose row-local horse anchor points back to the same accessU profile token. This
+proves the `jra:horse:<10-ASCII-digit-accessU-profile-key>` candidate for accessU/accessS structural linkage, not a
+registration-number interpretation or cross-provider mapping. accessD row-local linkage remains unproven.
+
+The NAR HorseMarkInfo JRA fixture row exposes date, `Ｊ中山`, R, display/result facts, and no JRA result/profile URL,
+JRA horse key, or common NAR/JRA token. Horse name, jockey, trainer, race title, finish, and popularity are forbidden
+bridge inputs. Therefore the NAR lineage-to-JRA horse bridge and mixed-history collection remain fail-closed. The
+next prerequisite is a docs-only JRA race native-key and canonical result URL investigation; no implementation phase
+is authorized. Status is `DRAFT_FOR_REVIEW`.
