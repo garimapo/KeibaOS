@@ -5,8 +5,9 @@ from __future__ import annotations
 import sqlite3 as _sqlite3
 
 from scripts.simulation import jra_official_response_capture_migration as _v001
+from scripts.simulation import jra_official_response_capture_migration_v002 as _v002
 
-JRA_CAPTURE_MIGRATIONS = (_v001,)
+JRA_CAPTURE_MIGRATIONS = (_v001, _v002)
 _TABLE = "jra_official_response_capture_schema_migrations"
 
 

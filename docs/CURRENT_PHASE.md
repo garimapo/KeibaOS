@@ -6,84 +6,107 @@ READY_FOR_REVIEW
 
 ## Phase and Base
 
-Phase `4C-2d3b1i6d1d4a1` — request-aware historical evidence implementation.
+Phase `4C-2d3b1i6d1d4b1` — JRA final-odds capture domain and dedicated archive v002 implementation.
 
-Formal base: `41f2298820fe029bc06f024ff6da028f21ed5c7c`.
+Formal base: `906628c5eb5f1639387b3625d494cf133bb27729`.
 
-Approved PREPARE: `ff3010b77991e666e7325562a920a22e3382bd84`.
+Approved PREPARE: `acf0a28d84f6ce7961175cb807ec602f868fef56`.
 
-Implementation review branch: `review/4c-2d3b1i6d1d4a1-request-evidence-implementation`.
+Review branch: `review/4c-2d3b1i6d1d4b1-final-odds-capture-implementation`.
 
 ## Implemented Contract
 
-`HistoricalInputEvidenceReference` now has one final optional field,
-`request_identity_sha256: str | None = None`. It preserves the existing five positional fields and construction
-behavior. `None` remains the legacy URL-only request identity. A non-null value must be exactly lowercase
-64-character SHA-256 hex and requires a non-null canonical HTTPS endpoint URL.
-
-The provider-neutral layer stores and validates only that fingerprint. It does not know an HTTP method, form field,
-request body, JRA `cname`, or any provider-specific request preimage. The provider owns canonical request material
-and fingerprint calculation. Same-response timestamp coherence now keys exactly on:
+`JRAOfficialFinalWinOddsRequestLocator` is a frozen/slotted provider-owned POST locator with exactly
+`endpoint_url`, `cname`, `external_race_identity`, and `request_identity_sha256`. It accepts only the literal
+accessO endpoint `https://www.jra.go.jp/JRADB/accessO.html` and a raw, canonical CNAME matching:
 
 ```text
-(canonical_source_url, request_identity_sha256, response_sha256)
+pw151ou10<VV><YYYY><MM><DD><RR><YYYYMMDD>Z/<HH>
 ```
 
-Different request fingerprints are distinct even when endpoint and response bytes are equal. Equal full identities
-continue to require equal available/observed timestamps. Causality remains the unchanged builder responsibility.
+The locator derives and cross-checks the existing `JRAExternalRaceIdentity`; it never synthesizes CNAME from race
+identity. Percent/plus encoding, whitespace, controls, invalid dates, noncanonical fields, lower-case opaque tail,
+and caller-supplied contradictory fingerprints are rejected. The fingerprint is SHA-256 over exact UTF-8 canonical
+ASCII JSON with sorted keys and compact separators:
 
-Source schema stays `4`; source IDs stay `his-v4`. Snapshot schema stays `4`. Legacy evidence omits
-`request_identity_sha256` entirely from source and snapshot canonical payloads, preserving frozen formal-base payloads,
-source IDs, and content hashes byte-for-byte. Request-aware evidence serializes the non-null fingerprint, changing
-the corresponding source ID and snapshot digest. Timestamps remain excluded from c1a source IDs and included in
-snapshot provenance/digests.
+```json
+{"endpoint_url":"https://www.jra.go.jp/JRADB/accessO.html","form":{"cname":"<raw canonical cname>"},"method":"POST","schema_version":1}
+```
 
-## Persistence
+`JRAOfficialPageKind.FINAL_WIN_ODDS` is the sole new page kind. Existing accessS/accessU GET URL canonicalization
+and their public APIs remain unchanged; FINAL_WIN_ODDS cannot be passed through the GET URL canonicalizer.
 
-Global v014, `v014_historical_input_request_identity_schema`, adds only nullable strict-lowercase-SHA-256
-`request_identity_sha256` to `historical_input_snapshot_provenance_evidence`. It is additive and transaction-neutral,
-works for empty and nonempty v013 stores, preserves all existing rows as NULL, and performs no rebuild, rewrite,
-repair, or deletion. The global migration order is exactly `(8, 9, 10, 11, 12, 13, 14)`.
+`JRAFinalWinOddsSuppliedOfficialResponse` and `JRAFinalWinOddsResponseCapture` are separate frozen/slotted POST
+values. They retain exact strict-CP932 raw bytes and aware timestamps without a text round trip. The v2 capture uses
+`schema_version=2`, `page_kind=final_win_odds`, `request_method=POST`, the validated locator, and deterministic
+`jra-capture-v2:<sha256>` identity over the approved endpoint/request fingerprint/body SHA/observed-at preimage.
+All `JRAOfficialResponseCapture` v1 GET constructors and `jra-capture-v1` IDs remain literal-compatible.
 
-The SQLite snapshot repository writes and reconstructs the nullable field. Legacy NULL and request-aware non-null
-values round trip with the snapshot content SHA unchanged. Malformed stored non-null values fail closed as
-`RepositoryDataIntegrityError`; no defaulting or fallback occurs.
+## Dedicated JRA Archive v002
+
+Dedicated migration v002 is exactly `v002_jra_official_response_capture_request_identity_schema`. It is
+transaction-neutral: the existing migration runner alone owns `BEGIN IMMEDIATE`, commit, rollback, and registry
+registration. The runner sequence is exactly `(1, 2)`; global migrations remain `(8, 9, 10, 11, 12, 13, 14)`.
+
+v002 proves the complete registered v001 trust boundary before any mutation: both table column/type/PK/NOT-NULL and
+`WITHOUT ROWID` shapes, the exact response-body foreign key, and the unique non-partial three-column evidence index
+are verified with SQLite PRAGMAs. Rollback-only SAVEPOINT probes then prove actual v001 body and capture CHECK/FK
+behavior, including malformed body identity/length, page family, charset, HTTP, content encoding/length, URL, and
+timestamp-order rejection. Existing rows continue to reconstruct through the legacy capture domain. Any weakened or
+corrupt v001 shape fails before `ALTER TABLE`; the runner rollback leaves its tables, index, data, and version-1
+registry entry intact. v002 then rebuilds only `jra_official_response_captures`; `jra_official_response_bodies` is never rebuilt. All v001 values are copied exactly
+with `GET`, NULL request fingerprint, and NULL CNAME. The replacement table has disjoint enforced families:
 
 ```text
-SOURCE_SCHEMA_VERSION = 4 UNCHANGED
-SOURCE_NAMESPACE = his-v4 UNCHANGED
-SNAPSHOT_SCHEMA_VERSION = 4 UNCHANGED
+v001: race_result|horse_profile_history / GET / NULL fingerprint / NULL CNAME
+v002: final_win_odds / POST / lowercase SHA-256 fingerprint / raw canonical CNAME
+```
+
+It maintains separate partial exact-evidence indexes for legacy URL/body/observed identity and request-aware
+endpoint/request-fingerprint/body/observed identity. A malformed v001 schema, row, digest/body relationship, or
+unregistered store fails closed; any rebuild failure rolls back through the runner with no repair, adoption, update,
+delete, pruning, or fallback.
+
+`JRAOfficialResponseCaptureArchive` is one six-method family-specific protocol. The existing three legacy methods
+remain source- and type-compatible and operate only on v001 GET values. The new separate methods are
+`save_final_win_odds_capture`, `load_final_win_odds_capture`, and
+`load_final_win_odds_supplied_response_for_evidence`. Final lookup requires exact endpoint, request fingerprint,
+raw SHA, and observed-at; it has no URL-only POST, latest, nearest, or fallback mode. Legacy load of a v2 capture ID
+and final load of a v1 capture ID return `None`; an existing contradictory stored row raises
+`RepositoryDataIntegrityError`.
+
+## Frozen Boundaries
+
+```text
+EXISTING_ACCESS_S_CAPTURE_IDS_PRESERVED = PASS
+EXISTING_ACCESS_U_CAPTURE_IDS_PRESERVED = PASS
+LEGACY_ARCHIVE_API_PRESERVED = PASS
+LEGACY_GET_EVIDENCE_LOOKUP = PASS
 GLOBAL_MIGRATION_FINAL_VERSION = 14
-BUILDER_PRODUCTION_CHANGED = NO
-NAR_PRODUCTION_CHANGED = NO
-JRA_EXISTING_GET_PRODUCTION_CHANGED = NO
-JRA_ACCESSO_CAPTURE_STARTED = NO
+NAR_CAPTURE_UNCHANGED = PASS
+NEUTRAL_REQUEST_EVIDENCE_UNCHANGED = PASS
+LIVE_CAPTURE_PRODUCTION_UNCHANGED = PASS
 ```
 
-## Verification and Stop Condition
-
-Focused source/snapshot/builder/repository/migration verification passed 101 tests, scope-extension migration
-regressions passed 6 tests, current NAR historical-source plus JRA capture/live regressions passed 47 tests, and the
-complete migration-related suite passed 33 tests. The fresh full suite passed 2561 tests under Python 3.14.5 and
-pytest 8.3.5. The approved scope extension changed only three stale version-13 assertions to recognize v014; no
-production behavior changed after it. Do not implement JRA accessO, JRA archive v002, live POST transport, a JRA
-normalizer, an NAR/JRA bridge, acquisition, or any next phase.
+Live POST transport, real accessO capture, JRA historical odds/result normalization, acquisition, NAR/JRA bridge,
+pagination, pacing, historical backdating, and package-root exports remain out of scope.
 
 ## Allowed Files
 
 ```text
-scripts/simulation/historical_input_evidence.py
-scripts/simulation/historical_input_source_records.py
-scripts/simulation/historical_input_snapshots.py
-scripts/simulation/repositories/sqlite_historical_input_snapshot_repository.py
-scripts/migrations/runner.py
-scripts/migrations/versions/v014_historical_input_request_identity_schema.py
-tests/test_historical_input_source_records.py
-tests/test_historical_input_snapshots.py
-tests/test_historical_input_snapshot_builder.py
-tests/test_sqlite_historical_input_snapshot_repository.py
-tests/test_historical_input_snapshot_migration.py
-tests/test_simulation_migrations.py
+scripts/simulation/jra_official_identity.py
+scripts/simulation/jra_official_response_capture.py
+scripts/simulation/jra_official_response_capture_migration_runner.py
+scripts/simulation/jra_official_response_capture_migration_v002.py
+scripts/simulation/repositories/sqlite_jra_official_response_capture_repository.py
+tests/test_jra_official_identity.py
+tests/test_jra_official_response_capture.py
+tests/test_jra_official_response_capture_migration.py
+tests/test_sqlite_jra_official_response_capture_repository.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
+
+## Stop Condition
+
+Stop for independent implementation review. Do not integrate formal or begin d1d4b2 live POST transport.

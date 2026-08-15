@@ -12,6 +12,7 @@ from typing import Protocol as _Protocol
 from urllib.parse import urlsplit as _urlsplit
 
 from scripts.simulation.jra_official_identity import (
+    JRAOfficialFinalWinOddsRequestLocator as _FinalLocator,
     JRAOfficialIdentityValidationError as _IdentityValidationError,
     parse_jra_horse_profile_url_identity as _parse_profile,
     parse_jra_result_url_identity as _parse_result,
@@ -21,6 +22,7 @@ from scripts.simulation.jra_official_identity import (
 class JRAOfficialPageKind(_StrEnum):
     RACE_RESULT = "race_result"
     HORSE_PROFILE_HISTORY = "horse_profile_history"
+    FINAL_WIN_ODDS = "final_win_odds"
 
 
 class JRAOfficialResponseCaptureError(Exception):
@@ -96,9 +98,11 @@ def canonicalize_jra_official_capture_url(*, page_kind: JRAOfficialPageKind, res
         if page_kind is JRAOfficialPageKind.RACE_RESULT:
             _parse_result(response_url)
             path = "/JRADB/accessS.html"
-        else:
+        elif page_kind is JRAOfficialPageKind.HORSE_PROFILE_HISTORY:
             _parse_profile(response_url)
             path = "/JRADB/accessU.html"
+        else:
+            raise _validation("final win odds is a POST-only capture family")
     except _IdentityValidationError as error:
         raise _validation("response_url does not match page_kind") from error
     parsed = _urlsplit(response_url)
@@ -161,6 +165,24 @@ class JRASuppliedOfficialResponse:
 
 
 @_dataclass(frozen=True, slots=True)
+class JRAFinalWinOddsSuppliedOfficialResponse:
+    """Exact supplied POST response for one final-win-odds request locator."""
+
+    request_locator: _FinalLocator
+    response_body: bytes
+    charset: str = "cp932"
+    observed_at: _datetime = _field(default=None)  # type: ignore[assignment]
+
+    def __post_init__(self) -> None:
+        if type(self.request_locator) is not _FinalLocator:
+            raise _validation("request_locator must be exact JRAOfficialFinalWinOddsRequestLocator")
+        object.__setattr__(self, "response_body", _strict_cp932(self.response_body))
+        if type(self.charset) is not str or self.charset != "cp932":
+            raise _validation("charset must be exact cp932")
+        object.__setattr__(self, "observed_at", _utc(self.observed_at, "observed_at"))
+
+
+@_dataclass(frozen=True, slots=True)
 class JRAOfficialResponseCapture:
     canonical_source_url: str
     response_body: bytes
@@ -209,10 +231,80 @@ class JRAOfficialResponseCapture:
         return JRASuppliedOfficialResponse(response_url=self.canonical_source_url, response_body=self.response_body, charset="cp932", observed_at=self.observed_at)
 
 
+@_dataclass(frozen=True, slots=True)
+class JRAFinalWinOddsResponseCapture:
+    """Immutable trusted final-win-odds POST capture."""
+
+    request_locator: _FinalLocator
+    response_body: bytes
+    charset: str
+    requested_at: _datetime
+    observed_at: _datetime
+    stored_at: _datetime
+    http_status: int
+    content_type: str
+    content_encoding: str | None = None
+    http_date: str | None = None
+    etag: str | None = None
+    last_modified: str | None = None
+    content_length: int | None = None
+    schema_version: int = _field(init=False, default=2)
+    page_kind: JRAOfficialPageKind = _field(init=False, default=JRAOfficialPageKind.FINAL_WIN_ODDS)
+    request_method: str = _field(init=False, default="POST")
+    response_sha256: str = _field(init=False)
+    capture_id: str = _field(init=False)
+
+    def __post_init__(self) -> None:
+        if type(self.request_locator) is not _FinalLocator:
+            raise _validation("request_locator must be exact JRAOfficialFinalWinOddsRequestLocator")
+        body = _strict_cp932(self.response_body)
+        if type(self.charset) is not str or self.charset != "cp932":
+            raise _validation("charset must be exact cp932")
+        if type(self.http_status) is not int or self.http_status != 200:
+            raise _validation("http_status must be exact int 200")
+        content_type = _content_type(self.content_type)
+        if self.content_encoding not in (None, "identity"):
+            if type(self.content_encoding) is str:
+                raise JRAOfficialResponseCaptureUnsupportedError("content_encoding is unsupported")
+            raise _validation("content_encoding is invalid")
+        for value, name in ((self.http_date, "http_date"), (self.etag, "etag"), (self.last_modified, "last_modified")):
+            _header(value, name)
+        if self.content_length is not None and (type(self.content_length) is not int or self.content_length < 0 or self.content_length != len(body)):
+            raise _validation("content_length must exactly match response_body")
+        requested, observed, stored = (_utc(self.requested_at, "requested_at"), _utc(self.observed_at, "observed_at"), _utc(self.stored_at, "stored_at"))
+        if not requested <= observed <= stored:
+            raise _validation("capture timestamps are out of order")
+        digest = _hashlib.sha256(body).hexdigest()
+        material = {
+            "canonical_source_url": self.request_locator.endpoint_url,
+            "observed_at_utc": _datetime_text(observed),
+            "page_kind": JRAOfficialPageKind.FINAL_WIN_ODDS.value,
+            "request_identity_sha256": self.request_locator.request_identity_sha256,
+            "request_method": "POST",
+            "response_sha256": digest,
+            "schema_version": 2,
+        }
+        capture_id = "jra-capture-v2:" + _hashlib.sha256(
+            _json.dumps(material, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+        for name, value in (("response_body", body), ("content_type", content_type), ("requested_at", requested), ("observed_at", observed), ("stored_at", stored), ("response_sha256", digest), ("capture_id", capture_id)):
+            object.__setattr__(self, name, value)
+
+    @property
+    def canonical_source_url(self) -> str:
+        return self.request_locator.endpoint_url
+
+    def to_supplied_official_response(self) -> JRAFinalWinOddsSuppliedOfficialResponse:
+        return JRAFinalWinOddsSuppliedOfficialResponse(request_locator=self.request_locator, response_body=self.response_body, charset="cp932", observed_at=self.observed_at)
+
+
 class JRAOfficialResponseCaptureArchive(_Protocol):
     def save_capture(self, *, capture: JRAOfficialResponseCapture) -> None: ...
     def load_capture(self, *, capture_id: str) -> JRAOfficialResponseCapture | None: ...
     def load_supplied_response_for_evidence(self, *, canonical_source_url: str, response_sha256: str, observed_at: _datetime) -> JRASuppliedOfficialResponse: ...
+    def save_final_win_odds_capture(self, *, capture: JRAFinalWinOddsResponseCapture) -> None: ...
+    def load_final_win_odds_capture(self, *, capture_id: str) -> JRAFinalWinOddsResponseCapture | None: ...
+    def load_final_win_odds_supplied_response_for_evidence(self, *, canonical_source_url: str, request_identity_sha256: str, response_sha256: str, observed_at: _datetime) -> JRAFinalWinOddsSuppliedOfficialResponse: ...
 
 
 if "annotations" in globals():

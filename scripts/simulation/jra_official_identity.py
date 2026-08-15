@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass as _dataclass
 from datetime import date as _date
+import hashlib as _hashlib
+import json as _json
 import re as _re
 from urllib.parse import urlsplit as _urlsplit
 
@@ -19,6 +21,7 @@ class JRAOfficialIdentityValidationError(JRAOfficialIdentityError):
 _HOST = "www.jra.go.jp"
 _RESULT_PATH = "/JRADB/accessS.html"
 _PROFILE_PATH = "/JRADB/accessU.html"
+_FINAL_ODDS_ENDPOINT = "https://www.jra.go.jp/JRADB/accessO.html"
 _RACE_PREFIX = "jra:race"
 _HORSE_PREFIX = "jra:horse"
 _YEAR = _re.compile(r"[0-9]{4}\Z")
@@ -35,6 +38,11 @@ _RESULT_CNAME = _re.compile(
 )
 _PROFILE_CNAME = _re.compile(
     r"pw01dud(?:00|10)(?P<horse_key>[0-9]{10})/(?P<tail>[0-9A-F]{2})\Z"
+)
+_FINAL_ODDS_CNAME = _re.compile(
+    r"pw151ou10(?P<venue>(?:0[1-9]|10))(?P<year>[0-9]{4})"
+    r"(?P<meeting>(?:0[1-9]|[1-9][0-9]))(?P<day>(?:0[1-9]|1[0-2]))"
+    r"(?P<race>(?:0[1-9]|1[0-2]))(?P<date>[0-9]{8})Z/(?P<tail>[0-9A-F]{2})\Z"
 )
 
 
@@ -103,6 +111,52 @@ class JRAExternalHorseIdentity:
     @property
     def external_horse_id(self) -> str:
         return f"{_HORSE_PREFIX}:{self.horse_key}"
+
+
+def _final_odds_identity(cname: object) -> JRAExternalRaceIdentity:
+    value = _strict_str(cname, "cname")
+    if "%" in value or "+" in value:
+        raise _validation("cname must be raw canonical request material")
+    match = _FINAL_ODDS_CNAME.fullmatch(value)
+    if match is None:
+        raise _validation("cname is outside the approved accessO family")
+    fields = match.groupdict()
+    _validate_cname_date(fields["date"], fields["year"])
+    return JRAExternalRaceIdentity(
+        fields["year"], fields["venue"], fields["meeting"], fields["day"], fields["race"]
+    )
+
+
+def _final_odds_fingerprint(cname: str) -> str:
+    material = {
+        "endpoint_url": _FINAL_ODDS_ENDPOINT,
+        "form": {"cname": cname},
+        "method": "POST",
+        "schema_version": 1,
+    }
+    return _hashlib.sha256(
+        _json.dumps(material, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+    ).hexdigest()
+
+
+@_dataclass(frozen=True, slots=True)
+class JRAOfficialFinalWinOddsRequestLocator:
+    """Validated official accessO POST material for one JRA race."""
+
+    endpoint_url: str
+    cname: str
+    external_race_identity: JRAExternalRaceIdentity
+    request_identity_sha256: str
+
+    def __post_init__(self) -> None:
+        if type(self.endpoint_url) is not str or self.endpoint_url != _FINAL_ODDS_ENDPOINT:
+            raise _validation("endpoint_url is not the approved accessO endpoint")
+        identity = _final_odds_identity(self.cname)
+        if type(self.external_race_identity) is not JRAExternalRaceIdentity or self.external_race_identity != identity:
+            raise _validation("external_race_identity disagrees with cname")
+        fingerprint = _final_odds_fingerprint(self.cname)
+        if type(self.request_identity_sha256) is not str or self.request_identity_sha256 != fingerprint:
+            raise _validation("request_identity_sha256 disagrees with canonical request material")
 
 
 def parse_jra_external_race_id(value: str) -> JRAExternalRaceIdentity:

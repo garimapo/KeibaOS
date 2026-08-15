@@ -9,6 +9,7 @@ import unittest
 from scripts.simulation.jra_official_identity import (
     JRAExternalHorseIdentity,
     JRAExternalRaceIdentity,
+    JRAOfficialFinalWinOddsRequestLocator,
     JRAOfficialIdentityError,
     JRAOfficialIdentityValidationError,
     build_jra_external_entry_id,
@@ -36,7 +37,7 @@ class JRAOfficialIdentityTests(unittest.TestCase):
             {name for name in vars(module) if not name.startswith("_")},
             {
                 "JRAOfficialIdentityError", "JRAOfficialIdentityValidationError", "JRAExternalRaceIdentity",
-                "JRAExternalHorseIdentity", "parse_jra_external_race_id", "parse_jra_external_horse_id",
+                "JRAExternalHorseIdentity", "JRAOfficialFinalWinOddsRequestLocator", "parse_jra_external_race_id", "parse_jra_external_horse_id",
                 "parse_jra_result_url_identity", "parse_jra_horse_profile_url_identity",
                 "build_jra_external_entry_id", "build_jra_provider_record_id",
             },
@@ -44,6 +45,7 @@ class JRAOfficialIdentityTests(unittest.TestCase):
         self.assertTrue(issubclass(JRAOfficialIdentityValidationError, JRAOfficialIdentityError))
         self.assertTrue(is_dataclass(JRAExternalRaceIdentity) and JRAExternalRaceIdentity.__dataclass_params__.frozen)
         self.assertTrue(is_dataclass(JRAExternalHorseIdentity) and JRAExternalHorseIdentity.__dataclass_params__.frozen)
+        self.assertTrue(is_dataclass(JRAOfficialFinalWinOddsRequestLocator) and JRAOfficialFinalWinOddsRequestLocator.__dataclass_params__.frozen)
         self.assertEqual(tuple(inspect.signature(build_jra_external_entry_id).parameters), ("race_identity", "horse_no"))
         self.assertEqual(tuple(inspect.signature(build_jra_provider_record_id).parameters), ("race_identity", "horse_identity"))
         source = Path(module.__file__).read_text(encoding="utf-8")
@@ -177,6 +179,21 @@ class JRAOfficialIdentityTests(unittest.TestCase):
             build_jra_provider_record_id(race_identity=race, horse_identity=horse),
             build_jra_provider_record_id(race_identity=race, horse_identity=changed_horse),
         )
+
+    def test_final_win_odds_locator_is_exact_request_material(self) -> None:
+        cname = "pw151ou1006202601021220260105Z/2E"
+        race = JRAExternalRaceIdentity("2026", "06", "01", "02", "12")
+        locator = JRAOfficialFinalWinOddsRequestLocator(
+            endpoint_url="https://www.jra.go.jp/JRADB/accessO.html", cname=cname,
+            external_race_identity=race,
+            request_identity_sha256="9c4a4f2dfc7e2c21841f7a2bb3f36ec7397312a34b565ff7e511e74800774ade",
+        )
+        self.assertEqual(locator.external_race_identity, race)
+        for cname_value in (cname.replace("/", "%2F"), cname.replace("2E", "2e"), cname + " "):
+            with self.subTest(cname=cname_value), self.assertRaises(JRAOfficialIdentityValidationError):
+                JRAOfficialFinalWinOddsRequestLocator(locator.endpoint_url, cname_value, race, locator.request_identity_sha256)
+        with self.assertRaises(JRAOfficialIdentityValidationError):
+            JRAOfficialFinalWinOddsRequestLocator(locator.endpoint_url, cname, race, "0" * 64)
 
 
 if __name__ == "__main__":
