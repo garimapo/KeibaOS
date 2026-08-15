@@ -3608,3 +3608,29 @@ live regressions 38; neutral source/snapshot/builder regressions 47; NAR histori
 suite 2580. Package-root export, forbidden-dependency, unchanged JRA capture/NAR/neutral production, migration
 version, and `git diff --check` checks passed. No official response was archived or persisted, and no real accessO
 capture was performed.
+
+## Phase 4C-2d3b1i6d1d5b2 JRA accessU Response-Local Complete-History Proof PREPARE
+
+Read-only official JRA accessU inspection resolved the d1d5b/d1d5b1 completeness blocker without assigning a horse
+to the provider's undefined `外国馬` category. The unique `li#result_unit` section headed `レース条件別成績` contains a
+`div.race_data.mt10 > div.layout_grid` with direct aggregate cells for `平地レース合計` and `障害レース合計`. Each uses
+the exact `出走回数` heading. A representative profile with 12 JRA starts, 10 local/NAR starts, and two transfer rows
+reported flat 22 and obstacle 0; its 22 classified actual-start rows exactly matched the aggregate after excluding
+the transfers. An observed no-data profile structurally exposes both aggregate cells as `該当するデータがありません。`
+alongside the exact `出走レース` no-data state.
+
+JRA's accessU explanatory material describes its race/condition results as covering races started in JRA, local, and
+overseas racing, while separately stating that foreign horses are generally limited to their latest four displayed
+starts. Therefore a response-local proof is now frozen: validate both aggregate tables and their internal finish-count
+arithmetic, closed-classify every displayed row across JRA/non-JRA/known-unsupported actual starts, reject any
+continuation marker or unknown row, and require the displayed actual-start count to equal flat plus obstacle starts.
+The foreign latest-four condition produces a detectable mismatch rather than an eligibility inference. Every mismatch
+fails closed; a complete response with a known unsupported/non-JRA actual start retains an explicit unsupported event
+reference rather than silently dropping it.
+
+This is an evidence-at-observation proof, not a claim about races not yet published by JRA. The supplier timestamp
+must precede the target scheduled start, all returned events must precede the target race date, and update delays for
+JRA/non-JRA data are not backfilled. Zero history is permitted only for the exact simultaneous history and both-
+aggregate no-data state with no continuation marker. The proposed next phase is the small pure
+`d1d5b3` discovery implementation using one supplied accessU response and no accessO locator, archive lookup,
+network, or pagination.
