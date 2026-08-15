@@ -3022,6 +3022,27 @@ related NAR/c1a/c1c/snapshot suites passed 52 tests; the full suite passed 2467 
 package-root non-export checks pass. `git diff --check` and the approved changed-file scope are verified before review
 publication.
 
+## Phase 4C-2d3b1i6d1d5d2 JRA Zero-Actual-Start Past-Race-Absence Source
+
+Implemented the narrow pure JRA absence-source boundary. It calls the formal d1d5b3 accessU discovery exactly once
+and projects only its exact discovery domain. It performs no accessU HTML/CP932/aggregate/continuation/identity/
+cutoff parsing or recomputation, and has no acquisition, archive, repository, database, filesystem, clock, or
+orchestration responsibility.
+
+The source accepts both formally complete zero-actual-start states: an empty official history, and a nonempty
+transfer-only discovery whose event kinds are all `PROVEN_NON_START`. It rejects JRA, non-JRA, and unsupported actual
+starts even when they coexist with transfers. The neutral `past_race_absence` record remains the existing exact
+three-value shape, with `result_count=0` meaning zero actual prior starts rather than zero displayed rows.
+
+Each record has one `past_race_absence_query` evidence reference tied to the exact supplied accessU URL and raw-byte
+SHA-256, with `available_at=None`, unchanged `observed_at`, and no request identity. Existing source canonicalization
+therefore preserves timestamp-only source-ID stability and changes source ID when raw evidence bytes change.
+
+Dedicated tests cover real discovery for empty, one-transfer, and multi-transfer complete histories; all actual-start
+rejections; translated discovery failures; public surface/purity; neutral validation; and snapshot acceptance for
+both empty and transfer-only absence states plus the existing past-race/absence XOR rejection. No schema, builder,
+repository, capture, discovery, normalizer, NAR, or package-export change was made.
+
 ### d3b2a Target-entry Binding Correction
 
 `TARGET_ENTRY_HORSE_NO_CONSISTENCY = REQUIRED`: the normalizer now extracts the canonical horse-number suffix from
