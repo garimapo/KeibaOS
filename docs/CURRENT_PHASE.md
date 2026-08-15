@@ -2,93 +2,180 @@
 
 ## Status
 
-READY_FOR_REVIEW
+DRAFT_FOR_REVIEW
 
 ## Phase and Base
 
-Phase `4C-2d3b1i6d1d5b3` — JRA complete-history discovery implementation.
+Phase `4C-2d3b1i6d1d5c1` — JRA accessS -> accessO final-win-odds locator extraction PREPARE.
 
-Formal base: `367602e64353244e27b1518014c0907b922fb4ae`.
+Formal base: `d53d2df5c7f9aee91b9cbea0dda07145aefb3acf`.
 
-Approved PREPARE: `f39aafb63f7538e55484cbc8171cf94865a17e1c`.
+Review branch: `review/4c-2d3b1i6d1d5c1-jra-accesso-locator-prepare`.
 
-Review branch: `review/4c-2d3b1i6d1d5b3-jra-complete-history-discovery`.
+## Objective and Boundary
 
-## Implemented Boundary
+Freeze a pure extractor that consumes one exact trusted JRA accessS `RACE_RESULT` supplied response and returns the
+already-formal `JRAOfficialFinalWinOddsRequestLocator`. It closes only the evidence-navigation boundary:
 
-Implemented the pure, single-supplied-response function:
+```text
+JRA historical event reference
+-> trusted accessS response for its canonical result URL
+-> locator extracted from that response's official final-win-odds control
+-> trusted accessO response
+-> existing d1d5a normalizer
+```
+
+It is not acquisition, archive lookup, discovery, accessO POST transport, normalization, or orchestration. It must not
+synthesize a CNAME from race identity, accessS CNAME, date, venue, meeting, day, race number, or an opaque tail.
+
+## Frozen Proposed API
+
+The next implementation must provide exactly:
 
 ```python
-discover_jra_historical_past_race_history(
+extract_jra_final_win_odds_request_locator(
     *,
-    target_track_record: HistoricalInputSourceRecord,
-    target_entry_record: HistoricalInputSourceRecord,
-    horse_history_response: JRASuppliedOfficialResponse,
-) -> JRAHistoricalPastRaceDiscovery
+    race_result_response: JRASuppliedOfficialResponse,
+) -> JRAOfficialFinalWinOddsRequestLocator
 ```
 
-The only module-defined public names are `JRAHistoricalEventKind`,
-`JRAHistoricalPastRaceReference`, `JRAHistoricalPastRaceDiscovery`, the three stated discovery errors, and the
-function. Domain values are immutable/slotted. No package-root export is permitted.
+The parser module owns a closed extraction parsing boundary. It requires
+`type(race_result_response) is JRASuppliedOfficialResponse`, strict-decodes the supplied exact CP932 bytes once for
+HTML parsing, and first validates the URL through `parse_jra_result_url_identity(...)`. A supplied accessU response,
+malformed URL, malformed CP932, or malformed DOM is an extraction validation failure. No target record is required:
+the exact accessS response identity and actual official navigation fully determine and cross-check the locator.
 
-It validates exact target JRA c1a track/entry records and their coherent race/entry/horse identities, then requires exact
-accessU `HORSE_PROFILE_HISTORY` supplied evidence for that horse, strict CP932 decoding, and
-`observed_at <= scheduled_start_at`. There is no name fallback, no clock lookup, and no timestamp backdating.
+The function has no HTTP, archive, repository, SQLite, filesystem, environment, clock, randomness, retry, sleep, or
+subprocess ownership. It must not re-encode supplied bytes and it does not compute response SHA or alter timestamps.
 
-Use only `div.race_detail > table.basic.narrow-xy.striped` with the exact ordered semantic headings:
+## Official Navigation Contract
+
+Read-only official accessS inspection established the race-specific final-odds control in the result structure. The
+required container is the unique result-table header path:
 
 ```text
-年月日 | 場 | レース名 | 距離 | 馬場 | 頭数 | 人気 | 着順 | 騎手名 | 負担重量 | 馬体重 | タイム | Rt | 1着馬（2着馬）
+div#race_result.mt20
+> div.race_result_unit
+> table.basic.narrow-xy.striped
+> caption
+> div.race_header
+> div.right
+> div.race_related_link
+> ul > li
+> a.btn-def.btn-sm.blue.btn-block
 ```
 
-Classify every row exactly once as `JRA_ACTUAL_START`, `NON_JRA_ACTUAL_START`, `PROVEN_NON_START`, or
-`UNSUPPORTED_ACTUAL_START`; unknown rows fail closed. JRA starts require one exact row-local official accessS anchor,
-whose formal parsed identity and date agree with the row. Non-JRA/unsupported events remain explicit without an
-invented JRA identity. Proven transfer/non-start rows never count. Actual events must remain reverse chronological,
-strictly precede the target date, and be duplicate-free.
+The unique control's normalized visible label is exactly `オッズ`; its `href` is exactly `#`; and its direct
+`onclick` is the official doAction navigation. The observed official semantic form is:
 
-`PROVEN_NON_START` is deliberately restricted to the exact transfer rows `JRAへ転入` and `JRAより転出`, with all other
-start facts and navigation absent. The display tokens `取消`, `取止`, and `除外` have no separately proven accessU row
-layout in this contract and therefore fail closed; they cannot suppress contradictory race-time, jockey, head-count,
-popularity, or other start facts from aggregate accounting.
+```javascript
+return doAction('/JRADB/accessO.html', 'pw151ou10...Z/HH');
+```
 
-Every parsable row-local official accessS anchor is validated before classification, including for an eventual
-`UNSUPPORTED_ACTUAL_START`: canonical result URL, parsed JRA race identity, CNAME calendar date, and equality with the
-displayed accessU row date. The private parsed-event metadata then participates in duplicate canonical-URL and JRA
-race-identity rejection. An unsupported public reference deliberately remains reference-free, as frozen, but cannot
-bypass navigation validation or duplicate safety.
+The extraction grammar accepts only that direct `return doAction(` invocation with the exact relative action
+`/JRADB/accessO.html`, one ordinary unescaped single-quoted raw CNAME argument, and the terminating `);`. It permits
+only ASCII presentation whitespace around the JS punctuation already present in that grammar. Backslash escapes,
+double quotes, entity recovery, percent-encoded CNAME material, concatenation, arbitrary script execution, alternate
+action syntax, and generic form fields are not accepted.
 
-Mandatory response-local completeness proof: it requires the unique `li#result_unit` `レース条件別成績` aggregate section;
-one `平地レース合計` and one `障害レース合計` table in its exact left/right grid cells; exact result aggregate headers;
-canonical non-negative counts; independent `1着 + 2着 + 3着 + 4着以下 == 出走回数` checks; and equality between
-`flat + obstacle` and all displayed actual events. Any mismatch, malformed aggregate, continuation/lazy-load marker,
-unknown row, or ambiguity is a discovery validation error. No latest-N fallback or foreign-horse inference exists.
+The page-wide navigation menu contains generic `accessO` controls for other odds products (for example a generic
+`pw15oli...` action). Those controls are outside the required result-table-caption path and must never be candidates.
+The page's generic hidden `form#commForm01 input[name=cname]` is transport plumbing, not final-odds evidence, and
+must not be used as a fallback. The direct result-header control is the sole approved source.
 
-Zero history is accepted only for simultaneous exact `出走レース` no-data and both aggregate no-data/valid zero states,
-with no row/navigation or continuation marker. `proven_zero_history == (events == ())` always holds. A known
-unsupported actual event remains an event and participates in the count; it is never silently omitted.
+The raw CNAME is retained exactly as extracted: it contains raw `/`, never `%2F`, and its formal grammar retains
+the uppercase two-hex opaque tail. The extractor never lowercases, percent-decodes, or repairs it.
 
-The module must not use HTTP, archives, repositories, filesystem, SQLite, network, accessS/accessO fetching,
-accessO locator synthesis, normalization, pagination fetching, discovery of races, Predictor, random, subprocess, or
-clock ownership.
+## Endpoint, Identity, and Fingerprint
 
-## Allowed Files
+The relative action must resolve on the formal JRA origin to exactly:
 
 ```text
-scripts/simulation/jra_historical_past_race_discovery.py
-tests/test_jra_historical_past_race_discovery.py
+https://www.jra.go.jp/JRADB/accessO.html
+```
+
+No alternate host, path, query, fragment, or relative navigation is accepted. The existing formal
+`JRAOfficialFinalWinOddsRequestLocator` then validates the raw CNAME and derives its race identity. The extractor
+requires:
+
+```text
+locator.external_race_identity
+== parse_jra_result_url_identity(race_result_response.response_url)
+```
+
+Any mismatch fails closed. Visible race-heading parsing remains d1d5a normalizer responsibility; this phase validates
+official navigation and provider-native identity only, without duplicating d1d5a display parsing.
+
+`JRAOfficialFinalWinOddsRequestLocator` deliberately requires a canonical request fingerprint while its fingerprint
+algorithm is private to `jra_official_identity.py`. The next implementation therefore requires one narrow new public
+identity-domain builder:
+
+```python
+build_jra_final_win_odds_request_locator(
+    *,
+    cname: str,
+) -> JRAOfficialFinalWinOddsRequestLocator
+```
+
+It accepts only raw CNAME material, fixes the existing formal accessO endpoint, derives the race identity with the
+existing private formal grammar, and computes the existing private canonical request fingerprint. The extractor must
+call this builder; it must not duplicate fingerprint logic or call private identity helpers. This is the minimal API
+change: locating HTML in `jra_official_identity.py` would introduce a capture-domain dependency/cycle, while exposing
+the builder preserves lexical/request identity ownership there.
+
+## Ambiguity and Failure Policy
+
+Require exactly one complete result-caption control matching the structural selector, label, and invocation grammar.
+Fail closed for no candidate, duplicate candidate (including byte-identical duplicates), multiple candidate
+actions/CNAMEs, a wrong or duplicate endpoint, malformed/missing `onclick`, unsupported quoting/escaping, malformed
+CNAME, selector/container contradiction, or accessS/accessO race-identity disagreement. No first-match, generic
+odds-control, form-field, URL, race-ID, or accessS-CNAME fallback is allowed.
+
+The locator applies only after an actual JRA historical start has supplied trusted accessS result evidence. It does not
+create a locator for `NON_JRA_ACTUAL_START`, `PROVEN_NON_START`, or an unsupported start whose settlement path has
+not later been formally approved.
+
+## Causality and Compatibility
+
+Extraction carries no timestamp and does not backdate anything. Causality remains with the supplied accessS
+`observed_at` and the later accessO supplied response's `observed_at`; future orchestration must establish both
+against the target information cutoff. Current inspection establishes parser semantics only and cannot prove historical
+availability.
+
+Keep d1d5a normalizer, d1d5b3 discovery, JRA capture/domain/archive/live behavior, NAR production, neutral evidence,
+source/snapshot schemas (`4`), global migrations (`14`), JRA capture migrations (`1, 2`), package exports, and
+bridge status unchanged. `NAR_LINEAGE_TO_JRA_HORSE_ID_LINK` remains `NOT_PROVEN`;
+`MIXED_HISTORY_COLLECTION_READY` remains `NO`.
+
+## Recommended Implementation Scope
+
+Recommended next phase: `4C-2d3b1i6d1d5c2` — JRA accessS final-odds locator extraction implementation.
+
+Exact recommended allowed files:
+
+```text
+scripts/simulation/jra_official_identity.py
+scripts/simulation/jra_final_win_odds_request_locator.py
+tests/test_jra_official_identity.py
+tests/test_jra_final_win_odds_request_locator.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-## Verification
+The dedicated tests must use minimal synthetic strict-CP932 accessS snippets and cover the exact result-caption control,
+raw-slash/percent boundary, uppercase tail, formal fingerprint, response type/CP932/accessS validation, missing and
+duplicate controls, generic-menu exclusion, wrong endpoint, malformed JS/CNAME, race mismatch, no synthesis, pure
+determinism, forbidden dependencies, and no package-root export.
 
-Fresh verification using Python 3.14.5 / pytest 8.3.5 passed: the dedicated discovery suite (9 tests), the d1d5a,
-JRA identity/capture/archive/live, NAR historical-source, and neutral source/snapshot/builder regression set (126
-tests), and the full suite (2589 tests). Package-root export, forbidden-dependency/source, unchanged-production,
-version, diff, and final-status checks are required before review publication.
+## Allowed Files
+
+```text
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+```
 
 ## Stop Condition
 
-Create and push exactly one review commit: `feat: discover complete JRA horse history`. Do not formally integrate,
-perform real capture, implement orchestration or an accessO locator, create a NAR/JRA bridge, or connect Predictor.
+Create and push exactly one documentation review commit: `docs: prepare JRA final-odds locator extraction`. Do not
+implement the extractor or builder, modify production/tests, acquire or archive official responses, perform accessO
+POST, implement orchestration, create a bridge, or connect Predictor. Stop for independent review.

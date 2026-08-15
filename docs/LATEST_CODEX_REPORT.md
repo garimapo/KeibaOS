@@ -3647,3 +3647,32 @@ unsupported starts: their CNAME calendar date must equal the accessU row date, a
 participates in duplicate canonical accessS URL and JRA race-identity rejection. Unsupported public references remain
 explicit and count toward completeness but expose no fabricated JRA result identity. Fresh verification passed:
 dedicated discovery 9, related regressions 126, and the full suite 2589.
+
+## Phase 4C-2d3b1i6d1d5c1 JRA accessS -> accessO Final-Win-Odds Locator Extraction PREPARE
+
+Prepared the smallest pure boundary that obtains an already-formal
+`JRAOfficialFinalWinOddsRequestLocator` only from the actual trusted accessS result response's race-specific final-odds
+navigation. This remains a design/investigation phase: no production, test, capture, archive, discovery, normalizer,
+or fixture content changed; no trusted response was captured or archived.
+
+Read-only official accessS inspection found the sole race-specific final-odds control under the unique result-table
+caption header path: `div#race_result.mt20 > div.race_result_unit > table.basic.narrow-xy.striped > caption >
+div.race_header > div.right > div.race_related_link`. Its `オッズ` button's direct `onclick` is structurally an official
+`return doAction('/JRADB/accessO.html', 'pw151ou10...Z/HH');` navigation. Generic page-menu accessO controls and the
+generic hidden `commForm01` CNAME field are explicitly excluded: neither proves a final-win-odds request for the
+displayed race.
+
+The future extractor will require exact `JRASuppliedOfficialResponse` accessS evidence, strict CP932 decoding, and
+exactly one fully structured race-header odds control. It will retain a raw canonical CNAME (including raw slash and
+uppercase tail), reject escaped/percent-encoded/synthesized values and ambiguity, resolve only the formal
+`https://www.jra.go.jp/JRADB/accessO.html` endpoint, and require the locator's formal race identity to equal the
+accessS URL race identity. It will not duplicate d1d5a's visible-page identity responsibility and will not alter
+timestamps.
+
+The review established one narrow identity API gap: the existing locator constructor requires a formal request
+fingerprint whose canonical algorithm is intentionally private to `jra_official_identity.py`. The recommended next
+phase adds a public pure `build_jra_final_win_odds_request_locator(*, cname: str)` there, which alone derives the
+existing endpoint, race identity, and fingerprint. A separate parser module can then call that builder without
+duplicating request-fingerprint canonicalization or creating a capture-to-identity import cycle. The recommended next
+implementation scope is the identity module/test, one new locator-extractor module/test, and these two documentation
+files. Status is `DRAFT_FOR_REVIEW`; no acquisition, orchestration, bridge, or Predictor work has started.
