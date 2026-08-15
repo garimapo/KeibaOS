@@ -3560,3 +3560,31 @@ file/database/network-client dependencies outside its approved `requests` byte t
 b1 capture-domain/archive/migration production files, NAR production, and provider-neutral evidence production are
 unchanged; global migrations remain through v014. `git diff --check` is clean and the only changed files are the four
 approved d1d4b2 files. The review branch is ready for independent review; formal remote remains at the approved base.
+
+## Phase 4C-2d3b1i6d1d5 JRA Historical Past-Race Normalizer Consolidation PREPARE
+
+Consolidated the approved d1d accessS result design, d1d1 final-odds evidence finding, d1d2/d1d3 three-role neutral
+contract, and the formal d1d4b1/d1d4b2 accessO capture stack on formal base
+`dcdef4bd6559418fe7f179f42cd16a263604fc08`. The selected future boundary consumes one validated target track record,
+one validated target entry record, one supplied accessS result response, and one supplied request-aware accessO final
+odds response to produce one target-scoped JRA `past_race` source record.
+
+Stable horse linkage is only the selected accessS row-local accessU anchor matched to the target entry’s canonical JRA
+horse identity. The selected row’s historical `td.num` is used only to join the unique `table.tanpuku` accessO odds row
+and its direct positive `td.odds_tan` decimal; it never has to equal the target-race horse number. The historical
+accessS CNAME identity and narrow calendar date are cross-checked with unique visible accessS/accessO race headers,
+including date, venue, meeting/day, race number, and race heading. A read-only official accessO structure inspection
+confirmed the approved `.race_header`, `table.tanpuku`, `td.num`, and `td.odds_tan` boundary; it created no archive
+record, stored no response, and committed no fixture.
+
+All 17 source-record values now have one exact direct official authority: accessS supplies the sixteen context/result
+facts and accessO only the final single-win odds. The canonical evidence tuple is accessS context, accessO final odds,
+and accessS result; it preserves raw SHA semantics, request fingerprint ownership, `available_at=None`, supplied
+observations, and same-response timestamp coherence. No text-margin conversion, fallback identity, inferred odds,
+time manipulation, or missing fourth-corner sentinel is allowed.
+
+No architecture blocker remains. The next smallest phase is `4C-2d3b1i6d1d5a — JRA historical past-race normalizer
+implementation`, limited to the new provider module, one dedicated test module, and phase documents. It should use
+minimal synthetic CP932 structural snippets rather than full official-page fixtures. NAR, JRA capture/domain/archive/
+live code, neutral evidence, source/snapshot schemas (4), global migrations (14), JRA capture migrations `(1,2)`, and
+the unproven NAR-to-JRA bridge remain unchanged. This PREPARE is docs-only and `DRAFT_FOR_REVIEW`.
