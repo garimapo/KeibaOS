@@ -48,8 +48,13 @@ Dedicated migration v002 is exactly `v002_jra_official_response_capture_request_
 transaction-neutral: the existing migration runner alone owns `BEGIN IMMEDIATE`, commit, rollback, and registry
 registration. The runner sequence is exactly `(1, 2)`; global migrations remain `(8, 9, 10, 11, 12, 13, 14)`.
 
-v002 validates registered v001 rows and referenced raw bodies before mutation, then rebuilds only
-`jra_official_response_captures`; `jra_official_response_bodies` is never rebuilt. All v001 values are copied exactly
+v002 proves the complete registered v001 trust boundary before any mutation: both table column/type/PK/NOT-NULL and
+`WITHOUT ROWID` shapes, the exact response-body foreign key, and the unique non-partial three-column evidence index
+are verified with SQLite PRAGMAs. Rollback-only SAVEPOINT probes then prove actual v001 body and capture CHECK/FK
+behavior, including malformed body identity/length, page family, charset, HTTP, content encoding/length, URL, and
+timestamp-order rejection. Existing rows continue to reconstruct through the legacy capture domain. Any weakened or
+corrupt v001 shape fails before `ALTER TABLE`; the runner rollback leaves its tables, index, data, and version-1
+registry entry intact. v002 then rebuilds only `jra_official_response_captures`; `jra_official_response_bodies` is never rebuilt. All v001 values are copied exactly
 with `GET`, NULL request fingerprint, and NULL CNAME. The replacement table has disjoint enforced families:
 
 ```text

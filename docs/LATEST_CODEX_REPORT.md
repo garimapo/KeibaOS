@@ -3507,3 +3507,22 @@ related JRA-live/neutral/NAR/migration regressions 94, and the full suite 2565. 
 dependency/source checks passed; the live capture module, NAR capture production, neutral request-evidence production,
 and global v014 registry are unchanged. `git diff --check` passed. Status remains `READY_FOR_REVIEW`; no live POST,
 real accessO capture, historical odds normalizer, formal integration, or bridge work has begun.
+
+## Phase 4C-2d3b1i6d1d4b1 v001 Pre-Migration Schema Hardening
+
+Hardened only the v002 pre-migration trust boundary. Before any capture-table rename, the migration now proves the
+complete v001 response-body and capture table structures through `table_info`, `table_list`, `foreign_key_list`,
+`index_list`, `index_info`, and `index_xinfo`: exact columns/types/PK/NOT-NULL shape, `WITHOUT ROWID`, the required
+RESTRICT body foreign key, and the one unique non-partial three-column evidence index without expression keys.
+
+Rollback-only SAVEPOINT probes additionally prove the live v001 DDL rejects representative malformed SHA/body/length
+rows and invalid capture version, page kind, URL, foreign key, charset, HTTP status, content encoding/length, and
+timestamp order. The migration requires FK enforcement to be active as well as validating the declared FK. Every
+stored v001 capture still reconstructs through the legacy domain before mutation. Weakened schema cases now fail before
+`ALTER TABLE`, leaving the original tables, index, data, and version-1 registry intact with no temporary table or v002
+registration. The v002 target schema and all other b1 production behavior remain unchanged.
+
+Fresh correction verification under Python 3.14.5 / pytest 8.3.5 passed: JRA migration tests 9, all four b1
+dedicated modules 25, related JRA/NAR/neutral/migration regressions 94, and the full suite 2566. Package-root export,
+forbidden dependency/source, unchanged-live-module, and `git diff --check` checks passed. The correction is
+`READY_FOR_REVIEW`; no live POST, real capture, normalizer, formal integration, or bridge work has begun.
