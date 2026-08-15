@@ -6,89 +6,97 @@ READY_FOR_REVIEW
 
 ## Phase and Base
 
-Phase `4C-2d3b1i6d1d5b3` — JRA complete-history discovery implementation.
+Phase `4C-2d3b1i6d1d5c2` — JRA accessS final-odds locator extraction implementation.
 
-Formal base: `367602e64353244e27b1518014c0907b922fb4ae`.
+Formal base: `d53d2df5c7f9aee91b9cbea0dda07145aefb3acf`.
 
-Approved PREPARE: `f39aafb63f7538e55484cbc8171cf94865a17e1c`.
+Approved PREPARE: `2934b663dcdf962ccb0576d6440dc941b590716a`.
 
-Review branch: `review/4c-2d3b1i6d1d5b3-jra-complete-history-discovery`.
+Review branch: `review/4c-2d3b1i6d1d5c2-jra-accesso-locator`.
 
 ## Implemented Boundary
 
-Implemented the pure, single-supplied-response function:
+Added the pure identity-domain builder:
 
 ```python
-discover_jra_historical_past_race_history(
+build_jra_final_win_odds_request_locator(
     *,
-    target_track_record: HistoricalInputSourceRecord,
-    target_entry_record: HistoricalInputSourceRecord,
-    horse_history_response: JRASuppliedOfficialResponse,
-) -> JRAHistoricalPastRaceDiscovery
+    cname: str,
+) -> JRAOfficialFinalWinOddsRequestLocator
 ```
 
-The only module-defined public names are `JRAHistoricalEventKind`,
-`JRAHistoricalPastRaceReference`, `JRAHistoricalPastRaceDiscovery`, the three stated discovery errors, and the
-function. Domain values are immutable/slotted. No package-root export is permitted.
+It accepts only the formal raw accessO CNAME grammar, fixes the formal
+`https://www.jra.go.jp/JRADB/accessO.html` endpoint, and uses the existing private identity/fingerprint primitives to
+construct the existing immutable locator. It does not parse HTML or duplicate the canonical request-fingerprint
+algorithm. Existing identity behavior, including the pinned known CNAME fingerprint, remains unchanged.
 
-It validates exact target JRA c1a track/entry records and their coherent race/entry/horse identities, then requires exact
-accessU `HORSE_PROFILE_HISTORY` supplied evidence for that horse, strict CP932 decoding, and
-`observed_at <= scheduled_start_at`. There is no name fallback, no clock lookup, and no timestamp backdating.
+Added the pure extractor:
 
-Use only `div.race_detail > table.basic.narrow-xy.striped` with the exact ordered semantic headings:
+```python
+extract_jra_final_win_odds_request_locator(
+    *,
+    race_result_response: JRASuppliedOfficialResponse,
+) -> JRAOfficialFinalWinOddsRequestLocator
+```
+
+Its only module-defined public names are
+`JRAFinalWinOddsRequestLocatorExtractionError`,
+`JRAFinalWinOddsRequestLocatorExtractionValidationError`, and the function. It accepts only an exact accessS
+`JRASuppliedOfficialResponse`, strictly decodes supplied CP932 bytes, validates the response URL with
+`parse_jra_result_url_identity(...)`, and changes neither bytes nor timestamps.
+
+The sole accepted official navigation is exactly one `オッズ` control with `href="#"` at:
 
 ```text
-年月日 | 場 | レース名 | 距離 | 馬場 | 頭数 | 人気 | 着順 | 騎手名 | 負担重量 | 馬体重 | タイム | Rt | 1着馬（2着馬）
+div#race_result.mt20
+> div.race_result_unit
+> table.basic.narrow-xy.striped
+> caption > div.race_header > div.right > div.race_related_link
+> ul > li > a.btn-def.btn-sm.blue.btn-block
 ```
 
-Classify every row exactly once as `JRA_ACTUAL_START`, `NON_JRA_ACTUAL_START`, `PROVEN_NON_START`, or
-`UNSUPPORTED_ACTUAL_START`; unknown rows fail closed. JRA starts require one exact row-local official accessS anchor,
-whose formal parsed identity and date agree with the row. Non-JRA/unsupported events remain explicit without an
-invented JRA identity. Proven transfer/non-start rows never count. Actual events must remain reverse chronological,
-strictly precede the target date, and be duplicate-free.
+Its direct source `onclick` must be the approved single-quoted
+`return doAction('/JRADB/accessO.html', '<raw-cname>');` form. Only explicitly approved ASCII presentation
+whitespace is accepted. The extractor requires the raw source attribute spelling as well as the parsed DOM value, so
+HTML entity quote recovery cannot turn an altered navigation into valid evidence. It rejects double quotes, escapes,
+concatenation, extra script/arguments, altered endpoints, percent-encoded/invalid CNAMEs, duplicate controls, and all
+other ambiguity. Generic page-menu odds controls and `commForm01` hidden CNAME transport plumbing are never scanned
+as candidates.
 
-`PROVEN_NON_START` is deliberately restricted to the exact transfer rows `JRAへ転入` and `JRAより転出`, with all other
-start facts and navigation absent. The display tokens `取消`, `取止`, and `除外` have no separately proven accessU row
-layout in this contract and therefore fail closed; they cannot suppress contradictory race-time, jockey, head-count,
-popularity, or other start facts from aggregate accounting.
+The extractor calls only the public builder and requires the resulting locator's race identity to equal the supplied
+accessS URL's parsed race identity. It never synthesizes a locator from accessS CNAME, race ID, date, venue, or race
+number. It has no HTTP, archive, repository, filesystem, SQLite, clock, environment, random, subprocess, capture,
+accessO POST, normalizer, discovery, orchestration, or bridge ownership. No package-root export is added.
 
-Every parsable row-local official accessS anchor is validated before classification, including for an eventual
-`UNSUPPORTED_ACTUAL_START`: canonical result URL, parsed JRA race identity, CNAME calendar date, and equality with the
-displayed accessU row date. The private parsed-event metadata then participates in duplicate canonical-URL and JRA
-race-identity rejection. An unsupported public reference deliberately remains reference-free, as frozen, but cannot
-bypass navigation validation or duplicate safety.
-
-Mandatory response-local completeness proof: it requires the unique `li#result_unit` `レース条件別成績` aggregate section;
-one `平地レース合計` and one `障害レース合計` table in its exact left/right grid cells; exact result aggregate headers;
-canonical non-negative counts; independent `1着 + 2着 + 3着 + 4着以下 == 出走回数` checks; and equality between
-`flat + obstacle` and all displayed actual events. Any mismatch, malformed aggregate, continuation/lazy-load marker,
-unknown row, or ambiguity is a discovery validation error. No latest-N fallback or foreign-horse inference exists.
-
-Zero history is accepted only for simultaneous exact `出走レース` no-data and both aggregate no-data/valid zero states,
-with no row/navigation or continuation marker. `proven_zero_history == (events == ())` always holds. A known
-unsupported actual event remains an event and participates in the count; it is never silently omitted.
-
-The module must not use HTTP, archives, repositories, filesystem, SQLite, network, accessS/accessO fetching,
-accessO locator synthesis, normalization, pagination fetching, discovery of races, Predictor, random, subprocess, or
-clock ownership.
+The raw-onclick proof is bound to the selected DOM candidate, not a page-global substring: a quote-aware raw HTML
+token scan skips comments and script bodies, retains raw anchor start tags in document order, and verifies count/order
+agreement with the parsed anchors. The unique selected result-header anchor is located by identity in that parsed
+sequence; only its corresponding raw start tag may contain exactly one literal lowercase `onclick` attribute whose raw
+double-quoted value equals the approved parsed invocation. Entity-encoded selected values (`&#39;`, `&#x27;`, or `&apos;`)
+therefore fail even when comments, scripts, generic navigation, hidden forms, or another anchor contain the decoded
+text.
 
 ## Allowed Files
 
 ```text
-scripts/simulation/jra_historical_past_race_discovery.py
-tests/test_jra_historical_past_race_discovery.py
+scripts/simulation/jra_official_identity.py
+scripts/simulation/jra_final_win_odds_request_locator.py
+tests/test_jra_official_identity.py
+tests/test_jra_final_win_odds_request_locator.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
 ## Verification
 
-Fresh verification using Python 3.14.5 / pytest 8.3.5 passed: the dedicated discovery suite (9 tests), the d1d5a,
-JRA identity/capture/archive/live, NAR historical-source, and neutral source/snapshot/builder regression set (126
-tests), and the full suite (2589 tests). Package-root export, forbidden-dependency/source, unchanged-production,
-version, diff, and final-status checks are required before review publication.
+Fresh Python 3.14.5 / pytest 8.3.5 verification passed: identity and locator dedicated suites (17 tests), JRA
+capture/archive/live plus d1d5a/d1d5b3, NAR, and provider-neutral source/snapshot/builder regressions (139 tests),
+and the full suite (2,597 tests). The public-surface/purity tests pin the builder, exact extractor API, no package-root
+export, and forbidden dependency boundary. Final diff, scope, unchanged-production, version, and status checks are
+required before review publication.
 
 ## Stop Condition
 
-Create and push exactly one review commit: `feat: discover complete JRA horse history`. Do not formally integrate,
-perform real capture, implement orchestration or an accessO locator, create a NAR/JRA bridge, or connect Predictor.
+Create and push exactly one review commit: `feat: extract JRA final-odds request locator`. Do not formally integrate,
+perform real accessO capture, implement collection/orchestration, synthesize a CNAME, modify discovery or normalizer,
+implement a NAR/JRA bridge, or connect Predictor. Stop for independent review.

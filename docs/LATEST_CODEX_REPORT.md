@@ -3647,3 +3647,47 @@ unsupported starts: their CNAME calendar date must equal the accessU row date, a
 participates in duplicate canonical accessS URL and JRA race-identity rejection. Unsupported public references remain
 explicit and count toward completeness but expose no fabricated JRA result identity. Fresh verification passed:
 dedicated discovery 9, related regressions 126, and the full suite 2589.
+
+## Phase 4C-2d3b1i6d1d5c2 JRA accessS Final-Odds Locator Extraction Implementation
+
+Implemented the approved pure accessS-to-accessO locator boundary on formal base
+`d53d2df5c7f9aee91b9cbea0dda07145aefb3acf`, within exactly the approved identity/parser/test/documentation files. The
+identity domain now exposes only the narrow public builder
+`build_jra_final_win_odds_request_locator(*, cname: str)`. It fixes the existing official endpoint, derives the
+formal race identity, and computes the existing private canonical request fingerprint; no fingerprint implementation
+was copied into the HTML parser and all prior locator behavior remains unchanged.
+
+The new pure extractor consumes exact `JRASuppliedOfficialResponse` accessS evidence, validates its formal result URL,
+strictly decodes exact CP932 bytes, and accepts only the unique `オッズ` control in the official result-table-caption
+`race_header` related-link path. Its direct raw source must be the approved single-quoted
+`return doAction('/JRADB/accessO.html', '<raw-cname>');` spelling. The parser rejects generic page-menu controls,
+hidden `commForm01` values, DOM-only HTML entity quote recovery, double quotes, escapes, concatenation, extra
+arguments/script, endpoint changes, percent-encoded CNAMEs, malformed CNAMEs, duplicates, and race-identity
+disagreement. It returns the existing locator only after its race identity equals the supplied accessS identity; it
+never synthesizes CNAME material from any result identity or display fact.
+
+Synthetic strict-CP932 tests cover the approved builder fingerprint, exact control, raw slash/uppercase tail,
+input/family/URL/encoding failures, generic/hidden-form exclusion, JavaScript grammar, source-spelling/entity
+rejection, identity mismatch, ambiguity, public surface, and purity. Fresh verification under Python 3.14.5 / pytest
+8.3.5 passed: dedicated identity/locator suites 16, related JRA/NAR/neutral regression set 138, and full suite 2596.
+No real accessO response was captured, archived, or posted; d1d5a, d1d5b3, JRA capture/archive/live, NAR,
+provider-neutral production, migrations, orchestration, bridge, and Predictor remain unchanged. Status is
+`READY_FOR_REVIEW` pending independent review.
+
+### Raw selected-control binding correction
+
+Corrected the source-spelling proof so it no longer counts decoded `onclick` text across the whole page. The extractor
+now uses a quote-aware raw HTML token scan that skips comments and script bodies, aligns raw anchor start tags with
+BeautifulSoup anchors in document order, identifies the exact selected result-header anchor, and validates only that
+raw tag's literal lowercase `onclick` attribute. The raw value must equal the approved unescaped single-quoted
+doAction spelling. Entity spellings `&#39;`, `&#x27;`, and `&apos;` remain invalid even if the DOM parser decodes them.
+
+The new regression proves the defect against the previous review source in memory: a selected entity-encoded control
+plus an unrelated comment containing the exact decoded raw `onclick` was accepted by the prior page-global count. It
+is now rejected; an equivalent script-text decoy is rejected as well. The builder, fingerprint ownership, selector,
+identity cross-check, raw CNAME policy, and all unrelated c2 boundaries remain unchanged.
+
+Fresh correction verification under Python 3.14.5 / pytest 8.3.5 passed: dedicated identity/locator suites 17,
+related JRA/NAR/neutral regressions 139, and the full suite 2597. Package-export, forbidden-dependency/source/AST,
+identity-ownership, unchanged-production, version, and `git diff --check` validation remain required before review
+publication.

@@ -159,6 +159,18 @@ class JRAOfficialFinalWinOddsRequestLocator:
             raise _validation("request_identity_sha256 disagrees with canonical request material")
 
 
+def build_jra_final_win_odds_request_locator(*, cname: str) -> JRAOfficialFinalWinOddsRequestLocator:
+    """Build the sole approved accessO final-win-odds request locator."""
+
+    identity = _final_odds_identity(cname)
+    return JRAOfficialFinalWinOddsRequestLocator(
+        endpoint_url=_FINAL_ODDS_ENDPOINT,
+        cname=cname,
+        external_race_identity=identity,
+        request_identity_sha256=_final_odds_fingerprint(cname),
+    )
+
+
 def parse_jra_external_race_id(value: str) -> JRAExternalRaceIdentity:
     """Parse the sole canonical JRA external race-ID spelling."""
 
