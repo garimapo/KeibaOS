@@ -3039,6 +3039,22 @@ public projection. This resolves the collector predecessor's double-discovery co
 absence-record constructor. No collector, capture, archive, migration, source/snapshot schema, NAR, bridge, or real
 official acquisition work was added.
 
+### d1d5e0 discovery target-lineage correction
+
+Hardened the public `JRAHistoricalPastRaceDiscovery` constructor so that its authoritative target race and entry
+lineage cannot be forged through direct construction. It now parses the target race through the formal JRA race parser,
+requires the target entry to use that exact race prefix, requires a canonical positive horse-number suffix, and proves
+the final entry ID with the existing formal JRA entry-ID builder. Malformed/non-JRA race IDs, wrong-race entries,
+leading-zero or zero suffixes, and malformed entry material fail as
+`JRAHistoricalPastRaceDiscoveryValidationError` before absence projection can emit neutral data.
+
+The same discovery-domain error boundary now translates the expected lower-level capture validation error raised for
+malformed direct accessU evidence-binding URLs. Existing discovery parsing, projection zero-discovery behavior, direct
+normalizer one-discovery behavior, output shape, schemas, migrations, capture/archive behavior, and NAR behavior are
+unchanged. Fresh verification under Python 3.14.5 / pytest 8.3.5 passed 22 dedicated discovery/absence tests, 138
+related JRA/NAR/neutral tests, and the 2,610-test full suite. Package-export, forbidden-dependency/source/AST,
+source-schema/snapshot-schema/migration-registry unchanged, and `git diff --check` checks passed.
+
 ## Phase 4C-2d3b1i6d1d5d2 JRA Zero-Actual-Start Past-Race-Absence Source
 
 Implemented the narrow pure JRA absence-source boundary. It calls the formal d1d5b3 accessU discovery exactly once

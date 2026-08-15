@@ -28,6 +28,7 @@ from scripts.simulation.jra_official_identity import (
 )
 from scripts.simulation.jra_official_response_capture import (
     JRAOfficialPageKind as _JRAOfficialPageKind,
+    JRAOfficialResponseCaptureValidationError as _JRAOfficialResponseCaptureValidationError,
     JRASuppliedOfficialResponse as _JRASuppliedOfficialResponse,
     canonicalize_jra_official_capture_url as _canonicalize_jra_official_capture_url,
 )
@@ -319,6 +320,19 @@ class JRAHistoricalPastRaceDiscovery:
         ):
             raise JRAHistoricalPastRaceDiscoveryValidationError("historical discovery is invalid")
         try:
+            target_race = _parse_jra_external_race_id(self.target_external_race_id)
+            entry_prefix = f"{target_race.external_race_id}:entry:"
+            if not self.target_external_entry_id.startswith(entry_prefix):
+                raise ValueError
+            entry_horse_no = self.target_external_entry_id.removeprefix(entry_prefix)
+            if _POSITIVE.fullmatch(entry_horse_no) is None or _build_jra_external_entry_id(
+                race_identity=target_race,
+                horse_no=entry_horse_no,
+            ) != self.target_external_entry_id:
+                raise ValueError
+        except (_JRAOfficialIdentityValidationError, TypeError, ValueError, OverflowError) as error:
+            raise JRAHistoricalPastRaceDiscoveryValidationError("historical discovery target lineage is invalid") from error
+        try:
             canonical_url = _canonicalize_jra_official_capture_url(
                 page_kind=_JRAOfficialPageKind.HORSE_PROFILE_HISTORY,
                 response_url=self.horse_history_response_url,
@@ -327,7 +341,7 @@ class JRAHistoricalPastRaceDiscovery:
             target_horse = _parse_jra_external_horse_id(self.target_external_horse_id)
             if self.horse_history_observed_at.tzinfo is not _timezone.utc or self.horse_history_observed_at.utcoffset() != _timezone.utc.utcoffset(None):
                 raise ValueError
-        except (_JRAOfficialIdentityValidationError, TypeError, ValueError, OverflowError) as error:
+        except (_JRAOfficialIdentityValidationError, _JRAOfficialResponseCaptureValidationError, TypeError, ValueError, OverflowError) as error:
             raise JRAHistoricalPastRaceDiscoveryValidationError("historical discovery evidence binding is invalid") from error
         if canonical_url != self.horse_history_response_url or response_horse != target_horse:
             raise JRAHistoricalPastRaceDiscoveryValidationError("historical discovery evidence binding is incoherent")

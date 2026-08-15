@@ -25,6 +25,7 @@ from scripts.simulation.jra_historical_past_race_absence_source import (
 from scripts.simulation.jra_historical_past_race_discovery import (
     JRAHistoricalEventKind,
     JRAHistoricalPastRaceDiscovery,
+    JRAHistoricalPastRaceDiscoveryValidationError,
     discover_jra_historical_past_race_history,
 )
 from scripts.simulation.jra_official_response_capture import JRASuppliedOfficialResponse
@@ -291,6 +292,23 @@ class JRAHistoricalPastRaceAbsenceSourceTests(unittest.TestCase):
         incoherent = _unsafe_discovery(transfer, proven_zero_history=True)
         with self.assertRaises(JRAHistoricalPastRaceAbsenceSourceValidationError):
             project_jra_historical_past_race_absence_source_record(discovery=incoherent, horse_history_response=_response(body=_body(rows=(_transfer(day=6),), flat=0, obstacle=0)))
+
+    def test_normally_constructed_forged_discovery_cannot_project_absence(self) -> None:
+        body = _body(rows=None, flat=None, obstacle=None)
+        response = _response(body=body)
+        discovery = _discover(body=body, response=response)
+        with self.assertRaises(JRAHistoricalPastRaceDiscoveryValidationError):
+            JRAHistoricalPastRaceDiscovery(
+                "jra:race:2026:05:01:02:04",
+                ENTRY_ID,
+                discovery.target_external_horse_id,
+                discovery.target_race_date,
+                discovery.events,
+                discovery.proven_zero_history,
+                discovery.horse_history_response_url,
+                discovery.horse_history_response_sha256,
+                discovery.horse_history_observed_at,
+            )
 
     def test_projection_rejects_all_actual_start_kinds_and_transfer_mixtures(self) -> None:
         cases = (
