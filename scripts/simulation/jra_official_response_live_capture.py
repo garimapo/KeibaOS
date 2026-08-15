@@ -13,6 +13,8 @@ from requests.adapters import HTTPAdapter as _HTTPAdapter
 from urllib3.exceptions import HTTPError as _HTTPError
 
 from scripts.simulation.jra_official_response_capture import (
+    JRAFinalWinOddsResponseCapture as _JRAFinalWinOddsResponseCapture,
+    JRAFinalWinOddsSuppliedOfficialResponse as _JRAFinalWinOddsSuppliedOfficialResponse,
     JRAOfficialPageKind as _JRAOfficialPageKind,
     JRAOfficialResponseCapture as _JRAOfficialResponseCapture,
     JRAOfficialResponseCaptureArchive as _JRAOfficialResponseCaptureArchive,
@@ -20,6 +22,9 @@ from scripts.simulation.jra_official_response_capture import (
     JRAOfficialResponseCaptureUnsupportedError as _JRAOfficialResponseCaptureUnsupportedError,
     JRAOfficialResponseCaptureValidationError as _JRAOfficialResponseCaptureValidationError,
     canonicalize_jra_official_capture_url as _canonicalize_jra_official_capture_url,
+)
+from scripts.simulation.jra_official_identity import (
+    JRAOfficialFinalWinOddsRequestLocator as _JRAOfficialFinalWinOddsRequestLocator,
 )
 
 
@@ -48,6 +53,12 @@ class _JRAOfficialHTTPResponse:
 
 class _JRAOfficialHTTPTransport(_Protocol):
     def fetch(self, *, canonical_source_url: str) -> _JRAOfficialHTTPResponse: ...
+
+    def fetch_final_win_odds(
+        self,
+        *,
+        request_locator: _JRAOfficialFinalWinOddsRequestLocator,
+    ) -> _JRAOfficialHTTPResponse: ...
 
 
 class _RequestsJRAOfficialHTTPTransport:
@@ -86,6 +97,68 @@ class _RequestsJRAOfficialHTTPTransport:
                 raise JRAOfficialResponseCaptureTransportError("official JRA Content-Length differs from body length")
             return _JRAOfficialHTTPResponse(
                 canonical_source_url=canonical_source_url,
+                response_body=body,
+                content_type=response.headers.get("Content-Type"),
+                content_encoding=content_encoding,
+                http_date=response.headers.get("Date"),
+                etag=response.headers.get("ETag"),
+                last_modified=response.headers.get("Last-Modified"),
+                content_length=content_length,
+            )
+        except _requests.RequestException as error:
+            raise JRAOfficialResponseCaptureTransportError("official JRA HTTPS acquisition failed") from error
+        except (_HTTPError, OSError) as error:
+            raise JRAOfficialResponseCaptureTransportError("official JRA HTTPS stream failed") from error
+        finally:
+            if response is not None:
+                response.close()
+
+    def fetch_final_win_odds(
+        self,
+        *,
+        request_locator: _JRAOfficialFinalWinOddsRequestLocator,
+    ) -> _JRAOfficialHTTPResponse:
+        """POST one cookie-free final-odds request and retain its exact bytes."""
+
+        if type(request_locator) is not _JRAOfficialFinalWinOddsRequestLocator:
+            raise _JRAOfficialResponseCaptureValidationError(
+                "request_locator must be exact JRAOfficialFinalWinOddsRequestLocator"
+            )
+        request = _requests.Request(
+            method="POST",
+            url=request_locator.endpoint_url,
+            data={"cname": request_locator.cname},
+            headers={
+                "Accept-Encoding": "identity",
+                "Content-Type": "application/x-www-form-urlencoded",
+                "User-Agent": _USER_AGENT,
+            },
+        ).prepare()
+        request.headers.pop("Cookie", None)
+        request.headers.pop("Referer", None)
+        request.headers.pop("Origin", None)
+        response = None
+        try:
+            response = self._session.send(
+                request,
+                stream=True,
+                allow_redirects=False,
+                verify=True,
+                timeout=(_CONNECT_TIMEOUT_SECONDS, _READ_TIMEOUT_SECONDS),
+            )
+            if response.status_code != 200:
+                raise JRAOfficialResponseCaptureTransportError("official JRA response status must be 200")
+            content_encoding = self._content_encoding(response.headers.get("Content-Encoding"))
+            content_length = self._content_length(response.headers.get("Content-Length"))
+            if content_length is not None and content_length > _MAX_RESPONSE_BODY_BYTES:
+                raise JRAOfficialResponseCaptureTransportError("official JRA response body is too large")
+            if response.url != request_locator.endpoint_url:
+                raise JRAOfficialResponseCaptureTransportError("official JRA effective response URL differs")
+            body = self._read_body(response)
+            if content_length is not None and len(body) != content_length:
+                raise JRAOfficialResponseCaptureTransportError("official JRA Content-Length differs from body length")
+            return _JRAOfficialHTTPResponse(
+                canonical_source_url=request_locator.endpoint_url,
                 response_body=body,
                 content_type=response.headers.get("Content-Type"),
                 content_encoding=content_encoding,
@@ -189,6 +262,41 @@ class JRAOfficialLiveResponseCaptureService:
         )
         self._archive.save_capture(capture=capture)
         return capture
+
+    def capture_final_win_odds_response(
+        self,
+        *,
+        request_locator: _JRAOfficialFinalWinOddsRequestLocator,
+    ) -> _JRAFinalWinOddsSuppliedOfficialResponse:
+        """Acquire, validate, archive, then return one final-win-odds supplied response."""
+
+        if type(request_locator) is not _JRAOfficialFinalWinOddsRequestLocator:
+            raise _JRAOfficialResponseCaptureValidationError(
+                "request_locator must be exact JRAOfficialFinalWinOddsRequestLocator"
+            )
+        requested_at = self._clock_sample("requested_at")
+        result = self._transport.fetch_final_win_odds(request_locator=request_locator)
+        if type(result) is not _JRAOfficialHTTPResponse or result.canonical_source_url != request_locator.endpoint_url:
+            raise JRAOfficialResponseCaptureTransportError("official JRA transport result is contradictory")
+        observed_at = self._clock_sample("observed_at")
+        stored_at = self._clock_sample("stored_at")
+        capture = _JRAFinalWinOddsResponseCapture(
+            request_locator=request_locator,
+            response_body=result.response_body,
+            charset="cp932",
+            requested_at=requested_at,
+            observed_at=observed_at,
+            stored_at=stored_at,
+            http_status=200,
+            content_type=result.content_type,
+            content_encoding=result.content_encoding,
+            http_date=result.http_date,
+            etag=result.etag,
+            last_modified=result.last_modified,
+            content_length=result.content_length,
+        )
+        self._archive.save_final_win_odds_capture(capture=capture)
+        return capture.to_supplied_official_response()
 
     def _clock_sample(self, name: str) -> _datetime:
         value = self._utc_clock()
