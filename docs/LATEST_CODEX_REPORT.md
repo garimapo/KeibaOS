@@ -3526,3 +3526,37 @@ Fresh correction verification under Python 3.14.5 / pytest 8.3.5 passed: JRA mig
 dedicated modules 25, related JRA/NAR/neutral/migration regressions 94, and the full suite 2566. Package-root export,
 forbidden dependency/source, unchanged-live-module, and `git diff --check` checks passed. The correction is
 `READY_FOR_REVIEW`; no live POST, real capture, normalizer, formal integration, or bridge work has begun.
+
+## Phase 4C-2d3b1i6d1d4b2 JRA Final-Odds Live POST Transport
+
+Implemented only the approved live accessO POST transport on formal base
+`d91063fade86cfcc19b7dbd05bad3ed6172fde58`. The existing accessS/accessU `capture_response` API and GET transport
+call shape remain unchanged; `FINAL_WIN_ODDS` remains excluded from that GET path. The existing service now has the
+separate `capture_final_win_odds_response` method, which requires an exact validated
+`JRAOfficialFinalWinOddsRequestLocator` before clock, network, or archive work.
+
+The private POST path uses exactly the locator endpoint and a one-field standard form body, preserving the raw CNAME
+and encoding its slash as `%2F`. It explicitly prepares a cookie-free, referer-free, origin-free request rather than
+depending on persistent session state. It retains `Accept-Encoding: identity`, form content type, disabled redirects,
+TLS verification, zero retries, ten-second connect/read timeouts, and byte-only streaming with content decoding off.
+HTTP status, effective endpoint, encoding, canonical Content-Length, 4 MiB limits, stream chunks, and all transport
+errors fail closed while responses are closed on every path.
+
+The service samples requested/observed/stored timestamps around one raw entity, builds only the existing v2
+`JRAFinalWinOddsResponseCapture`, archives it through `save_final_win_odds_capture`, then returns its supplied
+response. Strict CP932 remains capture-domain validation; an invalid domain object or failed archive produces no
+return value. No real accessO call was performed. The archive/domain, migrations, neutral evidence, NAR production,
+normalizers, discovery, and bridge remain unchanged. Initial dedicated verification passed 13 tests under Python
+3.14.5 / pytest 8.3.5; related, full, and static verification remain required before publication.
+
+Fresh review verification under Python 3.14.5 / pytest 8.3.5 passed: the dedicated POST/GET live module 13 tests,
+the frozen b1 identity/capture/repository/migration modules 25 tests, and the neutral snapshot plus NAR capture
+regressions 95 tests. The full suite passed 2570 tests. Package-root export, source/AST boundary, unchanged b1/NAR/
+neutral production, global migration v014, and `git diff --check` verification remain part of the final review
+handoff. Status remains `READY_FOR_REVIEW`; no formal integration or real accessO capture has occurred.
+
+Final review static verification passed: the module has no package-root export, no new clock ownership, no forbidden
+file/database/network-client dependencies outside its approved `requests` byte transport, and no NAR dependency. The
+b1 capture-domain/archive/migration production files, NAR production, and provider-neutral evidence production are
+unchanged; global migrations remain through v014. `git diff --check` is clean and the only changed files are the four
+approved d1d4b2 files. The review branch is ready for independent review; formal remote remains at the approved base.

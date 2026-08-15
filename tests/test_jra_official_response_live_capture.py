@@ -8,9 +8,14 @@ import unittest
 
 import scripts.simulation.jra_official_response_live_capture as module
 from scripts.simulation.jra_official_response_capture import (
+    JRAFinalWinOddsSuppliedOfficialResponse,
     JRAOfficialPageKind,
     JRAOfficialResponseCaptureUnsupportedError,
     JRAOfficialResponseCaptureValidationError,
+)
+from scripts.simulation.jra_official_identity import (
+    JRAExternalRaceIdentity,
+    JRAOfficialFinalWinOddsRequestLocator,
 )
 from scripts.simulation.jra_official_response_live_capture import (
     JRAOfficialLiveResponseCaptureService,
@@ -21,16 +26,37 @@ from scripts.simulation.jra_official_response_live_capture import (
 
 _S = "https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde0106202504030420250913%2FDC"
 _U = "https://www.jra.go.jp/JRADB/accessU.html?CNAME=pw01dud002020102902%2F22"
+_O = "https://www.jra.go.jp/JRADB/accessO.html"
+_CNAME = "pw151ou1006202601021220260105Z/2E"
 _BODY = "<meta charset=\"Shift_JIS\">テスト".encode("cp932")
 _TIME = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+
+def _locator() -> JRAOfficialFinalWinOddsRequestLocator:
+    identity = JRAExternalRaceIdentity("2026", "06", "01", "02", "12")
+    return JRAOfficialFinalWinOddsRequestLocator(
+        endpoint_url=_O,
+        cname=_CNAME,
+        external_race_identity=identity,
+        request_identity_sha256="9c4a4f2dfc7e2c21841f7a2bb3f36ec7397312a34b565ff7e511e74800774ade",
+    )
 
 
 class _Archive:
     def __init__(self, *, error: BaseException | None = None) -> None:
         self.error = error
         self.values = []
+        self.legacy_calls = 0
+        self.final_calls = 0
 
     def save_capture(self, *, capture) -> None:
+        self.legacy_calls += 1
+        if self.error is not None:
+            raise self.error
+        self.values.append(capture)
+
+    def save_final_win_odds_capture(self, *, capture) -> None:
+        self.final_calls += 1
         if self.error is not None:
             raise self.error
         self.values.append(capture)
@@ -41,9 +67,16 @@ class _Transport:
         self.result = result
         self.error = error
         self.urls: list[str] = []
+        self.locators: list[object] = []
 
     def fetch(self, *, canonical_source_url: str):
         self.urls.append(canonical_source_url)
+        if self.error is not None:
+            raise self.error
+        return self.result
+
+    def fetch_final_win_odds(self, *, request_locator):
+        self.locators.append(request_locator)
         if self.error is not None:
             raise self.error
         return self.result
@@ -101,6 +134,12 @@ class _Session:
             raise self.outcome
         return self.outcome
 
+    def send(self, request, **kwargs):
+        self.calls.append((request, kwargs))
+        if isinstance(self.outcome, BaseException):
+            raise self.outcome
+        return self.outcome
+
 
 def _result(*, url: str = _S, body: bytes = _BODY, content_length: int | None = None, content_encoding: str | None = None):
     return module._JRAOfficialHTTPResponse(
@@ -130,12 +169,88 @@ class JRAOfficialLiveResponseCaptureTests(unittest.TestCase):
             },
         )
         self.assertEqual(tuple(inspect.signature(JRAOfficialLiveResponseCaptureService.capture_response).parameters), ("self", "page_kind", "response_url"))
+        self.assertEqual(tuple(inspect.signature(JRAOfficialLiveResponseCaptureService.capture_final_win_odds_response).parameters), ("self", "request_locator"))
         source = Path(module.__file__).read_text(encoding="utf-8")
         self.assertNotIn("response.text", source)
         self.assertNotIn(".decode(", source)
         self.assertNotIn(".encode(", source)
         tree = ast.parse(source)
         self.assertFalse(any(isinstance(node, ast.ImportFrom) and node.module == "scripts.simulation.nar_official_response_live_capture" for node in ast.walk(tree)))
+
+    def test_final_win_odds_service_archives_the_exact_v2_capture_before_return(self):
+        archive = _Archive()
+        transport = _Transport(_result(url=_O))
+        clock = _Clock(_TIME, _TIME + timedelta(microseconds=1), _TIME + timedelta(microseconds=2))
+        locator = _locator()
+        value = _service(transport=transport, archive=archive, clock=clock).capture_final_win_odds_response(
+            request_locator=locator
+        )
+        self.assertIsInstance(value, JRAFinalWinOddsSuppliedOfficialResponse)
+        self.assertIs(value.request_locator, locator)
+        self.assertEqual(value.response_body, _BODY)
+        self.assertEqual(transport.locators, [locator])
+        self.assertEqual(archive.legacy_calls, 0)
+        self.assertEqual(archive.final_calls, 1)
+        self.assertEqual(len(archive.values), 1)
+        capture = archive.values[0]
+        self.assertEqual(capture.schema_version, 2)
+        self.assertEqual(capture.page_kind, JRAOfficialPageKind.FINAL_WIN_ODDS)
+        self.assertEqual(capture.request_method, "POST")
+        self.assertEqual((capture.requested_at, capture.observed_at, capture.stored_at), (
+            _TIME,
+            _TIME + timedelta(microseconds=1),
+            _TIME + timedelta(microseconds=2),
+        ))
+
+    def test_final_win_odds_validation_clock_domain_and_archive_failures_never_return(self):
+        archive = _Archive()
+        transport = _Transport(_result(url=_O))
+        service = _service(transport=transport, archive=archive, clock=_Clock(_TIME, _TIME, _TIME))
+        with self.assertRaises(JRAOfficialResponseCaptureValidationError):
+            service.capture_final_win_odds_response(request_locator=object())
+        self.assertEqual(transport.locators, [])
+        self.assertEqual(archive.values, [])
+
+        with self.assertRaises(JRAOfficialResponseCaptureValidationError):
+            _service(transport=transport, archive=archive, clock=_Clock(datetime(2026, 1, 1))).capture_final_win_odds_response(
+                request_locator=_locator()
+            )
+        self.assertEqual(transport.locators, [])
+
+        with self.assertRaises(JRAOfficialResponseCaptureValidationError):
+            _service(
+                transport=_Transport(_result(url=_O)),
+                archive=archive,
+                clock=_Clock(_TIME, datetime(2026, 1, 1)),
+            ).capture_final_win_odds_response(request_locator=_locator())
+        self.assertEqual(archive.values, [])
+
+        for result in (object(), _result(url=_S)):
+            with self.subTest(result=result), self.assertRaises(JRAOfficialResponseCaptureTransportError):
+                _service(
+                    transport=_Transport(result),
+                    archive=archive,
+                    clock=_Clock(_TIME, _TIME, _TIME),
+                ).capture_final_win_odds_response(request_locator=_locator())
+        self.assertEqual(archive.values, [])
+
+        for body, error in ((b"", JRAOfficialResponseCaptureValidationError), (b"\x81", JRAOfficialResponseCaptureUnsupportedError)):
+            with self.subTest(body=body), self.assertRaises(error):
+                _service(
+                    transport=_Transport(_result(url=_O, body=body, content_length=len(body))),
+                    archive=archive,
+                    clock=_Clock(_TIME, _TIME, _TIME),
+                ).capture_final_win_odds_response(request_locator=_locator())
+        self.assertEqual(archive.values, [])
+
+        error = RuntimeError("archive unavailable")
+        with self.assertRaises(RuntimeError) as raised:
+            _service(
+                transport=_Transport(_result(url=_O)),
+                archive=_Archive(error=error),
+                clock=_Clock(_TIME, _TIME, _TIME),
+            ).capture_final_win_odds_response(request_locator=_locator())
+        self.assertIs(raised.exception, error)
 
     def test_access_s_and_u_canonicalize_before_network_and_persist_before_return(self):
         archive = _Archive()
@@ -166,7 +281,12 @@ class JRAOfficialLiveResponseCaptureTests(unittest.TestCase):
         transport = _Transport(_result())
         clock = _Clock(_TIME, _TIME, _TIME)
         service = _service(transport=transport, archive=archive, clock=clock)
-        for kind, url in ((JRAOfficialPageKind.RACE_RESULT, _U), (JRAOfficialPageKind.HORSE_PROFILE_HISTORY, _S), (JRAOfficialPageKind.RACE_RESULT, "https://bad.example/")):
+        for kind, url in (
+            (JRAOfficialPageKind.RACE_RESULT, _U),
+            (JRAOfficialPageKind.HORSE_PROFILE_HISTORY, _S),
+            (JRAOfficialPageKind.FINAL_WIN_ODDS, _O),
+            (JRAOfficialPageKind.RACE_RESULT, "https://bad.example/"),
+        ):
             with self.subTest(kind=kind, url=url), self.assertRaises(JRAOfficialResponseCaptureValidationError):
                 service.capture_response(page_kind=kind, response_url=url)
         self.assertEqual(clock.calls, 0)
@@ -232,6 +352,57 @@ class JRAOfficialLiveResponseCaptureTests(unittest.TestCase):
         self.assertTrue(response.closed)
         self.assertFalse(response.raw.decode_content)
         self.assertEqual(response.raw.calls, [(64 * 1024, False)])
+
+    def test_final_win_odds_post_wire_is_exact_cookie_free_and_raw(self):
+        response = _Response(
+            url=_O,
+            headers={"Content-Length": str(len(_BODY)), "Content-Encoding": "identity"},
+        )
+        session = _Session(response)
+        session.headers.update({"Cookie": "stale=1", "Referer": "https://example.invalid/", "Origin": "https://example.invalid"})
+        transport = object.__new__(module._RequestsJRAOfficialHTTPTransport)
+        transport._session = session
+        result = transport.fetch_final_win_odds(request_locator=_locator())
+        request, kwargs = session.calls[0]
+        self.assertEqual(request.method, "POST")
+        self.assertEqual(request.url, _O)
+        self.assertEqual(request.body, "cname=pw151ou1006202601021220260105Z%2F2E")
+        self.assertEqual(request.headers["Content-Type"], "application/x-www-form-urlencoded")
+        self.assertEqual(request.headers["Accept-Encoding"], "identity")
+        self.assertNotIn("Cookie", request.headers)
+        self.assertNotIn("Referer", request.headers)
+        self.assertNotIn("Origin", request.headers)
+        self.assertEqual(kwargs, {"stream": True, "allow_redirects": False, "verify": True, "timeout": (10.0, 10.0)})
+        self.assertEqual(result.canonical_source_url, _O)
+        self.assertEqual(result.response_body, _BODY)
+        self.assertTrue(response.closed)
+        self.assertFalse(response.raw.decode_content)
+        self.assertEqual(response.raw.calls, [(64 * 1024, False)])
+
+    def test_final_win_odds_post_transport_failures_close_and_fail_closed(self):
+        for status, url, headers, chunks, error in (
+            (301, _O, {}, (_BODY,), JRAOfficialResponseCaptureTransportError),
+            (200, _S, {}, (_BODY,), JRAOfficialResponseCaptureTransportError),
+            (200, _O, {"Content-Encoding": "gzip"}, (_BODY,), JRAOfficialResponseCaptureUnsupportedError),
+            (200, _O, {"Content-Length": "01"}, (_BODY,), JRAOfficialResponseCaptureTransportError),
+            (200, _O, {"Content-Length": "2"}, (b"a",), JRAOfficialResponseCaptureTransportError),
+            (200, _O, {}, (b"a" * (4 * 1024 * 1024 + 1),), JRAOfficialResponseCaptureTransportError),
+            (200, _O, {}, (object(),), JRAOfficialResponseCaptureTransportError),
+        ):
+            response = _Response(status=status, url=url, headers=headers, chunks=chunks)
+            transport = object.__new__(module._RequestsJRAOfficialHTTPTransport)
+            transport._session = _Session(response)
+            with self.subTest(status=status, url=url, headers=headers, error=error), self.assertRaises(error):
+                transport.fetch_final_win_odds(request_locator=_locator())
+            self.assertTrue(response.closed)
+        response = _Response(url=_O, headers={"Content-Length": str(4 * 1024 * 1024)}, chunks=(b"a" * (4 * 1024 * 1024),))
+        transport = object.__new__(module._RequestsJRAOfficialHTTPTransport)
+        transport._session = _Session(response)
+        self.assertEqual(len(transport.fetch_final_win_odds(request_locator=_locator()).response_body), 4 * 1024 * 1024)
+        transport = object.__new__(module._RequestsJRAOfficialHTTPTransport)
+        transport._session = _Session(module._requests.Timeout("timeout"))
+        with self.assertRaises(JRAOfficialResponseCaptureTransportError):
+            transport.fetch_final_win_odds(request_locator=_locator())
 
     def test_transport_encoding_length_size_and_stream_failures_fail_closed(self):
         for encoding in ("gzip", "br", "deflate"):
