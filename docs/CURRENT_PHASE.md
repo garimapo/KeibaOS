@@ -6,79 +6,86 @@ READY_FOR_REVIEW
 
 ## Phase and Base
 
-Phase `4C-2d3b1i6d1d4b2` — JRA final-odds live POST transport.
+Phase `4C-2d3b1i6d1d5a` — JRA historical past-race normalizer implementation.
 
-Formal base: `d91063fade86cfcc19b7dbd05bad3ed6172fde58`.
+Formal base: `dcdef4bd6559418fe7f179f42cd16a263604fc08`.
 
-Review branch: `review/4c-2d3b1i6d1d4b2-final-odds-live-post`.
+Approved PREPARE: `3a8c1fc26eb90c83b0578aa30afe724a2779c2dd`.
 
-## Implemented Contract
+Review branch: `review/4c-2d3b1i6d1d5a-jra-past-race-normalizer`.
 
-`JRAOfficialLiveResponseCaptureService` retains its existing GET-only public method:
+## Implemented Boundary
+
+`scripts/simulation/jra_historical_past_race_source.py` is a pure supplied-response normalizer with exactly these
+module-defined public names:
 
 ```text
-capture_response(*, page_kind, response_url) -> JRAOfficialResponseCapture
+JRAHistoricalPastRaceSourceError
+JRAHistoricalPastRaceSourceValidationError
+JRAHistoricalPastRaceSourceUnsupportedError
+normalize_jra_historical_past_race_source_record
 ```
 
-It continues to accept only accessS/accessU. `FINAL_WIN_ODDS` remains rejected by that GET boundary, and its GET
-transport call shape remains unchanged.
+The function accepts the approved target track/entry records, one exact accessS `JRASuppliedOfficialResponse`, and one
+exact request-aware accessO `JRAFinalWinOddsSuppliedOfficialResponse`; it returns one target-scoped JRA `past_race`
+record. It has no HTTP, archive, filesystem, database, clock, discovery, pagination, bridge, or package-root export.
 
-The same service now provides exactly one separate final-odds operation:
+Target records are exact c1a values with organization `JRA` and source system `jra_official`. Their target race ID,
+entry ID, entry horse number, and stable `jra:horse:<10 digits>` identity are cross-checked through the formal JRA
+identity constructors. Historical horse selection is only the unique accessS `td.horse a[href]` accessU anchor matching
+that stable horse identity. The selected historical `td.num` is used only to join accessO and need not equal target
+horse number.
+
+## Identity, Facts, and Evidence
+
+The normalizer parses accessS with the formal public result URL parser, narrowly validates its already-approved CNAME
+calendar date, and requires it to precede the target track date. Unique visible accessS/accessO headers cross-check
+date, venue mapping, meeting number/day, race number, and race heading. The result table must have the approved
+semantic heading family; accessO must have exactly one `table.tanpuku`, with one matching `td.num` and direct positive
+finite `td.odds_tan` value.
+
+All 17 c1a values have direct authority: accessS supplies race/date/place/name/class/distance/surface/weather/
+condition, finish/time, body weight/change, jockey, popularity, passing order, and fourth-corner position; accessO
+supplies final single-win odds only. No float conversion, assigned-weight substitution, textual-margin conversion, or
+derived odds is permitted. `td.corner li[title]` labels must uniquely and increasingly identify the explicit fourth
+corner; neither a fixed component nor the final component is assumed. The direct row-local accessS `td.margin` is
+inspected only for the exact official dead-heat marker `同着`; it is never converted or included in record values.
+Official line-break presentation in result-table heading labels is normalized only for exact semantic heading
+comparison, without widening the required heading family.
+
+The output keeps target external race/entry IDs and uses the historical JRA race plus stable horse identity in
+`build_jra_provider_record_id`. It creates exactly three canonical evidence roles:
 
 ```text
-capture_final_win_odds_response(
-    *,
-    request_locator: JRAOfficialFinalWinOddsRequestLocator,
-) -> JRAFinalWinOddsSuppliedOfficialResponse
+historical_race_context    = accessS URL / raw SHA / None / supplied observed_at
+historical_race_final_odds = accessO endpoint / request fingerprint / raw SHA / None / supplied observed_at
+historical_race_result     = the same accessS evidence tuple as context
 ```
 
-It accepts only an exact already-validated locator before sampling the clock, using HTTP, or calling the archive. It
-does not discover races, reconstruct endpoints/CNAMEs, decode response text, parse odds, build neutral evidence, or
-perform a real official capture in tests.
+SHA-256 is calculated over supplied bytes before strict CP932 decode or parsing. Timestamp-only changes leave source
+identity unchanged; body or accessO request-fingerprint changes do not. The existing builder remains the only causality
+owner. No timestamp is backdated or fabricated.
 
-## POST Transport
+## Fail-closed Scope
 
-The private final-odds transport uses only the locator endpoint
-`https://www.jra.go.jp/JRADB/accessO.html` with a POST form containing exactly `cname=<raw locator CNAME>`. Standard
-form encoding is used, including encoding the raw CNAME slash as `%2F`; CNAME is never sent as a query parameter.
+Malformed/contradictory identities, missing or duplicate headers/tables/rows/anchors, wrong lineage, malformed CP932,
+or accessS/accessO disagreement raise the normalizer validation error. Recognized but unsupported result states include
+withdrawal/exclusion/DNF/disqualification, blank class, invalid finish/time/body weight/popularity, nonpositive odds,
+unsupported surface, direct `td.margin` marker `同着`, and ambiguous/missing fourth-corner structure. There is no
+fallback. A positive numeric finish does not bypass the direct dead-heat check.
 
-The prepared request is independent of persistent session state: it uses `Accept-Encoding: identity` and
-`Content-Type: application/x-www-form-urlencoded`, while `Cookie`, `Referer`, and `Origin` are removed before the
-actual send. Redirects are disabled, TLS verification is required, retries remain zero, and the timeout remains
-`(10.0, 10.0)`.
+Tests use only synthetic strict-CP932 HTML strings in the dedicated test module; no official page, archive record, or
+fixture file was captured or committed. NAR production, JRA capture/domain/archive/live production, neutral evidence,
+source/snapshot schema versions (4), global migrations (14), and JRA capture migrations `(1,2)` are unchanged.
 
-It retains the GET transport's exact raw-byte safeguards: HTTP 200 only, exact effective endpoint, absent or identity
-content encoding, canonical ASCII Content-Length, 4 MiB preflight/incremental limit, raw streaming with
-`decode_content=False`, no text/decode/re-encode path, and response closure on all outcomes. Transport
-contradictions fail closed.
-
-## Capture Sequence and Boundaries
-
-The final-odds service sequence is:
+## Allowed Files and Stop Condition
 
 ```text
-validated locator -> requested_at -> POST bytes -> observed_at -> stored_at
--> JRAFinalWinOddsResponseCapture -> archive.save_final_win_odds_capture -> supplied response
-```
-
-The separate b1 final-odds capture domain remains the sole owner of strict CP932 validation and immutable v2 capture
-identity. Failed clock sampling, transport result, capture-domain validation, or archive persistence returns no
-supplied response; archive failures propagate. Supplied observation timestamps are preserved without temporal
-backdating or aggregation.
-
-The archive/domain, repositories, dedicated migrations, global migration registry (still ending at 14), neutral
-request evidence, NAR production, normalizers, historical acquisition, and the NAR/JRA bridge are unchanged.
-
-## Allowed Files
-
-```text
-scripts/simulation/jra_official_response_live_capture.py
-tests/test_jra_official_response_live_capture.py
+scripts/simulation/jra_historical_past_race_source.py
+tests/test_jra_historical_past_race_source.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-## Stop Condition
-
-Stop for independent implementation review. Do not integrate formal, perform real accessO capture, or begin a
-normalizer, discovery, bridge, or subsequent phase.
+Stop for independent implementation review. Do not formally integrate, perform real accessO capture, begin historical
+discovery/orchestration, change target acquisition, connect Predictor, or begin the NAR/JRA bridge.
