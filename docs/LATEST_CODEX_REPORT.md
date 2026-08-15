@@ -3477,3 +3477,33 @@ Package-root export, provider-specific dependency/source, builder-unchanged, NAR
 and `git diff --check` checks passed. The final allowed scope is exactly 17 files. Status is `READY_FOR_REVIEW`; one
 review commit is authorized, with no JRA accessO capture, archive v002, live POST, normalizer, bridge, or acquisition
 work started.
+
+## Phase 4C-2d3b1i6d1d4b JRA Final-Odds Capture v002 PREPARE
+
+Prepared the post-request-aware-evidence JRA final-odds capture architecture on formal base
+`906628c5eb5f1639387b3625d494cf133bb27729`; this is a docs-only design review branch. Official accessS navigation
+has already established the authoritative accessO protocol: `POST` exactly one lower-case `cname` form field, encoded
+as `application/x-www-form-urlencoded`, to `https://www.jra.go.jp/JRADB/accessO.html`. The approved observed CNAME
+`pw151ou1006202601021220260105Z/2E` yields server-rendered strict-CP932 final-odds HTML with the visible race identity
+and row-local final single-win odds. The endpoint is not a fabricated GET CNAME URL.
+
+The selected provider-owned boundary is immutable `JRAOfficialFinalWinOddsRequestLocator`. It validates the exact
+accessO CNAME grammar, derives and verifies the existing `JRAExternalRaceIdentity`, and produces the exact request
+fingerprint from canonical ASCII JSON over POST, the canonical endpoint, and the one canonical raw CNAME form value.
+Cookies, transport headers, and timestamps are excluded. The exact lowercase SHA-256 becomes the already-approved
+neutral `request_identity_sha256`; final-odds evidence therefore truthfully binds the actual endpoint, request
+fingerprint, raw response SHA, and actual observation time without teaching c1a about JRA forms.
+
+The prepare selects `FINAL_WIN_ODDS` plus distinct final-odds supplied/capture values, preserving every existing
+accessS/accessU GET constructor, `jra-capture-v1` identity, capture ID, repository lookup, and live
+`capture_response(*, page_kind, response_url)` API. Final odds has `jra-capture-v2` identity that includes its POST
+request fingerprint and observed time. Dedicated archive v002 is required because v001’s schema/page-kind CHECKs
+cannot support the third family additively. The planned transaction-owned rebuild preserves all v001 capture and body
+values exactly, introduces request-method/fingerprint/CNAME material with disjoint v001 GET and v002 POST constraints,
+and provides separate exact legacy and request-aware evidence lookup indexes. The global migration final version stays
+14; NAR capture and the neutral evidence implementation remain unchanged.
+
+Recommended work is deliberately split: d1d4b1 implements only the pure request locator, capture domain, dedicated
+archive v002, repository, and tests; d1d4b2 later adds the live POST transport. Neither phase includes an odds/result
+normalizer, NAR/JRA bridge, acquisition workflow, pacing, or historical backdating. Status is `DRAFT_FOR_REVIEW`;
+no production, test, fixture, migration, archive, or HTTP change was made in this PREPARE phase.
