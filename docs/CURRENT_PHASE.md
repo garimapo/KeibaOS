@@ -2,90 +2,145 @@
 
 ## Status
 
-READY_FOR_REVIEW
+DRAFT_FOR_REVIEW
 
 ## Phase and Base
 
-Phase `4C-2d3b1i6d1d5a` — JRA historical past-race normalizer implementation.
+Phase `4C-2d3b1i6d1d5b1` — JRA accessU complete-history eligibility / source investigation PREPARE.
 
-Formal base: `dcdef4bd6559418fe7f179f42cd16a263604fc08`.
+Formal base: `367602e64353244e27b1518014c0907b922fb4ae`.
 
-Approved PREPARE: `3a8c1fc26eb90c83b0578aa30afe724a2779c2dd`.
+Approved d1d5b PREPARE: `be0941a3fef1ea8c0d652464de584a7d6350ff23`.
 
-Review branch: `review/4c-2d3b1i6d1d5a-jra-past-race-normalizer`.
+Review branch: `review/4c-2d3b1i6d1d5b1-jra-history-eligibility-prepare`.
 
-## Implemented Boundary
+This is design and read-only official-source investigation only. It changes no production code, test, fixture, capture,
+archive, repository, schema, migration, normalizer, discovery module, or package-root export.
 
-`scripts/simulation/jra_historical_past_race_source.py` is a pure supplied-response normalizer with exactly these
-module-defined public names:
+## Official Facts Investigated
+
+The accessU `出走レース` explanatory text says:
 
 ```text
-JRAHistoricalPastRaceSourceError
-JRAHistoricalPastRaceSourceValidationError
-JRAHistoricalPastRaceSourceUnsupportedError
-normalize_jra_historical_past_race_source_record
+JRA、地方、海外で出走したすべてのレースの成績となります。
+なお、外国馬は原則として直近の過去４走のみの掲載となります。
 ```
 
-The function accepts the approved target track/entry records, one exact accessS `JRASuppliedOfficialResponse`, and one
-exact request-aware accessO `JRAFinalWinOddsSuppliedOfficialResponse`; it returns one target-scoped JRA `past_race`
-record. It has no HTTP, archive, filesystem, database, clock, discovery, pagination, bridge, or package-root export.
+That establishes the displayed-history scope and the foreign-horse latest-four exception, but it does not define
+`外国馬` on the response or associate the exception with a row-local/profile-local status field.
 
-Target records are exact c1a values with organization `JRA` and source system `jra_official`. Their target race ID,
-entry ID, entry horse number, and stable `jra:horse:<10 digits>` identity are cross-checked through the formal JRA
-identity constructors. Historical horse selection is only the unique accessS `td.horse a[href]` accessU anchor matching
-that stable horse identity. The selected historical `td.num` is used only to join accessO and need not equal target
-horse number.
-
-## Identity, Facts, and Evidence
-
-The normalizer parses accessS with the formal public result URL parser, narrowly validates its already-approved CNAME
-calendar date, and requires it to precede the target track date. Unique visible accessS/accessO headers cross-check
-date, venue mapping, meeting number/day, race number, and race heading. The result table must have the approved
-semantic heading family; accessO must have exactly one `table.tanpuku`, with one matching `td.num` and direct positive
-finite `td.odds_tan` value.
-
-All 17 c1a values have direct authority: accessS supplies race/date/place/name/class/distance/surface/weather/
-condition, finish/time, body weight/change, jockey, popularity, passing order, and fourth-corner position; accessO
-supplies final single-win odds only. No float conversion, assigned-weight substitution, textual-margin conversion, or
-derived odds is permitted. `td.corner li[title]` labels must uniquely and increasingly identify the explicit fourth
-corner; neither a fixed component nor the final component is assumed. The direct row-local accessS `td.margin` is
-inspected only for the exact official dead-heat marker `同着`; it is never converted or included in record values.
-Official line-break presentation in result-table heading labels is normalized only for exact semantic heading
-comparison, without widening the required heading family.
-
-The output keeps target external race/entry IDs and uses the historical JRA race plus stable horse identity in
-`build_jra_provider_record_id`. It creates exactly three canonical evidence roles:
+Official JRA rule material independently distinguishes concepts that must not be collapsed:
 
 ```text
-historical_race_context    = accessS URL / raw SHA / None / supplied observed_at
-historical_race_final_odds = accessO endpoint / request fingerprint / raw SHA / None / supplied observed_at
-historical_race_result     = the same accessS evidence tuple as context
+外国産馬 / （外） = foreign-bred horse category
+カク外             = horse managed by a foreign trainer for an international exchange race
 ```
 
-SHA-256 is calculated over supplied bytes before strict CP932 decode or parsing. Timestamp-only changes leave source
-identity unchanged; body or accessO request-fingerprint changes do not. The existing builder remains the only causality
-owner. No timestamp is backdated or fabricated.
+The rule material therefore proves that foreign-bred status and foreign-managed horse status are distinct official
+concepts. It does **not** prove which, if either, is the exact `外国馬` category used by the accessU latest-four notice.
+`外国産馬`, `（外）`, overseas starts, foreign birth place, pedigree, and a foreign trainer/owner are consequently not
+eligibility proofs for this contract.
 
-## Fail-closed Scope
+Read-only accessU inspection of both a populated profile and an exact `出走レース` no-data response found only ordinary
+profile facts (parentage, sex, age, trainer, date of birth, breeding farm, and place of production). It found no direct
+`外国馬` classification, no exhaustive non-foreign marker, and no response-local registration/affiliation field tied by
+official semantics to the latest-four exception. Absence of those markers is not proof.
 
-Malformed/contradictory identities, missing or duplicate headers/tables/rows/anchors, wrong lineage, malformed CP932,
-or accessS/accessO disagreement raise the normalizer validation error. Recognized but unsupported result states include
-withdrawal/exclusion/DNF/disqualification, blank class, invalid finish/time/body weight/popularity, nonpositive odds,
-unsupported surface, direct `td.margin` marker `同着`, and ambiguous/missing fourth-corner structure. There is no
-fallback. A positive numeric finish does not bypass the direct dead-heat check.
+The no-data response has `div.race_detail` headed `出走レース` with a `div.caution.no_data` message
+`該当するデータがありません`. This proves only that the response displays no applicable history data; it does not
+state that the horse has never had an actual start or override the response's history-scope/update limitations.
 
-Tests use only synthetic strict-CP932 HTML strings in the dedicated test module; no official page, archive record, or
-fixture file was captured or committed. NAR production, JRA capture/domain/archive/live production, neutral evidence,
-source/snapshot schema versions (4), global migrations (14), and JRA capture migrations `(1,2)` are unchanged.
-
-## Allowed Files and Stop Condition
+## Eligibility Decision
 
 ```text
-scripts/simulation/jra_historical_past_race_source.py
-tests/test_jra_historical_past_race_source.py
+FOREIGN_HORSE_EXCEPTION =
+  accessU states a latest-four exception for 外国馬, but its exact membership
+  semantics are not defined on the page or bound to a supplied response field.
+
+FOREIGN_HORSE_VS_FOREIGN_BRED =
+  DISTINCT_OFFICIAL_CONCEPTS; accessU exception mapping is NOT_PROVEN.
+
+ACCESS_U_ELIGIBILITY_MARKER = NONE_PROVEN
+TARGET_SOURCE_ELIGIBILITY_MARKER = NONE_PROVEN
+ACCESS_U_COMPLETE_HISTORY_ELIGIBILITY = NOT_PROVEN
+```
+
+Existing JRA target-entry records contain the external race ID, entry ID, stable ten-digit horse identity, and target
+horse number. They contain no approved foreign-horse eligibility fact. The formal JRA trusted capture contract covers
+accessS/accessU and accessO; it has no accessD target-card capture/identity contract. Read-only accessD inspection did
+not establish a direct target-row field with official semantics proving that the target is outside the accessU
+exception. In particular, a race-card `（外）`-style symbol, if present, would describe the distinct foreign-bred rule
+category and cannot be used as a substitute.
+
+An eligibility status could be affiliation/registration-sensitive rather than an immutable birth fact; the exact
+accessU term is not defined sufficiently to freeze its time behavior. Therefore any future qualifying evidence must
+be captured as an exact official response at or before the target cutoff. A current page may establish parser structure
+only; it cannot prove eligibility for a historical target retrospectively.
+
+```text
+ELIGIBILITY_CAUSALITY =
+  Any future direct classification must be contained in trusted evidence with
+  observed_at <= target scheduled_start_at. No backdating, current-page inference,
+  or unrecorded status reconstruction is allowed.
+```
+
+## Alternative Source Investigation
+
+No alternative official JRA complete-history source was proven that simultaneously provides all of:
+
+```text
+official JRA ownership
+stable mapping to jra:horse:<10 digits>
+complete JRA/local/overseas history without the accessU exception
+documented pagination/continuation semantics
+causally capturable supplied bytes
+```
+
+The public race-by-race accessS result pages are exact results once a race is already known; they are not a
+stable-horse complete-history index. They cannot be searched/scanned to fill omitted accessU history without
+discovery/orchestration or a provider identity bridge. No third-party source is eligible.
+
+```text
+ALTERNATIVE_OFFICIAL_COMPLETE_SOURCE = NONE_PROVEN
+ZERO_HISTORY_PROOF = NOT_PROVEN
+ALL_PRIOR_STARTS_POLICY = BLOCKED_FOR_UNCONSTRAINED_JRA_TARGET
+DISCOVERY_IMPLEMENTATION_READY = NO
+```
+
+## Frozen Consequences
+
+Do not implement `discover_jra_historical_past_race_history` from one accessU response. It would claim
+`ALL_CAUSALLY_AVAILABLE_ACTUAL_PRIOR_STARTS` without a valid universal completeness proof. Do not instead return the
+latest displayed events under a misleading complete-history name, add a target-entry field speculatively, or use a
+multi-response tuple of the same truncated source as a workaround.
+
+The existing d1d5a normalizer, accessO no-synthesis rule, JRA capture/archive/live stack, NAR production, and neutral
+evidence/source/snapshot stack remain unchanged. `NAR_LINEAGE_TO_JRA_HORSE_ID_LINK = NOT_PROVEN` and
+`MIXED_HISTORY_COLLECTION_READY = NO` remain frozen. Source schema remains 4, snapshot schema remains 4, global
+migrations remain through 14, and JRA capture migrations remain `(1,2)`.
+
+```text
+ARCHITECTURE_BLOCKERS =
+  1. No direct, exhaustive, response-local accessU marker proves exemption from
+     the foreign-horse latest-four exception.
+  2. No proven target-race source fact carries that eligibility with approved
+     capture/identity/causality semantics.
+  3. No alternative official complete stable-horse history source is proven.
+```
+
+The recommended next phase is not implementation. It is `4C-2d3b1i6d1d5b2 — JRA foreign-horse exception official
+semantics / source-capability escalation PREPARE`, documentation only, requiring an authoritative JRA source that
+defines the accessU exception and exposes a causally capturable, exhaustive eligibility/completeness fact. If none is
+available, the JRA complete-history feature remains intentionally unavailable.
+
+```text
+NEXT_PHASE_ALLOWED_FILES =
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-Stop for independent implementation review. Do not formally integrate, perform real accessO capture, begin historical
-discovery/orchestration, change target acquisition, connect Predictor, or begin the NAR/JRA bridge.
+## Stop Condition
+
+Stop for independent review. Do not implement discovery or eligibility parsing, mutate/archive a response, perform a
+real trusted capture, add fixtures, change target acquisition, begin orchestration, connect Predictor, or begin a
+NAR/JRA bridge.

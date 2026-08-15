@@ -3608,3 +3608,24 @@ live regressions 38; neutral source/snapshot/builder regressions 47; NAR histori
 suite 2580. Package-root export, forbidden-dependency, unchanged JRA capture/NAR/neutral production, migration
 version, and `git diff --check` checks passed. No official response was archived or persisted, and no real accessO
 capture was performed.
+
+## Phase 4C-2d3b1i6d1d5b1 JRA Complete-History Eligibility / Source Investigation PREPARE
+
+Investigated the d1d5b accessU completeness blocker using read-only official JRA pages and explanatory material only.
+The accessU history note says that results cover JRA, local, and overseas starts but that `外国馬` are generally shown
+only their latest four starts. JRA's rule material separately defines foreign-bred horses (`外国産馬` / `（外）`) and
+foreign-trainer-managed international-exchange horses (`カク外`), proving those terms are distinct but not proving
+which exact category the accessU notice means.
+
+No inspected accessU profile contains an exhaustive direct `外国馬` classification or a non-foreign eligibility marker.
+Profile facts such as pedigree, birthplace, trainer, owner, race count, CNAME, and overseas-history display remain
+forbidden inferences. The current JRA target-entry contract has no such fact, and no accessD target-card field with
+approved identity/capture/causal semantics was established. The observed accessU no-data layout means only that no
+applicable data is displayed; it does not prove zero actual starts.
+
+No alternative official JRA source was proven to bind the existing stable ten-digit horse identity to a complete
+JRA/local/overseas history with known continuation and historical capture behavior. Complete one-response discovery
+therefore remains blocked for an unconstrained JRA target. Any future eligibility fact would need its own trusted
+official response observed on or before the target scheduled start; today’s structural inspection cannot backdate a
+historical classification. No production/test/schema/capture/archive change, trusted capture, or real accessO call
+occurred. Status is `DRAFT_FOR_REVIEW` pending independent architecture review.
