@@ -152,9 +152,19 @@ class JRAFinalWinOddsRequestLocatorExtractionTests(unittest.TestCase):
         for onclick in invalid:
             with self.subTest(onclick=onclick), self.assertRaises(JRAFinalWinOddsRequestLocatorExtractionValidationError):
                 _extract(body=_body(control=_control(onclick=onclick)))
+        for entity_marker in ("&#39;", "&#x27;", "&apos;"):
+            entity = _control().replace("'", entity_marker)
+            with self.subTest(entity_marker=entity_marker), self.assertRaises(JRAFinalWinOddsRequestLocatorExtractionValidationError):
+                _extract(body=_body(control=entity))
+
+    def test_entity_encoded_selected_control_cannot_use_unrelated_raw_decoy(self) -> None:
         entity = _control().replace("'", "&#39;")
-        with self.assertRaises(JRAFinalWinOddsRequestLocatorExtractionValidationError):
-            _extract(body=_body(control=entity))
+        decoded = f'onclick="return doAction(\'/JRADB/accessO.html\', \'{CNAME}\');"'
+        comment_decoy = f"<!-- {decoded} -->"
+        script_decoy = f"<script>const rawNavigation = `{decoded}`;</script>"
+        for decoy in (comment_decoy, script_decoy):
+            with self.subTest(decoy=decoy), self.assertRaises(JRAFinalWinOddsRequestLocatorExtractionValidationError):
+                _extract(body=_body(control=entity, generic=decoy))
 
     def test_cname_grammar_identity_crosscheck_and_no_synthesis_fail_closed(self) -> None:
         for cname in (CNAME.replace("2E", "2e"), CNAME + " ", "pw151ou1006202601021220260105Z%2F2E"):

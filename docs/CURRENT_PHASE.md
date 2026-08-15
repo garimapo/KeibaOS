@@ -68,6 +68,14 @@ accessS URL's parsed race identity. It never synthesizes a locator from accessS 
 number. It has no HTTP, archive, repository, filesystem, SQLite, clock, environment, random, subprocess, capture,
 accessO POST, normalizer, discovery, orchestration, or bridge ownership. No package-root export is added.
 
+The raw-onclick proof is bound to the selected DOM candidate, not a page-global substring: a quote-aware raw HTML
+token scan skips comments and script bodies, retains raw anchor start tags in document order, and verifies count/order
+agreement with the parsed anchors. The unique selected result-header anchor is located by identity in that parsed
+sequence; only its corresponding raw start tag may contain exactly one literal lowercase `onclick` attribute whose raw
+double-quoted value equals the approved parsed invocation. Entity-encoded selected values (`&#39;`, `&#x27;`, or `&apos;`)
+therefore fail even when comments, scripts, generic navigation, hidden forms, or another anchor contain the decoded
+text.
+
 ## Allowed Files
 
 ```text
@@ -81,9 +89,9 @@ docs/LATEST_CODEX_REPORT.md
 
 ## Verification
 
-Fresh Python 3.14.5 / pytest 8.3.5 verification passed: identity and locator dedicated suites (16 tests), JRA
-capture/archive/live plus d1d5a/d1d5b3, NAR, and provider-neutral source/snapshot/builder regressions (138 tests),
-and the full suite (2,596 tests). The public-surface/purity tests pin the builder, exact extractor API, no package-root
+Fresh Python 3.14.5 / pytest 8.3.5 verification passed: identity and locator dedicated suites (17 tests), JRA
+capture/archive/live plus d1d5a/d1d5b3, NAR, and provider-neutral source/snapshot/builder regressions (139 tests),
+and the full suite (2,597 tests). The public-surface/purity tests pin the builder, exact extractor API, no package-root
 export, and forbidden dependency boundary. Final diff, scope, unchanged-production, version, and status checks are
 required before review publication.
 

@@ -3673,3 +3673,21 @@ rejection, identity mismatch, ambiguity, public surface, and purity. Fresh verif
 No real accessO response was captured, archived, or posted; d1d5a, d1d5b3, JRA capture/archive/live, NAR,
 provider-neutral production, migrations, orchestration, bridge, and Predictor remain unchanged. Status is
 `READY_FOR_REVIEW` pending independent review.
+
+### Raw selected-control binding correction
+
+Corrected the source-spelling proof so it no longer counts decoded `onclick` text across the whole page. The extractor
+now uses a quote-aware raw HTML token scan that skips comments and script bodies, aligns raw anchor start tags with
+BeautifulSoup anchors in document order, identifies the exact selected result-header anchor, and validates only that
+raw tag's literal lowercase `onclick` attribute. The raw value must equal the approved unescaped single-quoted
+doAction spelling. Entity spellings `&#39;`, `&#x27;`, and `&apos;` remain invalid even if the DOM parser decodes them.
+
+The new regression proves the defect against the previous review source in memory: a selected entity-encoded control
+plus an unrelated comment containing the exact decoded raw `onclick` was accepted by the prior page-global count. It
+is now rejected; an equivalent script-text decoy is rejected as well. The builder, fingerprint ownership, selector,
+identity cross-check, raw CNAME policy, and all unrelated c2 boundaries remain unchanged.
+
+Fresh correction verification under Python 3.14.5 / pytest 8.3.5 passed: dedicated identity/locator suites 17,
+related JRA/NAR/neutral regressions 139, and the full suite 2597. Package-export, forbidden-dependency/source/AST,
+identity-ownership, unchanged-production, version, and `git diff --check` validation remain required before review
+publication.
