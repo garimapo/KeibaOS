@@ -20,6 +20,7 @@ from scripts.simulation.historical_input_source_records import (
 from scripts.simulation.jra_historical_past_race_absence_source import (
     JRAHistoricalPastRaceAbsenceSourceValidationError,
     normalize_jra_historical_past_race_absence_source_record,
+    project_jra_historical_past_race_absence_source_record,
 )
 from scripts.simulation.jra_historical_past_race_discovery import (
     JRAHistoricalEventKind,
@@ -123,6 +124,24 @@ def _normalize(*, body: bytes, observed: datetime = OBSERVED, entry: HistoricalI
     )
 
 
+def _discover(*, body: bytes, response: JRASuppliedOfficialResponse | None = None):
+    return discover_jra_historical_past_race_history(
+        target_track_record=_track(), target_entry_record=_entry(),
+        horse_history_response=_response(body=body) if response is None else response,
+    )
+
+
+def _unsafe_discovery(discovery: JRAHistoricalPastRaceDiscovery, **changes: object) -> JRAHistoricalPastRaceDiscovery:
+    result = object.__new__(JRAHistoricalPastRaceDiscovery)
+    for name in (
+        "target_external_race_id", "target_external_entry_id", "target_external_horse_id", "target_race_date",
+        "events", "proven_zero_history", "horse_history_response_url", "horse_history_response_sha256",
+        "horse_history_observed_at",
+    ):
+        object.__setattr__(result, name, changes.get(name, getattr(discovery, name)))
+    return result
+
+
 def _target_record(kind: str, absence: HistoricalInputSourceRecord | None = None) -> HistoricalInputSourceRecord:
     if kind == "jockey":
         values = {"external_entry_id": ENTRY_ID, "jockey": "騎手"}
@@ -160,12 +179,13 @@ class JRAHistoricalPastRaceAbsenceSourceTests(unittest.TestCase):
 
         self.assertEqual(
             {name for name in vars(module) if not name.startswith("_")},
-            {"JRAHistoricalPastRaceAbsenceSourceError", "JRAHistoricalPastRaceAbsenceSourceValidationError", "normalize_jra_historical_past_race_absence_source_record"},
+            {"JRAHistoricalPastRaceAbsenceSourceError", "JRAHistoricalPastRaceAbsenceSourceValidationError", "normalize_jra_historical_past_race_absence_source_record", "project_jra_historical_past_race_absence_source_record"},
         )
         self.assertEqual(tuple(inspect.signature(normalize_jra_historical_past_race_absence_source_record).parameters), ("target_track_record", "target_entry_record", "horse_history_response"))
+        self.assertEqual(tuple(inspect.signature(project_jra_historical_past_race_absence_source_record).parameters), ("discovery", "horse_history_response"))
         self.assertFalse(hasattr(package, "normalize_jra_historical_past_race_absence_source_record"))
         tree = ast.parse(Path(module.__file__).read_text(encoding="utf-8"))
-        forbidden = {"requests", "httpx", "sqlite3", "pathlib", "random", "subprocess", "time", "urllib"}
+        forbidden = {"requests", "httpx", "sqlite3", "pathlib", "random", "subprocess", "time", "urllib", "bs4"}
         self.assertFalse(any((isinstance(node, ast.Import) and any(item.name.split(".")[0] in forbidden for item in node.names)) or (isinstance(node, ast.ImportFrom) and node.module and node.module.split(".")[0] in forbidden) for node in ast.walk(tree)))
 
     def test_empty_history_creates_exact_neutral_absence_record(self) -> None:
@@ -225,13 +245,69 @@ class JRAHistoricalPastRaceAbsenceSourceTests(unittest.TestCase):
 
         body = _body(rows=None, flat=None, obstacle=None)
         response = _response(body=body)
-        discovery = JRAHistoricalPastRaceDiscovery(RACE_ID, ENTRY_ID, HORSE_ID, date(2026, 7, 4), (), True)
-        with patch.object(module, "_discover_jra_historical_past_race_history", return_value=discovery) as discover:
+        discovery = _discover(body=body, response=response)
+        expected = project_jra_historical_past_race_absence_source_record(discovery=discovery, horse_history_response=response)
+        with patch.object(module, "_discover_jra_historical_past_race_history", return_value=discovery) as discover, patch.object(module, "project_jra_historical_past_race_absence_source_record", return_value=expected) as project:
             record = normalize_jra_historical_past_race_absence_source_record(
                 target_track_record=_track(), target_entry_record=_entry(), horse_history_response=response,
             )
         discover.assert_called_once_with(target_track_record=_track(), target_entry_record=_entry(), horse_history_response=response)
-        self.assertEqual(record.record_kind, "past_race_absence")
+        project.assert_called_once_with(discovery=discovery, horse_history_response=response)
+        self.assertEqual(record, expected)
+
+    def test_projection_never_discovers_or_parses_and_preserves_empty_and_transfer_output(self) -> None:
+        import scripts.simulation.jra_historical_past_race_absence_source as module
+        from unittest.mock import patch
+
+        empty_body = _body(rows=None, flat=None, obstacle=None)
+        empty_response = _response(body=empty_body)
+        empty_discovery = _discover(body=empty_body, response=empty_response)
+        transfer_body = _body(rows=(_transfer(day=6),), flat=0, obstacle=0)
+        transfer_response = _response(body=transfer_body)
+        transfer_discovery = _discover(body=transfer_body, response=transfer_response)
+        with patch.object(module, "_discover_jra_historical_past_race_history", side_effect=AssertionError("must not discover")):
+            empty = project_jra_historical_past_race_absence_source_record(discovery=empty_discovery, horse_history_response=empty_response)
+            transfer = project_jra_historical_past_race_absence_source_record(discovery=transfer_discovery, horse_history_response=transfer_response)
+        self.assertEqual(empty, _normalize(body=empty_body))
+        self.assertEqual(transfer, _normalize(body=transfer_body))
+
+    def test_projection_requires_exact_bound_response_and_coherent_discovery(self) -> None:
+        body = _body(rows=None, flat=None, obstacle=None)
+        response = _response(body=body)
+        discovery = _discover(body=body, response=response)
+        with self.assertRaises(JRAHistoricalPastRaceAbsenceSourceValidationError):
+            project_jra_historical_past_race_absence_source_record(discovery=object(), horse_history_response=response)
+        with self.assertRaises(JRAHistoricalPastRaceAbsenceSourceValidationError):
+            project_jra_historical_past_race_absence_source_record(discovery=discovery, horse_history_response=object())
+        for changed in (
+            _response(body=body, url=PROFILE_URL.replace("%2FAA", "%2FAB")),
+            _response(body=body.replace(b"</body>", b"<!-- changed --></body>")),
+            _response(body=body, observed=OBSERVED + timedelta(minutes=1)),
+            _response(body=body, url=PROFILE_URL.replace(HORSE_KEY, "3001234568")),
+        ):
+            with self.subTest(response=changed), self.assertRaises(JRAHistoricalPastRaceAbsenceSourceValidationError):
+                project_jra_historical_past_race_absence_source_record(discovery=discovery, horse_history_response=changed)
+        transfer = _discover(body=_body(rows=(_transfer(day=6),), flat=0, obstacle=0))
+        incoherent = _unsafe_discovery(transfer, proven_zero_history=True)
+        with self.assertRaises(JRAHistoricalPastRaceAbsenceSourceValidationError):
+            project_jra_historical_past_race_absence_source_record(discovery=incoherent, horse_history_response=_response(body=_body(rows=(_transfer(day=6),), flat=0, obstacle=0)))
+
+    def test_projection_rejects_all_actual_start_kinds_and_transfer_mixtures(self) -> None:
+        cases = (
+            (_actual(), 1),
+            (_actual(place="園田", anchor=None), 1),
+            (_actual(finish="中止"), 1),
+            (_transfer(day=6) + _actual(), 1),
+            (_transfer(day=6) + _actual(place="園田", anchor=None), 1),
+            (_transfer(day=6) + _actual(finish="中止"), 1),
+        )
+        for rows, count in cases:
+            with self.subTest(rows=rows):
+                body = _body(rows=(rows,), flat=count, obstacle=0)
+                response = _response(body=body)
+                discovery = _discover(body=body, response=response)
+                with self.assertRaises(JRAHistoricalPastRaceAbsenceSourceValidationError):
+                    project_jra_historical_past_race_absence_source_record(discovery=discovery, horse_history_response=response)
 
     def test_source_id_follows_raw_bytes_not_timestamps(self) -> None:
         body = _body(rows=None, flat=None, obstacle=None)

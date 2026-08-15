@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass as _dataclass
-from datetime import date as _date, datetime as _datetime
+from datetime import date as _date, datetime as _datetime, timezone as _timezone
 from enum import StrEnum as _StrEnum
 import hashlib as _hashlib
 import re as _re
@@ -29,6 +29,7 @@ from scripts.simulation.jra_official_identity import (
 from scripts.simulation.jra_official_response_capture import (
     JRAOfficialPageKind as _JRAOfficialPageKind,
     JRASuppliedOfficialResponse as _JRASuppliedOfficialResponse,
+    canonicalize_jra_official_capture_url as _canonicalize_jra_official_capture_url,
 )
 
 
@@ -64,6 +65,7 @@ _AGGREGATE_HEADINGS = ("1着", "2着", "3着", "4着以下", "出走回数", "�
 _NO_DATA = "該当するデータがありません。"
 _INTEGER = _re.compile(r"(?:0|[1-9][0-9]*)\Z")
 _POSITIVE = _re.compile(r"[1-9][0-9]*\Z")
+_SHA256 = _re.compile(r"[0-9a-f]{64}\Z")
 _DATE = _re.compile(r"[0-9]{4}年[0-9]{1,2}月[0-9]{1,2}日\Z")
 _CNAME_DATE = _re.compile(r"(?P<date>[0-9]{8})/[0-9A-F]{2}\Z")
 _TIME = _re.compile(r"[0-9]{1,2}:[0-5][0-9](?:\.[0-9])?\Z")
@@ -300,16 +302,35 @@ class JRAHistoricalPastRaceDiscovery:
     target_race_date: _date
     events: tuple[JRAHistoricalPastRaceReference, ...]
     proven_zero_history: bool
+    horse_history_response_url: str
+    horse_history_response_sha256: str
+    horse_history_observed_at: _datetime
 
     def __post_init__(self) -> None:
         if (
             type(self.target_external_race_id) is not str or type(self.target_external_entry_id) is not str
             or type(self.target_external_horse_id) is not str or type(self.target_race_date) is not _date
             or type(self.events) is not tuple or type(self.proven_zero_history) is not bool
+            or type(self.horse_history_response_url) is not str or type(self.horse_history_response_sha256) is not str
+            or _SHA256.fullmatch(self.horse_history_response_sha256) is None
+            or type(self.horse_history_observed_at) is not _datetime
             or any(type(event) is not JRAHistoricalPastRaceReference for event in self.events)
             or self.proven_zero_history != (self.events == ())
         ):
             raise JRAHistoricalPastRaceDiscoveryValidationError("historical discovery is invalid")
+        try:
+            canonical_url = _canonicalize_jra_official_capture_url(
+                page_kind=_JRAOfficialPageKind.HORSE_PROFILE_HISTORY,
+                response_url=self.horse_history_response_url,
+            )
+            response_horse = _parse_jra_horse_profile_url_identity(self.horse_history_response_url)
+            target_horse = _parse_jra_external_horse_id(self.target_external_horse_id)
+            if self.horse_history_observed_at.tzinfo is not _timezone.utc or self.horse_history_observed_at.utcoffset() != _timezone.utc.utcoffset(None):
+                raise ValueError
+        except (_JRAOfficialIdentityValidationError, TypeError, ValueError, OverflowError) as error:
+            raise JRAHistoricalPastRaceDiscoveryValidationError("historical discovery evidence binding is invalid") from error
+        if canonical_url != self.horse_history_response_url or response_horse != target_horse:
+            raise JRAHistoricalPastRaceDiscoveryValidationError("historical discovery evidence binding is incoherent")
 
 
 @_dataclass(frozen=True, slots=True)
@@ -437,7 +458,17 @@ def discover_jra_historical_past_race_history(
     if _zero_state(container):
         if (flat, obstacle) not in {(None, None), (0, 0)}:
             raise _validation("accessU zero history disagrees with aggregate counts")
-        return JRAHistoricalPastRaceDiscovery(target_race.external_race_id, entry_id, horse.external_horse_id, target_date, (), True)
+        return JRAHistoricalPastRaceDiscovery(
+            target_race.external_race_id,
+            entry_id,
+            horse.external_horse_id,
+            target_date,
+            (),
+            True,
+            horse_history_response.response_url,
+            _hashlib.sha256(horse_history_response.response_body).hexdigest(),
+            horse_history_response.observed_at,
+        )
     if flat is None or obstacle is None:
         raise _validation("accessU history and aggregate no-data states conflict")
     table = _history_table(container)
@@ -462,7 +493,17 @@ def discover_jra_historical_past_race_history(
     actual_count = sum(event.event_kind is not JRAHistoricalEventKind.PROVEN_NON_START for event in events)
     if actual_count != flat + obstacle:
         raise _validation("accessU displayed actual-start count disagrees with aggregate total")
-    return JRAHistoricalPastRaceDiscovery(target_race.external_race_id, entry_id, horse.external_horse_id, target_date, events, False)
+    return JRAHistoricalPastRaceDiscovery(
+        target_race.external_race_id,
+        entry_id,
+        horse.external_horse_id,
+        target_date,
+        events,
+        False,
+        horse_history_response.response_url,
+        _hashlib.sha256(horse_history_response.response_body).hexdigest(),
+        horse_history_response.observed_at,
+    )
 
 
 if "annotations" in globals():

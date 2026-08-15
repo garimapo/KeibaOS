@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 from dataclasses import is_dataclass
 from datetime import date, datetime, timedelta, timezone
+import hashlib
 import inspect
 from pathlib import Path
 import unittest
@@ -132,6 +133,7 @@ class JRAHistoricalPastRaceDiscoveryTests(unittest.TestCase):
         self.assertEqual(tuple(JRAHistoricalEventKind), (JRAHistoricalEventKind.JRA_ACTUAL_START, JRAHistoricalEventKind.NON_JRA_ACTUAL_START, JRAHistoricalEventKind.PROVEN_NON_START, JRAHistoricalEventKind.UNSUPPORTED_ACTUAL_START))
         self.assertTrue(is_dataclass(JRAHistoricalPastRaceReference) and JRAHistoricalPastRaceReference.__dataclass_params__.frozen)
         self.assertTrue(is_dataclass(JRAHistoricalPastRaceDiscovery) and JRAHistoricalPastRaceDiscovery.__dataclass_params__.frozen)
+        self.assertTrue(hasattr(JRAHistoricalPastRaceDiscovery, "__slots__"))
         tree = ast.parse(Path(module.__file__).read_text(encoding="utf-8"))
         forbidden = {"requests", "httpx", "sqlite3", "pathlib", "random", "subprocess", "time"}
         self.assertFalse(any((isinstance(node, ast.Import) and any(item.name.split(".")[0] in forbidden for item in node.names)) or (isinstance(node, ast.ImportFrom) and node.module and node.module.split(".")[0] in forbidden) for node in ast.walk(tree)))
@@ -162,9 +164,17 @@ class JRAHistoricalPastRaceDiscoveryTests(unittest.TestCase):
             _discover(body=_body(rows=rows, flat=2, obstacle=2).replace("<td>0</td><td>0</td><td>0</td><td>2</td><td>2</td>".encode("cp932"), "<td>0</td><td>0</td><td>0</td><td>1</td><td>2</td>".encode("cp932"), 1))
 
     def test_zero_history_requires_same_response_aggregate_proof(self) -> None:
-        zero = _discover(body=_body(rows=None, flat=None, obstacle=None))
+        body = _body(rows=None, flat=None, obstacle=None)
+        response = _response(body=body, observed=datetime(2026, 6, 10, 19, tzinfo=timezone(timedelta(hours=9))))
+        zero = _discover(horse_history_response=response)
         self.assertTrue(zero.proven_zero_history)
         self.assertEqual(zero.events, ())
+        self.assertEqual(zero.horse_history_response_url, PROFILE_URL)
+        self.assertEqual(zero.horse_history_response_sha256, hashlib.sha256(body).hexdigest())
+        self.assertEqual(zero.horse_history_observed_at, OBSERVED)
+        self.assertIs(zero.horse_history_observed_at.tzinfo, timezone.utc)
+        changed = _discover(body=body.replace(b"</body>", b"<!-- exact byte change --></body>"))
+        self.assertNotEqual(changed.horse_history_response_sha256, zero.horse_history_response_sha256)
         with self.assertRaises(JRAHistoricalPastRaceDiscoveryValidationError):
             _discover(body=_body(rows=None, flat=1, obstacle=0))
         with self.assertRaises(JRAHistoricalPastRaceDiscoveryValidationError):

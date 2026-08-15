@@ -3022,6 +3022,23 @@ related NAR/c1a/c1c/snapshot suites passed 52 tests; the full suite passed 2467 
 package-root non-export checks pass. `git diff --check` and the approved changed-file scope are verified before review
 publication.
 
+## Phase 4C-2d3b1i6d1d5e0 JRA Discovery-to-Absence Projection Handoff
+
+Extended the immutable/slotted JRA complete-history discovery with evidence binding for the exact accessU response:
+canonical URL, raw response SHA-256, and normalized UTC observed time. The discovery validates that its bound accessU
+URL identifies the same formal horse as its target horse. Existing discovery parsing, closed event classification,
+aggregate completeness, chronology, and cutoff behavior are unchanged.
+
+Added the public pure absence projection from an exact bound discovery and the original exact supplied response. It
+performs no discovery and no HTML parsing. It verifies the URL, raw body SHA, observed timestamp, and formal accessU
+horse identity before emitting the existing neutral JRA absence record. It accepts only empty history or complete
+transfer-only zero-actual-start history and rejects every actual-start category.
+
+The existing direct absence normalizer still calls discovery exactly once and now delegates record construction to the
+public projection. This resolves the collector predecessor's double-discovery conflict without duplicating the
+absence-record constructor. No collector, capture, archive, migration, source/snapshot schema, NAR, bridge, or real
+official acquisition work was added.
+
 ## Phase 4C-2d3b1i6d1d5d2 JRA Zero-Actual-Start Past-Race-Absence Source
 
 Implemented the narrow pure JRA absence-source boundary. It calls the formal d1d5b3 accessU discovery exactly once
