@@ -141,6 +141,7 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
         )
         self.assertFalse(hasattr(reference, "__dict__"))
         self.assertEqual(reference.observed_at, OBSERVED)
+        self.assertIsNone(reference.request_identity_sha256)
         for kwargs in (
             {"response_sha256": "A" * 64},
             {"response_sha256": "a" * 63},
@@ -156,6 +157,52 @@ class HistoricalInputSourceRecordsTest(unittest.TestCase):
                 values.update(kwargs)
                 with self.assertRaises(ValueError):
                     HistoricalInputEvidenceReference(**values)
+
+    def test_request_identity_fingerprint_is_optional_strict_and_endpoint_bound(self) -> None:
+        legacy = HistoricalInputEvidenceReference("track", "https://example.test/raw", "a" * 64, AVAILABLE, OBSERVED)
+        request_aware = HistoricalInputEvidenceReference(
+            "track", "https://example.test/raw", "a" * 64, AVAILABLE, OBSERVED, "b" * 64,
+        )
+        self.assertIsNone(legacy.request_identity_sha256)
+        self.assertEqual(request_aware.request_identity_sha256, "b" * 64)
+        for value in ("B" * 64, "b" * 63, "b" * 65, "g" * 64, True, b"b" * 64):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                HistoricalInputEvidenceReference("track", "https://example.test/raw", "a" * 64, AVAILABLE, OBSERVED, value)
+        with self.assertRaises(ValueError):
+            HistoricalInputEvidenceReference("track", None, "a" * 64, AVAILABLE, OBSERVED, "b" * 64)
+
+    def test_request_identity_changes_source_identity_without_timestamp_dependence(self) -> None:
+        baseline = _record("past_race", canonical_source_url="https://example.test/past")
+        request_aware_evidence = tuple(
+            replace(item, request_identity_sha256="a" * 64)
+            for item in baseline.evidence
+        )
+        request_aware = HistoricalInputSourceRecord(
+            record_kind=baseline.record_kind, organization=baseline.organization, source_system=baseline.source_system,
+            external_race_id=baseline.external_race_id, external_entry_id=baseline.external_entry_id,
+            provider_record_id=baseline.provider_record_id, record_values=baseline.record_values, evidence=request_aware_evidence,
+        )
+        self.assertNotEqual(request_aware.source_id, baseline.source_id)
+        payload = canonical_historical_input_source_payload(record=request_aware)
+        self.assertEqual(payload["evidence"][0]["request_identity_sha256"], "a" * 64)
+        self.assertNotIn("request_identity_sha256", canonical_historical_input_source_payload(record=baseline)["evidence"][0])
+        shifted = HistoricalInputSourceRecord(
+            record_kind=request_aware.record_kind, organization=request_aware.organization, source_system=request_aware.source_system,
+            external_race_id=request_aware.external_race_id, external_entry_id=request_aware.external_entry_id,
+            provider_record_id=request_aware.provider_record_id, record_values=request_aware.record_values,
+            evidence=tuple(replace(item, observed_at=item.observed_at + timedelta(minutes=1)) for item in request_aware.evidence),
+        )
+        self.assertEqual(shifted.source_id, request_aware.source_id)
+        distinct_requests = (
+            replace(request_aware.evidence[0], response_sha256="c" * 64, observed_at=OBSERVED),
+            replace(request_aware.evidence[1], response_sha256="c" * 64, request_identity_sha256="d" * 64, observed_at=OBSERVED + timedelta(minutes=1)),
+        )
+        distinct = HistoricalInputSourceRecord(
+            record_kind=baseline.record_kind, organization=baseline.organization, source_system=baseline.source_system,
+            external_race_id=baseline.external_race_id, external_entry_id=baseline.external_entry_id,
+            provider_record_id=baseline.provider_record_id, record_values=baseline.record_values, evidence=distinct_requests,
+        )
+        self.assertEqual(len(distinct.evidence), 2)
 
     def test_evidence_roles_order_timestamps_and_raw_digest_drive_v4_identity(self) -> None:
         baseline = _record("past_race", canonical_source_url="https://example.test/past")

@@ -395,9 +395,9 @@ def _canonical_evidence(
     )
     if not roles_are_valid or len(set(roles)) != len(roles):
         raise _validation_error("evidence roles are invalid")
-    observations: dict[tuple[str | None, str], tuple[_datetime | None, _datetime]] = {}
+    observations: dict[tuple[str | None, str | None, str], tuple[_datetime | None, _datetime]] = {}
     for item in ordered:
-        identity = (item.canonical_source_url, item.response_sha256)
+        identity = (item.canonical_source_url, item.request_identity_sha256, item.response_sha256)
         previous = observations.get(identity)
         times = (item.available_at, item.observed_at)
         if previous is not None and previous != times:
@@ -411,14 +411,17 @@ def _canonical_evidence(
 def _evidence_payload(
     evidence: tuple[_HistoricalInputEvidenceReference, ...],
 ) -> list[dict[str, object]]:
-    return [
-        {
+    result: list[dict[str, object]] = []
+    for item in evidence:
+        payload: dict[str, object] = {
             "evidence_role": item.evidence_role,
             "canonical_source_url": item.canonical_source_url,
             "response_sha256": item.response_sha256,
         }
-        for item in evidence
-    ]
+        if item.request_identity_sha256 is not None:
+            payload["request_identity_sha256"] = item.request_identity_sha256
+        result.append(payload)
+    return result
 
 
 def _unchecked_payload(record: HistoricalInputSourceRecord) -> dict[str, object]:

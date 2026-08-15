@@ -178,6 +178,29 @@ class HistoricalInputSnapshotsTest(unittest.TestCase):
             with self.subTest(roles=roles), self.assertRaises(ValueError):
                 replace(past, evidence=_evidence(*roles))
 
+    def test_request_identity_changes_snapshot_digest_but_legacy_payload_is_unchanged(self) -> None:
+        baseline = _snapshot()
+        self.assertEqual(baseline.content_sha256, "df128033bb9bf966a9ed391958fc23b489e3268553ca945bae0a68fc7af20973")
+        request_aware_provenance = tuple(
+            replace(
+                item,
+                evidence=tuple(replace(evidence, request_identity_sha256="a" * 64) for evidence in item.evidence),
+            )
+            if item.audit_key == "past_race/10/0" else item
+            for item in baseline.provenance
+        )
+        request_aware = HistoricalInputSnapshot(
+            baseline.identity, baseline.internal_race_id, baseline.information_cutoff, baseline.race,
+            baseline.entries, baseline.past_races, request_aware_provenance,
+        )
+        self.assertNotEqual(request_aware.content_sha256, baseline.content_sha256)
+        legacy_payload = build_historical_input_snapshot_content_payload(snapshot=baseline)
+        request_payload = build_historical_input_snapshot_content_payload(snapshot=request_aware)
+        legacy_evidence = next(item for item in legacy_payload["provenance"] if item["audit_key"] == "past_race/10/0")["evidence"]
+        request_evidence = next(item for item in request_payload["provenance"] if item["audit_key"] == "past_race/10/0")["evidence"]
+        self.assertTrue(all("request_identity_sha256" not in item for item in legacy_evidence))
+        self.assertEqual({item["request_identity_sha256"] for item in request_evidence}, {"a" * 64})
+
     def test_past_race_provenance_requires_consistent_same_response_observations(self) -> None:
         baseline = _provenance()[4]
         same_response = (

@@ -270,6 +270,23 @@ class HistoricalInputSnapshotBuilderTests(unittest.TestCase):
         with self.assertRaises(HistoricalInputSnapshotAssemblyError):
             _build(late_records)
 
+    def test_request_identity_propagates_without_changing_builder_causality(self) -> None:
+        records = _complete_records()
+        target = next(record for record in records if record.record_kind == "past_race")
+        request_aware = replace(
+            target,
+            evidence=tuple(replace(item, request_identity_sha256="a" * 64) for item in target.evidence),
+        )
+        snapshot = _build(tuple(request_aware if record is target else record for record in records))
+        provenance = next(item for item in snapshot.provenance if item.source_id == request_aware.source_id)
+        self.assertEqual({item.request_identity_sha256 for item in provenance.evidence}, {"a" * 64})
+        late = replace(
+            request_aware,
+            evidence=tuple(replace(item, observed_at=CAPTURED + timedelta(seconds=1)) for item in request_aware.evidence),
+        )
+        with self.assertRaises(HistoricalInputSnapshotAssemblyError):
+            _build(tuple(late if record is target else record for record in records))
+
     def test_source_url_none_and_non_track_urls_do_not_change_selection(self) -> None:
         self.assertIs(_build(_complete_records(track_url=None)).identity.source_identity.source_url, None)
         first = _build(_complete_records(track_url="https://example.test/target"))

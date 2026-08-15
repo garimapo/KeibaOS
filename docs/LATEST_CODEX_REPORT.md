@@ -3430,3 +3430,50 @@ passed 43 tests; the related source/snapshot/builder/NAR suite passed 67 tests; 
 Package-root export, forbidden dependency/source/AST, migration/global-version unchanged, repository unchanged, NAR
 production unchanged, and `git diff --check` checks all passed. Status is `READY_FOR_REVIEW`; stop for independent
 implementation review.
+
+## Phase 4C-2d3b1i6d1d4a1 Request-Aware Historical Evidence Implementation Stop
+
+Implemented the approved provider-neutral optional request fingerprint on formal base
+`41f2298820fe029bc06f024ff6da028f21ed5c7c`, within the exact allowed production/test/migration files. The final
+field on `HistoricalInputEvidenceReference` is `request_identity_sha256: str | None = None`; it preserves the legacy
+five-argument positional constructor. Non-null values are strict lowercase SHA-256 and require a canonical HTTPS
+endpoint. The neutral domain remains provider agnostic: no JRA method, `cname`, form, request-body, or accessO logic
+was added.
+
+Same-response coherence now uses `(canonical_source_url, request_identity_sha256, response_sha256)`. Legacy `None`
+is omitted from canonical source/snapshot payloads, preserving the frozen formal-base two-role source payload,
+`his-v4` source ID, and snapshot digest exactly. A non-null fingerprint is serialized for new evidence and changes
+its source ID and snapshot digest; timestamps remain source-ID-independent. The builder was not modified and its
+existing causality behavior still passes with propagated request-aware evidence.
+
+Added global additive v014, `v014_historical_input_request_identity_schema`, which adds nullable strict SHA-256
+`request_identity_sha256` to provenance evidence. It supports nonempty v013 stores without rebuilding, rewriting, or
+deleting rows, and advances global migration order to `(8, 9, 10, 11, 12, 13, 14)`. The SQLite repository reads and
+writes the field, preserves both NULL and non-null values, and fails closed on corrupt stored fingerprints. NAR and
+existing JRA GET capture/live production remain unchanged; JRA accessO has not started.
+
+Fresh focused verification passed 101 tests; current NAR historical-source and JRA capture/live regressions passed
+47 tests. Package-export, provider-specific dependency, builder-unchanged, NAR-unchanged, JRA-GET-unchanged, and
+`git diff --check` checks passed. The full suite collected 2561 tests: 2555 passed and six failed solely because
+these out-of-scope tests still assert global migrations end at v013:
+
+* `tests/test_nar_official_response_capture_migration.py` (1)
+* `tests/test_simulation_bet_plan_migration.py` (3)
+* `tests/test_sqlite_persisted_simulation_application.py` (2)
+
+All six need their stale expected global migration registry extended with v014, but those files are not in the exact
+allowed list. Per the stop condition, no out-of-scope edit, commit, or push was performed. The allowed-file worktree
+is preserved unchanged pending an explicit scope extension.
+
+## Phase 4C-2d3b1i6d1d4a1 Scope Extension and Final Verification
+
+The approved scope extension added only three stale global-migration expectation tests. They now recognize the exact
+approved registry `(8, 9, 10, 11, 12, 13, 14)` and v014's registered name; no production behavior changed after the
+extension. The six formerly failing assertions passed. Fresh verification under Python 3.14.5 / pytest 8.3.5 passed:
+focused d1d4a1 source/snapshot/builder/repository/migration tests 101; scope-extension tests 6; NAR historical-source
+and existing JRA capture/live tests 47; complete migration-related suites 33; and the full suite 2561.
+
+Package-root export, provider-specific dependency/source, builder-unchanged, NAR-unchanged, JRA-GET-capture-unchanged,
+and `git diff --check` checks passed. The final allowed scope is exactly 17 files. Status is `READY_FOR_REVIEW`; one
+review commit is authorized, with no JRA accessO capture, archive v002, live POST, normalizer, bridge, or acquisition
+work started.

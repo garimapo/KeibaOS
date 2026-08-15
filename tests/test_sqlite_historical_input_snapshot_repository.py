@@ -262,6 +262,57 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
             source_identity=HistoricalExternalRaceIdentity("NAR", "nar_official", "race-1"),
         ), same_response)
 
+    def test_request_identity_round_trips_and_corruption_fails_closed(self) -> None:
+        connection, repository = self.repository()
+        legacy = self.snapshot()
+        repository.save_snapshot(snapshot=legacy)
+        self.assertEqual(
+            connection.execute(
+                "SELECT request_identity_sha256 FROM historical_input_snapshot_provenance_evidence"
+            ).fetchall(),
+            [(None,)] * 6,
+        )
+        request_aware_provenance = tuple(
+            replace(
+                item,
+                evidence=tuple(replace(evidence, request_identity_sha256="a" * 64) for evidence in item.evidence),
+            )
+            for item in legacy.provenance
+        )
+        request_aware = HistoricalInputSnapshot(
+            HistoricalInputSnapshotIdentity("dataset-2", legacy.identity.source_identity, CAPTURED + timedelta(seconds=1)),
+            legacy.internal_race_id, legacy.information_cutoff, legacy.race, legacy.entries, legacy.past_races,
+            request_aware_provenance,
+        )
+        repository.save_snapshot(snapshot=request_aware)
+        self.assertEqual(
+            connection.execute(
+                "SELECT request_identity_sha256 FROM historical_input_snapshot_provenance_evidence WHERE snapshot_id=2"
+            ).fetchall(),
+            [("a" * 64,)] * 6,
+        )
+        loaded = repository.load_latest_snapshot(
+            dataset_id="dataset-2", race_id=1, information_cutoff=CUTOFF,
+            source_identity=HistoricalExternalRaceIdentity("NAR", "nar_official", "race-1"),
+        )
+        self.assertIsNotNone(loaded)
+        self.assertEqual(loaded.content_sha256, request_aware.content_sha256)
+        self.assertEqual(
+            {evidence.request_identity_sha256 for item in loaded.provenance for evidence in item.evidence},
+            {"a" * 64},
+        )
+        connection.execute("PRAGMA ignore_check_constraints=ON")
+        connection.execute(
+            "UPDATE historical_input_snapshot_provenance_evidence SET request_identity_sha256=? WHERE snapshot_id=2 AND evidence_order=0",
+            ("A" * 64,),
+        )
+        connection.execute("PRAGMA ignore_check_constraints=OFF")
+        with self.assertRaises(RepositoryDataIntegrityError):
+            repository.load_latest_snapshot(
+                dataset_id="dataset-2", race_id=1, information_cutoff=CUTOFF,
+                source_identity=HistoricalExternalRaceIdentity("NAR", "nar_official", "race-1"),
+            )
+
     def test_same_snapshot_is_an_idempotent_no_op(self) -> None:
         connection, repository = self.repository()
         snapshot = self.snapshot()
