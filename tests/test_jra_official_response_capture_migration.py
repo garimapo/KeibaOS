@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import sqlite3
 import unittest
+from datetime import datetime, timezone
 
 from scripts.simulation.jra_official_response_capture_migration import NAME, VERSION, apply
+from scripts.simulation.jra_official_response_capture_migration_v002 import NAME as NAME_V2, VERSION as VERSION_V2
 from scripts.simulation.jra_official_response_capture_migration_runner import apply_jra_capture_schema_migrations, get_applied_jra_capture_schema_versions
+from scripts.simulation.jra_official_response_capture import JRAOfficialResponseCapture
 
 
 class JRAMigrationTests(unittest.TestCase):
@@ -22,7 +25,7 @@ class JRAMigrationTests(unittest.TestCase):
     def test_dedicated_v001_fresh_and_idempotent(self):
         c = sqlite3.connect(":memory:")
         apply_jra_capture_schema_migrations(c)
-        self.assertEqual(get_applied_jra_capture_schema_versions(c), {VERSION: NAME})
+        self.assertEqual(get_applied_jra_capture_schema_versions(c), {VERSION: NAME, VERSION_V2: NAME_V2})
         self.assertEqual({r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}, {"jra_official_response_capture_schema_migrations", "jra_official_response_bodies", "jra_official_response_captures"})
         apply_jra_capture_schema_migrations(c)
         self.assertFalse(c.in_transaction)
@@ -46,7 +49,7 @@ class JRAMigrationTests(unittest.TestCase):
         ) WITHOUT ROWID""")
         c.commit()
         apply_jra_capture_schema_migrations(c)
-        self.assertEqual(get_applied_jra_capture_schema_versions(c), {1: NAME})
+        self.assertEqual(get_applied_jra_capture_schema_versions(c), {1: NAME, VERSION_V2: NAME_V2})
 
     def test_constraint_probes_rollback_without_changing_registered_rows(self):
         c = sqlite3.connect(":memory:")
@@ -103,3 +106,27 @@ class JRAMigrationTests(unittest.TestCase):
                 self.assertFalse(c.in_transaction)
                 self.assertIsNotNone(c.execute("SELECT 1 FROM sqlite_master WHERE name=?", (table,)).fetchone())
                 self.assertIsNone(c.execute("SELECT 1 FROM sqlite_master WHERE name=?", (self._REGISTRY,)).fetchone())
+
+    def test_v002_rebuild_preserves_nonempty_v001_capture_and_body(self):
+        c = sqlite3.connect(":memory:")
+        apply(c)
+        body = "<meta charset=\"Shift_JIS\">テスト".encode("cp932")
+        capture = JRAOfficialResponseCapture(
+            canonical_source_url="https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde0106202504030420250913%2FDC",
+            response_body=body, charset="cp932", requested_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            observed_at=datetime(2026, 1, 1, tzinfo=timezone.utc), stored_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            http_status=200, content_type="text/html",
+        )
+        c.execute("INSERT INTO jra_official_response_bodies(response_sha256,response_body,byte_length) VALUES(?,?,?)", (capture.response_sha256, body, len(body)))
+        c.execute("""INSERT INTO jra_official_response_captures(
+            capture_id,schema_version,page_kind,canonical_source_url,response_sha256,charset,requested_at_utc,observed_at_utc,stored_at_utc,http_status,content_type,content_encoding,http_date,etag,last_modified,content_length
+        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (
+            capture.capture_id, 1, capture.page_kind.value, capture.canonical_source_url, capture.response_sha256, "cp932",
+            "2026-01-01T00:00:00.000000+00:00", "2026-01-01T00:00:00.000000+00:00", "2026-01-01T00:00:00.000000+00:00", 200, "text/html", None, None, None, None, None,
+        ))
+        c.commit(); c.execute("BEGIN IMMEDIATE")
+        from scripts.simulation.jra_official_response_capture_migration_v002 import apply as apply_v002
+        apply_v002(c); c.commit()
+        row = c.execute("SELECT capture_id,request_method,request_identity_sha256,request_cname FROM jra_official_response_captures").fetchone()
+        self.assertEqual(row, (capture.capture_id, "GET", None, None))
+        self.assertEqual(c.execute("SELECT response_body FROM jra_official_response_bodies").fetchone()[0], body)

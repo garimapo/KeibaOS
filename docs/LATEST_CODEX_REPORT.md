@@ -3477,3 +3477,33 @@ Package-root export, provider-specific dependency/source, builder-unchanged, NAR
 and `git diff --check` checks passed. The final allowed scope is exactly 17 files. Status is `READY_FOR_REVIEW`; one
 review commit is authorized, with no JRA accessO capture, archive v002, live POST, normalizer, bridge, or acquisition
 work started.
+
+## Phase 4C-2d3b1i6d1d4b1 JRA Final-Odds Capture Domain and Archive v002 Implementation
+
+Implemented the approved pure JRA accessO final-win-odds request/capture domain on formal base
+`906628c5eb5f1639387b3625d494cf133bb27729`. The new frozen/slotted request locator accepts only the official POST
+endpoint and validated raw canonical accessO CNAME grammar, derives the existing JRA race identity, and verifies the
+exact SHA-256 request fingerprint over canonical POST/endpoint/form JSON. Existing race/horse identity and accessS/
+accessU behavior remain unchanged.
+
+Added separate final-odds supplied-response and v2 capture values. They preserve exact strict-CP932 bytes and actual
+aware timestamps, expose no fabricated GET response URL, and produce `jra-capture-v2` identities from the approved
+request-aware preimage. v1 GET capture constructors and `jra-capture-v1` IDs remain unchanged. FINAL_WIN_ODDS is
+explicitly POST-only and cannot be accepted by the existing GET canonicalizer.
+
+Added transaction-neutral dedicated migration v002 and registered it after v001. It validates v001 data before
+rebuilding only the capture table, preserves body storage and legacy rows/IDs byte-for-byte, adds disjoint GET/v1 and
+POST/v2 request-family constraints, and creates separate legacy/request-aware evidence indexes. The runner retains
+sole transaction ownership. The repository now has family-specific final-odds save/load/exact-lookup methods while
+the three legacy GET signatures and behavior remain unchanged. Cross-family ID loads return `None`; stored corruption
+fails closed.
+
+Focused domain/archive/migration tests and related live-GET, neutral evidence, NAR capture, and migration regressions
+are required before publication. No live POST transport, real capture, JRA normalizer, NAR change, global migration,
+or bridge work was performed. Status is `READY_FOR_REVIEW` pending full verification and independent review.
+
+Fresh implementation verification under Python 3.14.5 / pytest 8.3.5 passed: four dedicated changed modules 24,
+related JRA-live/neutral/NAR/migration regressions 94, and the full suite 2565. Package-root export and forbidden
+dependency/source checks passed; the live capture module, NAR capture production, neutral request-evidence production,
+and global v014 registry are unchanged. `git diff --check` passed. Status remains `READY_FOR_REVIEW`; no live POST,
+real accessO capture, historical odds normalizer, formal integration, or bridge work has begun.
