@@ -3608,3 +3608,27 @@ live regressions 38; neutral source/snapshot/builder regressions 47; NAR histori
 suite 2580. Package-root export, forbidden-dependency, unchanged JRA capture/NAR/neutral production, migration
 version, and `git diff --check` checks passed. No official response was archived or persisted, and no real accessO
 capture was performed.
+
+## Phase 4C-2d3b1i6d1d5b JRA Complete Horse-History Discovery PREPARE
+
+Prepared the JRA accessU discovery architecture from formal base
+`367602e64353244e27b1518014c0907b922fb4ae`, with no production, test, fixture, capture, archive, or schema change.
+Read-only official accessU inspection found a reverse-chronological fourteen-column race-history table containing
+JRA starts with direct accessS navigation, local/NAR starts without accessS navigation, and explicit transfer rows
+(`JRAへ転入` / `JRAより転出`). No pagination or continuation control was observed on that page.
+
+The page also officially states that the history covers JRA, local, and overseas starts, while foreign horses are
+generally limited to their most recent four past starts. Because the current exact target entry only proves a stable
+JRA horse key—not that the horse is outside the foreign-horse exception—a single supplied accessU response cannot
+prove `ALL_CAUSALLY_AVAILABLE_ACTUAL_PRIOR_STARTS` for every valid target. The design therefore deliberately blocks a
+complete-history discovery implementation rather than creating a partial-page API that claims completeness.
+
+The proposed future closed vocabulary retains `JRA_ACTUAL_START`, `NON_JRA_ACTUAL_START`, `PROVEN_NON_START`, and
+`UNSUPPORTED_ACTUAL_START`; every displayed row must classify or fail closed. A JRA actual-start reference may retain
+only the displayed date, parsed JRA race identity, and exact anchored accessS result URL. It must not synthesize an
+accessO locator, infer result facts, or bridge stable JRA horse identity to NAR lineage. Zero history is not proven,
+and mixed-provider collection remains unavailable.
+
+The recommended follow-up is docs-only `4C-2d3b1i6d1d5b1`, which must obtain either an exact official proof that a
+target is not subject to the foreign-horse latest-four limit or an official complete-history source with a trusted
+supplied-response contract. Status is `DRAFT_FOR_REVIEW`; no trusted response was captured, archived, or persisted.
