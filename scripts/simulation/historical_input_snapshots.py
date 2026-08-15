@@ -305,9 +305,9 @@ def _validate_provenance_shape(provenance: HistoricalInputProvenance) -> None:
     roles_are_valid = roles in required if provenance.input_type == "past_race" and provenance.past_race_index is not None else roles == required
     if not roles_are_valid or len(set(roles)) != len(roles):
         raise ValueError("provenance evidence roles are invalid")
-    observations: dict[tuple[str | None, str], tuple[_datetime | None, _datetime]] = {}
+    observations: dict[tuple[str | None, str | None, str], tuple[_datetime | None, _datetime]] = {}
     for item in provenance.evidence:
-        identity = (item.canonical_source_url, item.response_sha256)
+        identity = (item.canonical_source_url, item.request_identity_sha256, item.response_sha256)
         current = (item.available_at, item.observed_at)
         previous = observations.get(identity)
         if previous is not None and previous != current:
@@ -480,6 +480,11 @@ def _build_unchecked_historical_input_snapshot_content_payload(
                         "response_sha256": evidence.response_sha256,
                         "available_at": None if evidence.available_at is None else _format_datetime(evidence.available_at),
                         "observed_at": _format_datetime(evidence.observed_at),
+                        **(
+                            {"request_identity_sha256": evidence.request_identity_sha256}
+                            if evidence.request_identity_sha256 is not None
+                            else {}
+                        ),
                     }
                     for evidence in item.evidence
                 ],

@@ -15,6 +15,7 @@ from scripts.migrations.versions import (
     v011_historical_past_race_time_difference_schema,
     v012_historical_input_evidence_schema,
     v013_historical_past_race_race_time_domain_schema,
+    v014_historical_input_request_identity_schema,
 )
 
 
@@ -131,10 +132,12 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         self.assertEqual(v012_historical_input_evidence_schema.NAME, "v012_historical_input_evidence_schema")
         self.assertEqual(v013_historical_past_race_race_time_domain_schema.VERSION, 13)
         self.assertEqual(v013_historical_past_race_race_time_domain_schema.NAME, "v013_historical_past_race_race_time_domain_schema")
-        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS), (8, 9, 10, 11, 12, 13))
+        self.assertEqual(v014_historical_input_request_identity_schema.VERSION, 14)
+        self.assertEqual(v014_historical_input_request_identity_schema.NAME, "v014_historical_input_request_identity_schema")
+        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS), (8, 9, 10, 11, 12, 13, 14))
         self.assertEqual(
             get_applied_versions(connection),
-            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema"},
+            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema", 14: "v014_historical_input_request_identity_schema"},
         )
         self.assertEqual(
             {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'historical_input_%'")},
@@ -158,7 +161,7 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         apply_migrations(connection)
         self.assertEqual(
             connection.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall(),
-            [(8,), (9,), (10,), (11,), (12,), (13,)],
+            [(8,), (9,), (10,), (11,), (12,), (13,), (14,)],
         )
         self.assertEqual(connection.execute("SELECT count(*) FROM historical_input_snapshots").fetchone()[0], 0)
         for table in HISTORICAL_TABLES:
@@ -166,6 +169,30 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         index_columns = tuple(row[2] for row in connection.execute("PRAGMA index_info(ux_horses_race_id_id)"))
         self.assertEqual(index_columns, ("race_id", "id"))
         self.assertEqual(connection.execute("PRAGMA index_list(horses)").fetchone()[2], 1)
+
+    def test_v014_adds_nullable_request_identity_without_rewriting_nonempty_store(self) -> None:
+        connection = self.db()
+        apply_migrations(connection, migrations=MIGRATIONS[:-1])
+        self.source_and_external_mapping(connection)
+        self.header(connection)
+        self.entry(connection)
+        self.provenance(connection, input_type="track", audit_key="track", race_entry_id=None)
+        connection.commit()
+        v014_historical_input_request_identity_schema.apply(connection)
+        self.assertEqual(
+            connection.execute(
+                "SELECT request_identity_sha256 FROM historical_input_snapshot_provenance_evidence"
+            ).fetchone(),
+            (None,),
+        )
+        connection.commit()
+        with self.assertRaises(sqlite3.IntegrityError):
+            connection.execute(
+                "UPDATE historical_input_snapshot_provenance_evidence SET request_identity_sha256='A'"
+            )
+        self.assertTrue(connection.in_transaction)
+        connection.rollback()
+        self.assertEqual(connection.execute("SELECT count(*) FROM historical_input_snapshots").fetchone(), (1,))
 
     def test_apply_is_transaction_neutral(self) -> None:
         connection = self.db()

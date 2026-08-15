@@ -526,13 +526,14 @@ class SQLiteHistoricalInputSnapshotRepository:
                 raise RepositoryDataIntegrityError("stored historical provenance is malformed") from exc
             audit = self._stored_required_text(audit_key, "provenance.audit_key")
             evidence_rows = self._connection.execute(
-                """SELECT evidence_order,evidence_role,canonical_source_url,response_sha256,available_at_utc,observed_at_utc
+                """SELECT evidence_order,evidence_role,canonical_source_url,response_sha256,available_at_utc,observed_at_utc,
+                          request_identity_sha256
                    FROM historical_input_snapshot_provenance_evidence
                    WHERE snapshot_id=? AND audit_key=? ORDER BY evidence_order ASC""",
                 (snapshot_id, audit),
             ).fetchall()
             evidence = []
-            for order, role, url, digest, available, observed in evidence_rows:
+            for order, role, url, digest, available, observed, request_identity in evidence_rows:
                 if self._stored_non_negative_int(order, "evidence_order") != len(evidence):
                     raise RepositoryDataIntegrityError("stored provenance evidence order is invalid")
                 evidence.append(
@@ -540,8 +541,9 @@ class SQLiteHistoricalInputSnapshotRepository:
                         self._stored_required_text(role, "evidence_role"),
                         self._stored_optional_text(url, "canonical_source_url"),
                         self._stored_sha256(digest),
-                        self._stored_optional_datetime(available, "available_at_utc"),
-                        self._stored_datetime(observed, "observed_at_utc"),
+                    self._stored_optional_datetime(available, "available_at_utc"),
+                    self._stored_datetime(observed, "observed_at_utc"),
+                    None if request_identity is None else self._stored_sha256(request_identity),
                     )
                 )
             values.append(
@@ -805,8 +807,8 @@ class SQLiteHistoricalInputSnapshotRepository:
         self._connection.executemany(
             """INSERT INTO historical_input_snapshot_provenance_evidence(
                    snapshot_id,audit_key,evidence_order,evidence_role,canonical_source_url,response_sha256,
-                   available_at_utc,observed_at_utc
-               ) VALUES(?,?,?,?,?,?,?,?)""",
+                   available_at_utc,observed_at_utc,request_identity_sha256
+               ) VALUES(?,?,?,?,?,?,?,?,?)""",
             (
                 (
                     snapshot_id,
@@ -817,6 +819,7 @@ class SQLiteHistoricalInputSnapshotRepository:
                     evidence.response_sha256,
                     None if evidence.available_at is None else self._datetime_text(evidence.available_at),
                     self._datetime_text(evidence.observed_at),
+                    evidence.request_identity_sha256,
                 )
                 for item in snapshot.provenance
                 for order, evidence in enumerate(item.evidence)

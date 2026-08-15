@@ -62,12 +62,18 @@ class HistoricalInputEvidenceReference:
     response_sha256: str
     available_at: _datetime | None
     observed_at: _datetime
+    request_identity_sha256: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "evidence_role", _text(self.evidence_role, "evidence_role"))
         object.__setattr__(self, "canonical_source_url", _url(self.canonical_source_url))
         if type(self.response_sha256) is not str or _SHA256.fullmatch(self.response_sha256) is None:
             raise ValueError("response_sha256 must be lowercase SHA-256 hex")
+        if self.request_identity_sha256 is not None:
+            if type(self.request_identity_sha256) is not str or _SHA256.fullmatch(self.request_identity_sha256) is None:
+                raise ValueError("request_identity_sha256 must be lowercase SHA-256 hex or None")
+            if self.canonical_source_url is None:
+                raise ValueError("request_identity_sha256 requires canonical_source_url")
         available = None if self.available_at is None else _normalize_datetime(self.available_at, "available_at")
         observed = _normalize_datetime(self.observed_at, "observed_at")
         if available is not None and available > observed:
