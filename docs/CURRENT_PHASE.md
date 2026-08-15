@@ -65,25 +65,44 @@ Expected malformed-provider/target/discovery/source-record inputs are translated
 and `ValueError`, `TypeError`, `AttributeError`, or `OverflowError` needed to prevent incidental malformed-input
 leaks; it must not catch `Exception` or conceal programmer/runtime defects.
 
-## Zero-History Acceptance
+## Zero-Actual-Start Acceptance
 
-The absence normalizer returns a record **only** if:
+The absence record represents **zero actual prior starts**, not necessarily an empty displayed accessU history. The
+following terms are deliberately distinct:
 
 ```text
-discovery.proven_zero_history is True
-and discovery.events == ()
+EMPTY_OFFICIAL_HISTORY
+= discovery.proven_zero_history is True and discovery.events == ()
+
+ZERO_ACTUAL_PRIOR_STARTS
+= no event in discovery.events has an actual-start event kind
+```
+
+The normalizer returns an absence record only for either exact discovery state:
+
+```text
+A. EMPTY_OFFICIAL_HISTORY
+
+B. discovery.proven_zero_history is False
+   discovery.events is nonempty
+   every event.event_kind is JRAHistoricalEventKind.PROVEN_NON_START
 ```
 
 d1d5b3's immutable discovery domain itself enforces
-`proven_zero_history == (events == ())`; the absence boundary checks both values defensively. Any nonempty event
-tuple rejects, regardless of event kind. Thus JRA actual starts, NAR/local or overseas starts represented as
-`NON_JRA_ACTUAL_START`, `UNSUPPORTED_ACTUAL_START`, and `PROVEN_NON_START` transfer history cannot become
-absence evidence. A history with zero JRA starts but a non-JRA actual start is specifically not zero history.
+`proven_zero_history == (events == ())`. In state B, d1d5b3 has already established that the complete aggregate
+actual-start total is zero: transfer rows such as `JRAへ転入` and `JRAより転出` are formal `PROVEN_NON_START` events
+and do not contribute to its displayed actual-start count. The absence boundary may inspect only the formal
+`proven_zero_history`, `events`, and closed `JRAHistoricalEventKind` projection; it must not reparse HTML or
+recompute aggregate totals.
 
-Discovery's exact simultaneous accessU no-data plus complete aggregate zero/no-data state is the only accepted proof.
-Incomplete/truncated aggregate counts, continuation, malformed response, target mismatch, horse mismatch, or a late
-observation fail in discovery and are translated by this boundary. There is no caller override, no “zero JRA starts”
-interpretation, and no fallback from an empty parser result.
+Reject any tuple containing `JRA_ACTUAL_START`, `NON_JRA_ACTUAL_START`, or `UNSUPPORTED_ACTUAL_START`. Thus an
+actual JRA, NAR/local, overseas, or recognized unsupported prior start cannot become absence evidence. A history
+with zero JRA starts but a non-JRA actual start is specifically not zero actual history. There is no caller override,
+no “zero JRA starts” interpretation, and no fallback from an empty parser result.
+
+Discovery owns the underlying exact no-data and aggregate-count proof in both accepted cases. Incomplete/truncated
+aggregate counts, continuation, malformed response, target mismatch, horse mismatch, or a late observation fail in
+discovery and are translated by this boundary.
 
 ## Exact Output and Evidence
 
@@ -127,7 +146,8 @@ observed_at                = horse_history_response.observed_at
 ```
 
 Hash only the original exact supplied bytes; never decoded/re-encoded HTML. The one trusted accessU response is the
-official evidence proving the zero-history query. No separate aggregate/history evidence references are added.
+official evidence proving the zero-actual-start query, including transfer-only discovery state B. No separate
+aggregate/history evidence references are added.
 
 ## Causality and Snapshot Compatibility
 
@@ -141,8 +161,9 @@ No schema, migration, builder, repository, or neutral-domain change is required.
 `external_entry_id/query_scope/result_count` and the one `past_race_absence_query` role. Formal builder grouping
 requires each entry to have either one-or-more `past_race` records or exactly one absence record, rejects both forms
 together, checks the absence query target date, and emits its established `past_race/<race_entry_id>/none`
-provenance. A compatible zero-history JRA track/entry/jockey/odds set plus this record is therefore accepted without
-schema change.
+provenance. Both empty official history and transfer-only, zero-actual-start discovery may therefore produce an
+accepted absence record; any actual-start event prevents absence. Transfer events are not invented as `past_race`
+records, while their official source remains auditable through the absence evidence.
 
 ## Recommended Implementation Scope
 
@@ -157,10 +178,12 @@ docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-Tests must use minimal synthetic CP932 accessU responses and cover exact zero output/evidence/SHA/timestamps/source-ID
-determinism; all event kinds and incomplete/continuation/mismatch rejection; neutral record-set validation; snapshot
-builder acceptance for a zero-history JRA entry; builder rejection of a past-race plus absence conflict; public
-surface; package-root absence; and forbidden dependencies.
+Tests must use minimal synthetic CP932 accessU responses and cover empty-history output/evidence/SHA/timestamps/
+source-ID determinism; one and multiple `PROVEN_NON_START` transfer rows with zero actual starts; rejection of every
+actual-start event kind even when transfer rows coexist; neutral record-set validation; snapshot-builder acceptance
+for both empty and transfer-only zero-actual-start JRA entries; builder rejection of a past-race plus absence
+conflict; incomplete/continuation/mismatch rejection; public surface; package-root absence; and forbidden
+dependencies.
 
 After formal d1d5d2 completion, the recommended design-only follow-on is
 `4C-2d3b1i6d1d5e1` — JRA historical collection/orchestration PREPARE. Do not begin it now.

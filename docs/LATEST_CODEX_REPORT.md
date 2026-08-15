@@ -3714,3 +3714,20 @@ the captured-at and information-cutoff causal chain.
 The recommended next phase is d1d5d2, limited to the new JRA absence-source module, its dedicated synthetic-CP932
 tests, and the two phase-report documents. No runtime code, tests, capture, archive, discovery, normalizer, or
 orchestration code changed in this prepare phase; no trusted live capture was performed.
+
+### d1d5d1 zero-actual-start clarification
+
+Corrected the absence contract to distinguish an empty official history from zero actual prior starts. Empty history
+remains `proven_zero_history is True` with `events == ()`. A complete, nonempty discovery whose closed events are all
+`PROVEN_NON_START` transfer events is also proof of zero actual starts: d1d5b3 has already checked its aggregate
+actual-start total is zero and excluded those transfer rows from the actual-start count.
+
+The future absence source therefore projects only d1d5b3's formal discovery domain (`proven_zero_history`, events,
+and `JRAHistoricalEventKind`); it does not reparse accessU HTML or recompute aggregate totals. It rejects any
+`JRA_ACTUAL_START`, `NON_JRA_ACTUAL_START`, or `UNSUPPORTED_ACTUAL_START`. `result_count=0` now explicitly means
+zero actual prior starts, not zero displayed history events. The neutral output record and its single raw-byte accessU
+evidence reference remain unchanged.
+
+The existing snapshot contract needs no change: both empty and transfer-only zero-actual-start absence records are
+accepted, while a past-race plus absence remains rejected. The next implementation phase remains d1d5d2 with the
+same four-file scope. No runtime code, tests, schema, capture, discovery, or normalizer changed in this correction.
