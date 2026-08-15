@@ -12,6 +12,7 @@ from scripts.simulation.jra_official_identity import (
     JRAOfficialFinalWinOddsRequestLocator,
     JRAOfficialIdentityError,
     JRAOfficialIdentityValidationError,
+    build_jra_final_win_odds_request_locator,
     build_jra_external_entry_id,
     build_jra_provider_record_id,
     parse_jra_external_horse_id,
@@ -39,7 +40,7 @@ class JRAOfficialIdentityTests(unittest.TestCase):
                 "JRAOfficialIdentityError", "JRAOfficialIdentityValidationError", "JRAExternalRaceIdentity",
                 "JRAExternalHorseIdentity", "JRAOfficialFinalWinOddsRequestLocator", "parse_jra_external_race_id", "parse_jra_external_horse_id",
                 "parse_jra_result_url_identity", "parse_jra_horse_profile_url_identity",
-                "build_jra_external_entry_id", "build_jra_provider_record_id",
+                "build_jra_external_entry_id", "build_jra_provider_record_id", "build_jra_final_win_odds_request_locator",
             },
         )
         self.assertTrue(issubclass(JRAOfficialIdentityValidationError, JRAOfficialIdentityError))
@@ -48,6 +49,7 @@ class JRAOfficialIdentityTests(unittest.TestCase):
         self.assertTrue(is_dataclass(JRAOfficialFinalWinOddsRequestLocator) and JRAOfficialFinalWinOddsRequestLocator.__dataclass_params__.frozen)
         self.assertEqual(tuple(inspect.signature(build_jra_external_entry_id).parameters), ("race_identity", "horse_no"))
         self.assertEqual(tuple(inspect.signature(build_jra_provider_record_id).parameters), ("race_identity", "horse_identity"))
+        self.assertEqual(tuple(inspect.signature(build_jra_final_win_odds_request_locator).parameters), ("cname",))
         source = Path(module.__file__).read_text(encoding="utf-8")
         tree = ast.parse(source)
         forbidden = {"requests", "httpx", "sqlite3", "pathlib", "random", "subprocess", "time", "socket"}
@@ -189,9 +191,16 @@ class JRAOfficialIdentityTests(unittest.TestCase):
             request_identity_sha256="9c4a4f2dfc7e2c21841f7a2bb3f36ec7397312a34b565ff7e511e74800774ade",
         )
         self.assertEqual(locator.external_race_identity, race)
+        self.assertEqual(build_jra_final_win_odds_request_locator(cname=cname), locator)
+        self.assertEqual(
+            build_jra_final_win_odds_request_locator(cname=cname).request_identity_sha256,
+            "9c4a4f2dfc7e2c21841f7a2bb3f36ec7397312a34b565ff7e511e74800774ade",
+        )
         for cname_value in (cname.replace("/", "%2F"), cname.replace("2E", "2e"), cname + " "):
             with self.subTest(cname=cname_value), self.assertRaises(JRAOfficialIdentityValidationError):
                 JRAOfficialFinalWinOddsRequestLocator(locator.endpoint_url, cname_value, race, locator.request_identity_sha256)
+            with self.subTest(builder_cname=cname_value), self.assertRaises(JRAOfficialIdentityValidationError):
+                build_jra_final_win_odds_request_locator(cname=cname_value)
         with self.assertRaises(JRAOfficialIdentityValidationError):
             JRAOfficialFinalWinOddsRequestLocator(locator.endpoint_url, cname, race, "0" * 64)
 
