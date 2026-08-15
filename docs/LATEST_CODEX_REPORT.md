@@ -3608,3 +3608,42 @@ live regressions 38; neutral source/snapshot/builder regressions 47; NAR histori
 suite 2580. Package-root export, forbidden-dependency, unchanged JRA capture/NAR/neutral production, migration
 version, and `git diff --check` checks passed. No official response was archived or persisted, and no real accessO
 capture was performed.
+
+## Phase 4C-2d3b1i6d1d5b3 JRA Complete-History Discovery Implementation
+
+Implemented `scripts/simulation/jra_historical_past_race_discovery.py` as a pure single-response accessU discovery
+boundary. Its public surface is the closed `JRAHistoricalEventKind`, immutable/slotted event-reference and discovery
+values, the three discovery errors, and `discover_jra_historical_past_race_history`. It has no package-root export,
+network, archive/repository, filesystem, database, clock, normalization, accessO locator, or Predictor ownership.
+
+The implementation validates the exact JRA target track/entry race-entry-horse chain, exact accessU supplied response
+and horse identity, strict CP932 bytes, and supplied observation against target scheduled start. It accepts only the
+frozen accessU history table and headings. Every row becomes a JRA actual start through one row-local formal accessS
+navigation, a retained non-JRA actual start, a proven non-start transfer/cancellation, or a retained unsupported actual
+start; anything else fails closed. JRA identity is never invented from display text, and non-JRA/unsupported entries
+carry no fabricated cross-provider identity.
+
+The required response-local completeness proof validates the unique flat and obstacle aggregate cells, their exact
+headings, canonical counts, independent finish arithmetic, and equality with every actual displayed event. A four-row
+history against an aggregate of ten is rejected; non-JRA and unsupported actual starts count, while proven non-starts
+do not. Continuation/lazy-load markers, duplicates, chronology violations, target/future rows, unknown structures, and
+all count disagreement reject the whole discovery. Exact simultaneous history/aggregate no-data is the sole zero-
+history path. The proof preserves provider information available at `observed_at` and never backdates delayed data.
+
+Fresh verification under Python 3.14.5 / pytest 8.3.5 passed: dedicated discovery 8, related JRA/NAR/neutral
+regressions 126, and the complete suite 2588. No real trusted response was fetched or archived; d1d5a, JRA
+capture/domain/archive/live, NAR, provider-neutral source/snapshot, migrations, bridge, orchestration, and Predictor
+remain unchanged.
+
+### d1d5b3 strict non-start and unsupported accessS correction
+
+The event classifier now recognizes `PROVEN_NON_START` only for the exact observed transfer rows `JRAへ転入` and
+`JRAより転出`, including their no-navigation/no-start-facts shape. The unproven cancellation-style display values
+`取消`, `取止`, and `除外` no longer remove a row from aggregate accounting: they fail closed, including when the row
+also carries contradictory actual-start facts.
+
+Every row-local parsable accessS navigation is now fully checked before the public event kind is chosen. This includes
+unsupported starts: their CNAME calendar date must equal the accessU row date, and their private navigation metadata
+participates in duplicate canonical accessS URL and JRA race-identity rejection. Unsupported public references remain
+explicit and count toward completeness but expose no fabricated JRA result identity. Fresh verification passed:
+dedicated discovery 9, related regressions 126, and the full suite 2589.

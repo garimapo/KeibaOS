@@ -6,86 +6,89 @@ READY_FOR_REVIEW
 
 ## Phase and Base
 
-Phase `4C-2d3b1i6d1d5a` — JRA historical past-race normalizer implementation.
+Phase `4C-2d3b1i6d1d5b3` — JRA complete-history discovery implementation.
 
-Formal base: `dcdef4bd6559418fe7f179f42cd16a263604fc08`.
+Formal base: `367602e64353244e27b1518014c0907b922fb4ae`.
 
-Approved PREPARE: `3a8c1fc26eb90c83b0578aa30afe724a2779c2dd`.
+Approved PREPARE: `f39aafb63f7538e55484cbc8171cf94865a17e1c`.
 
-Review branch: `review/4c-2d3b1i6d1d5a-jra-past-race-normalizer`.
+Review branch: `review/4c-2d3b1i6d1d5b3-jra-complete-history-discovery`.
 
 ## Implemented Boundary
 
-`scripts/simulation/jra_historical_past_race_source.py` is a pure supplied-response normalizer with exactly these
-module-defined public names:
+Implemented the pure, single-supplied-response function:
 
-```text
-JRAHistoricalPastRaceSourceError
-JRAHistoricalPastRaceSourceValidationError
-JRAHistoricalPastRaceSourceUnsupportedError
-normalize_jra_historical_past_race_source_record
+```python
+discover_jra_historical_past_race_history(
+    *,
+    target_track_record: HistoricalInputSourceRecord,
+    target_entry_record: HistoricalInputSourceRecord,
+    horse_history_response: JRASuppliedOfficialResponse,
+) -> JRAHistoricalPastRaceDiscovery
 ```
 
-The function accepts the approved target track/entry records, one exact accessS `JRASuppliedOfficialResponse`, and one
-exact request-aware accessO `JRAFinalWinOddsSuppliedOfficialResponse`; it returns one target-scoped JRA `past_race`
-record. It has no HTTP, archive, filesystem, database, clock, discovery, pagination, bridge, or package-root export.
+The only module-defined public names are `JRAHistoricalEventKind`,
+`JRAHistoricalPastRaceReference`, `JRAHistoricalPastRaceDiscovery`, the three stated discovery errors, and the
+function. Domain values are immutable/slotted. No package-root export is permitted.
 
-Target records are exact c1a values with organization `JRA` and source system `jra_official`. Their target race ID,
-entry ID, entry horse number, and stable `jra:horse:<10 digits>` identity are cross-checked through the formal JRA
-identity constructors. Historical horse selection is only the unique accessS `td.horse a[href]` accessU anchor matching
-that stable horse identity. The selected historical `td.num` is used only to join accessO and need not equal target
-horse number.
+It validates exact target JRA c1a track/entry records and their coherent race/entry/horse identities, then requires exact
+accessU `HORSE_PROFILE_HISTORY` supplied evidence for that horse, strict CP932 decoding, and
+`observed_at <= scheduled_start_at`. There is no name fallback, no clock lookup, and no timestamp backdating.
 
-## Identity, Facts, and Evidence
-
-The normalizer parses accessS with the formal public result URL parser, narrowly validates its already-approved CNAME
-calendar date, and requires it to precede the target track date. Unique visible accessS/accessO headers cross-check
-date, venue mapping, meeting number/day, race number, and race heading. The result table must have the approved
-semantic heading family; accessO must have exactly one `table.tanpuku`, with one matching `td.num` and direct positive
-finite `td.odds_tan` value.
-
-All 17 c1a values have direct authority: accessS supplies race/date/place/name/class/distance/surface/weather/
-condition, finish/time, body weight/change, jockey, popularity, passing order, and fourth-corner position; accessO
-supplies final single-win odds only. No float conversion, assigned-weight substitution, textual-margin conversion, or
-derived odds is permitted. `td.corner li[title]` labels must uniquely and increasingly identify the explicit fourth
-corner; neither a fixed component nor the final component is assumed. The direct row-local accessS `td.margin` is
-inspected only for the exact official dead-heat marker `同着`; it is never converted or included in record values.
-Official line-break presentation in result-table heading labels is normalized only for exact semantic heading
-comparison, without widening the required heading family.
-
-The output keeps target external race/entry IDs and uses the historical JRA race plus stable horse identity in
-`build_jra_provider_record_id`. It creates exactly three canonical evidence roles:
+Use only `div.race_detail > table.basic.narrow-xy.striped` with the exact ordered semantic headings:
 
 ```text
-historical_race_context    = accessS URL / raw SHA / None / supplied observed_at
-historical_race_final_odds = accessO endpoint / request fingerprint / raw SHA / None / supplied observed_at
-historical_race_result     = the same accessS evidence tuple as context
+年月日 | 場 | レース名 | 距離 | 馬場 | 頭数 | 人気 | 着順 | 騎手名 | 負担重量 | 馬体重 | タイム | Rt | 1着馬（2着馬）
 ```
 
-SHA-256 is calculated over supplied bytes before strict CP932 decode or parsing. Timestamp-only changes leave source
-identity unchanged; body or accessO request-fingerprint changes do not. The existing builder remains the only causality
-owner. No timestamp is backdated or fabricated.
+Classify every row exactly once as `JRA_ACTUAL_START`, `NON_JRA_ACTUAL_START`, `PROVEN_NON_START`, or
+`UNSUPPORTED_ACTUAL_START`; unknown rows fail closed. JRA starts require one exact row-local official accessS anchor,
+whose formal parsed identity and date agree with the row. Non-JRA/unsupported events remain explicit without an
+invented JRA identity. Proven transfer/non-start rows never count. Actual events must remain reverse chronological,
+strictly precede the target date, and be duplicate-free.
 
-## Fail-closed Scope
+`PROVEN_NON_START` is deliberately restricted to the exact transfer rows `JRAへ転入` and `JRAより転出`, with all other
+start facts and navigation absent. The display tokens `取消`, `取止`, and `除外` have no separately proven accessU row
+layout in this contract and therefore fail closed; they cannot suppress contradictory race-time, jockey, head-count,
+popularity, or other start facts from aggregate accounting.
 
-Malformed/contradictory identities, missing or duplicate headers/tables/rows/anchors, wrong lineage, malformed CP932,
-or accessS/accessO disagreement raise the normalizer validation error. Recognized but unsupported result states include
-withdrawal/exclusion/DNF/disqualification, blank class, invalid finish/time/body weight/popularity, nonpositive odds,
-unsupported surface, direct `td.margin` marker `同着`, and ambiguous/missing fourth-corner structure. There is no
-fallback. A positive numeric finish does not bypass the direct dead-heat check.
+Every parsable row-local official accessS anchor is validated before classification, including for an eventual
+`UNSUPPORTED_ACTUAL_START`: canonical result URL, parsed JRA race identity, CNAME calendar date, and equality with the
+displayed accessU row date. The private parsed-event metadata then participates in duplicate canonical-URL and JRA
+race-identity rejection. An unsupported public reference deliberately remains reference-free, as frozen, but cannot
+bypass navigation validation or duplicate safety.
 
-Tests use only synthetic strict-CP932 HTML strings in the dedicated test module; no official page, archive record, or
-fixture file was captured or committed. NAR production, JRA capture/domain/archive/live production, neutral evidence,
-source/snapshot schema versions (4), global migrations (14), and JRA capture migrations `(1,2)` are unchanged.
+Mandatory response-local completeness proof: it requires the unique `li#result_unit` `レース条件別成績` aggregate section;
+one `平地レース合計` and one `障害レース合計` table in its exact left/right grid cells; exact result aggregate headers;
+canonical non-negative counts; independent `1着 + 2着 + 3着 + 4着以下 == 出走回数` checks; and equality between
+`flat + obstacle` and all displayed actual events. Any mismatch, malformed aggregate, continuation/lazy-load marker,
+unknown row, or ambiguity is a discovery validation error. No latest-N fallback or foreign-horse inference exists.
 
-## Allowed Files and Stop Condition
+Zero history is accepted only for simultaneous exact `出走レース` no-data and both aggregate no-data/valid zero states,
+with no row/navigation or continuation marker. `proven_zero_history == (events == ())` always holds. A known
+unsupported actual event remains an event and participates in the count; it is never silently omitted.
+
+The module must not use HTTP, archives, repositories, filesystem, SQLite, network, accessS/accessO fetching,
+accessO locator synthesis, normalization, pagination fetching, discovery of races, Predictor, random, subprocess, or
+clock ownership.
+
+## Allowed Files
 
 ```text
-scripts/simulation/jra_historical_past_race_source.py
-tests/test_jra_historical_past_race_source.py
+scripts/simulation/jra_historical_past_race_discovery.py
+tests/test_jra_historical_past_race_discovery.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-Stop for independent implementation review. Do not formally integrate, perform real accessO capture, begin historical
-discovery/orchestration, change target acquisition, connect Predictor, or begin the NAR/JRA bridge.
+## Verification
+
+Fresh verification using Python 3.14.5 / pytest 8.3.5 passed: the dedicated discovery suite (9 tests), the d1d5a,
+JRA identity/capture/archive/live, NAR historical-source, and neutral source/snapshot/builder regression set (126
+tests), and the full suite (2589 tests). Package-root export, forbidden-dependency/source, unchanged-production,
+version, diff, and final-status checks are required before review publication.
+
+## Stop Condition
+
+Create and push exactly one review commit: `feat: discover complete JRA horse history`. Do not formally integrate,
+perform real capture, implement orchestration or an accessO locator, create a NAR/JRA bridge, or connect Predictor.
