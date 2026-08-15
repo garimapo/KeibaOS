@@ -3560,3 +3560,36 @@ file/database/network-client dependencies outside its approved `requests` byte t
 b1 capture-domain/archive/migration production files, NAR production, and provider-neutral evidence production are
 unchanged; global migrations remain through v014. `git diff --check` is clean and the only changed files are the four
 approved d1d4b2 files. The review branch is ready for independent review; formal remote remains at the approved base.
+
+## Phase 4C-2d3b1i6d1d5a JRA Historical Past-Race Normalizer Implementation
+
+Implemented the approved pure JRA normalizer on formal base
+`dcdef4bd6559418fe7f179f42cd16a263604fc08`. The new provider module has only the three JRA-specific error types and
+`normalize_jra_historical_past_race_source_record`. It consumes a validated JRA target track/entry pair plus exact
+accessS/accessO supplied responses and returns one target-scoped c1a v4 `past_race`; it performs no HTTP, archive,
+filesystem, database, clock, discovery, pagination, or bridge work.
+
+The implementation validates target race/entry/horse coherence with existing public JRA identities, chooses the
+historical stable horse only through the unique accessS row-local accessU anchor, and uses that row's historical horse
+number only to join exactly one accessO `table.tanpuku` odds row. Both visible headers cross-check calendar date,
+venue, meeting/day, race number, and heading with their formal provider identities. accessS supplies sixteen direct
+facts; accessO `td.odds_tan` supplies the direct positive final-win odds. The explicit accessS corner labels, rather
+than a fixed or final component, determine fourth-corner position.
+
+The record has exactly context/accessS, final-odds/accessO, and result/accessS evidence roles. It preserves exact raw
+SHA-256 semantics, request-aware accessO identity, no fabricated availability timestamp, supplied observations, and
+source-ID timestamp independence. Synthetic strict-CP932 HTML is defined only in the dedicated test module; no
+official fixture, archive row, or live accessO capture was created.
+
+Fresh verification under Python 3.14.5 / pytest 8.3.5 passed: dedicated normalizer 8; JRA identity/capture/archive/
+live regressions 38; neutral source/snapshot/builder regressions 47; NAR historical-source regressions 35; and full
+suite 2578. Static boundary and unchanged-production verification remains required before review publication. Status
+is `READY_FOR_REVIEW`; no formal integration, discovery/orchestration, target acquisition, Predictor connection, or
+bridge work has begun.
+
+Final static and scope verification passed: the module has no package-root export and no forbidden HTTP, archive,
+database, filesystem, clock, randomness, or subprocess dependency. NAR production, JRA identity/capture/archive/live
+production, and provider-neutral evidence/source/snapshot production are unchanged. Global migrations remain
+`(8, 9, 10, 11, 12, 13, 14)` and JRA capture migrations remain `(1, 2)`. `git diff --check` is clean; the review
+scope is exactly the four approved d1d5a files. The formal remote remains
+`dcdef4bd6559418fe7f179f42cd16a263604fc08`; no real accessO capture was performed.
