@@ -47,6 +47,17 @@ whose formal parsed identity and date agree with the row. Non-JRA/unsupported ev
 invented JRA identity. Proven transfer/non-start rows never count. Actual events must remain reverse chronological,
 strictly precede the target date, and be duplicate-free.
 
+`PROVEN_NON_START` is deliberately restricted to the exact transfer rows `JRAへ転入` and `JRAより転出`, with all other
+start facts and navigation absent. The display tokens `取消`, `取止`, and `除外` have no separately proven accessU row
+layout in this contract and therefore fail closed; they cannot suppress contradictory race-time, jockey, head-count,
+popularity, or other start facts from aggregate accounting.
+
+Every parsable row-local official accessS anchor is validated before classification, including for an eventual
+`UNSUPPORTED_ACTUAL_START`: canonical result URL, parsed JRA race identity, CNAME calendar date, and equality with the
+displayed accessU row date. The private parsed-event metadata then participates in duplicate canonical-URL and JRA
+race-identity rejection. An unsupported public reference deliberately remains reference-free, as frozen, but cannot
+bypass navigation validation or duplicate safety.
+
 Mandatory response-local completeness proof: it requires the unique `li#result_unit` `レース条件別成績` aggregate section;
 one `平地レース合計` and one `障害レース合計` table in its exact left/right grid cells; exact result aggregate headers;
 canonical non-negative counts; independent `1着 + 2着 + 3着 + 4着以下 == 出走回数` checks; and equality between
@@ -72,9 +83,9 @@ docs/LATEST_CODEX_REPORT.md
 
 ## Verification
 
-Fresh verification using Python 3.14.5 / pytest 8.3.5 passed: the dedicated discovery suite (8 tests), the d1d5a,
+Fresh verification using Python 3.14.5 / pytest 8.3.5 passed: the dedicated discovery suite (9 tests), the d1d5a,
 JRA identity/capture/archive/live, NAR historical-source, and neutral source/snapshot/builder regression set (126
-tests), and the full suite (2588 tests). Package-root export, forbidden-dependency/source, unchanged-production,
+tests), and the full suite (2589 tests). Package-root export, forbidden-dependency/source, unchanged-production,
 version, diff, and final-status checks are required before review publication.
 
 ## Stop Condition

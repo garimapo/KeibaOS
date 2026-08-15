@@ -3634,3 +3634,16 @@ Fresh verification under Python 3.14.5 / pytest 8.3.5 passed: dedicated discover
 regressions 126, and the complete suite 2588. No real trusted response was fetched or archived; d1d5a, JRA
 capture/domain/archive/live, NAR, provider-neutral source/snapshot, migrations, bridge, orchestration, and Predictor
 remain unchanged.
+
+### d1d5b3 strict non-start and unsupported accessS correction
+
+The event classifier now recognizes `PROVEN_NON_START` only for the exact observed transfer rows `JRAへ転入` and
+`JRAより転出`, including their no-navigation/no-start-facts shape. The unproven cancellation-style display values
+`取消`, `取止`, and `除外` no longer remove a row from aggregate accounting: they fail closed, including when the row
+also carries contradictory actual-start facts.
+
+Every row-local parsable accessS navigation is now fully checked before the public event kind is chosen. This includes
+unsupported starts: their CNAME calendar date must equal the accessU row date, and their private navigation metadata
+participates in duplicate canonical accessS URL and JRA race-identity rejection. Unsupported public references remain
+explicit and count toward completeness but expose no fabricated JRA result identity. Fresh verification passed:
+dedicated discovery 9, related regressions 126, and the full suite 2589.

@@ -189,12 +189,30 @@ class JRAHistoricalPastRaceDiscoveryTests(unittest.TestCase):
         unsupported = _actual(race_date="2026年6月1日", finish="中止", anchor=RESULT_URL)
         event = _discover(body=_body(rows=(unsupported,), flat=1, obstacle=0)).events[0]
         self.assertEqual(event.event_kind, JRAHistoricalEventKind.UNSUPPORTED_ACTUAL_START)
+        self.assertIsNone(event.race_identity)
+        self.assertIsNone(event.canonical_race_result_url)
         conflicting = _transfer().replace("<td></td>", "<td>12</td>", 1)
         with self.assertRaises(JRAHistoricalPastRaceDiscoveryValidationError):
             _discover(body=_body(rows=(conflicting,), flat=0, obstacle=0))
+        for finish in ("取消", "取止", "除外"):
+            with self.subTest(finish=finish), self.assertRaises(JRAHistoricalPastRaceDiscoveryValidationError):
+                _discover(body=_body(rows=(_actual(race_date="2026年6月1日", finish=finish),), flat=0, obstacle=0))
         unknown = _actual(race_date="2026年6月1日", finish="謎")
         with self.assertRaises(JRAHistoricalPastRaceDiscoveryValidationError):
             _discover(body=_body(rows=(unknown,), flat=1, obstacle=0))
+
+    def test_unsupported_access_s_navigation_is_validated_and_duplicate_safe(self) -> None:
+        wrong_date = _actual(race_date="2026年6月2日", finish="中止", anchor=RESULT_URL)
+        with self.assertRaises(JRAHistoricalPastRaceDiscoveryValidationError):
+            _discover(body=_body(rows=(wrong_date,), flat=1, obstacle=0))
+        first = _actual(race_date="2026年6月1日", name="中止一", finish="中止", anchor=RESULT_URL)
+        second = _actual(race_date="2026年6月1日", name="中止二", finish="中止", anchor=RESULT_URL)
+        with self.assertRaises(JRAHistoricalPastRaceDiscoveryValidationError):
+            _discover(body=_body(rows=(first, second), flat=2, obstacle=0))
+        same_identity_other_url = RESULT_URL.replace("%2FAA", "%2FAB")
+        third = _actual(race_date="2026年6月1日", name="中止三", finish="中止", anchor=same_identity_other_url)
+        with self.assertRaises(JRAHistoricalPastRaceDiscoveryValidationError):
+            _discover(body=_body(rows=(first, third), flat=2, obstacle=0))
 
     def test_target_response_cutoff_and_structure_validation(self) -> None:
         for value in (object(),):

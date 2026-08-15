@@ -70,7 +70,6 @@ _TIME = _re.compile(r"[0-9]{1,2}:[0-5][0-9](?:\.[0-9])?\Z")
 _CONTINUATION = _re.compile(r"(?:next|previous|more|pagination|continuation|page|offset|limit|lazy)", _re.IGNORECASE)
 _NON_START_NAMES = frozenset({"JRAへ転入", "JRAより転出"})
 _UNSUPPORTED_FINISH = frozenset({"中止", "失格", "降着", "競走中止"})
-_NON_START_FINISH = frozenset({"取消", "取止", "除外"})
 _JRA_PLACES = frozenset({"札幌", "函館", "福島", "新潟", "東京", "中山", "中京", "京都", "阪神", "小倉"})
 
 
@@ -258,8 +257,6 @@ def _is_started(cells: tuple[_Tag, ...]) -> tuple[bool, bool]:
     finish = _text(cells[7].get_text(" ", strip=True))
     if finish in _UNSUPPORTED_FINISH:
         return True, True
-    if finish in _NON_START_FINISH:
-        return False, False
     ordinary = (
         bool(_text(cells[1].get_text(" ", strip=True)))
         and bool(_text(cells[2].get_text(" ", strip=True)))
@@ -315,37 +312,54 @@ class JRAHistoricalPastRaceDiscovery:
             raise JRAHistoricalPastRaceDiscoveryValidationError("historical discovery is invalid")
 
 
-def _reference(row: _Tag, base_url: str) -> JRAHistoricalPastRaceReference:
+@_dataclass(frozen=True, slots=True)
+class _ParsedEvent:
+    reference: JRAHistoricalPastRaceReference
+    access_s_identity: _JRAExternalRaceIdentity | None
+    canonical_access_s_url: str | None
+
+
+def _reference(row: _Tag, base_url: str) -> _ParsedEvent:
     cells = _row_cells(row)
     race_date = _parse_date(_node_text(cells[0], "official accessU event date"), "official accessU event date")
     anchor = _access_s_anchor(row, base_url)
+    if anchor is not None and _result_date(anchor[1], anchor[0]) != race_date:
+        raise _validation("official accessU row date disagrees with result navigation")
     fingerprint = _row_fingerprint(cells)
     if _is_non_start(cells, anchor):
-        return JRAHistoricalPastRaceReference(JRAHistoricalEventKind.PROVEN_NON_START, race_date, f"accessu:event:{fingerprint}", None, None)
+        return _ParsedEvent(
+            JRAHistoricalPastRaceReference(JRAHistoricalEventKind.PROVEN_NON_START, race_date, f"accessu:event:{fingerprint}", None, None),
+            None,
+            None,
+        )
     started, unsupported = _is_started(cells)
     if not started:
-        if _text(cells[7].get_text(" ", strip=True)) in _NON_START_FINISH and anchor is None:
-            return JRAHistoricalPastRaceReference(JRAHistoricalEventKind.PROVEN_NON_START, race_date, f"accessu:event:{fingerprint}", None, None)
         raise _validation("official accessU event is unclassified")
     if anchor is not None and not unsupported:
         identity, canonical = anchor
-        if _result_date(canonical, identity) != race_date:
-            raise _validation("official accessU row date disagrees with result navigation")
-        return JRAHistoricalPastRaceReference(
-            JRAHistoricalEventKind.JRA_ACTUAL_START,
-            race_date,
-            f"jra:event:{identity.external_race_id}",
+        return _ParsedEvent(
+            JRAHistoricalPastRaceReference(
+                JRAHistoricalEventKind.JRA_ACTUAL_START,
+                race_date,
+                f"jra:event:{identity.external_race_id}",
+                identity,
+                canonical,
+            ),
             identity,
             canonical,
         )
     if anchor is None and _text(cells[1].get_text(" ", strip=True)) in _JRA_PLACES:
         raise _validation("official accessU JRA start is missing result navigation")
-    return JRAHistoricalPastRaceReference(
-        JRAHistoricalEventKind.UNSUPPORTED_ACTUAL_START if unsupported else JRAHistoricalEventKind.NON_JRA_ACTUAL_START,
-        race_date,
-        f"accessu:event:{fingerprint}",
-        None,
-        None,
+    return _ParsedEvent(
+        JRAHistoricalPastRaceReference(
+            JRAHistoricalEventKind.UNSUPPORTED_ACTUAL_START if unsupported else JRAHistoricalEventKind.NON_JRA_ACTUAL_START,
+            race_date,
+            f"accessu:event:{fingerprint}",
+            None,
+            None,
+        ),
+        anchor[0] if anchor is not None else None,
+        anchor[1] if anchor is not None else None,
     )
 
 
@@ -431,9 +445,16 @@ def discover_jra_historical_past_race_history(
     rows = tuple(body.find_all("tr", recursive=False))
     if not rows:
         raise _validation("official accessU history rows are missing")
-    events = tuple(_reference(row, horse_history_response.response_url) for row in rows)
+    parsed_events = tuple(_reference(row, horse_history_response.response_url) for row in rows)
+    events = tuple(event.reference for event in parsed_events)
     if len({event.provider_event_id for event in events}) != len(events):
         raise _validation("accessU historical event is duplicated")
+    access_s_urls = tuple(event.canonical_access_s_url for event in parsed_events if event.canonical_access_s_url is not None)
+    if len(set(access_s_urls)) != len(access_s_urls):
+        raise _validation("accessU result navigation URL is duplicated")
+    access_s_identities = tuple(event.access_s_identity for event in parsed_events if event.access_s_identity is not None)
+    if len(set(access_s_identities)) != len(access_s_identities):
+        raise _validation("accessU result navigation race identity is duplicated")
     if any(event.race_date >= target_date for event in events):
         raise _validation("accessU historical event is not before target race")
     if any(events[index].race_date < events[index + 1].race_date for index in range(len(events) - 1)):
