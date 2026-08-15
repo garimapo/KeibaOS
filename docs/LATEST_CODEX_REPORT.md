@@ -3507,3 +3507,22 @@ Recommended work is deliberately split: d1d4b1 implements only the pure request 
 archive v002, repository, and tests; d1d4b2 later adds the live POST transport. Neither phase includes an odds/result
 normalizer, NAR/JRA bridge, acquisition workflow, pacing, or historical backdating. Status is `DRAFT_FOR_REVIEW`;
 no production, test, fixture, migration, archive, or HTTP change was made in this PREPARE phase.
+
+## Phase 4C-2d3b1i6d1d4b Archive API Contract Revision
+
+Refined only the approved d1d4b PREPARE documents. `JRAOfficialResponseCaptureArchive` is now frozen as one six-method,
+family-specific public Protocol. The existing three v001 GET methods retain their exact source- and type-compatible
+signatures and cannot save, load, or return a v002 POST/final-odds object. Three separate final-odds methods accept
+and return only the new final-odds capture/supplied-response types; their evidence lookup requires exact endpoint,
+request fingerprint, raw body SHA, and observation timestamp.
+
+Cross-family capture-ID lookup deliberately preserves the existing optional-load behavior: legacy `load_capture` for
+a valid v2 ID returns `None`, and final-odds `load_final_win_odds_capture` for a valid v1 ID returns `None`. A row that
+claims the requested family but cannot reconstruct its exact stored domain shape remains a fail-closed
+`RepositoryDataIntegrityError`. There is no union-widened API, generic archive Protocol, URL-only POST lookup, or
+latest/nearest fallback.
+
+The migration wording is also corrected: v002 `apply()` is transaction-neutral. The dedicated migration runner, not
+the migration itself, owns `BEGIN IMMEDIATE`, commit, rollback, and registration. All other d1d4b locator,
+fingerprint, page-kind, response/capture-domain, v002 rebuild, compatibility, and implementation-split decisions are
+unchanged. Status remains `DRAFT_FOR_REVIEW`; no implementation work was performed.

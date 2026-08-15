@@ -131,7 +131,7 @@ NAME = v002_jra_official_response_capture_request_identity_schema
 
 Register it after v001 only in `JRA_CAPTURE_MIGRATIONS`. Global migrations remain exactly `(8, 9, 10, 11, 12, 13, 14)`.
 
-v001 cannot be safely altered in place: its `schema_version=1` and two-value `page_kind` CHECK constraints exclude final odds. v002 therefore performs one deterministic transaction-owned rebuild of only `jra_official_response_captures`:
+v001 cannot be safely altered in place: its `schema_version=1` and two-value `page_kind` CHECK constraints exclude final odds. v002 `apply()` is transaction-neutral and therefore performs its deterministic rebuild only within the transaction already owned by the migration runner:
 
 1. Require the exact registered v001 archive shape and validate every v001 capture through the legacy capture domain before schema mutation; malformed, duplicate, missing-body, or unregistered state fails closed.
 2. Rename the v001 capture table to a temporary v001 name, drop only its old evidence index, and create the v002 capture table `WITHOUT ROWID` with all v001 columns plus `request_method TEXT NOT NULL`, `request_identity_sha256 TEXT NULL`, and `request_cname TEXT NULL`.
@@ -139,9 +139,46 @@ v001 cannot be safely altered in place: its `schema_version=1` and two-value `pa
 4. Copy every v001 capture column byte-for-byte, adding only `GET`, NULL, NULL. Do not change capture IDs, timestamps, response bodies, digest rows, or body de-duplication.
 5. Create two exact partial unique evidence indexes: legacy `(canonical_source_url,response_sha256,observed_at_utc)` for rows with NULL request fingerprint; request-aware `(canonical_source_url,request_identity_sha256,response_sha256,observed_at_utc)` for rows with non-NULL request fingerprint. Drop the renamed temporary table only after successful copy and index creation.
 
-The migration runner’s encompassing `BEGIN IMMEDIATE` transaction registers v002 only after `apply` succeeds. A failure leaves v001 tables, index, registry row set, and data intact; no adoption, repair, update, delete, prune, or fallback is allowed. `jra_official_response_bodies` is never rebuilt.
+The migration runner alone owns `BEGIN IMMEDIATE`, commit, and rollback; it registers v002 only after transaction-neutral `apply()` succeeds. A failure leaves v001 tables, index, registry row set, and data intact; no adoption, repair, update, delete, prune, or fallback is allowed. `jra_official_response_bodies` is never rebuilt.
 
-The repository must reconstruct either exact capture family, verify v002 locator/CNAME/fingerprint coherence, preserve append-only/idempotent semantics, and fail closed on corrupt stored request material. Legacy `load_supplied_response_for_evidence(canonical_source_url, response_sha256, observed_at)` remains exactly URL+raw-SHA+observation lookup and returns only a legacy GET supplied response. Add a separate exact final-odds lookup taking canonical endpoint URL, request fingerprint, raw response SHA, and observation time, returning only `JRAFinalWinOddsSuppliedOfficialResponse`. There is no nearest/latest lookup and no URL-only POST fallback.
+## Archive Public API After v002
+
+`JRAOfficialResponseCaptureArchive` remains the sole archive Protocol and has exactly these six family-specific methods. The concrete SQLite repository must match this public surface exactly:
+
+```python
+save_capture(
+    *, capture: JRAOfficialResponseCapture,
+) -> None
+
+load_capture(
+    *, capture_id: str,
+) -> JRAOfficialResponseCapture | None
+
+load_supplied_response_for_evidence(
+    *, canonical_source_url: str,
+    response_sha256: str,
+    observed_at: datetime,
+) -> JRASuppliedOfficialResponse
+
+save_final_win_odds_capture(
+    *, capture: JRAFinalWinOddsResponseCapture,
+) -> None
+
+load_final_win_odds_capture(
+    *, capture_id: str,
+) -> JRAFinalWinOddsResponseCapture | None
+
+load_final_win_odds_supplied_response_for_evidence(
+    *, canonical_source_url: str,
+    request_identity_sha256: str,
+    response_sha256: str,
+    observed_at: datetime,
+) -> JRAFinalWinOddsSuppliedOfficialResponse
+```
+
+The existing three GET methods remain source-compatible and type-compatible; they are not widened to unions or generic objects. They operate only on v001 GET families and never return a POST/final-odds value. Legacy evidence lookup remains exactly canonical URL + raw response SHA + observed-at. The three final-odds methods operate only on v002 `FINAL_WIN_ODDS` records; their evidence lookup requires the exact request fingerprint, has no URL-only POST mode, and has no nearest/latest/fallback behavior.
+
+Family-specific capture-ID loads preserve the existing optional-load convention: `load_capture(v2_capture_id)` returns `None`, and `load_final_win_odds_capture(v1_capture_id)` returns `None`. A row found for the requested family but whose stored family, version, page kind, request fields, CNAME, fingerprint, or reconstructed domain shape is contradictory is corruption and raises `RepositoryDataIntegrityError`, never `None`. The repository remains append-only/idempotent within each exact family and verifies v002 locator/CNAME/fingerprint coherence.
 
 ## Future Live POST API
 
