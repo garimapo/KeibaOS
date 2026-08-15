@@ -3731,3 +3731,23 @@ collector must run discovery exactly once. Directly recreating absence output wo
 after collector discovery violates the call-count contract. The recommended next phase is therefore a narrow
 d1d5e0 discovery-to-absence projection handoff PREPARE, before collector implementation. No production code, tests,
 capture, database, migration, bridge, or real official acquisition changed in this phase.
+
+### Independent-review prerequisite correction
+
+The independent architecture review confirmed that the collector is not implementation-ready: its API remained
+candidate/provisional, the formal absence API really would cause a second discovery call, and the proposed collector
+did not close the target-start observation boundary for injected accessS/accessO evidence. The corrected design now
+forbids d1d5e1 until a predecessor is formally complete and a fresh collector PREPARE is reviewed.
+
+The exact predecessor `4C-2d3b1i6d1d5e0` contract adds immutable accessU response URL, exact-body SHA-256, and
+normalized observation-time binding to the formal discovery value, then exposes a public pure projection from that
+exact discovery plus its bound supplied response. The existing absence normalizer retains its signature and one-call
+discovery semantics and delegates record construction to the projection. The projection performs no discovery and no
+HTML parsing, accepts only empty or transfer-only zero-actual-start proof, and fails closed on every binding mismatch
+or actual-start event.
+
+The correction freezes e0's exact API, public surface, exception behavior, allowed files, dedicated/related/full and
+static checks, forbidden dependencies, compatibility requirements, and stop condition. It also freezes the later
+collector rule that every accessS/accessO observation after target scheduled start fails the whole collection, without
+inventing cutoff/capture timestamps or weakening the snapshot builder's stricter final causal check. No production,
+test, source/snapshot schema, migration, capture, database, bridge, Predictor, or formal-branch change was made.

@@ -6,184 +6,245 @@ DRAFT_FOR_REVIEW
 
 ## Phase and Base
 
-Phase `4C-2d3b1i6d1d5e` — JRA historical source collection PREPARE.
+Phase `4C-2d3b1i6d1d5e` — JRA historical source collection PREPARE correction.
 
 Formal base: `a44df34017269b1b0a4e462b3bb775f7059681b7`.
 
 Review branch: `review/4c-2d3b1i6d1d5e-jra-history-collection-prepare`.
 
-## Objective
+## Corrected Outcome
 
-Freeze the smallest pure, injected, all-or-nothing collector that turns one validated JRA target track/entry and
-trusted supplied official evidence into complete provider-neutral past-history source records for that one entry. The
-collector owns orchestration, discovery event ordering, exact response pairing, in-call reuse, all-or-nothing return,
-and final neutral validation. It owns no HTTP, archive/repository, SQLite, clock, pacing, archive path, or provider
-HTML parsing already owned by the formal components.
+The JRA historical source collector is **not implementation-ready**. Formal d1d5d2 absence normalization owns and
+executes d1d5b3 discovery internally, while the collector requires one discovery call for every branch. Calling the
+existing absence normalizer after collector discovery would execute discovery twice; recreating its record would
+duplicate a formal boundary. Phase `4C-2d3b1i6d1d5e1` must not start until the predecessor below is formally complete
+and the collector receives a fresh PREPARE/review against that new formal base.
 
-## Candidate Public API
+The nonzero collector architecture remains provisional only. It continues to require
+`ALL_CAUSALLY_AVAILABLE_ACTUAL_PRIOR_STARTS`, newest-to-oldest output, exact accessS/accessO binding, in-call reuse,
+final neutral validation, fail-closed mixed/unsupported history, and no partial return, but none of those provisional
+collector declarations authorizes production work in this phase.
 
-Subject to the discovery-to-absence handoff blocker below, the intended API is:
+## Recommended Predecessor Phase
+
+Phase `4C-2d3b1i6d1d5e0` — JRA discovery-to-absence projection handoff implementation.
+
+Its objective is to expose a public, pure absence projection from one already-validated exact discovery and the exact
+accessU supplied response that produced it. It preserves the existing direct-call API and makes one discovery result
+reusable without parsing accessU HTML again.
+
+## Exact Discovery Evidence Binding
+
+`JRAHistoricalPastRaceDiscovery` must add exactly these immutable fields:
+
+```text
+horse_history_response_url: str
+horse_history_response_sha256: str
+horse_history_observed_at: datetime
+```
+
+`discover_jra_historical_past_race_history(...)` populates them from the exact validated
+`JRASuppliedOfficialResponse`:
+
+```text
+horse_history_response_url
+  = canonical horse_history_response.response_url
+
+horse_history_response_sha256
+  = SHA-256(exact horse_history_response.response_body bytes)
+
+horse_history_observed_at
+  = exact normalized horse_history_response.observed_at
+```
+
+The discovery domain validates exact field types, canonical accessU URL/horse identity, lowercase 64-character SHA-256
+grammar, aware UTC observation time, and the existing target lineage. This is evidence binding only: it does not store
+the body, create evidence references, change event classification, or weaken the existing
+`horse_history_observed_at <= target scheduled_start_at` discovery check.
+
+## Exact Projection Public API
+
+Add this public function to `scripts/simulation/jra_historical_past_race_absence_source.py`:
 
 ```python
-collect_jra_historical_input_source_records(
+project_jra_historical_past_race_absence_source_record(
     *,
-    target_track_record: HistoricalInputSourceRecord,
-    target_entry_record: HistoricalInputSourceRecord,
+    discovery: JRAHistoricalPastRaceDiscovery,
     horse_history_response: JRASuppliedOfficialResponse,
-    result_response_provider: JRAHistoricalRaceResultResponseProvider,
-    final_odds_response_provider: JRAHistoricalFinalWinOddsResponseProvider,
-) -> JRAHistoricalSourceCollection
+) -> HistoricalInputSourceRecord
 ```
 
-Proposed module public names are exactly:
+The exact module public surface becomes:
 
 ```text
-JRAHistoricalRaceResultResponseProvider
-JRAHistoricalFinalWinOddsResponseProvider
-JRAHistoricalSourceCollection
-JRAHistoricalSourceCollectionError
-JRAHistoricalSourceCollectionValidationError
-JRAHistoricalSourceCollectionUnsupportedError
-collect_jra_historical_input_source_records
+JRAHistoricalPastRaceAbsenceSourceError
+JRAHistoricalPastRaceAbsenceSourceValidationError
+normalize_jra_historical_past_race_absence_source_record
+project_jra_historical_past_race_absence_source_record
 ```
 
-No package-root export. The immutable/slotted collection contains exactly:
+No package-root export is added.
+
+Both arguments must have exact formal types. The projection performs no discovery and no HTML decode or parse. It
+must verify all of the following before constructing a record:
 
 ```text
-target_external_race_id: str
-target_external_entry_id: str
-source_records: tuple[HistoricalInputSourceRecord, ...]
+horse_history_response.response_url
+  == discovery.horse_history_response_url
+
+SHA-256(exact horse_history_response.response_body bytes)
+  == discovery.horse_history_response_sha256
+
+horse_history_response.observed_at
+  == discovery.horse_history_observed_at
+
+parse_jra_horse_profile_url_identity(horse_history_response.response_url).external_horse_id
+  == discovery.target_external_horse_id
 ```
 
-It accepts only exact source-record types. Every record must retain the target race and entry identities and be either
-`past_race` or `past_race_absence`. It must contain either one absence and no past races, or one-or-more past races
-and no absence. The tuple order is deterministic.
+The final identity check may use the formal URL identity parser only; it must not parse response HTML. URL, horse,
+SHA, timestamp, type, or discovery-invariant disagreement raises
+`JRAHistoricalPastRaceAbsenceSourceValidationError`. No fallback, closest/latest lookup, reconstructed response, or
+caller assertion is accepted.
 
-## Injected Provider Contracts
+## Exact Accepted and Rejected States
 
-The result provider is keyed by stronger formal race identity and bound discovery URL, not URL text alone:
-
-```python
-class JRAHistoricalRaceResultResponseProvider(Protocol):
-    def __call__(
-        self,
-        *,
-        race_identity: JRAExternalRaceIdentity,
-        canonical_race_result_url: str,
-    ) -> JRASuppliedOfficialResponse: ...
-```
-
-The collector requires an exact response object whose canonical response URL parses to, and equals, both supplied
-race identity and the discovery event's canonical accessS URL. A missing result, wrong type, URL/identity mismatch,
-or malformed provider response is a collection validation error.
-
-For each validated accessS response, the formal d1d5c2 extractor creates the sole final-odds request locator. The
-final-odds provider is keyed by that opaque formal locator, including its request identity:
-
-```python
-class JRAHistoricalFinalWinOddsResponseProvider(Protocol):
-    def __call__(
-        self,
-        *,
-        request_locator: JRAOfficialFinalWinOddsRequestLocator,
-    ) -> JRAFinalWinOddsSuppliedOfficialResponse: ...
-```
-
-It must return the exact supplied final-odds response whose locator equals the extracted locator. Raw HTML, strings,
-caller-made CNAMEs, response substitution, fallback/latest/nearest lookup, and duplicate/conflicting responses fail
-closed. The formal past-race normalizer remains the owner of accessS/accessO pair parsing and evidence construction.
-
-## Intended Nonzero Flow
-
-1. Run formal accessU discovery exactly once.
-2. Preserve its newest-to-oldest event order.
-3. Ignore `PROVEN_NON_START` only as an output slot; it remains represented by discovery's completeness proof.
-4. For each `JRA_ACTUAL_START`, obtain one exact accessS response through the result provider; validate its binding to
-   the discovery event; extract its formal final-odds locator; obtain one exact accessO response through the odds
-   provider; and call `normalize_jra_historical_past_race_source_record(...)`.
-5. Run `validate_historical_input_source_record_set(records=...)` before returning the immutable collection.
-
-The output order is newest actual prior start to oldest actual prior start. It does not introduce a race-count cap:
-source acquisition remains `ALL_CAUSALLY_AVAILABLE_ACTUAL_PRIOR_STARTS`.
-
-Within one call, accessS requests are deduplicated by `JRAExternalRaceIdentity`; final-odds requests are deduplicated
-by locator `request_identity_sha256`. The supplied response object is reused only for the same validated identity in
-that call. Discovery already rejects duplicate JRA event identities and URLs; collector deduplication is defensive and
-does not define cross-run cache/archive policy.
-
-## Event and Mixed-Provider Policy
+The projection accepts exactly:
 
 ```text
-PROVEN_NON_START
-  No past_race output; consumes no actual-start response; remains completeness evidence only.
+EMPTY_OFFICIAL_HISTORY
+  discovery.proven_zero_history is True
+  discovery.events == ()
 
-JRA_ACTUAL_START
-  Requires one fully bound accessS/accessO pair and exactly one normalized past_race record.
-
-NON_JRA_ACTUAL_START
-  Fail closed. It cannot be silently skipped or represented by this JRA-only collector.
-
-UNSUPPORTED_ACTUAL_START
-  Fail closed. It cannot be skipped or normalized best-effort.
+TRANSFER_ONLY_ZERO_ACTUAL_START
+  discovery.proven_zero_history is False
+  discovery.events is nonempty
+  every event kind is JRAHistoricalEventKind.PROVEN_NON_START
 ```
 
-Thus `JRA_ONLY_COLLECTION_READY = YES` only for complete discovery sequences containing JRA actual starts and/or
-proven non-starts, once the zero-history handoff is resolved. `COMPLETE_MIXED_HISTORY_COLLECTION_READY = NO`:
-historical NAR/local/overseas actual starts require an approved cross-provider collector and an official identity path.
-`NAR_LINEAGE_TO_JRA_HORSE_ID_LINK = NOT_PROVEN` remains unchanged.
+It rejects incoherent discovery and every sequence containing at least one `JRA_ACTUAL_START`,
+`NON_JRA_ACTUAL_START`, or `UNSUPPORTED_ACTUAL_START`, including transfer-plus-actual mixtures. Transfer events emit
+no past-race record. Absence means zero actual prior starts, not zero displayed events or zero JRA starts.
 
-## Zero-Actual-Start Handoff Blocker
-
-Formal d1d5d2 intentionally owns absence projection by calling formal discovery itself. The collector requirement
-demands discovery exactly once, including the zero-actual-start branch. Calling d1d5b2's public
-`normalize_jra_historical_past_race_absence_source_record(...)` after the collector's discovery would run discovery a
-second time; recreating its absence record directly would duplicate a formal boundary. Neither is acceptable.
-
-Therefore an implementation cannot satisfy both frozen requirements without an approved discovery-to-absence handoff
-contract. The smallest needed predecessor is a narrowly scoped design/implementation decision that exposes a formal
-absence projection from an already-validated exact `JRAHistoricalPastRaceDiscovery` plus the original supplied
-accessU response, while preserving the existing d1d5d2 public API and its discovery-owned validation for direct
-callers. The collector must not import or depend on a private absence helper.
-
-Until that handoff exists, `JRA_ONLY_COLLECTION_READY = NO` for implementation despite the nonzero JRA event flow
-being otherwise fully specified. No partial `JRAHistoricalSourceCollection` may be returned in any failure branch.
-
-## Causality, Validation, and Compatibility
-
-The collector introduces no clock or timestamp transformation. It preserves supplied evidence timestamps and relies
-on formal discovery/normalizer/domain validation plus the existing snapshot builder's causal eligibility boundary.
-It never backdates live evidence. A failure after any earlier provider result yields no partial returned tuple; an
-archive may independently retain captured evidence, but archive state is outside collector ownership.
-
-Returned records must be valid inputs for the existing snapshot builder after target track/entry/jockey/odds records
-are combined. This phase does not build snapshots. Existing source and snapshot schemas already admit both the
-past-race and past-race-absence alternatives; no source schema, snapshot schema, migration, repository, or capture
-change is required.
-
-## Recommended Next Phase
-
-Recommended next phase: `4C-2d3b1i6d1d5e0` — JRA discovery-to-absence projection handoff PREPARE. It must resolve
-the exact public/internal contract needed to preserve both d1d5d2 direct-call semantics and the collector's required
-single discovery call. Do not implement the collector until that review has approved the handoff.
-
-Provisional collector implementation scope after the blocker is resolved:
+The output remains the existing schema-v4 neutral record exactly:
 
 ```text
-scripts/simulation/jra_historical_source_collection.py
-tests/test_jra_historical_source_collection.py
+record_kind        = past_race_absence
+organization       = JRA
+source_system      = jra_official
+external_race_id   = discovery.target_external_race_id
+external_entry_id  = discovery.target_external_entry_id
+provider_record_id = None
+result_count       = 0
+```
+
+Its sole `past_race_absence_query` evidence uses the discovery-bound canonical URL, exact response-body SHA, exact
+observed time, `available_at=None`, and `request_identity_sha256=None`. Existing query-scope semantics remain
+unchanged.
+
+## Existing API Compatibility and Call Count
+
+`normalize_jra_historical_past_race_absence_source_record(...)` retains its exact signature, public name, exception
+family, output, and direct-call semantics. It must:
+
+1. call `discover_jra_historical_past_race_history(...)` exactly once;
+2. translate a formal discovery error to `JRAHistoricalPastRaceAbsenceSourceValidationError` as today; and
+3. call the new public projection with that discovery and the original supplied response.
+
+The projection calls discovery zero times. A future collector will call discovery exactly once and pass its result to
+the public projection on the zero-actual-start branch. Neither path may import a private helper or duplicate the
+absence-record constructor.
+
+## Exception Contract
+
+No new exception class is added. Wrong exact types, invalid discovery state, response/discovery binding mismatch,
+identity mismatch, or neutral record construction failure raise
+`JRAHistoricalPastRaceAbsenceSourceValidationError`, derived from
+`JRAHistoricalPastRaceAbsenceSourceError`. Existing discovery-error translation remains unchanged for direct callers.
+
+## Future Collector Causality Contract
+
+The later collector PREPARE must freeze these checks before implementation:
+
+- accessU discovery retains its existing `observed_at <= target scheduled_start_at` proof;
+- every injected accessS `JRASuppliedOfficialResponse.observed_at` must be no later than the target
+  `scheduled_start_at`;
+- every injected accessO `JRAFinalWinOddsSuppliedOfficialResponse.observed_at` must be no later than the target
+  `scheduled_start_at`;
+- a later observation fails the entire collection before return;
+- timestamps are never replaced or backdated;
+- the collector does not invent `information_cutoff` or `captured_at`; the snapshot builder retains the stricter final
+  eligibility check against caller-supplied cutoff/capture values.
+
+Thus a collector cannot return a nominally complete source collection containing evidence first observed after the
+target race start, while the snapshot boundary still owns the full
+`observed_at <= captured_at <= information_cutoff <= scheduled_start_at` check.
+
+## e0 Allowed Files
+
+```text
+scripts/simulation/jra_historical_past_race_discovery.py
+scripts/simulation/jra_historical_past_race_absence_source.py
+tests/test_jra_historical_past_race_discovery.py
+tests/test_jra_historical_past_race_absence_source.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-## Allowed Files
+No other file is allowed. In particular, no collector module or collector test may be created in e0.
+
+## e0 Required Tests
+
+Dedicated tests must prove:
+
+- discovery exposes the exact three evidence-binding fields and keeps immutable/slotted exact-type invariants;
+- binding uses exact response bytes, canonical accessU URL, exact normalized observed time, and formal horse identity;
+- existing empty, transfer-only, JRA, non-JRA, unsupported, chronology, completeness, and cutoff discovery behavior is
+  unchanged;
+- projection performs zero discovery calls and zero HTML parsing;
+- existing direct normalizer performs exactly one discovery call and delegates to the public projection;
+- exact empty and transfer-only projection outputs remain byte/SHA/timestamp/source-ID compatible with the current
+  formal output;
+- wrong discovery/response types, URL, body SHA, timestamp, horse identity, and incoherent discovery fail closed;
+- every actual-start kind and every transfer-plus-actual mixture is rejected;
+- public module surface and no package-root export are exact;
+- source validation and snapshot absence compatibility remain unchanged.
+
+Run the dedicated discovery and absence suites, the related JRA identity/source/snapshot regressions, and the full
+suite with the formal verification Python. Also run package-export, forbidden-dependency/AST, unchanged-schema,
+unchanged-migration, `git diff --check`, and final status checks. Report every exact command and result.
+
+## e0 Forbidden Dependencies and Changes
+
+Production modules must not import HTTP/live capture, archive/repository, SQLite/database, filesystem, clock/current
+time, sleep/retry, Predictor, or NAR bridge code. No HTML parser is added to the absence module. No source or snapshot
+schema version, migration, capture format, archive API, neutral validator, snapshot builder, mixed-provider identity,
+or prediction behavior changes. No real official response is fetched or archived.
+
+## Schema and Readiness
+
+```text
+SOURCE_SCHEMA_CHANGE_REQUIRED = NO
+SNAPSHOT_SCHEMA_CHANGE_REQUIRED = NO
+MIGRATION_REQUIRED = NO
+JRA_ONLY_COLLECTION_READY = NO
+COMPLETE_MIXED_HISTORY_COLLECTION_READY = NO
+NAR_LINEAGE_TO_JRA_HORSE_ID_LINK = NOT_PROVEN
+```
+
+The discovery-domain evidence binding is not a persisted source/snapshot schema change. Collector readiness may be
+reconsidered only after e0 is formally integrated and independently remote-verified.
+
+## Current Correction Allowed Files
 
 ```text
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-## Stop Condition
+## Current Stop Condition
 
-Create and push exactly one documentation review commit: `docs: prepare JRA historical source collection`. Do not
-implement collection, tests, capture, archive, migrations, database work, real acquisition, formal integration,
-mixed-provider bridge, or Predictor work. Stop for independent architecture review.
+Create and push exactly one additional documentation review commit:
+`docs: refine JRA historical collection prerequisites`. Do not amend the existing review commit. Do not implement e0
+or e1, add tests, perform capture/database/migration work, implement a bridge, modify Predictor, or formally integrate.
+Stop for independent architecture re-review.
