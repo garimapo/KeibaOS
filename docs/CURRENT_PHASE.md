@@ -48,7 +48,10 @@ All 17 c1a values have direct authority: accessS supplies race/date/place/name/c
 condition, finish/time, body weight/change, jockey, popularity, passing order, and fourth-corner position; accessO
 supplies final single-win odds only. No float conversion, assigned-weight substitution, textual-margin conversion, or
 derived odds is permitted. `td.corner li[title]` labels must uniquely and increasingly identify the explicit fourth
-corner; neither a fixed component nor the final component is assumed.
+corner; neither a fixed component nor the final component is assumed. The direct row-local accessS `td.margin` is
+inspected only for the exact official dead-heat marker `同着`; it is never converted or included in record values.
+Official line-break presentation in result-table heading labels is normalized only for exact semantic heading
+comparison, without widening the required heading family.
 
 The output keeps target external race/entry IDs and uses the historical JRA race plus stable horse identity in
 `build_jra_provider_record_id`. It creates exactly three canonical evidence roles:
@@ -68,7 +71,8 @@ owner. No timestamp is backdated or fabricated.
 Malformed/contradictory identities, missing or duplicate headers/tables/rows/anchors, wrong lineage, malformed CP932,
 or accessS/accessO disagreement raise the normalizer validation error. Recognized but unsupported result states include
 withdrawal/exclusion/DNF/disqualification, blank class, invalid finish/time/body weight/popularity, nonpositive odds,
-unsupported surface, and ambiguous/missing fourth-corner structure. There is no fallback.
+unsupported surface, direct `td.margin` marker `同着`, and ambiguous/missing fourth-corner structure. There is no
+fallback. A positive numeric finish does not bypass the direct dead-heat check.
 
 Tests use only synthetic strict-CP932 HTML strings in the dedicated test module; no official page, archive record, or
 fixture file was captured or committed. NAR production, JRA capture/domain/archive/live production, neutral evidence,

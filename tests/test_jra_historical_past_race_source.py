@@ -110,6 +110,7 @@ def _result_html(**changes: str) -> str:
     heading = _header(access_s=True, **{key[7:]: value for key, value in changes.items() if key.startswith("header_")})
     body_weight = changes.get("body_weight", "495(+1)")
     finish = changes.get("finish", "2")
+    margin = changes.get("margin", "1/2")
     race_time = changes.get("race_time", "1:12.3")
     popularity = changes.get("popularity", "3")
     horse_number = changes.get("horse_number", "7")
@@ -117,9 +118,17 @@ def _result_html(**changes: str) -> str:
     horse_name = changes.get("horse_name", "対象馬")
     corners = changes.get("corners", "<li title=\"1コーナー通過順位\">8</li><li title=\"2コーナー通過順位\">8</li><li title=\"3コーナー通過順位\">6</li><li title=\"4コーナー通過順位\">5</li>")
     extra_row = changes.get("extra_row", "")
+    headings = (
+        "<th class=\"place\">着順</th><th class=\"waku\">枠</th><th class=\"num\">馬<br/>番</th><th class=\"horse\">馬名</th>"
+        "<th class=\"age\">性齢</th><th class=\"weight\">負担<br/>重量</th><th class=\"jockey\">騎手名</th><th class=\"time\">タイム</th>"
+        "<th class=\"margin\">着差</th><th class=\"corner\">コーナー<br/><span>通過順位</span></th><th class=\"f_time\">上がり</th>"
+        "<th class=\"h_weight\">馬体重<br/><span>（増減）</span></th><th class=\"trainer\">調教師名</th><th class=\"pop\">単勝<br/>人気</th>"
+        if changes.get("authentic_headings") == "true" else
+        "<th>着順</th><th>枠</th><th>馬番</th><th>馬名</th><th>性齢</th><th>負担重量</th><th>騎手名</th><th>タイム</th><th>着差</th><th>コーナー通過順位</th><th>馬体重（増減）</th><th>調教師名</th><th>単勝人気</th>"
+    )
     return f'''<html><body><div id="race_result">{heading}
-<table><thead><tr><th>着順</th><th>枠</th><th>馬番</th><th>馬名</th><th>性齢</th><th>負担重量</th><th>騎手名</th><th>タイム</th><th>着差</th><th>コーナー通過順位</th><th>馬体重（増減）</th><th>調教師名</th><th>単勝人気</th></tr></thead>
-<tbody><tr><td class="place">{finish}</td><td class="num">{horse_number}</td><td class="horse"><a href="{href}">{horse_name}</a></td><td class="weight">56</td><td class="jockey">☆騎手 太郎</td><td class="time">{race_time}</td><td class="h_weight">{body_weight}</td><td class="pop">{popularity}</td><td class="corner">{corners}</td></tr>{extra_row}</tbody></table></div></body></html>'''
+<table><thead><tr>{headings}</tr></thead>
+<tbody><tr><td class="place">{finish}</td><td class="num">{horse_number}</td><td class="horse"><a href="{href}">{horse_name}</a></td><td class="weight">56</td><td class="jockey">☆騎手 太郎</td><td class="time">{race_time}</td><td class="margin">{margin}</td><td class="h_weight">{body_weight}</td><td class="pop">{popularity}</td><td class="corner">{corners}</td></tr>{extra_row}</tbody></table></div></body></html>'''
 
 
 def _odds_html(**changes: str) -> str:
@@ -258,6 +267,14 @@ class JRAHistoricalPastRaceSourceTests(unittest.TestCase):
         no_body_weight = _result_html().replace('<td class="h_weight">495(+1)</td>', '<td class="weight">56</td>')
         with self.assertRaises(JRAHistoricalPastRaceSourceValidationError):
             _normalize(result=_result_response(no_body_weight))
+
+    def test_dead_heat_direct_margin_is_unsupported_even_with_numeric_finish(self):
+        with self.assertRaises(JRAHistoricalPastRaceSourceUnsupportedError):
+            _normalize(result=_result_response(_result_html(finish="2", margin="同着")))
+
+    def test_authentic_line_break_result_headings_are_semantically_normalized(self):
+        record = _normalize(result=_result_response(_result_html(authentic_headings="true")))
+        self.assertEqual(record.record_values["finish"], 2)
 
     def test_access_o_identity_tables_join_and_odds_fail_closed(self):
         with self.assertRaises(JRAHistoricalPastRaceSourceValidationError):

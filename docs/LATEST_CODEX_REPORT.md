@@ -3593,3 +3593,18 @@ production, and provider-neutral evidence/source/snapshot production are unchang
 `(8, 9, 10, 11, 12, 13, 14)` and JRA capture migrations remain `(1, 2)`. `git diff --check` is clean; the review
 scope is exactly the four approved d1d5a files. The formal remote remains
 `dcdef4bd6559418fe7f179f42cd16a263604fc08`; no real accessO capture was performed.
+
+### Dead-heat fail-closed correction
+
+The accessS result-row inspection confirmed that the official `着差` value is row-local `td.margin`. The normalizer
+now inspects that direct display only for the exact official dead-heat marker `同着` and raises
+`JRAHistoricalPastRaceSourceUnsupportedError` when present; it neither converts ordinary margin text nor adds a
+margin field. A numeric finish consequently cannot bypass dead-heat handling. The result-table structural validator
+also normalizes official presentational line breaks in fixed semantic headings (including `馬<br>番`, `負担<br>重量`,
+`コーナー<br>通過順位`, `馬体重<br>（増減）`, and `単勝<br>人気`) without widening the required heading family.
+
+Fresh verification under Python 3.14.5 / pytest 8.3.5 passed: dedicated normalizer 10; JRA identity/capture/archive/
+live regressions 38; neutral source/snapshot/builder regressions 47; NAR historical-source regressions 35; and full
+suite 2580. Package-root export, forbidden-dependency, unchanged JRA capture/NAR/neutral production, migration
+version, and `git diff --check` checks passed. No official response was archived or persisted, and no real accessO
+capture was performed.

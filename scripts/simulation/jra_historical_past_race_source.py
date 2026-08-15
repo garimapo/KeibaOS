@@ -107,6 +107,10 @@ def _display(value: object) -> str:
     return " ".join(_normalize("NFC", value).split())
 
 
+def _heading(node: _Tag) -> str:
+    return "".join(_normalize("NFC", node.get_text(" ", strip=True)).split())
+
+
 def _text(node: _Tag, name: str, *, unsupported: bool = False) -> str:
     value = _display(node.get_text(" ", strip=True))
     if value:
@@ -247,7 +251,7 @@ def _target_identity(
 def _result_table(soup: _BeautifulSoup) -> _Tag:
     candidates: list[_Tag] = []
     for table in soup.select("#race_result table"):
-        headings = {_display(item.get_text(" ", strip=True)) for item in table.select("thead th")}
+        headings = {_heading(item) for item in table.select("thead th")}
         if _RESULT_HEADINGS.issubset(headings):
             candidates.append(table)
     return _one(candidates, "official JRA result table")
@@ -320,6 +324,9 @@ def _corner_values(row: _Tag) -> tuple[str, int]:
 def _result_values(row: _Tag) -> tuple[int, dict[str, object]]:
     horse_no = _positive(_text(_cell(row, "td.num", "official JRA horse number"), "official JRA horse number"), "official JRA horse number")
     finish = _positive(_text(_cell(row, "td.place", "official JRA finish"), "official JRA finish", unsupported=True), "official JRA finish", unsupported=True)
+    margin = _display(_cell(row, "td.margin", "official JRA margin").get_text(" ", strip=True))
+    if margin == "同着":
+        raise _unsupported("official JRA dead-heat result is unsupported")
     race_time = _text(_cell(row, "td.time", "official JRA race time"), "official JRA race time", unsupported=True)
     if _TIME.fullmatch(race_time) is None:
         raise _unsupported("official JRA race time is unsupported")
