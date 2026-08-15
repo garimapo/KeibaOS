@@ -3712,3 +3712,22 @@ Fresh correction verification under Python 3.14.5 / pytest 8.3.5 passed: dedicat
 related JRA/NAR/neutral regressions 139, and the full suite 2597. Package-export, forbidden-dependency/source/AST,
 identity-ownership, unchanged-production, version, and `git diff --check` validation remain required before review
 publication.
+
+## Phase 4C-2d3b1i6d1d5e JRA Historical Source Collection PREPARE
+
+Prepared the pure injected JRA historical source-collection architecture. The proposed collector will own a complete,
+newest-to-oldest event orchestration, accessS/accessO response pairing, in-call identity/request deduplication,
+all-or-nothing return, and final existing neutral source-record validation. It will receive only trusted formal
+supplied-response objects from injected providers, never raw HTML or live transport.
+
+Each JRA actual start is bound to its discovery race identity and canonical accessS URL, then passed through the
+formal final-odds locator extractor and keyed final-odds provider before the existing past-race normalizer. Transfer
+events produce no output. Non-JRA and unsupported actual starts fail closed; they cannot be silently omitted to
+obtain an incomplete JRA-only history. Acquisition remains all causally available actual prior starts, with no
+five-race cap and no partial collection return.
+
+Identified one blocking formal handoff: d1d5d2's public absence normalizer reruns d1d5b3 discovery, while the
+collector must run discovery exactly once. Directly recreating absence output would duplicate d1d5d2, and calling it
+after collector discovery violates the call-count contract. The recommended next phase is therefore a narrow
+d1d5e0 discovery-to-absence projection handoff PREPARE, before collector implementation. No production code, tests,
+capture, database, migration, bridge, or real official acquisition changed in this phase.
