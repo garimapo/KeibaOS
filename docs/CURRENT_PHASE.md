@@ -2,101 +2,178 @@
 
 ## Status
 
-READY_FOR_REVIEW
+DRAFT_FOR_REVIEW
 
 ## Phase and Base
 
-Phase `4C-2d3b1i6d1d5c2` — JRA accessS final-odds locator extraction implementation.
+Phase `4C-2d3b1i6d1d5d1` — JRA zero-history past-race-absence source PREPARE.
 
-Formal base: `d53d2df5c7f9aee91b9cbea0dda07145aefb3acf`.
+Formal base: `0fba21a39f0d1b39dcb516c287d1d06bdcf9c35f`.
 
-Approved PREPARE: `2934b663dcdf962ccb0576d6440dc941b590716a`.
+Review branch: `review/4c-2d3b1i6d1d5d1-jra-zero-history-absence-prepare`.
 
-Review branch: `review/4c-2d3b1i6d1d5c2-jra-accesso-locator`.
+## Objective and Ownership
 
-## Implemented Boundary
+Freeze a narrow pure JRA boundary that turns only formal accessU proof of **zero actual prior starts** into one
+provider-neutral `HistoricalInputSourceRecord(record_kind="past_race_absence")`. This closes the per-entry
+past-history evidence alternative required before later historical collection/orchestration. It is neither accessU
+parsing nor acquisition, archive work, race collection, accessS/accessO handling, normalization of a past race, or
+Predictor work.
 
-Added the pure identity-domain builder:
-
-```python
-build_jra_final_win_odds_request_locator(
-    *,
-    cname: str,
-) -> JRAOfficialFinalWinOddsRequestLocator
-```
-
-It accepts only the formal raw accessO CNAME grammar, fixes the formal
-`https://www.jra.go.jp/JRADB/accessO.html` endpoint, and uses the existing private identity/fingerprint primitives to
-construct the existing immutable locator. It does not parse HTML or duplicate the canonical request-fingerprint
-algorithm. Existing identity behavior, including the pinned known CNAME fingerprint, remains unchanged.
-
-Added the pure extractor:
+The future function must call the formal d1d5b3 discovery exactly once:
 
 ```python
-extract_jra_final_win_odds_request_locator(
+discover_jra_historical_past_race_history(
     *,
-    race_result_response: JRASuppliedOfficialResponse,
-) -> JRAOfficialFinalWinOddsRequestLocator
+    target_track_record: HistoricalInputSourceRecord,
+    target_entry_record: HistoricalInputSourceRecord,
+    horse_history_response: JRASuppliedOfficialResponse,
+) -> JRAHistoricalPastRaceDiscovery
 ```
 
-Its only module-defined public names are
-`JRAFinalWinOddsRequestLocatorExtractionError`,
-`JRAFinalWinOddsRequestLocatorExtractionValidationError`, and the function. It accepts only an exact accessS
-`JRASuppliedOfficialResponse`, strictly decodes supplied CP932 bytes, validates the response URL with
-`parse_jra_result_url_identity(...)`, and changes neither bytes nor timestamps.
+It must not independently inspect accessU HTML, row structure, aggregate tables, CP932 content, continuation markers,
+target lineage, accessU horse identity, or chronology. Discovery remains the sole owner of target validation, strict
+CP932, response-local aggregate-count completeness, zero-history proof, continuation rejection, and
+`observed_at <= scheduled_start_at`.
 
-The sole accepted official navigation is exactly one `オッズ` control with `href="#"` at:
+## Frozen Proposed API and Surface
 
-```text
-div#race_result.mt20
-> div.race_result_unit
-> table.basic.narrow-xy.striped
-> caption > div.race_header > div.right > div.race_related_link
-> ul > li > a.btn-def.btn-sm.blue.btn-block
+The next implementation must provide exactly:
+
+```python
+normalize_jra_historical_past_race_absence_source_record(
+    *,
+    target_track_record: HistoricalInputSourceRecord,
+    target_entry_record: HistoricalInputSourceRecord,
+    horse_history_response: JRASuppliedOfficialResponse,
+) -> HistoricalInputSourceRecord
 ```
 
-Its direct source `onclick` must be the approved single-quoted
-`return doAction('/JRADB/accessO.html', '<raw-cname>');` form. Only explicitly approved ASCII presentation
-whitespace is accepted. The extractor requires the raw source attribute spelling as well as the parsed DOM value, so
-HTML entity quote recovery cannot turn an altered navigation into valid evidence. It rejects double quotes, escapes,
-concatenation, extra script/arguments, altered endpoints, percent-encoded/invalid CNAMEs, duplicate controls, and all
-other ambiguity. Generic page-menu odds controls and `commForm01` hidden CNAME transport plumbing are never scanned
-as candidates.
-
-The extractor calls only the public builder and requires the resulting locator's race identity to equal the supplied
-accessS URL's parsed race identity. It never synthesizes a locator from accessS CNAME, race ID, date, venue, or race
-number. It has no HTTP, archive, repository, filesystem, SQLite, clock, environment, random, subprocess, capture,
-accessO POST, normalizer, discovery, orchestration, or bridge ownership. No package-root export is added.
-
-The raw-onclick proof is bound to the selected DOM candidate, not a page-global substring: a quote-aware raw HTML
-token scan skips comments and script bodies, retains raw anchor start tags in document order, and verifies count/order
-agreement with the parsed anchors. The unique selected result-header anchor is located by identity in that parsed
-sequence; only its corresponding raw start tag may contain exactly one literal lowercase `onclick` attribute whose raw
-double-quoted value equals the approved parsed invocation. Entity-encoded selected values (`&#39;`, `&#x27;`, or `&apos;`)
-therefore fail even when comments, scripts, generic navigation, hidden forms, or another anchor contain the decoded
-text.
-
-## Allowed Files
+Module public names are exactly:
 
 ```text
-scripts/simulation/jra_official_identity.py
-scripts/simulation/jra_final_win_odds_request_locator.py
-tests/test_jra_official_identity.py
-tests/test_jra_final_win_odds_request_locator.py
+JRAHistoricalPastRaceAbsenceSourceError
+JRAHistoricalPastRaceAbsenceSourceValidationError
+normalize_jra_historical_past_race_absence_source_record
+```
+
+No package-root export. The module is pure and owns no HTTP, archive/repository, SQLite, filesystem, environment,
+clock, randomness, subprocess, accessS fetch, accessO locator/POST, bridge, or Predictor behavior.
+
+Expected malformed-provider/target/discovery/source-record inputs are translated to
+`JRAHistoricalPastRaceAbsenceSourceValidationError`. The implementation may narrowly catch discovery boundary errors
+and `ValueError`, `TypeError`, `AttributeError`, or `OverflowError` needed to prevent incidental malformed-input
+leaks; it must not catch `Exception` or conceal programmer/runtime defects.
+
+## Zero-History Acceptance
+
+The absence normalizer returns a record **only** if:
+
+```text
+discovery.proven_zero_history is True
+and discovery.events == ()
+```
+
+d1d5b3's immutable discovery domain itself enforces
+`proven_zero_history == (events == ())`; the absence boundary checks both values defensively. Any nonempty event
+tuple rejects, regardless of event kind. Thus JRA actual starts, NAR/local or overseas starts represented as
+`NON_JRA_ACTUAL_START`, `UNSUPPORTED_ACTUAL_START`, and `PROVEN_NON_START` transfer history cannot become
+absence evidence. A history with zero JRA starts but a non-JRA actual start is specifically not zero history.
+
+Discovery's exact simultaneous accessU no-data plus complete aggregate zero/no-data state is the only accepted proof.
+Incomplete/truncated aggregate counts, continuation, malformed response, target mismatch, horse mismatch, or a late
+observation fail in discovery and are translated by this boundary. There is no caller override, no “zero JRA starts”
+interpretation, and no fallback from an empty parser result.
+
+## Exact Output and Evidence
+
+The output is exactly:
+
+```text
+record_kind        = "past_race_absence"
+organization       = "JRA"
+source_system      = "jra_official"
+external_race_id   = discovery.target_external_race_id
+external_entry_id  = discovery.target_external_entry_id
+provider_record_id = None
+```
+
+`jra_official` is fixed because formal discovery has already required the exact JRA target-track/entry family. Its
+record values are exactly:
+
+```python
+{
+    "external_entry_id": discovery.target_external_entry_id,
+    "query_scope": {
+        "external_entry_id": discovery.target_external_entry_id,
+        "target_race_date": discovery.target_race_date,
+        "strictly_before_target_race": True,
+    },
+    "result_count": 0,
+}
+```
+
+There are no JRA-specific record values.
+
+Create exactly one `HistoricalInputEvidenceReference` with:
+
+```text
+evidence_role             = "past_race_absence_query"
+canonical_source_url       = horse_history_response.response_url
+request_identity_sha256    = None (omitted from canonical payload)
+response_sha256            = sha256(exact horse_history_response.response_body)
+available_at               = None
+observed_at                = horse_history_response.observed_at
+```
+
+Hash only the original exact supplied bytes; never decoded/re-encoded HTML. The one trusted accessU response is the
+official evidence proving the zero-history query. No separate aggregate/history evidence references are added.
+
+## Causality and Snapshot Compatibility
+
+The normalizer does not introduce a clock or alter timestamps. Discovery requires its supplied response at or before
+the target scheduled start. The absence evidence preserves the exact supplied `observed_at`; the existing
+`HistoricalInputSnapshotBuilder` remains the sole owner of
+`observed_at <= captured_at <= information_cutoff <= scheduled_start_at`.
+
+No schema, migration, builder, repository, or neutral-domain change is required. Formal
+`HistoricalInputSourceRecord` already permits `past_race_absence` with exactly
+`external_entry_id/query_scope/result_count` and the one `past_race_absence_query` role. Formal builder grouping
+requires each entry to have either one-or-more `past_race` records or exactly one absence record, rejects both forms
+together, checks the absence query target date, and emits its established `past_race/<race_entry_id>/none`
+provenance. A compatible zero-history JRA track/entry/jockey/odds set plus this record is therefore accepted without
+schema change.
+
+## Recommended Implementation Scope
+
+Recommended next phase: `4C-2d3b1i6d1d5d2` — JRA zero-history past-race-absence source implementation.
+
+Exact recommended allowed files:
+
+```text
+scripts/simulation/jra_historical_past_race_absence_source.py
+tests/test_jra_historical_past_race_absence_source.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-## Verification
+Tests must use minimal synthetic CP932 accessU responses and cover exact zero output/evidence/SHA/timestamps/source-ID
+determinism; all event kinds and incomplete/continuation/mismatch rejection; neutral record-set validation; snapshot
+builder acceptance for a zero-history JRA entry; builder rejection of a past-race plus absence conflict; public
+surface; package-root absence; and forbidden dependencies.
 
-Fresh Python 3.14.5 / pytest 8.3.5 verification passed: identity and locator dedicated suites (17 tests), JRA
-capture/archive/live plus d1d5a/d1d5b3, NAR, and provider-neutral source/snapshot/builder regressions (139 tests),
-and the full suite (2,597 tests). The public-surface/purity tests pin the builder, exact extractor API, no package-root
-export, and forbidden dependency boundary. Final diff, scope, unchanged-production, version, and status checks are
-required before review publication.
+After formal d1d5d2 completion, the recommended design-only follow-on is
+`4C-2d3b1i6d1d5e1` — JRA historical collection/orchestration PREPARE. Do not begin it now.
+
+## Allowed Files
+
+```text
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+```
 
 ## Stop Condition
 
-Create and push exactly one review commit: `feat: extract JRA final-odds request locator`. Do not formally integrate,
-perform real accessO capture, implement collection/orchestration, synthesize a CNAME, modify discovery or normalizer,
-implement a NAR/JRA bridge, or connect Predictor. Stop for independent review.
+Create and push exactly one documentation review commit: `docs: prepare JRA zero-history absence source`. Do not
+implement production or tests, change schema/capture/discovery/normalizer/orchestration, acquire/archive official
+responses, synthesize CNAME material, build a bridge, or connect Predictor. Stop for independent review.

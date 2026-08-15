@@ -3691,3 +3691,26 @@ Fresh correction verification under Python 3.14.5 / pytest 8.3.5 passed: dedicat
 related JRA/NAR/neutral regressions 139, and the full suite 2597. Package-export, forbidden-dependency/source/AST,
 identity-ownership, unchanged-production, version, and `git diff --check` validation remain required before review
 publication.
+
+## Phase 4C-2d3b1i6d1d5d1 JRA Zero-History Past-Race-Absence Source PREPARE
+
+Prepared a docs-only contract for a narrow pure JRA zero-history absence normalizer. The proposed function accepts
+the validated target track and entry records plus one supplied accessU horse-history response, and delegates all
+accessU validation and parsing to the formal d1d5b3 complete-history discovery. It does not duplicate CP932,
+accessU identity, aggregate-count completeness, continuation, cutoff, or zero-history logic.
+
+The normalizer may return an absence record only when discovery proves both `proven_zero_history is True` and
+`events == ()`. This represents zero actual prior starts, not merely zero JRA starts; any JRA, non-JRA, unsupported,
+or other retained event fails closed. The output uses the established neutral `past_race_absence` shape with the
+target race and entry identities, no provider record ID, the exact three query values, and `result_count` zero.
+
+Its sole evidence reference is `past_race_absence_query`, tied to the supplied accessU URL, SHA-256 of the exact raw
+response bytes, no available-at or request identity, and the supplied observed-at unchanged. The existing
+`HistoricalInputSourceRecord` validator and `HistoricalInputSnapshotBuilder` already accept this exact absence
+shape and enforce the per-entry past-race XOR absence boundary, so no schema, snapshot, or migration change is
+required. Discovery remains responsible for the response observation cutoff; the builder remains responsible for
+the captured-at and information-cutoff causal chain.
+
+The recommended next phase is d1d5d2, limited to the new JRA absence-source module, its dedicated synthetic-CP932
+tests, and the two phase-report documents. No runtime code, tests, capture, archive, discovery, normalizer, or
+orchestration code changed in this prepare phase; no trusted live capture was performed.
