@@ -61,11 +61,19 @@ the canonical flat sequence. The normalizer calls the existing
 `validate_historical_input_source_record_set(...)` exactly once before construction;
 it does not create a second neutral validator.
 
-Expected supplied-response, structural, identity, source-record/evidence, and neutral
-conflict errors translate narrowly to `JRATargetRaceSourceValidationError`.
-Recognized normal-row absence/placeholder/non-runner shapes translate to
-`JRATargetRaceSourceUnsupportedError`. No broad `Exception`/`BaseException`
-catch is allowed.
+Malformed, ambiguous, contradictory, or structurally invalid supplied evidence
+translates narrowly to `JRATargetRaceSourceValidationError`: duplicate or missing
+accessD card container/header/required cell; duplicate horse anchor; malformed or
+wrong-family accessU anchor; duplicate horse number, horse identity, or rebuilt entry
+identity; header/race-identity contradiction; malformed canonical value; malformed
+HTML with no uniquely established official meaning; and neutral source/evidence
+conflict. No broad `Exception`/`BaseException` catch is allowed.
+
+`JRATargetRaceSourceUnsupportedError` is reserved for a structurally unique and
+intelligible direct official value/state that is outside the supported normal-runner
+envelope: for example, a unique odds node with blank, placeholder, non-positive, or
+non-numeric text, or another uniquely identified direct value shape explicitly outside
+the approved value grammar. Such an error does not prove a non-runner state.
 
 ## Input and Identity
 
@@ -162,12 +170,14 @@ proved only fully populated ordinary runner rows. No withdrawal, scratch, cancel
 exclusion, or non-runner display meaning was proven.
 
 Accordingly, a row is supported only if it satisfies the complete normal-runner shape
-above. A row with missing/duplicate required cells or anchor, blank/placeholder/non-
-numeric odds, or any other departure from that full shape is an unsupported row, not a
-silently omitted entry. The complete normalization raises
-`JRATargetRaceSourceUnsupportedError`; it returns neither track-only data nor a
-partial runner collection. This fail-closed policy supports normal cards without
-claiming an unproven non-runner classification.
+above. Possible non-normal/non-runner-like rows fail closed as unsupported only where
+the row structure is unambiguous and the unsupported direct value is identifiable;
+structural ambiguity remains validation failure. Thus a missing/duplicate required
+cell or anchor, duplicate horse number/identity, malformed anchor, or other structure
+without one official meaning raises `JRATargetRaceSourceValidationError`; a unique
+direct unsupported odds/value shape raises `JRATargetRaceSourceUnsupportedError`.
+Neither case is a proven non-runner, neither row is skipped, and the complete
+normalization returns neither track-only data nor a partial runner collection.
 
 Output order is ascending official horse number. The normalizer parses all rows,
 rejects duplicate identities before construction, builds all records in memory, runs

@@ -3886,3 +3886,22 @@ as unsupported for any row with a missing, duplicate, blank, placeholder, or oth
 non-normal required value. It never skips a row or returns a partial card. No schema
 change, real trusted capture, or fixture beyond minimal synthetic CP932 HTML is needed
 for the recommended implementation.
+
+### Error-boundary correction
+
+The target-source contract now separates malformed, ambiguous, contradictory, and
+structurally invalid evidence from unique direct unsupported values. Missing or
+duplicate containers, headers, cells, horse anchors, horse numbers, identities, or
+rebuilt entry identities; malformed/wrong-family accessU anchors; identity
+contradictions; malformed canonical values; structurally meaningless HTML; and neutral
+source/evidence conflicts are `JRATargetRaceSourceValidationError` failures. A
+structurally unique direct odds/value node that is blank, placeholder, non-positive,
+non-numeric, or otherwise explicitly outside the supported grammar is instead
+`JRATargetRaceSourceUnsupportedError`.
+
+Possible non-normal/non-runner-like rows fail closed as unsupported only where the row
+structure is unambiguous and the unsupported direct value is identifiable; structural
+ambiguity remains validation failure. This does not prove any non-runner semantics:
+`ACCESSD_NON_RUNNER_SEMANTICS_READY` remains `NO`. No row is skipped and no partial
+output is permitted; the supported normal-runner implementation remains ready without
+schema change or real trusted capture.
