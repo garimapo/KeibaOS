@@ -3790,3 +3790,49 @@ and final-odds-provider exceptions. A six-event JRA actual-start sequence confir
 newest-to-oldest event and imposes no source-history cap. Existing one-discovery, zero-provider, direct-lineage,
 mixed-history, deterministic-order, all-or-nothing, and purity coverage remains intact. Production, schema,
 migrations, package exports, live capture, archive, database, bridge, and formal branch remain unchanged.
+
+## Phase 4C-2d3b1i6d1d5f1 — JRA accessD Target Prerequisites Preparation
+
+Status: `READY_FOR_REVIEW`. This is a docs-only investigation on formal base
+`776cd9123635eef3759284ff997a369857f3769e`; design reference
+`89239924213a1b8d2b13183155dc70d21a9344c1` was read but was neither merged nor
+cherry-picked.
+
+The accessD identity contract is now frozen independently from display facts. The
+only endpoint is `https://www.jra.go.jp/JRADB/accessD.html`; its canonical CNAME is
+the `pw01dde` token with site, venue, year, meeting, day, race, real calendar date,
+and uppercase opaque tail. It maps directly to the existing formal JRA race identity
+`jra:race:<YYYY>:<VV>:<MM>:<DD>:<RR>`. A proposed future
+`parse_jra_race_card_url_identity()` must validate only the exact canonical HTTPS
+accessD URL/CNAME representation and reject noncanonical material; URL identity,
+not display text, owns this proof.
+
+The current capture/archive architecture cannot capture accessD without evolution:
+schema-v1 is limited to GET accessS/accessU and schema-v2 to POST final odds. The
+narrow future design is a separate GET schema-v3 target-race-card capture whose
+immutable raw CP932 supplied response reuses `JRASuppliedOfficialResponse`; its new
+v3 capture identity preserves all pre-existing v1/v2 IDs. A dedicated v003 capture,
+archive, and migration PREPARE is required before implementation.
+
+Read-only official material identifies accessD as the race-card family with displayed
+single-win odds, but did not provide a raw entry-row DOM proof for a same-row official
+accessU anchor. Accordingly `ACCESSD_TO_ACCESSU_IDENTITY_STATUS = NOT_PROVEN`, all
+target field/row selectors remain `NOT_PROVEN`, and no name/DOB/trainer/pedigree
+fallback is authorized. The next investigation must use actual read-only structural
+evidence to freeze row boundaries, canonical accessU href parsing, heading/cardinality
+requirements, target-odds selector, and withdrawal/cancellation/scratch handling.
+
+The existing neutral track contract requires exactly one `track` evidence reference
+and nonempty `track_condition`. No single causally eligible official response has
+been proven to supply all required target-track facts, so
+`SINGLE_RESPONSE_COMPLETE_TRACK_SOURCE = NOT_PROVEN`, complete target source remains
+blocked, and a two-response composition is forbidden. If a single response cannot be
+proven, a provider-neutral multi-response track-evidence/schema PREPARE is the
+required predecessor. Target odds remain prediction-time evidence and cannot be
+reconstructed or replaced with past-race final/settlement odds.
+
+The source boundary preserves exact observations and never backdates; the snapshot
+boundary alone evaluates `observed_at <= captured_at <= information_cutoff <=
+scheduled_start_at`. No implementation, test, live capture, archive mutation,
+schema/migration update, target normalizer, snapshot assembly, bridge, or Predictor
+work occurred.
