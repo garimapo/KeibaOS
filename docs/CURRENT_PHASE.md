@@ -71,7 +71,10 @@ no package export, related JRA/NAR/neutral regressions, and the full suite.
 
 ## Verification
 
-Dedicated collector tests pass. Related JRA discovery/absence/normalizer/locator/identity/capture/archive,
+The correction suite directly exercises the real accessS/accessO response binding helpers for wrong canonical URL,
+wrong JRA race identity, wrong response type, wrong final-odds locator, and both target-start cutoffs. It also pins
+the complete exception-translation matrix, unchanged provider-exception propagation, and a six-start sequence with
+no source-acquisition cap. Related JRA discovery/absence/normalizer/locator/identity/capture/archive,
 provider-neutral source/snapshot/builder, and NAR historical-source regressions pass. Full-suite and final static
 verification are recorded in `LATEST_CODEX_REPORT.md` before review publication.
 

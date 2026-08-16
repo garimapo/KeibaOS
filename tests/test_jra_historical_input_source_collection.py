@@ -13,6 +13,10 @@ from scripts.simulation.historical_input_evidence import HistoricalInputEvidence
 from scripts.simulation.historical_input_source_records import (
     HistoricalInputSourceConflictError,
     HistoricalInputSourceRecord,
+    HistoricalInputSourceValidationError,
+)
+from scripts.simulation.jra_final_win_odds_request_locator import (
+    JRAFinalWinOddsRequestLocatorExtractionValidationError,
 )
 from scripts.simulation.jra_historical_input_source_collection import (
     JRAHistoricalSourceCollection,
@@ -51,8 +55,11 @@ HORSE_ID = "jra:horse:3001234567"
 OBSERVED = datetime(2026, 6, 1, 10, tzinfo=UTC)
 SCHEDULED = datetime(2026, 7, 1, 12, tzinfo=UTC)
 PROFILE_URL = "https://www.jra.go.jp/JRADB/accessU.html?CNAME=pw01dud103001234567%2FAA"
-RESULT_URL = "https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde1005202601020320260601%2FAA"
+RESULT_URL = "https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde1006202601021220260105%2FAA"
+RESULT_ALT_URL = "https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde1006202601021220260105%2FAB"
+OTHER_RESULT_URL = "https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde1006202601021120260105%2FAA"
 LOCATOR = build_jra_final_win_odds_request_locator(cname="pw151ou1006202601021220260105Z/2E")
+OTHER_LOCATOR = build_jra_final_win_odds_request_locator(cname="pw151ou1006202601021220260105Z/2F")
 
 
 def _evidence(role: str, marker: str) -> tuple[HistoricalInputEvidenceReference, ...]:
@@ -110,12 +117,18 @@ def _past(marker: str, race_date: date = date(2026, 6, 1)) -> HistoricalInputSou
     return HistoricalInputSourceRecord("past_race", "JRA", "jra_official", RACE_ID, ENTRY_ID, f"jra:result:{marker}", values, evidence)
 
 
-def _result(observed: datetime = OBSERVED) -> JRASuppliedOfficialResponse:
-    return JRASuppliedOfficialResponse(RESULT_URL, b"x", "cp932", observed)
+def _result(
+    observed: datetime = OBSERVED,
+    response_url: str = RESULT_URL,
+) -> JRASuppliedOfficialResponse:
+    return JRASuppliedOfficialResponse(response_url, b"x", "cp932", observed)
 
 
-def _odds(observed: datetime = OBSERVED) -> JRAFinalWinOddsSuppliedOfficialResponse:
-    return JRAFinalWinOddsSuppliedOfficialResponse(LOCATOR, b"x", "cp932", observed)
+def _odds(
+    observed: datetime = OBSERVED,
+    request_locator=LOCATOR,
+) -> JRAFinalWinOddsSuppliedOfficialResponse:
+    return JRAFinalWinOddsSuppliedOfficialResponse(request_locator, b"x", "cp932", observed)
 
 
 class JRAHistoricalInputSourceCollectionTests(unittest.TestCase):
@@ -158,7 +171,7 @@ class JRAHistoricalInputSourceCollectionTests(unittest.TestCase):
         discovery = _discovery(events=(_reference(day=2), _reference(day=1)))
         result_provider = Mock(return_value=_result())
         odds_provider = Mock(return_value=_odds())
-        with patch("scripts.simulation.jra_historical_input_source_collection._discover", return_value=discovery), patch("scripts.simulation.jra_historical_input_source_collection._result_response", side_effect=lambda **kwargs: kwargs["response"]), patch("scripts.simulation.jra_historical_input_source_collection._extract_locator", return_value=LOCATOR), patch("scripts.simulation.jra_historical_input_source_collection._odds_response", side_effect=lambda **kwargs: kwargs["response"]), patch("scripts.simulation.jra_historical_input_source_collection._normalize_past_race", side_effect=(_past("new", date(2026, 6, 2)), _past("old", date(2026, 6, 1)))) as normalize, patch("scripts.simulation.jra_historical_input_source_collection._validate_historical_input_source_record_set", side_effect=lambda *, records: records) as validate:
+        with patch("scripts.simulation.jra_historical_input_source_collection._discover", return_value=discovery), patch("scripts.simulation.jra_historical_input_source_collection._extract_locator", return_value=LOCATOR), patch("scripts.simulation.jra_historical_input_source_collection._normalize_past_race", side_effect=(_past("new", date(2026, 6, 2)), _past("old", date(2026, 6, 1)))) as normalize, patch("scripts.simulation.jra_historical_input_source_collection._validate_historical_input_source_record_set", side_effect=lambda *, records: records) as validate:
             output = collect_jra_historical_input_source_records(target_track_record=_track(), target_entry_record=_entry(), horse_history_response=_horse_response(), race_result_response_provider=result_provider, final_win_odds_response_provider=odds_provider)
         self.assertEqual(tuple(record.provider_record_id for record in output.source_records), ("jra:result:new", "jra:result:old"))
         self.assertEqual(result_provider.call_count, 1)
@@ -177,6 +190,138 @@ class JRAHistoricalInputSourceCollectionTests(unittest.TestCase):
             with self.assertRaises(JRAHistoricalSourceCollectionValidationError):
                 collect_jra_historical_input_source_records(target_track_record=_track(), target_entry_record=_entry(), horse_history_response=_horse_response(), race_result_response_provider=lambda **_: _result(SCHEDULED + timedelta(seconds=1)), final_win_odds_response_provider=lambda **_: _odds())
 
+    def test_real_result_response_binding_rejects_wrong_url_race_and_type(self) -> None:
+        discovery = _discovery(events=(_reference(),))
+        common = dict(
+            target_track_record=_track(),
+            target_entry_record=_entry(),
+            horse_history_response=_horse_response(),
+            final_win_odds_response_provider=lambda **_: _odds(),
+        )
+        for response in (_result(response_url=RESULT_ALT_URL), _result(response_url=OTHER_RESULT_URL), _odds()):
+            with self.subTest(response_type=type(response).__name__, response_url=getattr(response, "response_url", None)), patch(
+                "scripts.simulation.jra_historical_input_source_collection._discover", return_value=discovery
+            ), patch(
+                "scripts.simulation.jra_historical_input_source_collection._extract_locator", return_value=LOCATOR
+            ), patch(
+                "scripts.simulation.jra_historical_input_source_collection._normalize_past_race", return_value=_past("unused")
+            ):
+                with self.assertRaises(JRAHistoricalSourceCollectionValidationError):
+                    collect_jra_historical_input_source_records(
+                        **common,
+                        race_result_response_provider=lambda **_: response,
+                    )
+
+    def test_real_final_odds_binding_rejects_wrong_type_locator_and_late_observation(self) -> None:
+        discovery = _discovery(events=(_reference(),))
+        common = dict(
+            target_track_record=_track(),
+            target_entry_record=_entry(),
+            horse_history_response=_horse_response(),
+            race_result_response_provider=lambda **_: _result(),
+        )
+        for response in (_odds(request_locator=OTHER_LOCATOR), _result(), _odds(SCHEDULED + timedelta(seconds=1))):
+            with self.subTest(response_type=type(response).__name__), patch(
+                "scripts.simulation.jra_historical_input_source_collection._discover", return_value=discovery
+            ), patch(
+                "scripts.simulation.jra_historical_input_source_collection._extract_locator", return_value=LOCATOR
+            ), patch(
+                "scripts.simulation.jra_historical_input_source_collection._normalize_past_race", return_value=_past("unused")
+            ):
+                with self.assertRaises(JRAHistoricalSourceCollectionValidationError):
+                    collect_jra_historical_input_source_records(
+                        **common,
+                        final_win_odds_response_provider=lambda **_: response,
+                    )
+
+    def test_exception_translation_for_locator_normalizer_projection_and_neutral_validation(self) -> None:
+        actual = _discovery(events=(_reference(),))
+        common = dict(
+            target_track_record=_track(),
+            target_entry_record=_entry(),
+            horse_history_response=_horse_response(),
+            race_result_response_provider=lambda **_: _result(),
+            final_win_odds_response_provider=lambda **_: _odds(),
+        )
+        with patch("scripts.simulation.jra_historical_input_source_collection._discover", return_value=actual), patch(
+            "scripts.simulation.jra_historical_input_source_collection._extract_locator",
+            side_effect=JRAFinalWinOddsRequestLocatorExtractionValidationError("bad"),
+        ):
+            with self.assertRaises(JRAHistoricalSourceCollectionValidationError):
+                collect_jra_historical_input_source_records(**common)
+        for error, expected in (
+            (JRAHistoricalPastRaceSourceValidationError("bad"), JRAHistoricalSourceCollectionValidationError),
+            (JRAHistoricalPastRaceSourceUnsupportedError("bad"), JRAHistoricalSourceCollectionUnsupportedError),
+        ):
+            with self.subTest(error=type(error).__name__), patch(
+                "scripts.simulation.jra_historical_input_source_collection._discover", return_value=actual
+            ), patch(
+                "scripts.simulation.jra_historical_input_source_collection._extract_locator", return_value=LOCATOR
+            ), patch(
+                "scripts.simulation.jra_historical_input_source_collection._normalize_past_race", side_effect=error
+            ):
+                with self.assertRaises(expected):
+                    collect_jra_historical_input_source_records(**common)
+        zero = _discovery()
+        with patch("scripts.simulation.jra_historical_input_source_collection._discover", return_value=zero), patch(
+            "scripts.simulation.jra_historical_input_source_collection._project_absence",
+            side_effect=JRAHistoricalPastRaceAbsenceSourceValidationError("bad"),
+        ):
+            with self.assertRaises(JRAHistoricalSourceCollectionValidationError):
+                collect_jra_historical_input_source_records(**common)
+        for error in (HistoricalInputSourceValidationError("bad"), HistoricalInputSourceConflictError("bad")):
+            with self.subTest(error=type(error).__name__), patch(
+                "scripts.simulation.jra_historical_input_source_collection._discover", return_value=actual
+            ), patch(
+                "scripts.simulation.jra_historical_input_source_collection._extract_locator", return_value=LOCATOR
+            ), patch(
+                "scripts.simulation.jra_historical_input_source_collection._normalize_past_race", return_value=_past("neutral")
+            ), patch(
+                "scripts.simulation.jra_historical_input_source_collection._validate_historical_input_source_record_set", side_effect=error
+            ):
+                with self.assertRaises(JRAHistoricalSourceCollectionValidationError):
+                    collect_jra_historical_input_source_records(**common)
+
+    def test_both_provider_exceptions_propagate_unchanged(self) -> None:
+        discovery = _discovery(events=(_reference(),))
+        result_error = RuntimeError("result provider")
+        with patch("scripts.simulation.jra_historical_input_source_collection._discover", return_value=discovery):
+            with self.assertRaisesRegex(RuntimeError, "result provider"):
+                collect_jra_historical_input_source_records(
+                    target_track_record=_track(), target_entry_record=_entry(), horse_history_response=_horse_response(),
+                    race_result_response_provider=lambda **_: (_ for _ in ()).throw(result_error),
+                    final_win_odds_response_provider=lambda **_: _odds(),
+                )
+        odds_error = RuntimeError("odds provider")
+        with patch("scripts.simulation.jra_historical_input_source_collection._discover", return_value=discovery), patch(
+            "scripts.simulation.jra_historical_input_source_collection._extract_locator", return_value=LOCATOR
+        ):
+            with self.assertRaisesRegex(RuntimeError, "odds provider"):
+                collect_jra_historical_input_source_records(
+                    target_track_record=_track(), target_entry_record=_entry(), horse_history_response=_horse_response(),
+                    race_result_response_provider=lambda **_: _result(),
+                    final_win_odds_response_provider=lambda **_: (_ for _ in ()).throw(odds_error),
+                )
+
+    def test_more_than_five_jra_actual_starts_are_not_truncated(self) -> None:
+        discovery = _discovery(events=tuple(_reference(day=index) for index in range(6, 0, -1)))
+        result_provider = Mock(return_value=_result())
+        odds_provider = Mock(return_value=_odds())
+        records = tuple(_past(f"race-{index}", date(2026, 6, index)) for index in range(6, 0, -1))
+        with patch("scripts.simulation.jra_historical_input_source_collection._discover", return_value=discovery), patch(
+            "scripts.simulation.jra_historical_input_source_collection._extract_locator", return_value=LOCATOR
+        ), patch(
+            "scripts.simulation.jra_historical_input_source_collection._normalize_past_race", side_effect=records
+        ):
+            output = collect_jra_historical_input_source_records(
+                target_track_record=_track(), target_entry_record=_entry(), horse_history_response=_horse_response(),
+                race_result_response_provider=result_provider, final_win_odds_response_provider=odds_provider,
+            )
+        self.assertEqual(len(output.source_records), 6)
+        self.assertEqual(tuple(record.provider_record_id for record in output.source_records), tuple(record.provider_record_id for record in records))
+        self.assertEqual(result_provider.call_count, 1)
+        self.assertEqual(odds_provider.call_count, 1)
+
     def test_exception_translation_and_provider_propagation(self) -> None:
         common = dict(target_track_record=_track(), target_entry_record=_entry(), horse_history_response=_horse_response(), race_result_response_provider=lambda **_: _result(), final_win_odds_response_provider=lambda **_: _odds())
         with patch("scripts.simulation.jra_historical_input_source_collection._discover", side_effect=JRAHistoricalPastRaceDiscoveryValidationError("bad")):
@@ -193,6 +338,6 @@ class JRAHistoricalInputSourceCollectionTests(unittest.TestCase):
 
     def test_no_partial_return_when_later_normalization_fails(self) -> None:
         discovery = _discovery(events=(_reference(day=2), _reference(day=1)))
-        with patch("scripts.simulation.jra_historical_input_source_collection._discover", return_value=discovery), patch("scripts.simulation.jra_historical_input_source_collection._result_response", side_effect=lambda **kwargs: kwargs["response"]), patch("scripts.simulation.jra_historical_input_source_collection._extract_locator", return_value=LOCATOR), patch("scripts.simulation.jra_historical_input_source_collection._odds_response", side_effect=lambda **kwargs: kwargs["response"]), patch("scripts.simulation.jra_historical_input_source_collection._normalize_past_race", side_effect=(_past("first"), JRAHistoricalPastRaceSourceValidationError("bad"))):
+        with patch("scripts.simulation.jra_historical_input_source_collection._discover", return_value=discovery), patch("scripts.simulation.jra_historical_input_source_collection._extract_locator", return_value=LOCATOR), patch("scripts.simulation.jra_historical_input_source_collection._normalize_past_race", side_effect=(_past("first"), JRAHistoricalPastRaceSourceValidationError("bad"))):
             with self.assertRaises(JRAHistoricalSourceCollectionValidationError):
                 collect_jra_historical_input_source_records(target_track_record=_track(), target_entry_record=_entry(), horse_history_response=_horse_response(), race_result_response_provider=lambda **_: _result(), final_win_odds_response_provider=lambda **_: _odds())

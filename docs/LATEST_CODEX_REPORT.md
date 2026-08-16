@@ -3775,3 +3775,18 @@ errors translate to the approved collection boundaries; provider-raised exceptio
 Fresh focused verification under Python 3.14.5 / pytest 8.3.5 passed: dedicated collector 7 and related JRA/NAR/
 neutral regression set 142. Full-suite and final static validation are recorded with the review commit. No real
 official response was captured, archived, or fetched; formal branch content remains unchanged.
+
+### Collection-boundary regression correction
+
+Strengthened the collector-only dedicated tests without changing production. The correction now exercises the real
+accessS and accessO binding/cutoff helpers for wrong canonical result URL, valid-but-wrong JRA result identity, wrong
+result and odds supplied-response types, a final-odds response for a different exact request locator, and a final-odds
+observation after the target scheduled start. These paths fail closed as collection validation errors rather than being
+tested through mocked binding helpers.
+
+The suite also pins locator extraction validation, past-race normalizer validation and unsupported translation,
+absence-projection validation, neutral validation and conflict translation, and unchanged propagation of both result-
+and final-odds-provider exceptions. A six-event JRA actual-start sequence confirms that the collector retains every
+newest-to-oldest event and imposes no source-history cap. Existing one-discovery, zero-provider, direct-lineage,
+mixed-history, deterministic-order, all-or-nothing, and purity coverage remains intact. Production, schema,
+migrations, package exports, live capture, archive, database, bridge, and formal branch remain unchanged.
