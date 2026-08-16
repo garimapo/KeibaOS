@@ -3790,3 +3790,40 @@ and final-odds-provider exceptions. A six-event JRA actual-start sequence confir
 newest-to-oldest event and imposes no source-history cap. Existing one-discovery, zero-provider, direct-lineage,
 mixed-history, deterministic-order, all-or-nothing, and purity coverage remains intact. Production, schema,
 migrations, package exports, live capture, archive, database, bridge, and formal branch remain unchanged.
+
+## Phase 4C-2d3b1i6d1d5f1b — JRA accessD Structural Prerequisites Preparation
+
+Status: `READY_FOR_REVIEW`. This docs-only phase began from formal base
+`776cd9123635eef3759284ff997a369857f3769e`. The f1 design commit
+`353c3259fab1ad17c97040deb9522fcd66431d1f` was used only as a reference; it was
+not merged or cherry-picked.
+
+At `2026-08-16T02:56:57.442112+00:00`, a single transient unauthenticated GET to
+the documented official accessD URL for 2026-07-26 Chukyo 9R returned HTTP 200,
+`Content-Type: text/html`, no content encoding, and strict-CP932-decodable bytes.
+The request established the GET/byte envelope only. The actual response was JRA's
+expired-publication representation (it explicitly says the card publication has
+ended), with no entry table, no accessU URL, and no race-field or odds layout. Its
+raw bytes were not persisted, staged, or copied into this repository; they are not
+trusted historical capture evidence.
+
+Accordingly the accessD CNAME/race identity and byte contract are now documented,
+and reuse of the immutable `JRASuppliedOfficialResponse` is compatible only after a
+future accessD canonical-URL allowlist extension. Current v1/v2 capture identities
+remain immutable; accessD needs a separately designed GET schema-v3 capture and
+migration family. The intended v3 identity has canonical URL, actual observation,
+page kind, raw response SHA-256, and schema version only.
+
+The phase is deliberately blocked on active-card structural evidence:
+`ACCESSD_TO_ACCESSU_IDENTITY_STATUS = NOT_PROVEN`, all target row/field selectors
+remain unproven, target odds are not source-ready, and no non-runner state is
+frozen. Neither horse-name-like facts nor a fallback selector is permitted.
+
+The one-track-evidence neutral contract still requires nonempty `track_condition`.
+No causally eligible single JRA response was proven to provide every required target
+track fact, so `SINGLE_RESPONSE_COMPLETE_TRACK_SOURCE = NOT_PROVEN` and
+`TRACK_SOURCE_SCHEMA_CHANGE_REQUIRED = YES`. The required next prerequisite is
+`4C-2d3b1i6d1d5f1a`, a provider-neutral multi-response track-evidence PREPARE;
+target-source implementation and snapshot assembly remain blocked. No production,
+test, archive, migration, schema, target normalizer, bridge, Predictor, or real
+trusted capture work occurred.
