@@ -21,6 +21,8 @@ from scripts.simulation.jra_official_response_capture import (
     JRAOfficialResponseCaptureError as _JRAOfficialResponseCaptureError,
     JRAOfficialResponseCaptureUnsupportedError as _JRAOfficialResponseCaptureUnsupportedError,
     JRAOfficialResponseCaptureValidationError as _JRAOfficialResponseCaptureValidationError,
+    JRAOfficialTargetRaceCardResponseCapture as _JRAOfficialTargetRaceCardResponseCapture,
+    _canonical_target_race_card_url as _canonical_target_race_card_url,
     canonicalize_jra_official_capture_url as _canonicalize_jra_official_capture_url,
 )
 from scripts.simulation.jra_official_identity import (
@@ -261,6 +263,38 @@ class JRAOfficialLiveResponseCaptureService:
             content_length=result.content_length,
         )
         self._archive.save_capture(capture=capture)
+        return capture
+
+    def capture_target_race_card_response(
+        self,
+        *,
+        response_url: str,
+    ) -> _JRAOfficialTargetRaceCardResponseCapture:
+        """Acquire, validate, archive, then return one exact schema-v3 accessD capture."""
+
+        canonical_source_url = _canonical_target_race_card_url(response_url, "response_url")
+        requested_at = self._clock_sample("requested_at")
+        result = self._transport.fetch(canonical_source_url=canonical_source_url)
+        if type(result) is not _JRAOfficialHTTPResponse or result.canonical_source_url != canonical_source_url:
+            raise JRAOfficialResponseCaptureTransportError("official JRA transport result is contradictory")
+        observed_at = self._clock_sample("observed_at")
+        stored_at = self._clock_sample("stored_at")
+        capture = _JRAOfficialTargetRaceCardResponseCapture(
+            canonical_source_url=canonical_source_url,
+            response_body=result.response_body,
+            charset="cp932",
+            requested_at=requested_at,
+            observed_at=observed_at,
+            stored_at=stored_at,
+            http_status=200,
+            content_type=result.content_type,
+            content_encoding=result.content_encoding,
+            http_date=result.http_date,
+            etag=result.etag,
+            last_modified=result.last_modified,
+            content_length=result.content_length,
+        )
+        self._archive.save_target_race_card_capture(capture=capture)
         return capture
 
     def capture_final_win_odds_response(

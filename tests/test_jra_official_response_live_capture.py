@@ -12,6 +12,7 @@ from scripts.simulation.jra_official_response_capture import (
     JRAOfficialPageKind,
     JRAOfficialResponseCaptureUnsupportedError,
     JRAOfficialResponseCaptureValidationError,
+    JRAOfficialTargetRaceCardResponseCapture,
 )
 from scripts.simulation.jra_official_identity import (
     JRAExternalRaceIdentity,
@@ -49,6 +50,7 @@ class _Archive:
         self.values = []
         self.legacy_calls = 0
         self.final_calls = 0
+        self.target_calls = 0
 
     def save_capture(self, *, capture) -> None:
         self.legacy_calls += 1
@@ -58,6 +60,12 @@ class _Archive:
 
     def save_final_win_odds_capture(self, *, capture) -> None:
         self.final_calls += 1
+        if self.error is not None:
+            raise self.error
+        self.values.append(capture)
+
+    def save_target_race_card_capture(self, *, capture) -> None:
+        self.target_calls += 1
         if self.error is not None:
             raise self.error
         self.values.append(capture)
@@ -142,11 +150,18 @@ class _Session:
         return self.outcome
 
 
-def _result(*, url: str = _S, body: bytes = _BODY, content_length: int | None = None, content_encoding: str | None = None):
+def _result(
+    *,
+    url: str = _S,
+    body: bytes = _BODY,
+    content_type: str = "text/html",
+    content_length: int | None = None,
+    content_encoding: str | None = None,
+):
     return module._JRAOfficialHTTPResponse(
         canonical_source_url=url,
         response_body=body,
-        content_type="text/html",
+        content_type=content_type,
         content_encoding=content_encoding,
         http_date=None,
         etag=None,
@@ -170,6 +185,10 @@ class JRAOfficialLiveResponseCaptureTests(unittest.TestCase):
             },
         )
         self.assertEqual(tuple(inspect.signature(JRAOfficialLiveResponseCaptureService.capture_response).parameters), ("self", "page_kind", "response_url"))
+        self.assertEqual(
+            tuple(inspect.signature(JRAOfficialLiveResponseCaptureService.capture_target_race_card_response).parameters),
+            ("self", "response_url"),
+        )
         self.assertEqual(tuple(inspect.signature(JRAOfficialLiveResponseCaptureService.capture_final_win_odds_response).parameters), ("self", "request_locator"))
         source = Path(module.__file__).read_text(encoding="utf-8")
         self.assertNotIn("response.text", source)
@@ -202,6 +221,112 @@ class JRAOfficialLiveResponseCaptureTests(unittest.TestCase):
             _TIME + timedelta(microseconds=1),
             _TIME + timedelta(microseconds=2),
         ))
+
+    def test_target_race_card_service_archives_the_exact_v3_capture_before_return(self):
+        archive = _Archive()
+        transport = _Transport(_result(url=_D))
+        clock = _Clock(_TIME, _TIME + timedelta(microseconds=1), _TIME + timedelta(microseconds=2))
+        value = _service(transport=transport, archive=archive, clock=clock).capture_target_race_card_response(
+            response_url=_D
+        )
+        self.assertIsInstance(value, JRAOfficialTargetRaceCardResponseCapture)
+        self.assertEqual(transport.urls, [_D])
+        self.assertEqual(transport.locators, [])
+        self.assertEqual(clock.calls, 3)
+        self.assertEqual(archive.legacy_calls, 0)
+        self.assertEqual(archive.final_calls, 0)
+        self.assertEqual(archive.target_calls, 1)
+        self.assertEqual(archive.values, [value])
+        self.assertEqual(value.canonical_source_url, _D)
+        self.assertEqual(value.response_body, _BODY)
+        self.assertEqual(value.schema_version, 3)
+        self.assertEqual(value.page_kind, JRAOfficialPageKind.TARGET_RACE_CARD)
+        self.assertEqual(value.request_method, "GET")
+        self.assertEqual((value.requested_at, value.observed_at, value.stored_at), (
+            _TIME,
+            _TIME + timedelta(microseconds=1),
+            _TIME + timedelta(microseconds=2),
+        ))
+
+    def test_target_race_card_input_rejection_happens_before_clock_transport_or_archive(self):
+        archive = _Archive()
+        transport = _Transport(_result(url=_D))
+        clock = _Clock(_TIME, _TIME, _TIME)
+        service = _service(transport=transport, archive=archive, clock=clock)
+        for value in (object(), _D.replace("%2F", "/"), _S, _U, _O, "https://bad.example/"):
+            with self.subTest(value=value), self.assertRaises(JRAOfficialResponseCaptureValidationError):
+                service.capture_target_race_card_response(response_url=value)
+        self.assertEqual(clock.calls, 0)
+        self.assertEqual(transport.urls, [])
+        self.assertEqual(archive.legacy_calls, 0)
+        self.assertEqual(archive.final_calls, 0)
+        self.assertEqual(archive.target_calls, 0)
+        self.assertEqual(archive.values, [])
+
+    def test_target_race_card_transport_clock_domain_and_archive_failures_never_return(self):
+        archive = _Archive()
+        for result in (object(), _result(url=_S)):
+            with self.subTest(result=result), self.assertRaises(JRAOfficialResponseCaptureTransportError):
+                _service(
+                    transport=_Transport(result),
+                    archive=archive,
+                    clock=_Clock(_TIME, _TIME, _TIME),
+                ).capture_target_race_card_response(response_url=_D)
+        self.assertEqual(archive.target_calls, 0)
+        self.assertEqual(archive.values, [])
+
+        requested_clock = _Clock(datetime(2026, 1, 1))
+        with self.assertRaises(JRAOfficialResponseCaptureValidationError):
+            _service(
+                transport=_Transport(_result(url=_D)),
+                archive=archive,
+                clock=requested_clock,
+            ).capture_target_race_card_response(response_url=_D)
+        self.assertEqual(requested_clock.calls, 1)
+        self.assertEqual(archive.target_calls, 0)
+
+        for clock in (
+            _Clock(_TIME, datetime(2026, 1, 1)),
+            _Clock(_TIME, _TIME, datetime(2026, 1, 1)),
+            _Clock(_TIME + timedelta(microseconds=1), _TIME, _TIME),
+        ):
+            with self.subTest(clock=clock.values), self.assertRaises(JRAOfficialResponseCaptureValidationError):
+                _service(
+                    transport=_Transport(_result(url=_D)),
+                    archive=archive,
+                    clock=clock,
+                ).capture_target_race_card_response(response_url=_D)
+        self.assertEqual(archive.target_calls, 0)
+
+        for result, error in (
+            (_result(url=_D, body=b"", content_length=0), JRAOfficialResponseCaptureValidationError),
+            (_result(url=_D, body=b"\x81", content_length=1), JRAOfficialResponseCaptureUnsupportedError),
+            (_result(url=_D, content_type="application/json"), JRAOfficialResponseCaptureUnsupportedError),
+            (_result(url=_D, content_encoding="gzip"), JRAOfficialResponseCaptureUnsupportedError),
+            (_result(url=_D, content_length=len(_BODY) + 1), JRAOfficialResponseCaptureValidationError),
+        ):
+            with self.subTest(result=result, error=error), self.assertRaises(error):
+                _service(
+                    transport=_Transport(result),
+                    archive=archive,
+                    clock=_Clock(_TIME, _TIME, _TIME),
+                ).capture_target_race_card_response(response_url=_D)
+        self.assertEqual(archive.target_calls, 0)
+        self.assertEqual(archive.values, [])
+
+        error = RuntimeError("archive unavailable")
+        failing_archive = _Archive(error=error)
+        with self.assertRaises(RuntimeError) as raised:
+            _service(
+                transport=_Transport(_result(url=_D)),
+                archive=failing_archive,
+                clock=_Clock(_TIME, _TIME, _TIME),
+            ).capture_target_race_card_response(response_url=_D)
+        self.assertIs(raised.exception, error)
+        self.assertEqual(failing_archive.legacy_calls, 0)
+        self.assertEqual(failing_archive.final_calls, 0)
+        self.assertEqual(failing_archive.target_calls, 1)
+        self.assertEqual(failing_archive.values, [])
 
     def test_final_win_odds_validation_clock_domain_and_archive_failures_never_return(self):
         archive = _Archive()
