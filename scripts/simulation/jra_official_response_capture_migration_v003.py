@@ -33,6 +33,39 @@ _EVIDENCE_INDEX = "ux_jra_official_response_captures_evidence"
 _REQUEST_INDEX = "ux_jra_official_response_captures_request_evidence"
 
 
+def _normalized_ddl(value: object) -> str:
+    if type(value) is not str:
+        return ""
+    return " ".join(value.split()).upper()
+
+
+_EXPECTED_V002_DDL = {
+    "jra_official_response_bodies": _normalized_ddl("""CREATE TABLE jra_official_response_bodies (
+        response_sha256 TEXT PRIMARY KEY CHECK(typeof(response_sha256)='text' AND length(response_sha256)=64 AND response_sha256 NOT GLOB '*[^0-9a-f]*'),
+        response_body BLOB NOT NULL CHECK(typeof(response_body)='blob'),
+        byte_length INTEGER NOT NULL CHECK(typeof(byte_length)='integer' AND byte_length>0 AND byte_length=length(response_body))
+    ) WITHOUT ROWID"""),
+    _TABLE: _normalized_ddl("""CREATE TABLE jra_official_response_captures (
+        capture_id TEXT PRIMARY KEY,
+        schema_version INTEGER NOT NULL CHECK(typeof(schema_version)='integer' AND schema_version IN (1,2)),
+        page_kind TEXT NOT NULL CHECK(page_kind IN ('race_result','horse_profile_history','final_win_odds')),
+        canonical_source_url TEXT NOT NULL CHECK(typeof(canonical_source_url)='text' AND canonical_source_url<>''),
+        response_sha256 TEXT NOT NULL REFERENCES jra_official_response_bodies(response_sha256) ON UPDATE RESTRICT ON DELETE RESTRICT,
+        charset TEXT NOT NULL CHECK(charset='cp932'), requested_at_utc TEXT NOT NULL, observed_at_utc TEXT NOT NULL, stored_at_utc TEXT NOT NULL,
+        http_status INTEGER NOT NULL CHECK(typeof(http_status)='integer' AND http_status=200), content_type TEXT NOT NULL,
+        content_encoding TEXT NULL CHECK(content_encoding IS NULL OR content_encoding='identity'), http_date TEXT NULL, etag TEXT NULL,
+        last_modified TEXT NULL, content_length INTEGER NULL CHECK(content_length IS NULL OR (typeof(content_length)='integer' AND content_length>=0)),
+        request_method TEXT NOT NULL CHECK(request_method IN ('GET','POST')),
+        request_identity_sha256 TEXT NULL CHECK(request_identity_sha256 IS NULL OR (typeof(request_identity_sha256)='text' AND length(request_identity_sha256)=64 AND request_identity_sha256 NOT GLOB '*[^0-9a-f]*')),
+        request_cname TEXT NULL CHECK(request_cname IS NULL OR (typeof(request_cname)='text' AND length(request_cname)>0)),
+        CHECK(requested_at_utc<=observed_at_utc AND observed_at_utc<=stored_at_utc),
+        CHECK((schema_version=1 AND page_kind IN ('race_result','horse_profile_history') AND request_method='GET' AND request_identity_sha256 IS NULL AND request_cname IS NULL) OR (schema_version=2 AND page_kind='final_win_odds' AND request_method='POST' AND request_identity_sha256 IS NOT NULL AND request_cname IS NOT NULL))
+    ) WITHOUT ROWID"""),
+    _EVIDENCE_INDEX: _normalized_ddl("CREATE UNIQUE INDEX ux_jra_official_response_captures_evidence ON jra_official_response_captures(canonical_source_url,response_sha256,observed_at_utc) WHERE request_identity_sha256 IS NULL"),
+    _REQUEST_INDEX: _normalized_ddl("CREATE UNIQUE INDEX ux_jra_official_response_captures_request_evidence ON jra_official_response_captures(canonical_source_url,request_identity_sha256,response_sha256,observed_at_utc) WHERE request_identity_sha256 IS NOT NULL"),
+}
+
+
 def _time(value: object) -> _datetime:
     if type(value) is not str or len(value) != 32:
         raise RuntimeError("v002 stored timestamp is invalid")
@@ -105,6 +138,10 @@ def _probe_constraints(connection: _sqlite3.Connection) -> None:
 def _validate_v002(connection: _sqlite3.Connection) -> None:
     """Fail closed before mutation; v003 never adopts an arbitrary v002 lookalike."""
 
+    for name, expected in _EXPECTED_V002_DDL.items():
+        row = connection.execute("SELECT sql FROM sqlite_master WHERE name=?", (name,)).fetchone()
+        if len(row or ()) != 1 or _normalized_ddl(row[0]) != expected:
+            raise RuntimeError("v002 DDL differs from the approved registered schema")
     if _columns(connection, "jra_official_response_bodies") != _BODY_COLUMNS:
         raise RuntimeError("v002 response-body table columns are invalid")
     _without_rowid(connection, "jra_official_response_bodies", 3)

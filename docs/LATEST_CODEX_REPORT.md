@@ -3814,6 +3814,17 @@ confirm rollback preserves the registered v002 tables and indexes with no tempor
 table or v003 registry entry. Verification passed: migration 10, dedicated 42,
 related 99, full suite 2626.
 
+### Exact v002 DDL pinning correction
+
+The v003 validator now normalizes and exactly compares the two approved v002 table
+DDLs and both partial-index DDLs before any mutation. This independently detects
+removed, weakened, or extra request identity/cname/method CHECKs even when family
+constraints would mask a SAVEPOINT probe. PRAGMA checks, probes, body verification,
+and v1/v2 reconstruction remain defense-in-depth. Regression variants cover removed
+and weakened request identity/cname checks, removed request-method checks, and an
+otherwise harmless extra CHECK, each pinned to rollback without a v003 registry row.
+Verification remains migration 10, dedicated 42, related 99, full 2626.
+
 The suite also pins locator extraction validation, past-race normalizer validation and unsupported translation,
 absence-projection validation, neutral validation and conflict translation, and unchanged propagation of both result-
 and final-odds-provider exceptions. A six-event JRA actual-start sequence confirms that the collector retains every

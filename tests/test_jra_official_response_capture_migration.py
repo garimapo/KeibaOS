@@ -216,6 +216,12 @@ class JRAMigrationTests(unittest.TestCase):
             ("extra_capture", None, (",\n        CHECK(requested_at_utc<=observed_at_utc AND observed_at_utc<=stored_at_utc)", ", extra TEXT,\n        CHECK(requested_at_utc<=observed_at_utc AND observed_at_utc<=stored_at_utc)"), None, None),
             ("extra_body", (",\n        byte_length INTEGER", ", extra TEXT,\n        byte_length INTEGER"), None, None, None),
             ("body_check", (" AND byte_length=length(response_body)", ""), None, None, None),
+            ("removed_request_identity_check", None, ("request_identity_sha256 TEXT NULL CHECK(request_identity_sha256 IS NULL OR (typeof(request_identity_sha256)='text' AND length(request_identity_sha256)=64 AND request_identity_sha256 NOT GLOB '*[^0-9a-f]*')),", "request_identity_sha256 TEXT NULL,"), None, None),
+            ("weakened_request_identity_check", None, ("length(request_identity_sha256)=64", "length(request_identity_sha256)>=0"), None, None),
+            ("removed_request_cname_check", None, ("request_cname TEXT NULL CHECK(request_cname IS NULL OR (typeof(request_cname)='text' AND length(request_cname)>0)),", "request_cname TEXT NULL,"), None, None),
+            ("weakened_request_cname_check", None, ("length(request_cname)>0", "length(request_cname)>=0"), None, None),
+            ("removed_request_method_check", None, ("request_method TEXT NOT NULL CHECK(request_method IN ('GET','POST')),", "request_method TEXT NOT NULL,"), None, None),
+            ("extra_harmless_check", None, (",\n        CHECK(requested_at_utc<=observed_at_utc AND observed_at_utc<=stored_at_utc),", ",\n        CHECK(requested_at_utc<=observed_at_utc AND observed_at_utc<=stored_at_utc),\n        CHECK(1),"), None, None),
         )
         for name, body_change, capture_change, evidence_sql, request_sql in variants:
             with self.subTest(name=name):
