@@ -2,84 +2,129 @@
 
 ## Status
 
-READY_FOR_REVIEW
+DRAFT_FOR_REVIEW
 
-## Phase
+## Phase and Base
 
-`4C-2d3b1i6d1d5e1` — JRA historical input-source collection.
+Phase `4C-2d3b1i6d1d5f` — JRA target historical source boundary PREPARE.
 
-Formal base: `c8008cdc15903b305219066c3b10b35e1255767f`.
+Formal base: `776cd9123635eef3759284ff997a369857f3769e`.
 
-Approved design: `7724e7a77017896eb6cb164672c63ec2af8b21b1`.
+Review branch: `review/4c-2d3b1i6d1d5f-jra-target-source-prepare`.
 
-Review branch: `review/4c-2d3b1i6d1d5e1-jra-history-collection`.
+## Formal Findings
 
-## Allowed Files
+The existing neutral source schema already supports exactly the required target kinds: one `track`; and, per exact
+external entry, one `entry`, `jockey`, and `odds_win`. The snapshot builder additionally requires exactly one
+`past_race` or `past_race_absence` per entry. The completed JRA historical collector supplies only that downstream
+past-evidence side and is unchanged.
+
+Read-only official JRA inspection identifies `JRADB/accessD.html` as the race card / 出馬表 family. Its visible race
+header provides candidate track facts, while its displayed rows provide candidate horse number, jockey, and displayed
+single-win odds. JRA describes the displayed single-win odds as nearly real time, so it is neither final odds nor a
+historical fact that can be reconstructed later. This is structural investigation only; no official response was
+captured, persisted, or copied.
+
+Formal JRA code currently recognizes only accessS result, accessU horse-history, and accessO final-odds identities.
+There is no accessD lexical identity parser, `JRAOfficialPageKind` member, canonical URL rule, supplied-response type,
+archive schema family, live-capture authorization, or raw accessD row contract. Crucially, no formal evidence proves a
+row-local accessD navigation to an exact accessU `jra:horse:<10 ASCII digits>` identity. Horse name, DOB, trainer,
+pedigree, or display-text comparison must never substitute for this proof.
+
+## Target Source Contract Status
 
 ```text
-scripts/simulation/jra_historical_input_source_collection.py
-tests/test_jra_historical_input_source_collection.py
-docs/CURRENT_PHASE.md
-docs/LATEST_CODEX_REPORT.md
+TARGET_SOURCE_PUBLIC_API = BLOCKED
+TARGET_SOURCE_RESULT_DOMAIN = BLOCKED
+ACCESSD_TO_ACCESSU_IDENTITY_STATUS = NOT_PROVEN
+SNAPSHOT_ASSEMBLY_READINESS = NOT_READY
 ```
 
-## Public Contract
+No target-source public API or domain is approved yet. Returning a complete target-race tuple would require an exact
+stable horse identity for every entry; returning a narrower target domain would still need that same identity before
+the formal per-entry historical collector can be called. Creating either API before the accessD proof would create an
+unapproved identity boundary.
 
-The new module exports only two callable provider Protocols, frozen/slotted
-`JRAHistoricalSourceCollection`, its validation/unsupported error hierarchy, and:
+## Frozen Candidate Evidence Roles (Not Yet an Implementation Contract)
 
-```python
-collect_jra_historical_input_source_records(
-    *,
-    target_track_record: HistoricalInputSourceRecord,
-    target_entry_record: HistoricalInputSourceRecord,
-    horse_history_response: JRASuppliedOfficialResponse,
-    race_result_response_provider: JRAHistoricalRaceResultResponseProvider,
-    final_win_odds_response_provider: JRAHistoricalFinalWinOddsResponseProvider,
-) -> JRAHistoricalSourceCollection
+If the predecessor proves one exact accessD supplied response family and its row-local accessU anchors, one response
+may support four source roles without cross-page inference:
+
+| Target kind | Candidate official source | Required future proof |
+| --- | --- | --- |
+| `track` | accessD race header | canonical accessD race identity; exact race date, scheduled start, place, distance, surface/condition, class/name/weather selectors |
+| `entry` | accessD entry row | canonical positive horse number; exact row-local accessU anchor yielding the stable JRA horse identity; exact entry ID construction |
+| `jockey` | same accessD entry row | exact direct jockey selector and row binding |
+| `odds_win` | same accessD entry row | direct positive finite single-win odds selector, exact same horse number, and an observation no later than the prediction cutoff |
+
+The response may be reused only with separate neutral evidence references whose roles are respectively `track`,
+`entry`, `jockey`, and `odds_win`; each uses the exact raw-body SHA and actual observation. This is conditional design,
+not permission to parse the current page loosely.
+
+## Target Odds Temporal Policy
+
+```text
+TARGET_PREDICTION_ODDS != HISTORICAL_PAST_RACE_FINAL_ODDS
 ```
 
-The result carries exact target race/entry IDs plus ordered source records. Its direct constructor validates canonical
-JRA race identity, exact race-scoped entry identity, canonical positive entry suffix, and reconstruction through
-`build_jra_external_entry_id`; every contained record must match those target IDs.
+`TARGET_PREDICTION_ODDS` is a directly displayed target-race single-win value from evidence actually observed no later
+than `information_cutoff`. It is not accessO final odds for a historical past race. It must never use final odds after
+the prediction cutoff, later page capture backdated to the target, a latest/nearest reconstruction, settlement data,
+or a guessed publication time. `available_at` is `None` unless an exact official availability time is separately
+established. The required causality chain remains:
 
-## Required Behavior
+```text
+available_at (when proven) <= observed_at <= captured_at <= information_cutoff <= scheduled_start_at
+```
 
-Discovery is called exactly once and supplies the sole complete event sequence. Before a provider is called, any
-`NON_JRA_ACTUAL_START` or `UNSUPPORTED_ACTUAL_START` aborts the whole collection. `PROVEN_NON_START` emits no record.
-Zero actual starts use only public absence projection, with zero result/odds provider calls.
+The snapshot builder remains the final owner of captured-at/cutoff eligibility; a target normalizer preserves actual
+response timestamps and creates none.
 
-Every JRA actual start follows: exact discovery reference → injected accessS response bound to exact URL/race → formal
-locator extraction → injected accessO response bound to that exact locator → existing JRA past-race normalizer. Output
-order remains discovery newest-to-oldest; there is no history cap. Result reuse is per call by JRA race identity;
-final-odds reuse is per call by request-identity SHA-256.
+## Source Completeness and Order (Conditional)
 
-AccessU retains formal causality. Every injected accessS/accessO observation must be no later than target scheduled
-start, with no timestamp change. The return is all-or-nothing. Existing
-`validate_historical_input_source_record_set(...)` is called exactly once before result construction.
+After the prerequisite, a target normalizer must return one complete target-race tuple, not a partial target domain:
 
-Exception translation is exact: discovery and normalizer validation errors map to collection validation; their
-unsupported errors map to collection unsupported; locator/projection/neutral-validation errors map to collection
-validation; provider-raised exceptions propagate unchanged. No broad exception catch.
+```text
+(track, entry[horse_no ascending], jockey[matching entry], odds_win[matching entry])
+```
 
-## Required Tests
+It must reject missing, duplicate, mismatched, withdrawn/unsupported, unlinked, or temporally ineligible rows. It
+must call existing `validate_historical_input_source_record_set(...)` exactly once after complete tuple construction;
+it must not duplicate neutral validation. Per-entry historical collection remains a later assembly/orchestration
+concern; snapshot construction is outside the target source boundary.
 
-Cover public signatures/domain; direct constructor lineage failures; one discovery call; zero/transfer projection and
-zero provider calls; ordering, binding, locator derivation, dedup, both causality checks, exact error translation,
-provider propagation, pre-provider mixed rejection, no partial return, one neutral validation, no history cap, purity,
-no package export, related JRA/NAR/neutral regressions, and the full suite.
+## Implementation Blockers and Recommended Predecessor
 
-## Verification
+```text
+IMPLEMENTATION_BLOCKERS =
+  1. exact accessD canonical URL/race-identity grammar is absent;
+  2. trusted accessD capture/supplied-response contract is absent;
+  3. row-local accessD -> accessU stable-horse identity is NOT_PROVEN;
+  4. exact target row/header/odds selectors and fail-closed unsupported states are not frozen.
 
-The correction suite directly exercises the real accessS/accessO response binding helpers for wrong canonical URL,
-wrong JRA race identity, wrong response type, wrong final-odds locator, and both target-start cutoffs. It also pins
-the complete exception-translation matrix, unchanged provider-exception propagation, and a six-start sequence with
-no source-acquisition cap. Related JRA discovery/absence/normalizer/locator/identity/capture/archive,
-provider-neutral source/snapshot/builder, and NAR historical-source regressions pass. Full-suite and final static
-verification are recorded in `LATEST_CODEX_REPORT.md` before review publication.
+RECOMMENDED_NEXT_PHASE =
+  4C-2d3b1i6d1d5f1 — JRA accessD target-entry identity and capture PREPARE
 
-## Boundaries and Stop Condition
+NEXT_PHASE_ALLOWED_FILES =
+  docs/CURRENT_PHASE.md
+  docs/LATEST_CODEX_REPORT.md
+```
 
-No HTTP/live capture, archive, repository, database, migrations, schemas, snapshot construction, Predictor, NAR↔JRA
-bridge, fallback, real capture, or package-root export. On success, commit exactly one review commit:
-`feat: collect JRA historical input source records`; push only the review branch and stop for independent review.
+The f1 PREPARE must inspect read-only official accessD structure and decide the exact accessD CNAME grammar, capture
+family, target race identity cross-check, raw row-local accessU-link selector and parsing proof, direct target field
+selectors, odds selector/time semantics, and cancellation/withdrawal handling before any implementation phase.
+
+Required future tests, after that contract is approved, include exact public API and no package export; URL/identity
+and strict CP932 rejection; one complete target card; all target records and evidence roles; horse-no/entry-ID
+coherence; direct accessD-to-accessU stable-horse proof; no name/DOB/trainer fallback; missing/duplicate/contradictory
+rows; direct odds parsing and cutoff rejection; raw-SHA/timestamp/source-ID behavior; final neutral validation once;
+snapshot input completeness; and no schema, migration, capture-family cross-contamination, bridge, or live network.
+
+## Compatibility and Stop Condition
+
+Source schema remains 4; snapshot schema remains 4; global migrations remain through 14; JRA capture migrations
+remain `(1, 2)`. JRA historical discovery, absence projection, final-odds locator/capture, normalizer, collector, NAR,
+provider-neutral source/snapshot, and package-root exports remain unchanged. `NAR_LINEAGE_TO_JRA_HORSE_ID_LINK` remains
+`NOT_PROVEN`; no bridge, Predictor, live capture, archive, database, or schema work is approved.
+
+Commit and push only this documentation PREPARE review. Stop for independent architecture review.

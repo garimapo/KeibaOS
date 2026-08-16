@@ -3790,3 +3790,30 @@ and final-odds-provider exceptions. A six-event JRA actual-start sequence confir
 newest-to-oldest event and imposes no source-history cap. Existing one-discovery, zero-provider, direct-lineage,
 mixed-history, deterministic-order, all-or-nothing, and purity coverage remains intact. Production, schema,
 migrations, package exports, live capture, archive, database, bridge, and formal branch remain unchanged.
+
+## Phase 4C-2d3b1i6d1d5f JRA Target Historical Source Boundary PREPARE
+
+Audited the current formal source/snapshot/JRA contracts and conducted read-only official JRA page-identity research;
+no production, test, capture, archive, database, migration, schema, or network-capture mutation occurred. The neutral
+schema and snapshot builder are already capable of a complete target source set: exactly one `track`, then exactly one
+`entry`, `jockey`, and `odds_win` per target entry, plus the already-formal per-entry `past_race` XOR
+`past_race_absence` evidence. The completed JRA historical collector remains downstream and unchanged.
+
+Official JRA `JRADB/accessD.html` is the target race card / 出馬表 family. Its visible structure is the candidate
+single response for race facts and rows containing horse number, jockey, and displayed single-win odds. JRA documents
+the displayed single-win odds as nearly real time, so target prediction odds must be captured at or before the actual
+information cutoff; final post-race odds, later capture, nearest/latest reconstruction, and settlement data are
+forbidden substitutes.
+
+The formal repository does not yet prove the required boundary. It recognizes only accessS, accessU, and accessO;
+there is no accessD URL grammar, race parser, capture page kind, supplied-response model, canonicalization rule, or
+row contract. Most importantly, an accessD target row has no formal row-local link proof to the stable accessU
+`jra:horse:<10 digits>` identity. Names, DOB, trainer, pedigree, and display text are forbidden bridge evidence.
+Accordingly `ACCESSD_TO_ACCESSU_IDENTITY_STATUS = NOT_PROVEN`, no target-source public API/domain is approved, and
+snapshot assembly is `NOT_READY`.
+
+The narrow recommended predecessor is `4C-2d3b1i6d1d5f1 — JRA accessD target-entry identity and capture PREPARE`,
+documentation-only. It must freeze the exact accessD grammar/capture family, target identity, row-local accessU anchor,
+direct selectors, single-win odds semantics, cutoff policy, and unsupported states before target-source implementation
+can be safely designed. Formal branch remains `776cd9123635eef3759284ff997a369857f3769e`; no real official response
+was captured or persisted.
