@@ -40,6 +40,10 @@ ACCESSD_TO_ACCESSU_IDENTITY_STATUS = NOT_PROVEN
 ACCESSD_STATIC_TRACK_FACTS = CONDITIONAL
 TARGET_TRACK_CONDITION_SOURCE = NOT_PROVEN
 COMPLETE_TARGET_TRACK_SOURCE = BLOCKED
+TRACK_EVIDENCE_CARDINALITY = EXACTLY_ONE
+MULTI_RESPONSE_TRACK_EVIDENCE_SUPPORTED = NO
+SINGLE_RESPONSE_COMPLETE_TRACK_SOURCE = NOT_PROVEN
+TRACK_SOURCE_SCHEMA_CHANGE_REQUIRED = UNDECIDED
 SNAPSHOT_ASSEMBLY_READINESS = NOT_READY
 ```
 
@@ -55,14 +59,15 @@ may support four source roles without cross-page inference:
 
 | Target kind | Candidate official source | Required future proof |
 | --- | --- | --- |
-| `track` | accessD race header plus separate condition evidence | accessD may provide only date/start/place/distance/surface/name/class; a causally eligible official track-condition source and exact race/time binding remain required; weather is optional and must not be invented |
+| `track` | one causally eligible official response, source not yet proven | exact race date/start/place/distance/surface/condition/name/class, and optional weather, must all come from the same response; no response combination is approved |
 | `entry` | accessD entry row | canonical positive horse number; exact row-local accessU anchor yielding the stable JRA horse identity; exact entry ID construction |
 | `jockey` | same accessD entry row | exact direct jockey selector and row binding |
 | `odds_win` | same accessD entry row | direct positive finite single-win odds selector, exact same horse number, and an observation no later than the prediction cutoff |
 
-The response may be reused only with separate neutral evidence references whose roles are respectively `track`,
-`entry`, `jockey`, and `odds_win`; each uses the exact raw-body SHA and actual observation. This is conditional design,
-not permission to parse the current page loosely.
+The current neutral `track` contract permits exactly one evidence reference. Therefore a complete target track record
+cannot combine accessD static facts with another condition response under the current schema. One response may be
+reused only for separate target record kinds (`track`, `entry`, `jockey`, `odds_win`) with each record's exact one
+evidence reference. This is conditional design, not permission to parse the current page loosely.
 
 ## Target Odds Temporal Policy
 
@@ -115,7 +120,7 @@ IMPLEMENTATION_BLOCKERS =
   1. exact accessD canonical URL/race-identity grammar is absent;
   2. trusted accessD capture/supplied-response contract is absent;
   3. row-local accessD -> accessU stable-horse identity is NOT_PROVEN;
-  4. causally available official target track_condition evidence and its exact race/time binding are NOT_PROVEN;
+  4. one causally available official response containing every required target track field is NOT_PROVEN;
   5. exact target row/header/odds selectors and fail-closed unsupported states are not frozen.
 
 RECOMMENDED_NEXT_PHASE =
@@ -126,11 +131,13 @@ NEXT_PHASE_ALLOWED_FILES =
   docs/LATEST_CODEX_REPORT.md
 ```
 
-The f1 PREPARE must inspect read-only official accessD structure and decide the exact accessD CNAME grammar, capture
-family, target race identity cross-check, raw row-local accessU-link selector and parsing proof, direct target field
-selectors, odds selector/time semantics, and cancellation/withdrawal handling. It must also identify the causally
-available official target `track_condition` source and freeze its exact race/time binding. Both prerequisites are
-required before any implementation phase.
+The f1 PREPARE must first decide whether one causally eligible official JRA response can provide every neutral target
+track field: `target_race_date`, `scheduled_start_at`, `place`, `distance_m`, `track`, `track_condition`, `race_name`,
+`race_class`, and optional `weather`. If yes, it freezes that single-response source and leaves the schema unchanged.
+If no, it must not synthesize or combine evidence; it recommends a separate narrow provider-neutral multi-response
+track-evidence/schema-evolution PREPARE before target-source implementation. In parallel f1 must inspect accessD CNAME
+grammar/capture family, target race cross-check, raw row-local accessU-link proof, direct target row/odds selectors,
+and withdrawal/cancellation handling.
 
 Required future tests, after that contract is approved, include exact public API and no package export; URL/identity
 and strict CP932 rejection; one complete target card; all target records and evidence roles; horse-no/entry-ID

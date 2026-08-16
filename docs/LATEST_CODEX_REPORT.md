@@ -3834,3 +3834,17 @@ eligibility. Target odds are usable only when their actual observation satisfies
 The recommended f1 PREPARE is broadened only to resolve both necessary prerequisites together: accessD
 identity/capture plus row-local accessU identity proof and selectors, and a causally available official target
 track-condition source with exact race/time binding. No implementation, capture, or formal-branch change occurred.
+
+### Track evidence-cardinality correction
+
+The existing neutral `track` record permits exactly one evidence reference, while requiring nonempty
+`track_condition`. The design therefore no longer implies that accessD static facts can be paired with a separate
+condition response. It freezes `TRACK_EVIDENCE_CARDINALITY = EXACTLY_ONE`,
+`MULTI_RESPONSE_TRACK_EVIDENCE_SUPPORTED = NO`, `SINGLE_RESPONSE_COMPLETE_TRACK_SOURCE = NOT_PROVEN`, and
+`TRACK_SOURCE_SCHEMA_CHANGE_REQUIRED = UNDECIDED`; complete target track sourcing remains blocked.
+
+The f1 PREPARE must first prove a single causally eligible official response containing every required neutral track
+field. If that is impossible, it must recommend a separate provider-neutral multi-response track-evidence/schema
+evolution PREPARE rather than synthesize or silently combine evidence. Its concurrent accessD identity/capture,
+row-local accessU identity, row/odds selector, and withdrawal investigations remain required. No implementation,
+capture, schema, or formal-branch change occurred.
