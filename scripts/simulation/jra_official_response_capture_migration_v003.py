@@ -19,6 +19,18 @@ NAME = "v003_jra_official_response_capture_target_race_card_schema"
 _TABLE = "jra_official_response_captures"
 _OLD = "jra_official_response_captures_v002"
 _COLUMNS = "capture_id,schema_version,page_kind,canonical_source_url,response_sha256,charset,requested_at_utc,observed_at_utc,stored_at_utc,http_status,content_type,content_encoding,http_date,etag,last_modified,content_length,request_method,request_identity_sha256,request_cname"
+_BODY_COLUMNS = (("response_sha256", "TEXT", 1, 1), ("response_body", "BLOB", 1, 0), ("byte_length", "INTEGER", 1, 0))
+_CAPTURE_COLUMNS = (
+    ("capture_id", "TEXT", 1, 1), ("schema_version", "INTEGER", 1, 0), ("page_kind", "TEXT", 1, 0),
+    ("canonical_source_url", "TEXT", 1, 0), ("response_sha256", "TEXT", 1, 0), ("charset", "TEXT", 1, 0),
+    ("requested_at_utc", "TEXT", 1, 0), ("observed_at_utc", "TEXT", 1, 0), ("stored_at_utc", "TEXT", 1, 0),
+    ("http_status", "INTEGER", 1, 0), ("content_type", "TEXT", 1, 0), ("content_encoding", "TEXT", 0, 0),
+    ("http_date", "TEXT", 0, 0), ("etag", "TEXT", 0, 0), ("last_modified", "TEXT", 0, 0),
+    ("content_length", "INTEGER", 0, 0), ("request_method", "TEXT", 1, 0),
+    ("request_identity_sha256", "TEXT", 0, 0), ("request_cname", "TEXT", 0, 0),
+)
+_EVIDENCE_INDEX = "ux_jra_official_response_captures_evidence"
+_REQUEST_INDEX = "ux_jra_official_response_captures_request_evidence"
 
 
 def _time(value: object) -> _datetime:
@@ -33,30 +45,92 @@ def _time(value: object) -> _datetime:
         raise RuntimeError("v002 stored timestamp is invalid") from error
 
 
+def _columns(connection: _sqlite3.Connection, table: str) -> tuple[tuple[str, str, int, int], ...]:
+    return tuple((row[1], row[2], row[3], row[5]) for row in connection.execute(f"PRAGMA table_info({table})"))
+
+
+def _without_rowid(connection: _sqlite3.Connection, table: str, count: int) -> None:
+    items = [row for row in connection.execute("PRAGMA table_list") if row[0] == "main" and row[1] == table]
+    if items != [("main", table, "table", count, 1, 0)]:
+        raise RuntimeError(f"{table} exact WITHOUT ROWID structure is invalid")
+
+
+def _index(connection: _sqlite3.Connection, name: str, columns: tuple[str, ...], predicate: str) -> None:
+    entries = connection.execute(f"PRAGMA index_list({_TABLE})").fetchall()
+    wanted = [row for row in entries if row[1] == name]
+    automatic = [row for row in entries if row[3] == "pk"]
+    custom = [row for row in entries if row[3] == "c"]
+    if len(entries) != 3 or len(automatic) != 1 or len(custom) != 2 or len(wanted) != 1 or wanted[0][2:] != (1, "c", 1):
+        raise RuntimeError("v002 capture indexes are invalid")
+    if tuple(row[2] for row in connection.execute(f"PRAGMA index_info({name})")) != columns:
+        raise RuntimeError("v002 evidence index order is invalid")
+    xinfo = connection.execute(f"PRAGMA index_xinfo({name})").fetchall()
+    if [(row[0], row[2], row[5]) for row in xinfo] != [(index, column, 1) for index, column in enumerate(columns)] + [(len(columns), "capture_id", 0)]:
+        raise RuntimeError("v002 evidence index has expressions or extra keys")
+    sql = connection.execute("SELECT sql FROM sqlite_master WHERE type='index' AND name=?", (name,)).fetchone()
+    if len(sql or ()) != 1 or type(sql[0]) is not str or " ".join(sql[0].split()).upper() != predicate:
+        raise RuntimeError("v002 evidence index predicate is invalid")
+
+
+def _rejected(connection: _sqlite3.Connection, sql: str, values: tuple[object, ...]) -> None:
+    try:
+        connection.execute(sql, values)
+    except _sqlite3.IntegrityError:
+        return
+    raise RuntimeError("v002 CHECK constraint is not enforced")
+
+
+def _probe_constraints(connection: _sqlite3.Connection) -> None:
+    if connection.execute("PRAGMA foreign_keys").fetchone() != (1,):
+        raise RuntimeError("v002 foreign-key enforcement is disabled")
+    digest = _hashlib.sha256(b"__jra_v002_probe_body__").hexdigest()
+    unknown = _hashlib.sha256(b"__jra_v002_probe_unknown__").hexdigest()
+    values = ["__jra_v002_probe__", 1, "race_result", "https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde0106202504030420250913%2FDC", digest, "cp932", "2026-01-01T00:00:00.000000+00:00", "2026-01-01T00:00:00.000000+00:00", "2026-01-01T00:00:00.000000+00:00", 200, "text/html", None, None, None, None, None, "GET", None, None]
+    names = _COLUMNS.split(",")
+    insert = f"INSERT INTO {_TABLE}({_COLUMNS}) VALUES({','.join('?' for _ in names)})"
+    connection.execute("SAVEPOINT jra_v002_schema_probe")
+    try:
+        for body_values in (("g" * 64, b"x", 1), (_hashlib.sha256(b"text").hexdigest(), "not-a-blob", 1), (_hashlib.sha256(b"zero").hexdigest(), b"x", 0), (_hashlib.sha256(b"mismatch").hexdigest(), b"x", 2)):
+            _rejected(connection, "INSERT INTO jra_official_response_bodies(response_sha256,response_body,byte_length) VALUES(?,?,?)", body_values)
+        connection.execute("INSERT INTO jra_official_response_bodies(response_sha256,response_body,byte_length) VALUES(?,?,?)", (digest, b"x", 1))
+        for index, value in ((1, 3), (2, "unknown"), (3, ""), (3, _sqlite3.Binary(b"url")), (4, unknown), (5, "utf8"), (9, 201), (11, "gzip"), (15, -1), (15, "one"), (16, "PUT"), (17, "x" * 64), (18, ""), (6, "2026-01-01T00:00:01.000000+00:00"), (7, "2026-01-01T00:00:01.000000+00:00"), (16, "POST")):
+            candidate = list(values)
+            candidate[index] = value
+            _rejected(connection, insert, tuple(candidate))
+    finally:
+        connection.execute("ROLLBACK TO jra_v002_schema_probe")
+        connection.execute("RELEASE jra_v002_schema_probe")
+
+
 def _validate_v002(connection: _sqlite3.Connection) -> None:
     """Fail closed before mutation; v003 never adopts an arbitrary v002 lookalike."""
 
-    expected = (
-        "capture_id", "schema_version", "page_kind", "canonical_source_url", "response_sha256", "charset",
-        "requested_at_utc", "observed_at_utc", "stored_at_utc", "http_status", "content_type",
-        "content_encoding", "http_date", "etag", "last_modified", "content_length", "request_method",
-        "request_identity_sha256", "request_cname",
-    )
-    columns = tuple(row[1] for row in connection.execute(f"PRAGMA table_info({_TABLE})"))
-    if columns != expected:
+    if _columns(connection, "jra_official_response_bodies") != _BODY_COLUMNS:
+        raise RuntimeError("v002 response-body table columns are invalid")
+    _without_rowid(connection, "jra_official_response_bodies", 3)
+    body_indexes = connection.execute("PRAGMA index_list(jra_official_response_bodies)").fetchall()
+    if len(body_indexes) != 1 or body_indexes[0][2:] != (1, "pk", 0):
+        raise RuntimeError("v002 response-body indexes are invalid")
+    if _columns(connection, _TABLE) != _CAPTURE_COLUMNS:
         raise RuntimeError("v002 capture table columns are invalid")
-    table = [row for row in connection.execute("PRAGMA table_list") if row[0] == "main" and row[1] == _TABLE]
-    if table != [("main", _TABLE, "table", 19, 1, 0)]:
-        raise RuntimeError("v002 capture table is not WITHOUT ROWID")
-    names = {row[1]: row for row in connection.execute(f"PRAGMA index_list({_TABLE})")}
-    for name in ("ux_jra_official_response_captures_evidence", "ux_jra_official_response_captures_request_evidence"):
-        item = names.get(name)
-        if item is None or item[2:] != (1, "c", 1):
-            raise RuntimeError("v002 evidence indexes are invalid")
-    if connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='jra_official_response_bodies'").fetchone() is None:
-        raise RuntimeError("v002 response body table is missing")
-    # Reconstructing through the current repository is deliberately avoided here:
-    # v003 must validate v002 without recursively requiring v003 schema support.
+    _without_rowid(connection, _TABLE, 19)
+    capture_sql_row = connection.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (_TABLE,)).fetchone()
+    capture_sql = " ".join(capture_sql_row[0].split()).upper() if len(capture_sql_row or ()) == 1 and type(capture_sql_row[0]) is str else ""
+    for fragment in (
+        "SCHEMA_VERSION INTEGER NOT NULL CHECK(TYPEOF(SCHEMA_VERSION)='INTEGER' AND SCHEMA_VERSION IN (1,2))",
+        "PAGE_KIND TEXT NOT NULL CHECK(PAGE_KIND IN ('RACE_RESULT','HORSE_PROFILE_HISTORY','FINAL_WIN_ODDS'))",
+        "CHECK(REQUESTED_AT_UTC<=OBSERVED_AT_UTC AND OBSERVED_AT_UTC<=STORED_AT_UTC)",
+        "(SCHEMA_VERSION=1 AND PAGE_KIND IN ('RACE_RESULT','HORSE_PROFILE_HISTORY') AND REQUEST_METHOD='GET' AND REQUEST_IDENTITY_SHA256 IS NULL AND REQUEST_CNAME IS NULL)",
+        "(SCHEMA_VERSION=2 AND PAGE_KIND='FINAL_WIN_ODDS' AND REQUEST_METHOD='POST' AND REQUEST_IDENTITY_SHA256 IS NOT NULL AND REQUEST_CNAME IS NOT NULL)",
+    ):
+        if fragment not in capture_sql:
+            raise RuntimeError("v002 capture CHECK structure is invalid")
+    foreign_keys = connection.execute(f"PRAGMA foreign_key_list({_TABLE})").fetchall()
+    if foreign_keys != [(0, 0, "jra_official_response_bodies", "response_sha256", "response_sha256", "RESTRICT", "RESTRICT", "NONE")]:
+        raise RuntimeError("v002 capture foreign key is invalid")
+    _index(connection, _EVIDENCE_INDEX, ("canonical_source_url", "response_sha256", "observed_at_utc"), "CREATE UNIQUE INDEX UX_JRA_OFFICIAL_RESPONSE_CAPTURES_EVIDENCE ON JRA_OFFICIAL_RESPONSE_CAPTURES(CANONICAL_SOURCE_URL,RESPONSE_SHA256,OBSERVED_AT_UTC) WHERE REQUEST_IDENTITY_SHA256 IS NULL")
+    _index(connection, _REQUEST_INDEX, ("canonical_source_url", "request_identity_sha256", "response_sha256", "observed_at_utc"), "CREATE UNIQUE INDEX UX_JRA_OFFICIAL_RESPONSE_CAPTURES_REQUEST_EVIDENCE ON JRA_OFFICIAL_RESPONSE_CAPTURES(CANONICAL_SOURCE_URL,REQUEST_IDENTITY_SHA256,RESPONSE_SHA256,OBSERVED_AT_UTC) WHERE REQUEST_IDENTITY_SHA256 IS NOT NULL")
+    _probe_constraints(connection)
     invalid = connection.execute("SELECT 1 FROM jra_official_response_captures WHERE (schema_version=1 AND (page_kind NOT IN ('race_result','horse_profile_history') OR request_method<>'GET' OR request_identity_sha256 IS NOT NULL OR request_cname IS NOT NULL)) OR (schema_version=2 AND (page_kind<>'final_win_odds' OR request_method<>'POST' OR request_identity_sha256 IS NULL OR request_cname IS NULL)) OR schema_version NOT IN (1,2) LIMIT 1").fetchone()
     if invalid is not None:
         raise RuntimeError("v002 capture row family is invalid")

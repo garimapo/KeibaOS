@@ -3803,6 +3803,17 @@ digest/length and canonical timestamps, and confirms each stored capture ID/page
 before capture-table mutation. A malformed v002 row therefore fails before rebuild;
 the body table remains read-only throughout v003 validation and migration.
 
+### Exact v002 pre-mutation schema validation revision
+
+v003 now verifies exact v002 body/capture columns, types, nullability, primary-key
+shape, WITHOUT ROWID tables, foreign key actions, the complete two-index set, index
+key order, partial predicates, and index xinfo key layout. SAVEPOINT probes prove the
+approved v002 body and capture CHECK behavior; persisted rows are still reconstructed
+and ID-verified before any table rename. Dedicated weakened-v002 regression cases
+confirm rollback preserves the registered v002 tables and indexes with no temporary
+table or v003 registry entry. Verification passed: migration 10, dedicated 42,
+related 99, full suite 2626.
+
 The suite also pins locator extraction validation, past-race normalizer validation and unsupported translation,
 absence-projection validation, neutral validation and conflict translation, and unchanged propagation of both result-
 and final-odds-provider exceptions. A six-event JRA actual-start sequence confirms that the collector retains every
