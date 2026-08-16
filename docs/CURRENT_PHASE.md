@@ -4,112 +4,79 @@
 
 READY_FOR_REVIEW
 
-## Phase and Base
+## Phase
 
-Phase `4C-2d3b1i6d1d5e0` — JRA discovery-to-absence projection handoff implementation.
+`4C-2d3b1i6d1d5e1` — JRA historical input-source collection.
 
-Formal base: `a44df34017269b1b0a4e462b3bb775f7059681b7`.
+Formal base: `c8008cdc15903b305219066c3b10b35e1255767f`.
 
-Corrected e architecture review: `19f841071522106176a6828ea02b455f91c1ac6f`.
+Approved design: `7724e7a77017896eb6cb164672c63ec2af8b21b1`.
 
-Review branch: `review/4c-2d3b1i6d1d5e0-jra-discovery-absence-projection`.
-
-## Implemented Discovery Evidence Binding
-
-Extended immutable/slotted `JRAHistoricalPastRaceDiscovery` with exactly:
-
-```text
-horse_history_response_url: str
-horse_history_response_sha256: str
-horse_history_observed_at: datetime
-```
-
-Formal discovery binds these values from the exact validated accessU `JRASuppliedOfficialResponse`: its canonical URL,
-SHA-256 of its exact raw response bytes, and its normalized UTC observed timestamp. The discovery domain validates the
-canonical accessU URL, URL horse identity against `target_external_horse_id`, lowercase SHA-256 grammar, and exact UTC
-datetime representation. It also proves directly constructed target lineage: the target race is a canonical formal JRA
-race ID, and the target entry is the exact canonical entry ID built from that race and a positive canonical horse-number
-suffix. It stores no body and creates no evidence reference. Existing classification, aggregate completeness, chronology,
-cutoff, and zero-history behavior remain unchanged.
-
-### Target-Lineage Correction
-
-The discovery constructor now fails closed for malformed or non-JRA target race IDs, entries for another race,
-leading-zero/zero/noncanonical entry horse-number material, and other malformed entry lineage. It uses the existing
-formal race parser and entry-ID builder; no entry parser or persisted field was added. Capture-domain URL validation
-errors for malformed direct accessU evidence binding are translated to
-`JRAHistoricalPastRaceDiscoveryValidationError`, so the public discovery boundary does not leak a lower-level capture
-validation exception. A normally constructed forged discovery cannot reach absence projection.
-
-## Public Projection
-
-Added the pure public handoff:
-
-```python
-project_jra_historical_past_race_absence_source_record(
-    *,
-    discovery: JRAHistoricalPastRaceDiscovery,
-    horse_history_response: JRASuppliedOfficialResponse,
-) -> HistoricalInputSourceRecord
-```
-
-The absence module public surface is exactly:
-
-```text
-JRAHistoricalPastRaceAbsenceSourceError
-JRAHistoricalPastRaceAbsenceSourceValidationError
-normalize_jra_historical_past_race_absence_source_record
-project_jra_historical_past_race_absence_source_record
-```
-
-No package-root export. Projection accepts only exact formal types and performs no discovery, HTML decode, or HTML
-parsing. Before constructing the existing schema-v4 neutral absence record, it verifies exact URL, raw-byte SHA,
-normalized observed timestamp, and accessU horse identity binding to discovery. Any mismatch or incoherent discovery
-fails closed with the existing absence validation error.
-
-Projection accepts only empty official history or a nonempty event tuple entirely composed of
-`JRAHistoricalEventKind.PROVEN_NON_START`. It rejects every JRA, non-JRA, or unsupported actual-start event, including
-transfer-plus-actual mixtures. Its output remains exactly the formal JRA `past_race_absence` record with one
-`past_race_absence_query` evidence reference, zero actual prior starts, and no extra provider fields.
-
-## Direct-Call Compatibility
-
-`normalize_jra_historical_past_race_absence_source_record(...)` retains its exact signature and direct-call behavior.
-It calls formal discovery exactly once, translates formal discovery errors as before, and delegates output construction
-to the public projection using the original supplied response. The absence constructor is not duplicated.
-
-This enables a future collector to run discovery once and call projection only for the zero-actual-start branch,
-without private-helper coupling or a second accessU parse.
-
-## Compatibility and Boundaries
-
-No source schema, snapshot schema, migration, capture/archive, repository, live transport, NAR, neutral validator,
-snapshot builder, package-root export, bridge, or Predictor change occurred. The existing source record and snapshot
-builder continue to accept empty and transfer-only absence results and reject past-race plus absence conflicts.
+Review branch: `review/4c-2d3b1i6d1d5e1-jra-history-collection`.
 
 ## Allowed Files
 
 ```text
-scripts/simulation/jra_historical_past_race_discovery.py
-scripts/simulation/jra_historical_past_race_absence_source.py
-tests/test_jra_historical_past_race_discovery.py
-tests/test_jra_historical_past_race_absence_source.py
+scripts/simulation/jra_historical_input_source_collection.py
+tests/test_jra_historical_input_source_collection.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
+## Public Contract
+
+The new module exports only two callable provider Protocols, frozen/slotted
+`JRAHistoricalSourceCollection`, its validation/unsupported error hierarchy, and:
+
+```python
+collect_jra_historical_input_source_records(
+    *,
+    target_track_record: HistoricalInputSourceRecord,
+    target_entry_record: HistoricalInputSourceRecord,
+    horse_history_response: JRASuppliedOfficialResponse,
+    race_result_response_provider: JRAHistoricalRaceResultResponseProvider,
+    final_win_odds_response_provider: JRAHistoricalFinalWinOddsResponseProvider,
+) -> JRAHistoricalSourceCollection
+```
+
+The result carries exact target race/entry IDs plus ordered source records. Its direct constructor validates canonical
+JRA race identity, exact race-scoped entry identity, canonical positive entry suffix, and reconstruction through
+`build_jra_external_entry_id`; every contained record must match those target IDs.
+
+## Required Behavior
+
+Discovery is called exactly once and supplies the sole complete event sequence. Before a provider is called, any
+`NON_JRA_ACTUAL_START` or `UNSUPPORTED_ACTUAL_START` aborts the whole collection. `PROVEN_NON_START` emits no record.
+Zero actual starts use only public absence projection, with zero result/odds provider calls.
+
+Every JRA actual start follows: exact discovery reference → injected accessS response bound to exact URL/race → formal
+locator extraction → injected accessO response bound to that exact locator → existing JRA past-race normalizer. Output
+order remains discovery newest-to-oldest; there is no history cap. Result reuse is per call by JRA race identity;
+final-odds reuse is per call by request-identity SHA-256.
+
+AccessU retains formal causality. Every injected accessS/accessO observation must be no later than target scheduled
+start, with no timestamp change. The return is all-or-nothing. Existing
+`validate_historical_input_source_record_set(...)` is called exactly once before result construction.
+
+Exception translation is exact: discovery and normalizer validation errors map to collection validation; their
+unsupported errors map to collection unsupported; locator/projection/neutral-validation errors map to collection
+validation; provider-raised exceptions propagate unchanged. No broad exception catch.
+
+## Required Tests
+
+Cover public signatures/domain; direct constructor lineage failures; one discovery call; zero/transfer projection and
+zero provider calls; ordering, binding, locator derivation, dedup, both causality checks, exact error translation,
+provider propagation, pre-provider mixed rejection, no partial return, one neutral validation, no history cap, purity,
+no package export, related JRA/NAR/neutral regressions, and the full suite.
+
 ## Verification
 
-Dedicated discovery and absence tests cover the three bound fields, exact raw-byte SHA, canonical accessU URL,
-normalized observed time, horse identity, frozen/slotted domain behavior, zero-discovery projection, one-discovery
-direct normalizer delegation, empty/transfer output parity, mismatched types/binding failures, actual-event rejection,
-neutral validation, and snapshot compatibility. The correction adds normal-constructor target race/entry lineage and
-accessU exception-boundary regressions. Fresh verification passed 22 dedicated tests, 138 related tests, and 2,610
-full-suite tests; package-export, forbidden-dependency/source/AST, source/snapshot/migration-unchanged, and diff
-checks passed.
+Dedicated collector tests pass. Related JRA discovery/absence/normalizer/locator/identity/capture/archive,
+provider-neutral source/snapshot/builder, and NAR historical-source regressions pass. Full-suite and final static
+verification are recorded in `LATEST_CODEX_REPORT.md` before review publication.
 
-## Stop Condition
+## Boundaries and Stop Condition
 
-Create and push exactly one correction commit: `fix: harden JRA discovery target lineage`. Do not implement
-the source collector, collector tests, HTTP/live capture, archive/repository/database/migration work, real capture,
-mixed-provider bridge, or formal integration. Stop for independent implementation review.
+No HTTP/live capture, archive, repository, database, migrations, schemas, snapshot construction, Predictor, NAR↔JRA
+bridge, fallback, real capture, or package-root export. On success, commit exactly one review commit:
+`feat: collect JRA historical input source records`; push only the review branch and stop for independent review.
