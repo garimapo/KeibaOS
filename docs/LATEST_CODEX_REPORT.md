@@ -3855,3 +3855,34 @@ unchanged propagation of archive exceptions. It also retains the v1 accessD reje
 and v1/v2 success regressions, transport raw-stream/configuration tests, no
 package-root export, and no real HTTP capture. No capture/archive/domain/repository/schema
 or migration boundary was changed.
+
+
+## Phase 4C-2d3b1i6d1d5f1c3 JRA accessD Target-Source Normalization Preparation
+
+Prepared the pure one-response accessD target-source boundary on formal
+`3d15d31a68500d05b224ffead60ee9a799064342`. The proposed
+`normalize_jra_target_race_input_source_records(*, response)` accepts only exact
+canonical `JRASuppliedOfficialResponse` accessD evidence and returns a frozen
+collection containing one validated neutral track record, ordered entry records, and
+the canonical flattened target source-record set.
+
+The design uses the established unique accessD card table and its bounded header/row
+selectors. URL identity remains authoritative and is cross-checked against direct visible
+date, venue/meeting/day, race number, and scheduled start. The same accessD response
+provides every required neutral track field, including track condition, and all target
+entry/jockey/odds fields. Each runner's stable horse identity comes solely from the
+unique row-local accessU anchor; entry IDs are rebuilt from formal URL race identity and
+the direct horse number. AccessD odds remain positive direct prediction-time values at
+the actual response observation, never accessO final odds.
+
+A shared raw-byte SHA and actual observed timestamp produce one role-specific evidence
+reference for every track, entry, jockey, and odds record; `available_at` and request
+identity remain absent. The source parser rejects response observation after the parsed
+scheduled start and leaves final cutoff eligibility to the snapshot boundary.
+
+The active structure did not prove non-runner semantics. The implementation contract
+therefore supports only fully populated normal rows and fails the entire normalization
+as unsupported for any row with a missing, duplicate, blank, placeholder, or otherwise
+non-normal required value. It never skips a row or returns a partial card. No schema
+change, real trusted capture, or fixture beyond minimal synthetic CP932 HTML is needed
+for the recommended implementation.
