@@ -3832,3 +3832,26 @@ recorded only as prerequisites, and non-runner states remain unsupported. The ne
 approved implementation candidate is limited to v003 identity/domain/archive/
 migration work and its tests; target-source normalization, snapshots, and live
 accessD acquisition remain out of scope.
+
+### v003 capture-family separation correction
+
+The design now separates accessD supplied-response recognition from the existing
+v1 capture URL boundary. `canonicalize_jra_official_capture_url(...)` remains
+strictly v1-only for accessS/accessU and continues to reject `TARGET_RACE_CARD`.
+A separate internal recognizer may accept canonical accessS/accessU/accessD only for
+`JRASuppliedOfficialResponse`; no accessD URL can reach
+`JRAOfficialResponseCapture` or a `jra-capture-v1` identity.
+
+The v3 target-card domain instead validates accessD through its own canonical path
+backed by `parse_jra_race_card_url_identity()`. Saving remains family-specific:
+legacy save is v1 only, final-odds save is v2 only, and target-card save is v3 only.
+The existing public `capture_response(...)` is frozen as v1-only and must reject a
+target-card page kind before clock, transport, or archive use. The future dedicated
+v3 live method uses only the accessD canonicalizer, v3 domain, and
+`save_target_race_card_capture`.
+
+Required v003 regressions now explicitly pin supplied accessD acceptance alongside
+v1 capture rejection, v1 live rejection without transport/archive use, v3 capture
+acceptance and v3-only save, and unchanged accessS/accessU v1 plus accessO v2
+identity and behavior. No implementation, migration, live capture, or raw-response
+persistence occurred in this correction.

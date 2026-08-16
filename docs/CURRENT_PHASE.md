@@ -45,11 +45,21 @@ pw01dde(?P<site>01|10)(?P<venue>0[1-9]|10)(?P<year>[0-9]{4})(?P<meeting>0[1-9]|[
 query, case, delimiter, CNAME, or date fails closed. Display identity never falls
 back to text.
 
-Add `JRAOfficialPageKind.TARGET_RACE_CARD = "target_race_card"`. Extend only the
-canonical URL dispatcher so the existing immutable `JRASuppliedOfficialResponse`
-accepts canonical accessD URLs. It remains strict CP932 exact bytes with actual
-aware `observed_at`; no second supplied-response type is added. Existing accessS,
-accessU, and POST final-odds semantics remain unchanged.
+Add `JRAOfficialPageKind.TARGET_RACE_CARD = "target_race_card"`, but freeze two
+different URL-recognition boundaries:
+
+```text
+V1_CAPTURE_URL_FAMILY = RACE_RESULT, HORSE_PROFILE_HISTORY
+V3_CAPTURE_URL_FAMILY = TARGET_RACE_CARD
+```
+
+`canonicalize_jra_official_capture_url(...)` remains the v1-only canonicalizer and
+continues to reject `TARGET_RACE_CARD`. It must not be widened. Add a separate
+internal supplied-response URL recognizer that accepts canonical accessS, accessU,
+and accessD URLs. Only that broader recognizer permits the existing immutable
+`JRASuppliedOfficialResponse` to accept accessD evidence. It remains strict CP932
+exact bytes with actual aware `observed_at`; no second supplied-response type is
+added. Existing accessS/accessU and POST final-odds semantics remain unchanged.
 
 ## v003 Capture Domain and ID
 
@@ -62,7 +72,9 @@ content_length, schema_version=3, page_kind=TARGET_RACE_CARD, request_method="GE
 response_sha256, capture_id
 ```
 
-It reuses v1 validation: exact canonical accessD URL; nonempty strict CP932 body;
+It uses its own exact accessD canonicalization based on
+`parse_jra_race_card_url_identity(...)`; it must not use the v1 canonicalizer. It
+then reuses v1 field validation: exact canonical accessD URL; nonempty strict CP932 body;
 charset `cp932`; HTTP 200; existing accepted HTML content type; absent/identity
 encoding only; existing header checks; exact optional Content-Length; aware UTC
 timestamps with `requested_at <= observed_at <= stored_at`; and SHA-256 of raw bytes.
@@ -97,10 +109,12 @@ back, raises existing capture-missing error if absent, and raises
 `RepositoryDataIntegrityError` for duplicate/corrupt family data. Existing APIs stay
 concrete: no union widening.
 
-Each ID loader accepts only its own prefix. Valid foreign-family IDs return `None`:
-v1/v2 for v3, v3 for v1/v2. Malformed IDs remain validation errors. Requested-family
-prefix/schema/page-kind/method/request-column/body/domain disagreement is
-`RepositoryDataIntegrityError`, not `None`.
+Repository saves remain concrete and family-specific: `save_capture` is v1 only,
+`save_final_win_odds_capture` is v2 only, and `save_target_race_card_capture` is v3
+only. Each ID loader accepts only its own prefix. Valid foreign-family IDs return
+`None`: v1/v2 for v3, v3 for v1/v2. Malformed IDs remain validation errors.
+Requested-family prefix/schema/page-kind/method/request-column/body/domain
+disagreement is `RepositoryDataIntegrityError`, not `None`.
 
 ## v003 Migration
 
@@ -131,16 +145,20 @@ and IDs are never altered.
 
 ## Live GET Compatibility and Readiness
 
-The existing private GET transport is reusable unchanged after accessD URL
-authorization: GET, TLS verification, redirects disabled, 200 only, zero retries,
-10/10 timeout, identity encoding, compressed-response rejection, exact optional
-Content-Length, 4 MiB body limit, raw undecoded stream/body SHA, and close paths.
+The existing private GET transport is reusable unchanged after the dedicated v3
+accessD canonical path authorizes its input: GET, TLS verification, redirects
+disabled, 200 only, zero retries, 10/10 timeout, identity encoding,
+compressed-response rejection, exact optional Content-Length, 4 MiB body limit, raw
+undecoded stream/body SHA, and close paths.
 
-The existing public `capture_response(...)` remains v1-only because it constructs
-and saves `JRAOfficialResponseCapture`. A later live phase needs a separate
+The existing public `capture_response(...)` remains v1-only: it accepts only the
+v1 capture URL family and rejects `TARGET_RACE_CARD` before clock, transport, or
+archive work. It must not call the broader supplied-response URL recognizer. A later
+live phase needs a separate
 `capture_target_race_card_response(*, response_url: str) -> JRAOfficialTargetRaceCardResponseCapture`:
-canonicalize -> clock -> existing GET fetch -> clock -> v3 capture -> dedicated save
--> return. The current GET API/call shape cannot change.
+v3-accessD-canonicalize -> clock -> existing GET fetch -> clock -> v3 capture ->
+`save_target_race_card_capture` -> return. The current GET API/call shape cannot
+change.
 
 From the referenced structural investigation only:
 
@@ -168,4 +186,7 @@ TARGET_SOURCE_IMPLEMENTATION_READY: NO — formal accessD capture is not impleme
 
 Next phase: narrow v003 identity/domain/archive/repository/migration implementation
 with tests/docs. It must not include target normalization, snapshots, or live accessD
-acquisition. Stop after the docs-only review commit is pushed.
+acquisition. Required regression tests prove: supplied accessD acceptance; v1 capture
+accessD rejection; v1 live API rejection before transport/archive; v3 capture accessD
+acceptance; dedicated v3 live save only; and unchanged v1 accessS/accessU plus v2
+accessO IDs and behavior. Stop after the docs-only review commit is pushed.
