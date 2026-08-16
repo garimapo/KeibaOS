@@ -3795,6 +3795,14 @@ capture table while retaining the shared body table and both partial evidence in
 No live accessD acquisition, target parser, source records, snapshots, or bridge work
 was performed.
 
+### v003 pre-mutation validation correction
+
+The initial v003 migration check was strengthened before review: it now reconstructs
+every persisted v1 and v2 row against its frozen capture domain, verifies exact body
+digest/length and canonical timestamps, and confirms each stored capture ID/page kind
+before capture-table mutation. A malformed v002 row therefore fails before rebuild;
+the body table remains read-only throughout v003 validation and migration.
+
 The suite also pins locator extraction validation, past-race normalizer validation and unsupported translation,
 absence-projection validation, neutral validation and conflict translation, and unchanged propagation of both result-
 and final-odds-provider exceptions. A six-event JRA actual-start sequence confirms that the collector retains every
