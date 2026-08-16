@@ -3745,3 +3745,48 @@ Fresh correction verification under Python 3.14.5 / pytest 8.3.5 passed: dedicat
 related JRA/NAR/neutral regressions 139, and the full suite 2597. Package-export, forbidden-dependency/source/AST,
 identity-ownership, unchanged-production, version, and `git diff --check` validation remain required before review
 publication.
+
+## Phase 4C-2d3b1i6d1d5e1 JRA Historical Input-Source Collection Implementation
+
+Implemented the approved pure injected collector in
+`scripts/simulation/jra_historical_input_source_collection.py`. Its exact public surface is the two typed response
+provider Protocols, frozen/slotted `JRAHistoricalSourceCollection`, its validation/unsupported error hierarchy, and
+`collect_jra_historical_input_source_records`. No package-root export, network, live capture, archive, database,
+clock, raw accessU parsing, snapshot construction, bridge, or Predictor integration was added.
+
+The collector calls formal accessU discovery exactly once and uses its complete event order as the only history
+sequence. It rejects discovered non-JRA and unsupported actual starts before either injected provider can run. Proven
+non-starts emit no record. Empty and transfer-only zero-actual-start histories use only the formal public absence
+projection, with zero result/odds provider calls and no second discovery.
+
+For each JRA actual start, the collector binds an exact injected accessS response to the discovery URL and race
+identity, extracts the formal accessO request locator from that exact response, binds the injected final-odds response
+to that locator, and delegates to the existing JRA past-race normalizer. AccessS responses are reused only within a
+call by canonical JRA race ID; final-odds responses are reused only within a call by request-fingerprint SHA-256.
+Output remains newest-to-oldest with no history cap, and all-or-nothing collection prevents partial returns.
+
+The collection result directly validates canonical JRA race/entry lineage through the existing identity parser and
+entry-ID builder, including a positive canonical horse-number suffix. It additionally requires every source record to
+be JRA/jra_official and exact-target bound. The collector invokes the existing neutral source-set validator exactly
+once before constructing this result. It preserves response timestamps and rejects accessS/accessO observations later
+than the target scheduled start. Formal discovery, locator, normalizer, absence-projection, and neutral-validation
+errors translate to the approved collection boundaries; provider-raised exceptions propagate unchanged.
+
+Fresh focused verification under Python 3.14.5 / pytest 8.3.5 passed: dedicated collector 7 and related JRA/NAR/
+neutral regression set 142. Full-suite and final static validation are recorded with the review commit. No real
+official response was captured, archived, or fetched; formal branch content remains unchanged.
+
+### Collection-boundary regression correction
+
+Strengthened the collector-only dedicated tests without changing production. The correction now exercises the real
+accessS and accessO binding/cutoff helpers for wrong canonical result URL, valid-but-wrong JRA result identity, wrong
+result and odds supplied-response types, a final-odds response for a different exact request locator, and a final-odds
+observation after the target scheduled start. These paths fail closed as collection validation errors rather than being
+tested through mocked binding helpers.
+
+The suite also pins locator extraction validation, past-race normalizer validation and unsupported translation,
+absence-projection validation, neutral validation and conflict translation, and unchanged propagation of both result-
+and final-odds-provider exceptions. A six-event JRA actual-start sequence confirms that the collector retains every
+newest-to-oldest event and imposes no source-history cap. Existing one-discovery, zero-provider, direct-lineage,
+mixed-history, deterministic-order, all-or-nothing, and purity coverage remains intact. Production, schema,
+migrations, package exports, live capture, archive, database, bridge, and formal branch remain unchanged.
