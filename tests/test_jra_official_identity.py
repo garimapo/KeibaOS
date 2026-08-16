@@ -18,6 +18,7 @@ from scripts.simulation.jra_official_identity import (
     parse_jra_external_horse_id,
     parse_jra_external_race_id,
     parse_jra_horse_profile_url_identity,
+    parse_jra_race_card_url_identity,
     parse_jra_result_url_identity,
 )
 
@@ -39,7 +40,7 @@ class JRAOfficialIdentityTests(unittest.TestCase):
             {
                 "JRAOfficialIdentityError", "JRAOfficialIdentityValidationError", "JRAExternalRaceIdentity",
                 "JRAExternalHorseIdentity", "JRAOfficialFinalWinOddsRequestLocator", "parse_jra_external_race_id", "parse_jra_external_horse_id",
-                "parse_jra_result_url_identity", "parse_jra_horse_profile_url_identity",
+                "parse_jra_result_url_identity", "parse_jra_horse_profile_url_identity", "parse_jra_race_card_url_identity",
                 "build_jra_external_entry_id", "build_jra_provider_record_id", "build_jra_final_win_odds_request_locator",
             },
         )
@@ -154,6 +155,13 @@ class JRAOfficialIdentityTests(unittest.TestCase):
         for value in invalid:
             with self.subTest(value=value), self.assertRaises(JRAOfficialIdentityValidationError):
                 parse_jra_horse_profile_url_identity(value)
+
+    def test_access_d_race_card_identity_is_canonical_and_closed(self) -> None:
+        card = "https://www.jra.go.jp/JRADB/accessD.html?CNAME=pw01dde0106202504030420250913%2FDC"
+        self.assertEqual(parse_jra_race_card_url_identity(card).external_race_id, RACE_ID)
+        for value in (card.replace("%2F", "/"), card.replace("dde01", "dde11"), card.replace("DC", "dc"), card.replace("accessD", "accessS"), card + "&x=1"):
+            with self.subTest(value=value), self.assertRaises(JRAOfficialIdentityValidationError):
+                parse_jra_race_card_url_identity(value)
 
     def test_entry_and_result_builders_are_exact_and_fail_closed(self) -> None:
         race = parse_jra_external_race_id(RACE_ID)

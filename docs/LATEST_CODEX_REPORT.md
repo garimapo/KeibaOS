@@ -3784,6 +3784,47 @@ result and odds supplied-response types, a final-odds response for a different e
 observation after the target scheduled start. These paths fail closed as collection validation errors rather than being
 tested through mocked binding helpers.
 
+### 4C-2d3b1i6d1d5f1c1 — accessD capture v003 implementation
+
+Implemented the isolated accessD identity/capture/archive prerequisite from formal
+`776cd912…`. The v1 URL canonicalizer remains accessS/accessU-only; a separate
+supplied-response recognizer admits canonical accessD. Schema-v3 target-card GET
+captures use their own accessD identity path and cannot create v1 identities. The
+archive/repository adds family-specific v3 APIs and migration v003 rebuilds only the
+capture table while retaining the shared body table and both partial evidence indexes.
+No live accessD acquisition, target parser, source records, snapshots, or bridge work
+was performed.
+
+### v003 pre-mutation validation correction
+
+The initial v003 migration check was strengthened before review: it now reconstructs
+every persisted v1 and v2 row against its frozen capture domain, verifies exact body
+digest/length and canonical timestamps, and confirms each stored capture ID/page kind
+before capture-table mutation. A malformed v002 row therefore fails before rebuild;
+the body table remains read-only throughout v003 validation and migration.
+
+### Exact v002 pre-mutation schema validation revision
+
+v003 now verifies exact v002 body/capture columns, types, nullability, primary-key
+shape, WITHOUT ROWID tables, foreign key actions, the complete two-index set, index
+key order, partial predicates, and index xinfo key layout. SAVEPOINT probes prove the
+approved v002 body and capture CHECK behavior; persisted rows are still reconstructed
+and ID-verified before any table rename. Dedicated weakened-v002 regression cases
+confirm rollback preserves the registered v002 tables and indexes with no temporary
+table or v003 registry entry. Verification passed: migration 10, dedicated 42,
+related 99, full suite 2626.
+
+### Exact v002 DDL pinning correction
+
+The v003 validator now normalizes and exactly compares the two approved v002 table
+DDLs and both partial-index DDLs before any mutation. This independently detects
+removed, weakened, or extra request identity/cname/method CHECKs even when family
+constraints would mask a SAVEPOINT probe. PRAGMA checks, probes, body verification,
+and v1/v2 reconstruction remain defense-in-depth. Regression variants cover removed
+and weakened request identity/cname checks, removed request-method checks, and an
+otherwise harmless extra CHECK, each pinned to rollback without a v003 registry row.
+Verification remains migration 10, dedicated 42, related 99, full 2626.
+
 The suite also pins locator extraction validation, past-race normalizer validation and unsupported translation,
 absence-projection validation, neutral validation and conflict translation, and unchanged propagation of both result-
 and final-odds-provider exceptions. A six-event JRA actual-start sequence confirms that the collector retains every

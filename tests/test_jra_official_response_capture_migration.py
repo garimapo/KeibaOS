@@ -6,12 +6,33 @@ from datetime import datetime, timezone
 
 from scripts.simulation.jra_official_response_capture_migration import NAME, VERSION, apply
 from scripts.simulation.jra_official_response_capture_migration_v002 import NAME as NAME_V2, VERSION as VERSION_V2
+from scripts.simulation.jra_official_response_capture_migration_v003 import NAME as NAME_V3, VERSION as VERSION_V3
 from scripts.simulation.jra_official_response_capture_migration_runner import apply_jra_capture_schema_migrations, get_applied_jra_capture_schema_versions
 from scripts.simulation.jra_official_response_capture import JRAOfficialResponseCapture
 
 
 class JRAMigrationTests(unittest.TestCase):
     _REGISTRY = "jra_official_response_capture_schema_migrations"
+
+    def _weakened_v002_connection(self, *, body_change: tuple[str, str] | None = None, capture_change: tuple[str, str] | None = None, evidence_sql: str | None = None, request_sql: str | None = None) -> sqlite3.Connection:
+        source = sqlite3.connect(":memory:")
+        apply(source)
+        from scripts.simulation.jra_official_response_capture_migration_v002 import apply as apply_v002
+        source.execute("PRAGMA foreign_keys=ON"); source.execute("BEGIN IMMEDIATE"); apply_v002(source); source.commit()
+        body_sql = source.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='jra_official_response_bodies'").fetchone()[0]
+        capture_sql = source.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='jra_official_response_captures'").fetchone()[0]
+        index_one = source.execute("SELECT sql FROM sqlite_master WHERE type='index' AND name='ux_jra_official_response_captures_evidence'").fetchone()[0]
+        index_two = source.execute("SELECT sql FROM sqlite_master WHERE type='index' AND name='ux_jra_official_response_captures_request_evidence'").fetchone()[0]
+        if body_change is not None: body_sql = body_sql.replace(*body_change)
+        if capture_change is not None: capture_sql = capture_sql.replace(*capture_change)
+        c = sqlite3.connect(":memory:")
+        c.execute("""CREATE TABLE jra_official_response_capture_schema_migrations (
+            version INTEGER PRIMARY KEY CHECK(typeof(version)='integer' AND version>0),
+            name TEXT NOT NULL UNIQUE CHECK(typeof(name)='text' AND length(name)>0)
+        ) WITHOUT ROWID""")
+        c.executemany("INSERT INTO jra_official_response_capture_schema_migrations(version,name) VALUES(?,?)", ((VERSION, NAME), (VERSION_V2, NAME_V2)))
+        c.execute(body_sql); c.execute(capture_sql); c.execute(evidence_sql or index_one); c.execute(request_sql or index_two); c.commit()
+        return c
 
     def _weakened_v001_connection(self, *, body_change: tuple[str, str] | None = None, capture_change: tuple[str, str] | None = None, index_sql: str | None = None) -> sqlite3.Connection:
         source = sqlite3.connect(":memory:")
@@ -45,7 +66,7 @@ class JRAMigrationTests(unittest.TestCase):
     def test_dedicated_v001_fresh_and_idempotent(self):
         c = sqlite3.connect(":memory:")
         apply_jra_capture_schema_migrations(c)
-        self.assertEqual(get_applied_jra_capture_schema_versions(c), {VERSION: NAME, VERSION_V2: NAME_V2})
+        self.assertEqual(get_applied_jra_capture_schema_versions(c), {VERSION: NAME, VERSION_V2: NAME_V2, VERSION_V3: NAME_V3})
         self.assertEqual({r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}, {"jra_official_response_capture_schema_migrations", "jra_official_response_bodies", "jra_official_response_captures"})
         apply_jra_capture_schema_migrations(c)
         self.assertFalse(c.in_transaction)
@@ -69,7 +90,7 @@ class JRAMigrationTests(unittest.TestCase):
         ) WITHOUT ROWID""")
         c.commit()
         apply_jra_capture_schema_migrations(c)
-        self.assertEqual(get_applied_jra_capture_schema_versions(c), {1: NAME, VERSION_V2: NAME_V2})
+        self.assertEqual(get_applied_jra_capture_schema_versions(c), {1: NAME, VERSION_V2: NAME_V2, VERSION_V3: NAME_V3})
 
     def test_constraint_probes_rollback_without_changing_registered_rows(self):
         c = sqlite3.connect(":memory:")
@@ -177,4 +198,37 @@ class JRAMigrationTests(unittest.TestCase):
                 self.assertEqual(c.execute("SELECT type,name,sql FROM sqlite_master WHERE name IN ('jra_official_response_bodies','jra_official_response_captures','ux_jra_official_response_captures_evidence') ORDER BY name").fetchall(), before)
                 self.assertEqual(get_applied_jra_capture_schema_versions(c), {VERSION: NAME})
                 self.assertIsNone(c.execute("SELECT 1 FROM sqlite_master WHERE name='jra_official_response_captures_v001'").fetchone())
+                self.assertFalse(c.in_transaction)
+
+    def test_v003_rejects_weakened_v002_schema_before_mutation(self):
+        variants = (
+            ("schema", None, ("schema_version IN (1,2)", "schema_version IN (1,2,3)"), None, None),
+            ("page", None, ("'final_win_odds'", "'final_win_odds','other'"), None, None),
+            ("timestamps", None, (",\n        CHECK(requested_at_utc<=observed_at_utc AND observed_at_utc<=stored_at_utc)", ""), None, None),
+            ("family", None, ("request_method='POST'", "request_method IN ('POST','GET')"), None, None),
+            ("foreign", None, (" REFERENCES jra_official_response_bodies(response_sha256) ON UPDATE RESTRICT ON DELETE RESTRICT", ""), None, None),
+            ("first_nonunique", None, None, "CREATE INDEX ux_jra_official_response_captures_evidence ON jra_official_response_captures(canonical_source_url,response_sha256,observed_at_utc) WHERE request_identity_sha256 IS NULL", None),
+            ("first_predicate", None, None, "CREATE UNIQUE INDEX ux_jra_official_response_captures_evidence ON jra_official_response_captures(canonical_source_url,response_sha256,observed_at_utc) WHERE 1", None),
+            ("first_order", None, None, "CREATE UNIQUE INDEX ux_jra_official_response_captures_evidence ON jra_official_response_captures(response_sha256,canonical_source_url,observed_at_utc) WHERE request_identity_sha256 IS NULL", None),
+            ("request_nonunique", None, None, None, "CREATE INDEX ux_jra_official_response_captures_request_evidence ON jra_official_response_captures(canonical_source_url,request_identity_sha256,response_sha256,observed_at_utc) WHERE request_identity_sha256 IS NOT NULL"),
+            ("request_predicate", None, None, None, "CREATE UNIQUE INDEX ux_jra_official_response_captures_request_evidence ON jra_official_response_captures(canonical_source_url,request_identity_sha256,response_sha256,observed_at_utc) WHERE 1"),
+            ("request_order", None, None, None, "CREATE UNIQUE INDEX ux_jra_official_response_captures_request_evidence ON jra_official_response_captures(response_sha256,request_identity_sha256,canonical_source_url,observed_at_utc) WHERE request_identity_sha256 IS NOT NULL"),
+            ("extra_capture", None, (",\n        CHECK(requested_at_utc<=observed_at_utc AND observed_at_utc<=stored_at_utc)", ", extra TEXT,\n        CHECK(requested_at_utc<=observed_at_utc AND observed_at_utc<=stored_at_utc)"), None, None),
+            ("extra_body", (",\n        byte_length INTEGER", ", extra TEXT,\n        byte_length INTEGER"), None, None, None),
+            ("body_check", (" AND byte_length=length(response_body)", ""), None, None, None),
+            ("removed_request_identity_check", None, ("request_identity_sha256 TEXT NULL CHECK(request_identity_sha256 IS NULL OR (typeof(request_identity_sha256)='text' AND length(request_identity_sha256)=64 AND request_identity_sha256 NOT GLOB '*[^0-9a-f]*')),", "request_identity_sha256 TEXT NULL,"), None, None),
+            ("weakened_request_identity_check", None, ("length(request_identity_sha256)=64", "length(request_identity_sha256)>=0"), None, None),
+            ("removed_request_cname_check", None, ("request_cname TEXT NULL CHECK(request_cname IS NULL OR (typeof(request_cname)='text' AND length(request_cname)>0)),", "request_cname TEXT NULL,"), None, None),
+            ("weakened_request_cname_check", None, ("length(request_cname)>0", "length(request_cname)>=0"), None, None),
+            ("removed_request_method_check", None, ("request_method TEXT NOT NULL CHECK(request_method IN ('GET','POST')),", "request_method TEXT NOT NULL,"), None, None),
+            ("extra_harmless_check", None, (",\n        CHECK(requested_at_utc<=observed_at_utc AND observed_at_utc<=stored_at_utc),", ",\n        CHECK(requested_at_utc<=observed_at_utc AND observed_at_utc<=stored_at_utc),\n        CHECK(1),"), None, None),
+        )
+        for name, body_change, capture_change, evidence_sql, request_sql in variants:
+            with self.subTest(name=name):
+                c = self._weakened_v002_connection(body_change=body_change, capture_change=capture_change, evidence_sql=evidence_sql, request_sql=request_sql)
+                before = c.execute("SELECT type,name,sql FROM sqlite_master WHERE name LIKE 'jra_official_response_%' OR name LIKE 'ux_jra_official_response_captures_%' ORDER BY name").fetchall()
+                with self.assertRaises(RuntimeError): apply_jra_capture_schema_migrations(c)
+                self.assertEqual(c.execute("SELECT type,name,sql FROM sqlite_master WHERE name LIKE 'jra_official_response_%' OR name LIKE 'ux_jra_official_response_captures_%' ORDER BY name").fetchall(), before)
+                self.assertEqual(get_applied_jra_capture_schema_versions(c), {VERSION: NAME, VERSION_V2: NAME_V2})
+                self.assertIsNone(c.execute("SELECT 1 FROM sqlite_master WHERE name='jra_official_response_captures_v002'").fetchone())
                 self.assertFalse(c.in_transaction)

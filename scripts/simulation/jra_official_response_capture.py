@@ -15,6 +15,7 @@ from scripts.simulation.jra_official_identity import (
     JRAOfficialFinalWinOddsRequestLocator as _FinalLocator,
     JRAOfficialIdentityValidationError as _IdentityValidationError,
     parse_jra_horse_profile_url_identity as _parse_profile,
+    parse_jra_race_card_url_identity as _parse_card,
     parse_jra_result_url_identity as _parse_result,
 )
 
@@ -23,6 +24,7 @@ class JRAOfficialPageKind(_StrEnum):
     RACE_RESULT = "race_result"
     HORSE_PROFILE_HISTORY = "horse_profile_history"
     FINAL_WIN_ODDS = "final_win_odds"
+    TARGET_RACE_CARD = "target_race_card"
 
 
 class JRAOfficialResponseCaptureError(Exception):
@@ -89,6 +91,19 @@ def _page_for_url(value: str) -> JRAOfficialPageKind:
             raise _validation("response_url is not a supported JRA capture URL") from error
 
 
+def _supplied_page_for_url(value: str) -> JRAOfficialPageKind:
+    """Recognize supplied GET evidence without widening the v1 capture family."""
+
+    try:
+        return _page_for_url(value)
+    except JRAOfficialResponseCaptureValidationError:
+        try:
+            _parse_card(value)
+            return JRAOfficialPageKind.TARGET_RACE_CARD
+        except _IdentityValidationError as error:
+            raise _validation("response_url is not a supported JRA supplied URL") from error
+
+
 def canonicalize_jra_official_capture_url(*, page_kind: JRAOfficialPageKind, response_url: str) -> str:
     """Validate one approved resolved JRA URL and canonicalize only its delimiter."""
 
@@ -113,10 +128,38 @@ def canonicalize_jra_official_capture_url(*, page_kind: JRAOfficialPageKind, res
     return f"https://www.jra.go.jp{path}?CNAME={cname.replace('/', '%2F')}"
 
 
+def _canonical_target_race_card_url(value: object, name: str) -> str:
+    if type(value) is not str:
+        raise _validation(f"{name} must be exact str")
+    try:
+        _parse_card(value)
+    except _IdentityValidationError as error:
+        raise _validation(f"{name} is not an approved accessD URL") from error
+    parsed = _urlsplit(value)
+    raw = parsed.query.split("=", 1)[1]
+    cname = raw.replace("%2F", "/")
+    canonical = f"https://www.jra.go.jp/JRADB/accessD.html?CNAME={cname.replace('/', '%2F')}"
+    if value != canonical:
+        raise _validation(f"{name} must already be canonical")
+    return canonical
+
+
 def _canonical_supported_url(value: object, name: str) -> tuple[JRAOfficialPageKind, str]:
     if type(value) is not str:
         raise _validation(f"{name} must be exact str")
     kind = _page_for_url(value)
+    canonical = canonicalize_jra_official_capture_url(page_kind=kind, response_url=value)
+    if value != canonical:
+        raise _validation(f"{name} must already be canonical")
+    return kind, canonical
+
+
+def _canonical_supplied_url(value: object, name: str) -> tuple[JRAOfficialPageKind, str]:
+    if type(value) is not str:
+        raise _validation(f"{name} must be exact str")
+    kind = _supplied_page_for_url(value)
+    if kind is JRAOfficialPageKind.TARGET_RACE_CARD:
+        return kind, _canonical_target_race_card_url(value, name)
     canonical = canonicalize_jra_official_capture_url(page_kind=kind, response_url=value)
     if value != canonical:
         raise _validation(f"{name} must already be canonical")
@@ -155,7 +198,7 @@ class JRASuppliedOfficialResponse:
     observed_at: _datetime = _field(default=None)  # type: ignore[assignment]
 
     def __post_init__(self) -> None:
-        _kind, canonical = _canonical_supported_url(self.response_url, "response_url")
+        _kind, canonical = _canonical_supplied_url(self.response_url, "response_url")
         body = _strict_cp932(self.response_body)
         if type(self.charset) is not str or self.charset != "cp932":
             raise _validation("charset must be exact cp932")
@@ -298,6 +341,58 @@ class JRAFinalWinOddsResponseCapture:
         return JRAFinalWinOddsSuppliedOfficialResponse(request_locator=self.request_locator, response_body=self.response_body, charset="cp932", observed_at=self.observed_at)
 
 
+@_dataclass(frozen=True, slots=True)
+class JRAOfficialTargetRaceCardResponseCapture:
+    """Immutable schema-v3 GET capture for an official accessD target card."""
+
+    canonical_source_url: str
+    response_body: bytes
+    charset: str
+    requested_at: _datetime
+    observed_at: _datetime
+    stored_at: _datetime
+    http_status: int
+    content_type: str
+    content_encoding: str | None = None
+    http_date: str | None = None
+    etag: str | None = None
+    last_modified: str | None = None
+    content_length: int | None = None
+    schema_version: int = _field(init=False, default=3)
+    page_kind: JRAOfficialPageKind = _field(init=False, default=JRAOfficialPageKind.TARGET_RACE_CARD)
+    request_method: str = _field(init=False, default="GET")
+    response_sha256: str = _field(init=False)
+    capture_id: str = _field(init=False)
+
+    def __post_init__(self) -> None:
+        canonical = _canonical_target_race_card_url(self.canonical_source_url, "canonical_source_url")
+        body = _strict_cp932(self.response_body)
+        if type(self.charset) is not str or self.charset != "cp932":
+            raise _validation("charset must be exact cp932")
+        if type(self.http_status) is not int or self.http_status != 200:
+            raise _validation("http_status must be exact int 200")
+        content_type = _content_type(self.content_type)
+        if self.content_encoding not in (None, "identity"):
+            if type(self.content_encoding) is str:
+                raise JRAOfficialResponseCaptureUnsupportedError("content_encoding is unsupported")
+            raise _validation("content_encoding is invalid")
+        for value, name in ((self.http_date, "http_date"), (self.etag, "etag"), (self.last_modified, "last_modified")):
+            _header(value, name)
+        if self.content_length is not None and (type(self.content_length) is not int or self.content_length < 0 or self.content_length != len(body)):
+            raise _validation("content_length must exactly match response_body")
+        requested, observed, stored = (_utc(self.requested_at, "requested_at"), _utc(self.observed_at, "observed_at"), _utc(self.stored_at, "stored_at"))
+        if not requested <= observed <= stored:
+            raise _validation("capture timestamps are out of order")
+        digest = _hashlib.sha256(body).hexdigest()
+        material = {"canonical_source_url": canonical, "observed_at_utc": _datetime_text(observed), "page_kind": JRAOfficialPageKind.TARGET_RACE_CARD.value, "response_sha256": digest, "schema_version": 3}
+        capture_id = "jra-capture-v3:" + _hashlib.sha256(_json.dumps(material, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")).hexdigest()
+        for name, value in (("canonical_source_url", canonical), ("response_body", body), ("content_type", content_type), ("requested_at", requested), ("observed_at", observed), ("stored_at", stored), ("response_sha256", digest), ("capture_id", capture_id)):
+            object.__setattr__(self, name, value)
+
+    def to_supplied_official_response(self) -> JRASuppliedOfficialResponse:
+        return JRASuppliedOfficialResponse(response_url=self.canonical_source_url, response_body=self.response_body, charset="cp932", observed_at=self.observed_at)
+
+
 class JRAOfficialResponseCaptureArchive(_Protocol):
     def save_capture(self, *, capture: JRAOfficialResponseCapture) -> None: ...
     def load_capture(self, *, capture_id: str) -> JRAOfficialResponseCapture | None: ...
@@ -305,6 +400,9 @@ class JRAOfficialResponseCaptureArchive(_Protocol):
     def save_final_win_odds_capture(self, *, capture: JRAFinalWinOddsResponseCapture) -> None: ...
     def load_final_win_odds_capture(self, *, capture_id: str) -> JRAFinalWinOddsResponseCapture | None: ...
     def load_final_win_odds_supplied_response_for_evidence(self, *, canonical_source_url: str, request_identity_sha256: str, response_sha256: str, observed_at: _datetime) -> JRAFinalWinOddsSuppliedOfficialResponse: ...
+    def save_target_race_card_capture(self, *, capture: JRAOfficialTargetRaceCardResponseCapture) -> None: ...
+    def load_target_race_card_capture(self, *, capture_id: str) -> JRAOfficialTargetRaceCardResponseCapture | None: ...
+    def load_target_race_card_supplied_response_for_evidence(self, *, canonical_source_url: str, response_sha256: str, observed_at: _datetime) -> JRASuppliedOfficialResponse: ...
 
 
 if "annotations" in globals():

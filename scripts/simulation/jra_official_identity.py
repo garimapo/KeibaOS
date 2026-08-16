@@ -21,6 +21,7 @@ class JRAOfficialIdentityValidationError(JRAOfficialIdentityError):
 _HOST = "www.jra.go.jp"
 _RESULT_PATH = "/JRADB/accessS.html"
 _PROFILE_PATH = "/JRADB/accessU.html"
+_RACE_CARD_PATH = "/JRADB/accessD.html"
 _FINAL_ODDS_ENDPOINT = "https://www.jra.go.jp/JRADB/accessO.html"
 _RACE_PREFIX = "jra:race"
 _HORSE_PREFIX = "jra:horse"
@@ -38,6 +39,11 @@ _RESULT_CNAME = _re.compile(
 )
 _PROFILE_CNAME = _re.compile(
     r"pw01dud(?:00|10)(?P<horse_key>[0-9]{10})/(?P<tail>[0-9A-F]{2})\Z"
+)
+_RACE_CARD_CNAME = _re.compile(
+    r"pw01dde(?:01|10)(?P<venue>(?:0[1-9]|10))(?P<year>[0-9]{4})"
+    r"(?P<meeting>(?:0[1-9]|[1-9][0-9]))(?P<day>(?:0[1-9]|1[0-2]))"
+    r"(?P<race>(?:0[1-9]|1[0-2]))(?P<date>[0-9]{8})/(?P<tail>[0-9A-F]{2})\Z"
 )
 _FINAL_ODDS_CNAME = _re.compile(
     r"pw151ou10(?P<venue>(?:0[1-9]|10))(?P<year>[0-9]{4})"
@@ -254,6 +260,22 @@ def parse_jra_horse_profile_url_identity(value: str) -> JRAExternalHorseIdentity
     if match is None:
         raise _validation("horse_profile_url CNAME is outside the approved accessU family")
     return JRAExternalHorseIdentity(match.group("horse_key"))
+
+
+def parse_jra_race_card_url_identity(value: str) -> JRAExternalRaceIdentity:
+    """Validate a canonical official accessD card URL and return its race identity."""
+
+    if type(value) is not str or "%2F" not in value or "/" not in value.split("CNAME=", 1)[-1].replace("%2F", "/"):
+        raise _validation("race_card_url must use the canonical %2F delimiter")
+    cname = _resolved_cname(value, _RACE_CARD_PATH, "race_card_url")
+    match = _RACE_CARD_CNAME.fullmatch(cname)
+    if match is None:
+        raise _validation("race_card_url CNAME is outside the approved accessD family")
+    fields = match.groupdict()
+    _validate_cname_date(fields["date"], fields["year"])
+    return JRAExternalRaceIdentity(
+        fields["year"], fields["venue"], fields["meeting"], fields["day"], fields["race"]
+    )
 
 
 def _entry_horse_number(value: object) -> str:
