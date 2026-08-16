@@ -3831,3 +3831,36 @@ and final-odds-provider exceptions. A six-event JRA actual-start sequence confir
 newest-to-oldest event and imposes no source-history cap. Existing one-discovery, zero-provider, direct-lineage,
 mixed-history, deterministic-order, all-or-nothing, and purity coverage remains intact. Production, schema,
 migrations, package exports, live capture, archive, database, bridge, and formal branch remain unchanged.
+
+
+## Phase 4C-2d3b1i6d1d5f1c2 JRA accessD Live Capture Boundary Preparation
+
+Prepared the narrow dedicated live HTTPS boundary on formal
+`94ceb4742e7fec6b758d1ceded2ffecc422c873f`. The proposed public service method is
+`capture_target_race_card_response(*, response_url: str) ->
+JRAOfficialTargetRaceCardResponseCapture`; it validates only an already canonical
+accessD URL through the existing v3-specific path before taking any clock sample, using
+transport, or writing the archive.
+
+The existing GET transport and injected UTC clock are reusable unchanged. The exact
+future sequence is v3 accessD validation, requested clock sample, existing
+`transport.fetch`, exact-result/URL binding, observed and stored samples, v3 domain
+construction, `save_target_race_card_capture`, then return. It preserves the formal
+GET transport properties (TLS, redirects disabled, 200-only, retries zero, 10/10
+timeout, identity encoding, compressed-response rejection, raw bytes, exact optional
+Content-Length, 4 MiB maximum, response closing). V3 capture construction remains the
+sole strict-CP932/body/header/timestamp/SHA validator.
+
+The legacy public `capture_response` remains exactly v1 and rejects accessD before
+clock, transport, or archive use. Final odds remains exactly v2 POST. The dedicated
+method cannot invoke v1/v2 domain or save APIs; archive-before-return is mandatory and
+transport/domain failures create no archive record while archive conflict/integrity
+failures propagate without a partial return. The returned evidence retains actual
+service timestamps only: no caller timestamp, backdating, or historical availability
+claim is introduced. Target cutoff eligibility remains owned downstream.
+
+The recommended implementation scope is only the existing live-capture module, its
+dedicated tests, and phase documents. Required tests freeze exact v3 success/family
+separation/failure ordering, unchanged transport and legacy behavior, and absence of
+package exports or real capture. No production/test/schema/archive/migration work or
+official network capture was performed in this preparation.
