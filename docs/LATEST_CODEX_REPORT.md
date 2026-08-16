@@ -3784,6 +3784,17 @@ result and odds supplied-response types, a final-odds response for a different e
 observation after the target scheduled start. These paths fail closed as collection validation errors rather than being
 tested through mocked binding helpers.
 
+### 4C-2d3b1i6d1d5f1c1 — accessD capture v003 implementation
+
+Implemented the isolated accessD identity/capture/archive prerequisite from formal
+`776cd912…`. The v1 URL canonicalizer remains accessS/accessU-only; a separate
+supplied-response recognizer admits canonical accessD. Schema-v3 target-card GET
+captures use their own accessD identity path and cannot create v1 identities. The
+archive/repository adds family-specific v3 APIs and migration v003 rebuilds only the
+capture table while retaining the shared body table and both partial evidence indexes.
+No live accessD acquisition, target parser, source records, snapshots, or bridge work
+was performed.
+
 The suite also pins locator extraction validation, past-race normalizer validation and unsupported translation,
 absence-projection validation, neutral validation and conflict translation, and unchanged propagation of both result-
 and final-odds-provider exceptions. A six-event JRA actual-start sequence confirms that the collector retains every

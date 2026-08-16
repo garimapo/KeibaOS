@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from scripts.simulation.jra_official_response_capture_migration import NAME, VERSION, apply
 from scripts.simulation.jra_official_response_capture_migration_v002 import NAME as NAME_V2, VERSION as VERSION_V2
+from scripts.simulation.jra_official_response_capture_migration_v003 import NAME as NAME_V3, VERSION as VERSION_V3
 from scripts.simulation.jra_official_response_capture_migration_runner import apply_jra_capture_schema_migrations, get_applied_jra_capture_schema_versions
 from scripts.simulation.jra_official_response_capture import JRAOfficialResponseCapture
 
@@ -45,7 +46,7 @@ class JRAMigrationTests(unittest.TestCase):
     def test_dedicated_v001_fresh_and_idempotent(self):
         c = sqlite3.connect(":memory:")
         apply_jra_capture_schema_migrations(c)
-        self.assertEqual(get_applied_jra_capture_schema_versions(c), {VERSION: NAME, VERSION_V2: NAME_V2})
+        self.assertEqual(get_applied_jra_capture_schema_versions(c), {VERSION: NAME, VERSION_V2: NAME_V2, VERSION_V3: NAME_V3})
         self.assertEqual({r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}, {"jra_official_response_capture_schema_migrations", "jra_official_response_bodies", "jra_official_response_captures"})
         apply_jra_capture_schema_migrations(c)
         self.assertFalse(c.in_transaction)
@@ -69,7 +70,7 @@ class JRAMigrationTests(unittest.TestCase):
         ) WITHOUT ROWID""")
         c.commit()
         apply_jra_capture_schema_migrations(c)
-        self.assertEqual(get_applied_jra_capture_schema_versions(c), {1: NAME, VERSION_V2: NAME_V2})
+        self.assertEqual(get_applied_jra_capture_schema_versions(c), {1: NAME, VERSION_V2: NAME_V2, VERSION_V3: NAME_V3})
 
     def test_constraint_probes_rollback_without_changing_registered_rows(self):
         c = sqlite3.connect(":memory:")

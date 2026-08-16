@@ -5,7 +5,7 @@ import sqlite3
 import unittest
 
 from scripts.simulation.jra_official_identity import JRAExternalRaceIdentity, JRAOfficialFinalWinOddsRequestLocator
-from scripts.simulation.jra_official_response_capture import JRAFinalWinOddsResponseCapture, JRAOfficialResponseCapture, JRAOfficialResponseCaptureMissingError
+from scripts.simulation.jra_official_response_capture import JRAFinalWinOddsResponseCapture, JRAOfficialResponseCapture, JRAOfficialResponseCaptureMissingError, JRAOfficialTargetRaceCardResponseCapture
 from scripts.simulation.jra_official_response_capture_migration_runner import apply_jra_capture_schema_migrations
 from scripts.simulation.repositories.errors import RepositoryConflictError, RepositoryDataIntegrityError
 from scripts.simulation.repositories.sqlite_jra_official_response_capture_repository import SQLiteJRAOfficialResponseCaptureRepository
@@ -13,6 +13,7 @@ from scripts.simulation.repositories.sqlite_jra_official_response_capture_reposi
 URL = "https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde0106202504030420250913%2FDC"
 BODY = "<meta charset=\"Shift_JIS\">\u30c6\u30b9\u30c8".encode("cp932")
 T = datetime(2026, 1, 1, tzinfo=timezone.utc)
+DURL = "https://www.jra.go.jp/JRADB/accessD.html?CNAME=pw01dde0106202504030420250913%2FDC"
 
 def item(**changes):
     values = dict(canonical_source_url=URL, response_body=BODY, charset="cp932", requested_at=T, observed_at=T, stored_at=T, http_status=200, content_type="text/html")
@@ -29,6 +30,11 @@ def final_item(**changes):
     values = dict(request_locator=locator, response_body=BODY, charset="cp932", requested_at=T, observed_at=T, stored_at=T, http_status=200, content_type="text/html")
     values.update(changes)
     return JRAFinalWinOddsResponseCapture(**values)
+
+def target_item(**changes):
+    values = dict(canonical_source_url=DURL, response_body=BODY, charset="cp932", requested_at=T, observed_at=T, stored_at=T, http_status=200, content_type="text/html")
+    values.update(changes)
+    return JRAOfficialTargetRaceCardResponseCapture(**values)
 
 class SQLiteJRACaptureTests(unittest.TestCase):
     def repo(self):
@@ -70,3 +76,13 @@ class SQLiteJRACaptureTests(unittest.TestCase):
                 request_identity_sha256="0" * 64,
                 response_sha256=final.response_sha256, observed_at=T,
             )
+
+    def test_target_card_family_is_exact_and_cross_family_closed(self):
+        _c, r = self.repo(); legacy, final, target = item(), final_item(), target_item()
+        r.save_capture(capture=legacy); r.save_final_win_odds_capture(capture=final); r.save_target_race_card_capture(capture=target)
+        self.assertEqual(r.load_target_race_card_capture(capture_id=target.capture_id), target)
+        self.assertIsNone(r.load_capture(capture_id=target.capture_id))
+        self.assertIsNone(r.load_final_win_odds_capture(capture_id=target.capture_id))
+        self.assertIsNone(r.load_target_race_card_capture(capture_id=legacy.capture_id))
+        self.assertIsNone(r.load_target_race_card_capture(capture_id=final.capture_id))
+        self.assertEqual(r.load_target_race_card_supplied_response_for_evidence(canonical_source_url=DURL, response_sha256=target.response_sha256, observed_at=T).response_body, BODY)

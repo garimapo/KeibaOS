@@ -9,12 +9,14 @@ import scripts.simulation.jra_official_response_capture as module
 from scripts.simulation.jra_official_response_capture import (
     JRAFinalWinOddsResponseCapture, JRAFinalWinOddsSuppliedOfficialResponse, JRAOfficialPageKind,
     JRAOfficialResponseCapture, JRAOfficialResponseCaptureUnsupportedError,
+    JRAOfficialTargetRaceCardResponseCapture,
     JRAOfficialResponseCaptureValidationError, JRASuppliedOfficialResponse, canonicalize_jra_official_capture_url,
 )
 from scripts.simulation.jra_official_identity import JRAExternalRaceIdentity, JRAOfficialFinalWinOddsRequestLocator
 
 S = "https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde0106202504030420250913%2FDC"
 U = "https://www.jra.go.jp/JRADB/accessU.html?CNAME=pw01dud002020102902%2F22"
+D = "https://www.jra.go.jp/JRADB/accessD.html?CNAME=pw01dde0106202504030420250913%2FDC"
 BODY = "<meta charset=\"Shift_JIS\">\u30c6\u30b9\u30c8".encode("cp932")
 T = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
@@ -38,10 +40,15 @@ def final_capture(**changes):
     values.update(changes)
     return JRAFinalWinOddsResponseCapture(**values)
 
+def target_capture(**changes):
+    values = dict(canonical_source_url=D, response_body=BODY, charset="cp932", requested_at=T, observed_at=T, stored_at=T, http_status=200, content_type="text/html")
+    values.update(changes)
+    return JRAOfficialTargetRaceCardResponseCapture(**values)
+
 
 class JRAOfficialResponseCaptureTests(unittest.TestCase):
     def test_public_surface_and_signature(self):
-        self.assertEqual({n for n in vars(module) if not n.startswith("_")}, {"JRAOfficialPageKind", "JRAOfficialResponseCaptureError", "JRAOfficialResponseCaptureValidationError", "JRAOfficialResponseCaptureUnsupportedError", "JRAOfficialResponseCaptureMissingError", "JRASuppliedOfficialResponse", "JRAFinalWinOddsSuppliedOfficialResponse", "JRAOfficialResponseCapture", "JRAFinalWinOddsResponseCapture", "JRAOfficialResponseCaptureArchive", "canonicalize_jra_official_capture_url"})
+        self.assertEqual({n for n in vars(module) if not n.startswith("_")}, {"JRAOfficialPageKind", "JRAOfficialResponseCaptureError", "JRAOfficialResponseCaptureValidationError", "JRAOfficialResponseCaptureUnsupportedError", "JRAOfficialResponseCaptureMissingError", "JRASuppliedOfficialResponse", "JRAFinalWinOddsSuppliedOfficialResponse", "JRAOfficialResponseCapture", "JRAFinalWinOddsResponseCapture", "JRAOfficialTargetRaceCardResponseCapture", "JRAOfficialResponseCaptureArchive", "canonicalize_jra_official_capture_url"})
         self.assertEqual(tuple(inspect.signature(canonicalize_jra_official_capture_url).parameters), ("page_kind", "response_url"))
 
     def test_canonical_urls_and_supplied_reconstruction(self):
@@ -82,3 +89,15 @@ class JRAOfficialResponseCaptureTests(unittest.TestCase):
         )
         self.assertNotEqual(value.capture_id, final_capture(request_locator=changed_locator).capture_id)
         self.assertEqual(capture().capture_id, "jra-capture-v1:6346ff4ffb171d35d9bfa72477537dcd6fc9abe36253b7b4edb2be0cf671cc89")
+
+    def test_access_d_is_supplied_only_for_v1_and_has_v3_domain(self):
+        self.assertEqual(JRASuppliedOfficialResponse(response_url=D, response_body=BODY, observed_at=T).response_url, D)
+        with self.assertRaises(JRAOfficialResponseCaptureValidationError):
+            capture(canonical_source_url=D)
+        with self.assertRaises(JRAOfficialResponseCaptureValidationError):
+            canonicalize_jra_official_capture_url(page_kind=JRAOfficialPageKind.TARGET_RACE_CARD, response_url=D)
+        value = target_capture()
+        self.assertEqual(value.schema_version, 3)
+        self.assertEqual(value.page_kind, JRAOfficialPageKind.TARGET_RACE_CARD)
+        self.assertTrue(value.capture_id.startswith("jra-capture-v3:"))
+        self.assertEqual(value.to_supplied_official_response(), JRASuppliedOfficialResponse(response_url=D, response_body=BODY, observed_at=T))

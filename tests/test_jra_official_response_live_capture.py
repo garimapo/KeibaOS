@@ -26,6 +26,7 @@ from scripts.simulation.jra_official_response_live_capture import (
 
 _S = "https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde0106202504030420250913%2FDC"
 _U = "https://www.jra.go.jp/JRADB/accessU.html?CNAME=pw01dud002020102902%2F22"
+_D = "https://www.jra.go.jp/JRADB/accessD.html?CNAME=pw01dde0106202504030420250913%2FDC"
 _O = "https://www.jra.go.jp/JRADB/accessO.html"
 _CNAME = "pw151ou1006202601021220260105Z/2E"
 _BODY = "<meta charset=\"Shift_JIS\">テスト".encode("cp932")
@@ -285,6 +286,7 @@ class JRAOfficialLiveResponseCaptureTests(unittest.TestCase):
             (JRAOfficialPageKind.RACE_RESULT, _U),
             (JRAOfficialPageKind.HORSE_PROFILE_HISTORY, _S),
             (JRAOfficialPageKind.FINAL_WIN_ODDS, _O),
+            (JRAOfficialPageKind.TARGET_RACE_CARD, _D),
             (JRAOfficialPageKind.RACE_RESULT, "https://bad.example/"),
         ):
             with self.subTest(kind=kind, url=url), self.assertRaises(JRAOfficialResponseCaptureValidationError):
