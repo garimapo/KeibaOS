@@ -6,46 +6,65 @@ READY_FOR_REVIEW
 
 ## Phase
 
-`4C-2d3b1i6d1d5f1c1` — JRA accessD capture v003.
+`4C-2d3b1i6d1d5f1c2` — JRA accessD live capture.
 
-Formal base: `776cd9123635eef3759284ff997a369857f3769e`.
+Formal base: `94ceb4742e7fec6b758d1ceded2ffecc422c873f`.
 
-Approved design: `ff217c3fdc4b1249d057909ad974430851710ed5`.
+Approved prepare: `e34e7139c0a5ed943897fd1638d6287a2b38b433`.
 
-Review branch: `review/4c-2d3b1i6d1d5f1c1-jra-accessd-capture-v003`.
+Review branch: `review/4c-2d3b1i6d1d5f1c2-jra-accessd-live-capture`.
 
 ## Allowed Files
 
 ```text
-scripts/simulation/jra_official_identity.py
-scripts/simulation/jra_official_response_capture.py
-scripts/simulation/jra_official_response_capture_migration_runner.py
-scripts/simulation/jra_official_response_capture_migration_v003.py
-scripts/simulation/repositories/sqlite_jra_official_response_capture_repository.py
-tests/test_jra_official_identity.py
-tests/test_jra_official_response_capture.py
-tests/test_jra_official_response_capture_migration.py
-tests/test_sqlite_jra_official_response_capture_repository.py
+scripts/simulation/jra_official_response_live_capture.py
 tests/test_jra_official_response_live_capture.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-## Frozen Contract
+## Implemented Contract
 
-`parse_jra_race_card_url_identity` accepts only canonical accessD URLs. Supplied
-responses may recognize accessS/accessU/accessD, while the existing v1 canonicalizer
-and `JRAOfficialResponseCapture` remain accessS/accessU-only. Schema-v3
-`JRAOfficialTargetRaceCardResponseCapture` is GET-only, derives deterministic
-`jra-capture-v3` identity, and converts to the existing supplied-response type.
+`JRAOfficialLiveResponseCaptureService` now has the exact dedicated method:
 
-Archive APIs stay family-specific. v003 validates v002, reuses response bodies,
-rebuilds only captures, preserves both partial indexes and every v1/v2 row and ID.
-Valid foreign-family IDs return `None`; requested-family corruption fails closed.
+```python
+capture_target_race_card_response(
+    self,
+    *,
+    response_url: str,
+) -> JRAOfficialTargetRaceCardResponseCapture
+```
 
-## Required Tests and Stop Condition
+It first uses the existing v3-only canonical accessD boundary. Invalid,
+noncanonical, or wrong-family input consequently fails before a clock sample,
+transport request, or archive write. It then performs exactly:
 
-Run dedicated identity/capture/repository/migration/live suites, related JRA
-regressions, full pytest, and `git diff --check`. No live accessD acquisition, target
-parser, source records, snapshots, Predictor, bridge, package export, or unrelated
-schema work is authorized. Stop after one review commit and push only this branch.
+```text
+v3 canonical accessD validation
+-> requested_at clock
+-> existing GET transport.fetch
+-> exact transport result and URL check
+-> observed_at clock
+-> stored_at clock
+-> JRAOfficialTargetRaceCardResponseCapture
+-> save_target_race_card_capture
+-> return capture
+```
+
+The new path uses only v3 domain/archive operations and preserves actual clock
+samples without caller timestamps or backdating. `capture_response` remains
+accessS/accessU-only and rejects `TARGET_RACE_CARD` before all collaborators;
+the v2 final-odds POST method and existing GET transport configuration remain
+unchanged.
+
+## Required Verification
+
+Run the dedicated live-capture suite, related JRA identity/capture/archive suites,
+the complete pytest suite, package/public-surface and forbidden-dependency checks,
+and `git diff --check`. No real trusted capture, target parser/normalizer, source
+records, snapshots, schema/migration/repository change, bridge, Predictor, or
+package-root export is authorized.
+
+## Stop Condition
+
+Stop after one review commit is pushed for independent review.

@@ -3831,3 +3831,27 @@ and final-odds-provider exceptions. A six-event JRA actual-start sequence confir
 newest-to-oldest event and imposes no source-history cap. Existing one-discovery, zero-provider, direct-lineage,
 mixed-history, deterministic-order, all-or-nothing, and purity coverage remains intact. Production, schema,
 migrations, package exports, live capture, archive, database, bridge, and formal branch remain unchanged.
+
+
+## Phase 4C-2d3b1i6d1d5f1c2 JRA accessD Live Capture Implementation
+
+Implemented the dedicated schema-v3 accessD GET service method
+`capture_target_race_card_response(*, response_url)` in the existing JRA live capture
+service. It first uses the existing private v3 canonical accessD validation, so malformed,
+raw-slash noncanonical, and accessS/accessU/accessO inputs are rejected before the
+clock, transport, or archive are touched.
+
+For valid canonical accessD, the method samples requested time, reuses the unchanged
+GET transport, verifies the exact returned byte entity and URL, samples observed and
+stored times, constructs `JRAOfficialTargetRaceCardResponseCapture`, saves through
+`save_target_race_card_capture`, and then returns that exact capture. The v3 domain
+continues to own strict CP932, headers, raw-byte SHA, and timestamp ordering. No caller
+timestamp is accepted; live evidence retains only actual service clock observations.
+
+The live suite now pins the public method signature, successful v3-only archive-before-
+return flow, exact three-clock ordering, raw/canonical/family rejection before
+collaborators, contradictory transport/domain/clock failures without archive writes, and
+unchanged propagation of archive exceptions. It also retains the v1 accessD rejection
+and v1/v2 success regressions, transport raw-stream/configuration tests, no
+package-root export, and no real HTTP capture. No capture/archive/domain/repository/schema
+or migration boundary was changed.
