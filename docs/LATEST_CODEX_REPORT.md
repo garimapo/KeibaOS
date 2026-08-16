@@ -3827,3 +3827,38 @@ track fact, so `SINGLE_RESPONSE_COMPLETE_TRACK_SOURCE = NOT_PROVEN` and
 target-source implementation and snapshot assembly remain blocked. No production,
 test, archive, migration, schema, target normalizer, bridge, Predictor, or real
 trusted capture work occurred.
+
+### Active-card structural investigation correction
+
+The expired-publication response was correctly retained as evidence only of its own
+byte envelope. The premature `TRACK_SOURCE_SCHEMA_CHANGE_REQUIRED = YES` conclusion
+has been replaced with the required evidence-driven decision after an active card
+was obtained directly from official navigation.
+
+At `2026-08-16T03:03:24.871331+00:00`, JRA's official current-week navigation
+page exposed the exact href for 2026-08-16 Chukyo 7R:
+`/JRADB/accessD.html?CNAME=pw01dde0107202602080720260816/29`. The CNAME was not
+constructed. Its canonical accessD URL was retrieved transiently at
+`2026-08-16T03:03:43.289184+00:00`: HTTP 200, `Content-Type: text/html`, absent
+content encoding, 237,794 bytes, and strict CP932 decoding. The body was neither
+persisted nor committed and is not trusted historical capture evidence.
+
+The active `table.basic.narrow-xy.mt20` had the expected target-card header and 16
+entry rows. Within every row, the exact horse-name anchor selector resolved one
+official accessU URL and the existing horse-profile identity parser returned a
+canonical ten-digit JRA horse key. The same active header supplied direct date,
+meeting/place/day, scheduled start, weather, surface/condition, race name/class,
+and course distance; each row supplied direct horse number, jockey, and positive
+single-win odds. The detailed unique selectors, structural heading rules, identity
+cross-checks, and fail-closed cardinality requirements are frozen in
+`CURRENT_PHASE.md`.
+
+Thus row-local horse identity, target odds, and one-response complete target-track
+evidence are now proven for the exact active accessD structure.
+`SINGLE_RESPONSE_COMPLETE_TRACK_SOURCE = PROVEN` and
+`TRACK_SOURCE_SCHEMA_CHANGE_REQUIRED = NO`; f1a is not currently required. The
+remaining readiness blocker is the absent formal accessD capture/archive family:
+the immutable supplied-response shape can be reused only after exact accessD URL
+recognition, and a dedicated v003 GET capture/migration design remains required.
+No production, tests, archive/database, schema/migration, target normalizer,
+snapshot, bridge, Predictor, or trusted capture work occurred.
