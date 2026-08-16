@@ -3790,3 +3790,45 @@ and final-odds-provider exceptions. A six-event JRA actual-start sequence confir
 newest-to-oldest event and imposes no source-history cap. Existing one-discovery, zero-provider, direct-lineage,
 mixed-history, deterministic-order, all-or-nothing, and purity coverage remains intact. Production, schema,
 migrations, package exports, live capture, archive, database, bridge, and formal branch remain unchanged.
+
+## Phase 4C-2d3b1i6d1d5f1c — JRA accessD Capture v003 Preparation
+
+Status: `READY_FOR_REVIEW`. This docs-only design uses formal base
+`776cd9123635eef3759284ff997a369857f3769e`; the active-card structural reference
+`6515e61bbdc256eeaa721f67bc34c6b36eaf3be4` was inspected but neither merged nor
+cherry-picked.
+
+The frozen identity addition is a narrow public
+`parse_jra_race_card_url_identity()` using the formal accessD CNAME grammar and
+canonical HTTPS accessD URL. It maps directly to the existing race identity and has
+no display-text fallback. `TARGET_RACE_CARD` extends the existing page-kind enum,
+while the existing immutable strict-CP932 `JRASuppliedOfficialResponse` is reused
+after exact accessD URL recognition rather than duplicated.
+
+The approved v003 domain is a distinct immutable GET target-card capture. Its raw
+body, headers, timestamps, validation, supplied-response conversion, and GET
+identity follow the v1 family; it has schema version 3 and an independent
+`jra-capture-v3` ID. Request method is deliberately absent from that ID because the
+closed v3 family fixes GET, just as v1 does. Existing v1 and request-aware v2 IDs
+are frozen byte-for-byte.
+
+Archive evolution is family-specific: three dedicated target-card methods complement
+the unchanged concrete v1 and v2 APIs, other-family IDs return `None`, and any
+requested-family corruption is `RepositoryDataIntegrityError`. Exact target-card
+evidence lookup is canonical URL plus raw SHA-256 plus observed instant, with no
+latest/nearest fallback.
+
+v003 must validate exact v002 state then rebuild only the capture table because
+SQLite cannot extend the existing closed CHECK constraints in place. The body table
+is reused untouched. All 19 capture columns, both partial evidence indexes, every
+v1/v2 row, and all prior capture IDs are preserved exactly. The migration runner
+continues to own transaction boundaries; v003 apply remains transaction-neutral.
+
+The private GET byte transport is already suitable for accessD once URL authorization
+exists, but the current public GET service remains v1-specific. A later live phase
+needs a separate v3 service method. Structural target selectors were not redesigned:
+the reference's horse identity, target odds, and one-response target-track facts are
+recorded only as prerequisites, and non-runner states remain unsupported. The next
+approved implementation candidate is limited to v003 identity/domain/archive/
+migration work and its tests; target-source normalization, snapshots, and live
+accessD acquisition remain out of scope.
