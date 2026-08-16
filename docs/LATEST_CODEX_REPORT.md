@@ -3817,3 +3817,20 @@ documentation-only. It must freeze the exact accessD grammar/capture family, tar
 direct selectors, single-win odds semantics, cutoff policy, and unsupported states before target-source implementation
 can be safely designed. Formal branch remains `776cd9123635eef3759284ff997a369857f3769e`; no real official response
 was captured or persisted.
+
+### Target evidence prerequisite correction
+
+The neutral `track` source record requires a nonempty `track_condition`. The accessD race card is therefore frozen only
+as `ACCESSD_STATIC_TRACK_FACTS = CONDITIONAL`; it is not sufficient for a complete target track record. The missing
+causally available official target-condition source is explicitly `NOT_PROVEN`, making
+`COMPLETE_TARGET_TRACK_SOURCE = BLOCKED`. Weather remains optional and is never fabricated. Post-race/result evidence
+must not backfill the prediction-time condition.
+
+The PREPARE also now separates timestamp ownership: a source normalizer preserves exact observation and may enforce
+the target scheduled-start boundary when formally knowable, but does not receive or invent `information_cutoff`.
+The snapshot boundary alone owns final `observed_at <= captured_at <= information_cutoff <= scheduled_start_at`
+eligibility. Target odds are usable only when their actual observation satisfies that later snapshot cutoff.
+
+The recommended f1 PREPARE is broadened only to resolve both necessary prerequisites together: accessD
+identity/capture plus row-local accessU identity proof and selectors, and a causally available official target
+track-condition source with exact race/time binding. No implementation, capture, or formal-branch change occurred.
