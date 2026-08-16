@@ -3766,3 +3766,17 @@ complete JRA-plus-transfer history. Any non-JRA or unsupported actual event fail
 provider acquisition, preserving `ALL_CAUSALLY_AVAILABLE_ACTUAL_PRIOR_STARTS` without a latest-N cap. The final source
 tuple uses the existing neutral record-set validator. No schema, migration, capture, NAR, bridge, Predictor, test, or
 production change occurred in this PREPARE.
+
+### d1d5e direct collection-boundary hardening
+
+The future immutable collection result now validates its target race/entry lineage even on normal direct construction.
+It must parse the canonical JRA target race, require the entry to belong to exactly that race, require a positive
+canonical decimal entry suffix, and prove the exact entry ID via the existing JRA entry-ID builder. Every contained
+neutral record must still match those validated target IDs exactly; no second identity grammar or public parser is
+introduced.
+
+The implementation contract also now freezes exact upstream exception translation: discovery and past-race-normalizer
+validation errors become collection validation errors; their unsupported errors become collection unsupported errors;
+locator/projection/neutral-validation failures become collection validation errors; provider-raised exceptions propagate
+unchanged. No broad exception catch is permitted. Future dedicated tests must cover all direct-construction lineage
+rejections and this complete translation table.

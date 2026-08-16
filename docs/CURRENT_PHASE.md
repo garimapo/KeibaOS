@@ -69,7 +69,16 @@ target_external_entry_id: str
 source_records: tuple[HistoricalInputSourceRecord, ...]
 ```
 
-It accepts exact source-record values only. Every record must be target-bound to those exact external IDs, have
+Its direct constructor validates target JRA lineage using existing formal identity APIs only:
+
+1. `parse_jra_external_race_id(target_external_race_id)` must succeed;
+2. `target_external_entry_id` must use that exact parsed race's entry prefix;
+3. the remaining horse-number suffix must be canonical positive decimal material; and
+4. `build_jra_external_entry_id(race_identity=parsed_race, horse_no=suffix)` must exactly equal
+   `target_external_entry_id`.
+
+It creates no second JRA grammar or public entry parser. It accepts exact source-record values only. Every record must
+be target-bound to these validated exact external IDs, have
 `organization="JRA"` and `source_system="jra_official"`, and have record kind `past_race` or
 `past_race_absence`. The tuple is nonempty and is exactly one of: one absence and no past races; or one-or-more past
 races and no absence. Its constructor performs only this collection-envelope validation; the collector performs the
@@ -149,9 +158,20 @@ final_win_odds_response.observed_at <= target scheduled_start_at
 
 Any late, missing, wrong-type, malformed, wrong-URL, wrong-race, wrong-locator, locator-extraction, or normalizer
 failure aborts the entire call with no returned collection. Timestamps are preserved exactly and never replaced or
-backdated. Provider-raised exceptions propagate unchanged; expected formal discovery, extractor, normalizer,
-projection, response-binding, and neutral-record validation failures are translated to the collection's validation or
-unsupported error family without a broad `Exception` catch. The existing snapshot boundary remains the sole owner of
+backdated. The exact upstream exception translation table is:
+
+| Upstream failure | Collection failure |
+| --- | --- |
+| discovery `ValidationError` | collection `ValidationError` |
+| discovery `UnsupportedError` | collection `UnsupportedError` |
+| locator-extraction validation | collection `ValidationError` |
+| past-race normalizer validation | collection `ValidationError` |
+| past-race normalizer unsupported | collection `UnsupportedError` |
+| absence-projection validation | collection `ValidationError` |
+| neutral source validation or conflict | collection `ValidationError` |
+| provider-raised exception | propagate unchanged |
+
+No broad `Exception` or `BaseException` catch is allowed. The existing snapshot boundary remains the sole owner of
 `observed_at <= captured_at <= information_cutoff <= scheduled_start_at` eligibility.
 
 `FINAL_NEUTRAL_VALIDATION` is exactly one final call to the existing
@@ -191,11 +211,13 @@ docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-Required tests include exact public surface/signature and frozen/slotted result domain; one discovery call; empty and
-transfer-only projection without provider calls; multi-start newest-to-oldest output; exact event/result URL/race
-binding; extractor-derived locator and exact final-odds locator binding; per-call result/request dedup; late/missing/
-wrong-type/wrong-identity evidence rejection; non-JRA and unsupported whole-call rejection before provider use; no
-partial return after a later event fails; final neutral-validation invocation and target-bound result invariants; no
+Required tests include exact public surface/signature and frozen/slotted result domain; normal direct-constructor
+rejection of malformed/non-JRA race IDs, an entry from another race, `entry:07`, `entry:0`, `entry:+7`, an extra entry
+suffix, and target/record ID disagreement; one discovery call; empty and transfer-only projection without provider
+calls; multi-start newest-to-oldest output; exact event/result URL/race binding; extractor-derived locator and exact
+final-odds locator binding; per-call result/request dedup; the exact upstream exception-translation table; late/
+missing/wrong-type/wrong-identity evidence rejection; non-JRA and unsupported whole-call rejection before provider use;
+no partial return after a later event fails; final neutral-validation invocation and target-bound result invariants; no
 source-history cap; purity/no package export; and regression coverage for JRA discovery, projection, normalizer,
 locator, capture/archive/live, NAR, and neutral source/snapshot boundaries.
 
