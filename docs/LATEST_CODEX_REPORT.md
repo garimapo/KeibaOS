@@ -3745,3 +3745,24 @@ Fresh correction verification under Python 3.14.5 / pytest 8.3.5 passed: dedicat
 related JRA/NAR/neutral regressions 139, and the full suite 2597. Package-export, forbidden-dependency/source/AST,
 identity-ownership, unchanged-production, version, and `git diff --check` validation remain required before review
 publication.
+
+## Phase 4C-2d3b1i6d1d5e JRA Historical Source Collection PREPARE v2
+
+Re-prepared the JRA collector against formal `c8008cdc15903b305219066c3b10b35e1255767f`, after the e0 public
+discovery-to-absence projection handoff became formal. The proposed pure injected collector now has one exact discovery
+call and can pass that exact discovery plus the original accessU supplied response directly to the formal public absence
+projection, eliminating the former double-discovery blocker.
+
+The implementation-ready contract uses one immutable/slotted collection result and two injected callable provider
+protocols: accessS is keyed by the complete formal JRA historical race reference; accessO is keyed only by the formal
+locator extracted from that exact accessS response. Both supplied-response objects must exactly bind to the discovery
+race/URL or extracted locator and both must have actual observations no later than the target scheduled start. It
+preserves raw timestamps, has no HTTP/archive/clock ownership, and leaves final snapshot eligibility to the existing
+snapshot boundary.
+
+Collection is all-or-nothing and retains discovery's newest-to-oldest JRA event order. It emits only formal absence for
+zero actual starts, ignores proven non-start events without consuming an output slot, and permits collection only for a
+complete JRA-plus-transfer history. Any non-JRA or unsupported actual event fails the entire JRA-only call before
+provider acquisition, preserving `ALL_CAUSALLY_AVAILABLE_ACTUAL_PRIOR_STARTS` without a latest-N cap. The final source
+tuple uses the existing neutral record-set validator. No schema, migration, capture, NAR, bridge, Predictor, test, or
+production change occurred in this PREPARE.
