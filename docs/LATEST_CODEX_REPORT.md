@@ -3888,3 +3888,29 @@ horse number must equal its entry horse number. Direct construction now rejects 
 organization/source/race records, unmatched items, and odds/entry disagreement before
 returning a collection. The normalizer still performs its one and only neutral validator
 call before that constructor boundary.
+
+
+## Phase 4C-2d3b1i6d1d5f1c4 JRA Target-Horse accessU History Resolution Preparation
+
+Prepared the missing target-entry accessU response-resolution boundary on formal
+`0b8a5b3b590478ac880d27c4ecf387f5136c4806`. The target source normalizer proves the
+stable horse identity from its row-local accessU anchor but currently discards the exact
+opaque URL. The archive can reconstruct only an already-known URL/SHA/observation
+evidence tuple and exposes no horse-identity enumeration or cutoff-selection API.
+Accordingly, neither an external horse ID nor a later accessD reparse may recover a
+trusted history response.
+
+The prepared fix is a JRA-specific immutable target-horse-history locator retained in
+the target collection, bound to the target race, entry, horse, and exact canonical
+accessU URL from the original row anchor. Neutral source-record values remain URL-free.
+After that retention, a family-specific archive query can select the latest eligible
+schema-v1 accessU response for the exact canonical URL at or before scheduled start;
+same-time conflicting captures fail closed, while no eligible capture is a dedicated
+unavailable result. No URL synthesis, backdating, live fallback, schema/index change,
+or real trusted capture is needed.
+
+The pure resolver remains injected and validates target/locator/response binding before
+passing the one exact response to formal discovery and the existing historical collector.
+Snapshot cutoff eligibility remains downstream. The recommended follow-on implements
+only locator retention plus this archive-backed resolver; collection, snapshot, live
+capture, migration, and bridge boundaries remain unchanged.
