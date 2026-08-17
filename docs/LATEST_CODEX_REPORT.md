@@ -3914,3 +3914,17 @@ passing the one exact response to formal discovery and the existing historical c
 Snapshot cutoff eligibility remains downstream. The recommended follow-on implements
 only locator retention plus this archive-backed resolver; collection, snapshot, live
 capture, migration, and bridge boundaries remain unchanged.
+
+### Causal lookup-cutoff correction
+
+The accessU archive query keeps the inclusive `observed_at_not_after` parameter, but
+the pure resolver no longer derives it from target scheduled start. Its public contract
+now receives the exact caller-supplied bound, validates that it is aware, UTC-comparable,
+and no later than scheduled start, passes it unchanged to the provider once, and rejects
+any response observed after it. Thus a 13:00 replay bound chooses a 12:30 capture rather
+than a 14:00 capture merely because the race starts at 15:00.
+
+Later race-level orchestration owns deriving this effective source-resolution bound from
+the replay causal boundary; it must remain compatible with captured-at and
+information-cutoff eligibility before snapshot assembly. C4 remains generic and does
+not duplicate snapshot-builder causality validation or rewrite timestamps.

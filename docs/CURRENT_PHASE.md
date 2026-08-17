@@ -90,7 +90,8 @@ It accepts only a canonical accessU URL, validates it with
 `canonicalize_jra_official_capture_url(page_kind=HORSE_PROFILE_HISTORY, ...)`, and
 requires the parsed URL horse identity to be the locator horse identity at the caller
 binding layer. It queries only schema-v1 `HORSE_PROFILE_HISTORY` captures for that
-exact canonical URL whose actual `observed_at <= observed_at_not_after`; accessS,
+exact canonical URL whose actual `observed_at <= observed_at_not_after`; this upper
+bound is inclusive. accessS,
 accessD, and accessO cannot match.
 
 The deterministic policy is `latest causally eligible observed_at`. The repository must
@@ -139,18 +140,23 @@ def resolve_jra_target_horse_history_response(
     target_track_record: HistoricalInputSourceRecord,
     target_entry_record: HistoricalInputSourceRecord,
     locator: JRATargetHorseHistoryLocator,
+    observed_at_not_after: datetime,
     horse_history_response_provider: JRATargetHorseHistoryResponseProvider,
 ) -> JRASuppliedOfficialResponse: ...
 ```
 
 It validates exact target lineage and locator binding, invokes the injected provider
-once with the target scheduled start as the exclusive upper bound, then requires an
-exact supplied response with canonical accessU URL whose parsed horse identity equals
-the target entry horse identity and whose actual `observed_at <= scheduled_start_at`.
+once with that exact explicit caller-supplied `observed_at_not_after` bound. The bound
+must be an exact aware datetime, normalized for UTC comparison, and no later than the
+target scheduled start. The resolver must not substitute scheduled start for it. It then
+requires an exact supplied response with canonical accessU URL whose parsed horse
+identity equals the target entry horse identity and whose actual
+`observed_at <= observed_at_not_after` (therefore also no later than scheduled start).
 `None` raises `JRATargetHorseHistoryResolutionUnavailableError`. Malformed locator,
-target, response, or late response raises the resolution validation error. Provider
-exceptions, including repository integrity failures, propagate unchanged. There is no
-broad exception catch, network, clock, archive access, or fallback in the pure resolver.
+target, bound, response, or late response raises the resolution validation error.
+Provider exceptions, including repository integrity failures, propagate unchanged.
+There is no broad exception catch, network, clock, archive access, or fallback in the
+pure resolver.
 
 The repository method may serve as the provider through a thin adapter, but the existing
 historical collector remains unchanged and still consumes the resolved exact response.
@@ -168,10 +174,13 @@ trusted accessD target evidence                    [formal]
 -> historical input snapshot builder                [formal]
 ```
 
-The target accessD `observed_at` remains preserved by target normalization. The resolved
-accessU response retains its actual `observed_at` and must be no later than the target
-scheduled start. No timestamp is replaced or backdated; no `available_at` is invented.
-The later snapshot boundary remains sole owner of
+The target accessD `observed_at` remains preserved by target normalization. The
+resolved accessU response retains its actual `observed_at` and must be no later than the
+explicit supplied lookup bound. No timestamp is replaced or backdated; no `available_at`
+is invented. A later race-level orchestration owns deriving that effective bound from
+the replay causal boundary and must never let it exceed applicable captured-at or
+information-cutoff eligibility. This resolver neither receives nor duplicates snapshot
+construction validation; the snapshot boundary remains sole owner of
 `observed_at <= captured_at <= information_cutoff <= scheduled_start_at`.
 
 ## Required Next Implementation Tests
@@ -179,12 +188,14 @@ The later snapshot boundary remains sole owner of
 The next phase must use no real capture and cover: exact locator public surface,
 immutability, canonical URL/horse/race/entry binding, one locator per ordered target
 entry, no neutral-record URL leakage, accessD row-anchor retention, no URL synthesis,
-provider call count one, canonical accessU-only response binding, wrong horse/family,
-late response, no result, provider exception propagation, and no raw accessD reparse.
-Repository tests must cover exact URL/cutoff lookup, latest eligible selection, no
-future fallback, same-time conflicting SHA integrity failure, corrupt requested-family
-row failure, accessS/accessD/accessO exclusion, and no-result `None`. Existing target
-normalizer, discovery, collector, capture/archive, and snapshot regressions must run.
+provider call count one with the exact caller bound, canonical accessU-only response
+binding, wrong horse/family, late response, a bound after scheduled start, no result,
+provider exception propagation, and no raw accessD reparse. Repository tests must cover
+the inclusive exact URL/cutoff lookup; 12:30/14:00 captures with a 13:00 bound selecting
+12:30; no future fallback; same-time conflicting SHA integrity failure; corrupt
+requested-family row failure; accessS/accessD/accessO exclusion; and no-result `None`.
+Existing target normalizer, discovery, collector, capture/archive, and snapshot
+regressions must run.
 
 ## Readiness and Next Phase
 
@@ -198,6 +209,10 @@ ARCHIVE_INDEX_CHANGE_REQUIRED: NO
 MULTIPLE_CAPTURE_POLICY_READY: YES
 NO_ELIGIBLE_CAPTURE_POLICY_READY: YES
 RAW_ACCESSD_REPARSE_ALLOWED: NO
+CAUSAL_LOOKUP_BOUND_READY: YES
+CAUSAL_LOOKUP_BOUND_SOURCE: EXPLICIT_CALLER_SUPPLIED_OBSERVED_AT_NOT_AFTER
+SCHEDULED_START_USED_AS_LOOKUP_BOUND: NO
+LOOKUP_BOUND_INCLUSIVE: YES
 CAUSALITY_POLICY_READY: YES
 IMPLEMENTATION_READY: YES_AFTER_LOCATOR_RETENTION
 BLOCKERS: formal target collection currently discards exact row-local accessU URL
