@@ -3945,3 +3945,34 @@ locator data, never neutral record values. No production files changed.
 
 Fresh correction verification: dedicated target/resolver/repository suites **56 passed**;
 the exact related command above **121 passed**; full pytest suite **2681 passed**.
+
+
+## Phase 4C-2d3b1i6d1d5f1c4b JRA Historical accessS/accessO Causal Resolution PREPARE
+
+Prepared the missing replay-causal accessS/accessO archive boundary against formal
+`8660f9f8ffdea03b0f7badc31429d8b572e7cfa0`. Current persisted v1 result captures
+already contain the canonical accessS URL, `race_result` page kind, schema version, and
+observation time. Current v2 final-odds captures already contain the canonical endpoint,
+formal request identity, raw CNAME, `final_win_odds` page kind, schema version, and
+observation time. The archive therefore needs two narrow family-specific latest-before-
+cutoff lookups, not a schema/index/migration change.
+
+The collector must receive an explicit inclusive `observed_at_not_after` and pass that
+unchanged value exactly once to both injected provider protocols. It must recheck supplied
+accessU, returned accessS, and returned accessO observations against that bound (and the
+outer scheduled-start maximum); scheduled start is not a lookup-bound substitute. The
+existing collector remains the sole owner of discovery, accessS-to-accessO locator
+extraction, caching, normalizing, and all-or-nothing event order.
+
+No eligible archive row returns `None` from the repository and becomes a distinct new
+collector unavailable error. Archive corruption and all other provider exceptions remain
+unchanged exceptions, never unavailable. The v1 result lookup is exact URL/family only;
+the v2 odds lookup is exact formal request-locator lineage and must reconstruct an equal
+locator. In either family, the unique greatest causally eligible observation wins and a
+same-time conflict or selected corruption fails closed with `RepositoryDataIntegrityError`.
+
+The target/accessU resolution already formalized in c4a stays unchanged. No real capture,
+live fallback, timestamp rewriting, synthetic result/odds, raw accessD reparse,
+race-level source union, snapshot assembly, schema/index change, or package export was
+authorized or performed. The next narrow implementation can be limited to the collector,
+SQLite capture repository, their tests, and phase docs.
