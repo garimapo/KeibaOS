@@ -153,6 +153,48 @@ class SQLiteJRAOfficialResponseCaptureRepository:
         except _sqlite3.Error as error:
             raise _Integrity("JRA target-card archive evidence read failed") from error
 
+    def load_latest_horse_profile_history_supplied_response(
+        self,
+        *,
+        canonical_horse_history_url: str,
+        observed_at_not_after: _datetime,
+    ) -> _Supplied | None:
+        """Return one latest inclusive-cutoff schema-v1 accessU capture, if present."""
+
+        try:
+            canonical = _canonicalize(
+                page_kind=_PageKind.HORSE_PROFILE_HISTORY,
+                response_url=canonical_horse_history_url,
+            )
+            if canonical != canonical_horse_history_url:
+                raise _Validation("canonical_horse_history_url is not canonical")
+            bound = self._lookup_time(observed_at_not_after)
+            rows = self._connection.execute(
+                f"SELECT {_COLUMNS} FROM jra_official_response_captures "
+                "WHERE schema_version=1 AND page_kind=? AND canonical_source_url=? "
+                "AND observed_at_utc<=? ORDER BY observed_at_utc DESC",
+                (_PageKind.HORSE_PROFILE_HISTORY.value, canonical, self._time(bound)),
+            ).fetchall()
+            if not rows:
+                return None
+            captures: list[_Capture] = []
+            for row in rows:
+                item = self._reconstruct(row)
+                if type(item) is not _Capture or item.page_kind is not _PageKind.HORSE_PROFILE_HISTORY:
+                    raise _Integrity("stored horse-history capture family differs")
+                captures.append(item)
+            latest = captures[0].observed_at
+            candidates = tuple(capture for capture in captures if capture.observed_at == latest)
+            if len(candidates) != 1:
+                raise _Integrity("latest horse-history capture is ambiguous")
+            return candidates[0].to_supplied_official_response()
+        except (_Integrity, _Validation):
+            raise
+        except _CaptureError as error:
+            raise _Validation("canonical_horse_history_url is invalid") from error
+        except _sqlite3.Error as error:
+            raise _Integrity("JRA horse-history archive lookup failed") from error
+
     def _save(self, *, capture: _Capture | _FinalCapture | _TargetCapture, final: bool) -> None:
         pattern = _V2_CAPTURE if final else (_V3_CAPTURE if type(capture) is _TargetCapture else _V1_CAPTURE)
         if pattern.fullmatch(capture.capture_id) is None or _SHA.fullmatch(capture.response_sha256) is None or _hashlib.sha256(capture.response_body).hexdigest() != capture.response_sha256:

@@ -6,64 +6,62 @@ READY_FOR_REVIEW
 
 ## Phase
 
-`4C-2d3b1i6d1d5f1c3` — JRA accessD target-source normalization.
+`4C-2d3b1i6d1d5f1c4a` — JRA accessU target-horse history resolution.
 
-Formal base: `3d15d31a68500d05b224ffead60ee9a799064342`.
+Formal base: `0b8a5b3b590478ac880d27c4ecf387f5136c4806`.
 
-Approved prepare: `e2241f65a629858dc50b7966a82c627468998b27`.
+Approved prepare: `019b6bf839d009baa76798fa388017fed56994c1`.
 
-Review branch: `review/4c-2d3b1i6d1d5f1c3-jra-accessd-target-source`.
+Review branch: `review/4c-2d3b1i6d1d5f1c4a-jra-accessu-history-resolution`.
 
 ## Allowed Files
 
 ```text
 scripts/simulation/jra_target_race_input_source.py
 tests/test_jra_target_race_input_source.py
+scripts/simulation/jra_target_horse_history_resolution.py
+tests/test_jra_target_horse_history_resolution.py
+scripts/simulation/repositories/sqlite_jra_official_response_capture_repository.py
+tests/test_sqlite_jra_official_response_capture_repository.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
 ## Implemented Contract
 
-`normalize_jra_target_race_input_source_records(*, response)` is a pure accessD
-normalizer. It accepts only exact canonical `JRASuppliedOfficialResponse` accessD
-evidence, validates URL and visible race identity coherence, strict-decodes CP932, and
-returns frozen/slotted `JRATargetRaceSourceCollection` values containing exactly one
-track and ascending horse-number entry records.
+`JRATargetRaceSourceCollection` now retains one frozen/slotted
+`JRATargetHorseHistoryLocator` per ascending target entry. The locator is constructed
+only from the already selected row-local accessD horse anchor, resolves relative hrefs
+against the official host, canonicalizes only an accessU URL, and proves race, entry,
+horse, and accessU URL coherence. No provider URL enters neutral source-record values
+and no later accessD HTML reparse or horse-ID-to-URL synthesis is possible.
 
-For every fully supported normal runner, the normalizer creates one each of neutral
-`entry`, `jockey`, and `odds_win` records. The stable horse identity comes only from
-the row-local accessU anchor; the entry ID is rebuilt from the accessD URL race identity
-and direct horse number. All records use one raw-byte response SHA, the actual observed
-timestamp, no available/request identity, and `provider_record_id=None`.
+`SQLiteJRAOfficialResponseCaptureRepository.load_latest_horse_profile_history_supplied_response`
+performs an exact canonical accessU, schema-v1 horse-profile lookup with an inclusive,
+explicit UTC-normalized observation bound. It returns the unique latest eligible capture,
+returns `None` for no eligible capture, and fails closed for same-time ambiguity or
+corrupt requested-family storage. It does not query other JRA page families and does not
+change schema or indexes.
 
-The flat ordering is exactly `track`, then `entry`, `jockey`, and `odds_win` for each
-ascending horse number. It builds the complete set in memory and calls the established
-neutral source validator exactly once before collection construction. There is no row
-skip or partial return.
+The pure injected
+`resolve_jra_target_horse_history_response(...)` boundary validates exact JRA target
+lineage and locator binding, calls its provider exactly once with the caller's unchanged
+`observed_at_not_after`, and accepts only the locator's exact canonical accessU response
+observed no later than that bound and the scheduled start. `None` becomes a dedicated
+unavailable error; provider exceptions propagate unchanged. It owns no repository,
+HTTP, live capture, clock, filesystem, database, snapshot, or historical collector work.
 
-The public collection constructor independently requires exact neutral source records
-throughout the flat tuple, one JRA/`jra_official` family and target race, exact
-entry/jockey/odds grouping, matching entry IDs, and matching odds/entry horse numbers.
-It rejects extra, unmatched, foreign-family, and forged direct-construction records.
-
-Missing/duplicate/malformed structure, anchors, values, identity contradictions, and
-neutral conflicts are `JRATargetRaceSourceValidationError`. A structurally unique direct
-odds value that is blank, placeholder, non-numeric, non-finite, zero, or negative is
-`JRATargetRaceSourceUnsupportedError`. This does not establish non-runner semantics:
-`ACCESSD_NON_RUNNER_SEMANTICS_READY = NO` remains frozen.
-
-The normalizer requires `response.observed_at <= scheduled_start_at`; it preserves the
-response timestamp and leaves snapshot-cutoff eligibility downstream. It owns no HTTP,
-archive, repository, database, filesystem, clock, snapshot, Predictor, or bridge work.
+The effective replay cutoff remains a later orchestration responsibility. This phase
+does not substitute scheduled start for the explicit lookup bound, backdate evidence,
+or introduce a live fallback.
 
 ## Required Verification
 
-Run the dedicated target-source suite; related historical-source/evidence/snapshot
-builder and JRA identity/capture regressions; full pytest; static public-surface and
-forbidden-dependency checks; and `git diff --check`. No real capture, schema/migration,
-package-root export, target acquisition, snapshot assembly, Predictor, or bridge change
-is authorized.
+Run dedicated target-source, resolver, and repository suites; related JRA
+identity/capture/discovery/collector/source/snapshot regressions; full pytest; static
+public-surface and forbidden-dependency checks; and `git diff --check`. No real trusted
+capture, schema/index/migration, package-root export, snapshot orchestration, or bridge
+change is authorized.
 
 ## Stop Condition
 

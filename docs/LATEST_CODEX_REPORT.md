@@ -3888,3 +3888,31 @@ horse number must equal its entry horse number. Direct construction now rejects 
 organization/source/race records, unmatched items, and odds/entry disagreement before
 returning a collection. The normalizer still performs its one and only neutral validator
 call before that constructor boundary.
+
+
+## Phase 4C-2d3b1i6d1d5f1c4a JRA accessU Target-Horse History Resolution
+
+Implemented the narrow handoff from formal accessD target normalization to an exact,
+causally bounded accessU horse-history response. Every target collection now retains a
+frozen/slotted `JRATargetHorseHistoryLocator` alongside, but separate from, neutral
+source records. Its canonical accessU URL comes only from the selected row-local accessD
+anchor, is bound to the formal race/entry/horse identities, and is never synthesized
+from a horse ID or recovered by a later raw-card parse.
+
+The JRA capture repository now provides a family-specific latest accessU lookup with an
+inclusive explicit observation cutoff. It searches only schema-v1 horse-profile captures
+at the exact canonical URL, returns the unique latest eligible response, returns `None`
+when none is eligible, and fails closed on tied latest captures or corrupt requested
+storage. No schema, migration, index, or cross-family fallback was added.
+
+`resolve_jra_target_horse_history_response(...)` is a pure injected response-binding
+boundary. It validates exact target lineage and retained locator alignment, passes the
+caller's exact `observed_at_not_after` to its provider once, and accepts only that exact
+canonical accessU response before the explicit cutoff and target start. It supplies no
+scheduled-start fallback, backdating, live HTTP, or synthetic zero-history evidence;
+missing evidence is an explicit unavailable error and provider exceptions remain
+unchanged.
+
+Verification passed: target/resolver/repository dedicated tests 41 passed; related JRA
+tests 124 passed; full suite 2666 passed; `git diff --check` passed. No real trusted
+capture was performed.
