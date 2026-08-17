@@ -3855,3 +3855,36 @@ unchanged propagation of archive exceptions. It also retains the v1 accessD reje
 and v1/v2 success regressions, transport raw-stream/configuration tests, no
 package-root export, and no real HTTP capture. No capture/archive/domain/repository/schema
 or migration boundary was changed.
+
+
+## Phase 4C-2d3b1i6d1d5f1c3 JRA accessD Target-Source Normalization Implementation
+
+Implemented the pure supported-normal-runner accessD target-source boundary on formal
+`3d15d31a68500d05b224ffead60ee9a799064342`. The new
+`normalize_jra_target_race_input_source_records(*, response)` accepts only a canonical
+supplied accessD response, strict-decodes its CP932 bytes, and cross-checks CNAME,
+visible date/venue/meeting/day, race number, and scheduled start before creating a
+frozen/slotted target collection.
+
+One response produces exactly one track record and ordered entry, jockey, and direct
+prediction-time odds records for every normal runner. Horse identity is only the unique
+row-local accessU anchor; every entry identity is rebuilt from the formal accessD race
+identity and official horse number. The result uses one role-specific raw-byte evidence
+reference per neutral record, preserves actual observation time, rejects later-than-start
+evidence, and calls the existing neutral source-record validator exactly once.
+
+Missing, duplicate, malformed, or contradictory structural facts fail as validation;
+only a unique, intelligible direct unsupported odds value fails as unsupported. No row
+is treated as a proven non-runner, skipped, or returned partially. No schema, package
+export, live capture, archive, snapshot, Predictor, or bridge work was added.
+
+### Collection-invariant correction
+
+`JRATargetRaceSourceCollection` now independently validates every member of its public
+flat source-record tuple. Every record must be an exact neutral source record in the
+JRA/`jra_official` family for the target track race; every three-record runner group is
+the exact target entry object followed by same-entry jockey and odds records. The odds
+horse number must equal its entry horse number. Direct construction now rejects foreign
+organization/source/race records, unmatched items, and odds/entry disagreement before
+returning a collection. The normalizer still performs its one and only neutral validator
+call before that constructor boundary.
