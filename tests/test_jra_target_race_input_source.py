@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import FrozenInstanceError
+import ast
+from dataclasses import FrozenInstanceError, replace
 from datetime import datetime, timezone
 from decimal import Decimal
 import hashlib
@@ -8,6 +9,7 @@ import inspect
 
 import pytest
 
+import scripts.simulation.jra_target_race_input_source as _module
 from scripts.simulation.jra_official_response_capture import JRASuppliedOfficialResponse
 from scripts.simulation.jra_target_race_input_source import (
     JRATargetRaceSourceCollection,
@@ -36,6 +38,13 @@ def _response(html: str | None = None, *, observed: datetime = OBSERVED) -> JRAS
 
 
 def test_public_surface_signature_and_immutable_collection() -> None:
+    assert _module.__all__ == (
+        "JRATargetRaceSourceError",
+        "JRATargetRaceSourceValidationError",
+        "JRATargetRaceSourceUnsupportedError",
+        "JRATargetRaceSourceCollection",
+        "normalize_jra_target_race_input_source_records",
+    )
     assert tuple(inspect.signature(normalize_jra_target_race_input_source_records).parameters) == ("response",)
     result = normalize_jra_target_race_input_source_records(response=_response())
     assert isinstance(result, JRATargetRaceSourceCollection)
@@ -120,3 +129,63 @@ def test_determinism_and_no_package_root_export() -> None:
     assert [record.source_id for record in first.source_records] == [record.source_id for record in second.source_records]
     import scripts.simulation as package
     assert not hasattr(package, "normalize_jra_target_race_input_source_records")
+
+
+@pytest.mark.parametrize(
+    ("index", "changes"),
+    [
+        (2, {"organization": "foreign"}),
+        (2, {"source_system": "foreign"}),
+        (2, {"external_race_id": "jra:race:2025:05:01:01:02"}),
+        (3, {"organization": "foreign"}),
+        (3, {"source_system": "foreign"}),
+        (3, {"external_race_id": "jra:race:2025:05:01:01:02"}),
+    ],
+)
+def test_collection_rejects_foreign_jockey_or_odds_family(index: int, changes: dict[str, str]) -> None:
+    result = normalize_jra_target_race_input_source_records(response=_response())
+    records = list(result.source_records)
+    records[index] = replace(records[index], **changes)
+    with pytest.raises(JRATargetRaceSourceValidationError):
+        JRATargetRaceSourceCollection(result.target_track_record, result.target_entry_records, tuple(records))
+
+
+def test_collection_rejects_odds_horse_number_mismatch_and_non_record_item() -> None:
+    result = normalize_jra_target_race_input_source_records(response=_response())
+    records = list(result.source_records)
+    records[3] = replace(records[3], record_values={
+        "external_entry_id": records[3].external_entry_id,
+        "horse_no": 99,
+        "win_odds": records[3].record_values["win_odds"],
+    })
+    with pytest.raises(JRATargetRaceSourceValidationError):
+        JRATargetRaceSourceCollection(result.target_track_record, result.target_entry_records, tuple(records))
+    malformed = list(result.source_records)
+    malformed[2] = object()  # type: ignore[assignment]
+    with pytest.raises(JRATargetRaceSourceValidationError):
+        JRATargetRaceSourceCollection(result.target_track_record, result.target_entry_records, tuple(malformed))  # type: ignore[arg-type]
+
+
+def test_normalizer_calls_neutral_validator_exactly_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = 0
+    original = _module._validate_record_set
+
+    def counted(*, records: object) -> object:
+        nonlocal calls
+        calls += 1
+        return original(records=records)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(_module, "_validate_record_set", counted)
+    normalize_jra_target_race_input_source_records(response=_response())
+    assert calls == 1
+
+
+def test_static_purity_excludes_forbidden_runtime_dependencies() -> None:
+    tree = ast.parse(inspect.getsource(_module))
+    modules: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            modules.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            modules.add(node.module.split(".")[0])
+    assert not modules & {"requests", "sqlite3", "pathlib", "subprocess", "random", "os", "time"}

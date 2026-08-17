@@ -42,6 +42,11 @@ ascending horse number. It builds the complete set in memory and calls the estab
 neutral source validator exactly once before collection construction. There is no row
 skip or partial return.
 
+The public collection constructor independently requires exact neutral source records
+throughout the flat tuple, one JRA/`jra_official` family and target race, exact
+entry/jockey/odds grouping, matching entry IDs, and matching odds/entry horse numbers.
+It rejects extra, unmatched, foreign-family, and forged direct-construction records.
+
 Missing/duplicate/malformed structure, anchors, values, identity contradictions, and
 neutral conflicts are `JRATargetRaceSourceValidationError`. A structurally unique direct
 odds value that is blank, placeholder, non-numeric, non-finite, zero, or negative is

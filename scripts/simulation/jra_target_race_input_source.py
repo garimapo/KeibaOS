@@ -205,15 +205,24 @@ class JRATargetRaceSourceCollection:
         track = self.target_track_record
         if track.record_kind != "track" or track.organization != "JRA" or track.source_system != "jra_official" or track.external_entry_id is not None:
             raise _validation("target track record is invalid")
+        if not self.source_records or self.source_records[0] is not track:
+            raise _validation("target source records must start with target track")
+        for record in self.source_records:
+            if type(record) is not _Record:
+                raise _validation("target source record is invalid")
+            if record.organization != "JRA" or record.source_system != "jra_official" or record.external_race_id != track.external_race_id:
+                raise _validation("target source record family is invalid")
         try:
             race = _parse_race_id(track.external_race_id)
         except _IdentityError as error:
             raise _validation("target track race identity is invalid") from error
+        if len(self.source_records) != 1 + 3 * len(self.target_entry_records):
+            raise _validation("target source record count is invalid")
         expected: list[_Record] = [track]
         seen_no: set[int] = set()
         seen_horse: set[str] = set()
         previous = 0
-        for entry in self.target_entry_records:
+        for index, entry in enumerate(self.target_entry_records):
             if type(entry) is not _Record or entry.record_kind != "entry" or entry.organization != "JRA" or entry.source_system != "jra_official" or entry.external_race_id != track.external_race_id or entry.external_entry_id is None:
                 raise _validation("target entry record is invalid")
             try:
@@ -227,8 +236,13 @@ class JRATargetRaceSourceCollection:
             previous = horse_no
             seen_no.add(horse_no)
             seen_horse.add(horse.external_horse_id)
-            group = tuple(record for record in self.source_records if record.external_entry_id == rebuilt)
-            if len(group) != 3 or tuple(record.record_kind for record in group) != ("entry", "jockey", "odds_win") or group[0] is not entry:
+            group = self.source_records[1 + index * 3 : 1 + (index + 1) * 3]
+            if (
+                tuple(record.record_kind for record in group) != ("entry", "jockey", "odds_win")
+                or group[0] is not entry
+                or any(record.external_entry_id != rebuilt for record in group)
+                or group[2].record_values["horse_no"] != horse_no
+            ):
                 raise _validation("target source record group is invalid")
             expected.extend(group)
         if not self.target_entry_records or self.source_records != tuple(expected):

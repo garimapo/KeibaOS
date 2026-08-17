@@ -3877,3 +3877,14 @@ Missing, duplicate, malformed, or contradictory structural facts fail as validat
 only a unique, intelligible direct unsupported odds value fails as unsupported. No row
 is treated as a proven non-runner, skipped, or returned partially. No schema, package
 export, live capture, archive, snapshot, Predictor, or bridge work was added.
+
+### Collection-invariant correction
+
+`JRATargetRaceSourceCollection` now independently validates every member of its public
+flat source-record tuple. Every record must be an exact neutral source record in the
+JRA/`jra_official` family for the target track race; every three-record runner group is
+the exact target entry object followed by same-entry jockey and odds records. The odds
+horse number must equal its entry horse number. Direct construction now rejects foreign
+organization/source/race records, unmatched items, and odds/entry disagreement before
+returning a collection. The normalizer still performs its one and only neutral validator
+call before that constructor boundary.
