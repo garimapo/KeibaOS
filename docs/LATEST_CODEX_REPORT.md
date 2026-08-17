@@ -3888,3 +3888,60 @@ horse number must equal its entry horse number. Direct construction now rejects 
 organization/source/race records, unmatched items, and odds/entry disagreement before
 returning a collection. The normalizer still performs its one and only neutral validator
 call before that constructor boundary.
+
+
+## Phase 4C-2d3b1i6d1d5f1c4a JRA accessU Target-Horse History Resolution
+
+Implemented the narrow handoff from formal accessD target normalization to an exact,
+causally bounded accessU horse-history response. Every target collection now retains a
+frozen/slotted `JRATargetHorseHistoryLocator` alongside, but separate from, neutral
+source records. Its canonical accessU URL comes only from the selected row-local accessD
+anchor, is bound to the formal race/entry/horse identities, and is never synthesized
+from a horse ID or recovered by a later raw-card parse.
+
+The JRA capture repository now provides a family-specific latest accessU lookup with an
+inclusive explicit observation cutoff. It searches only schema-v1 horse-profile captures
+at the exact canonical URL, returns the unique latest eligible response, returns `None`
+when none is eligible, and fails closed on tied latest captures or corrupt requested
+storage. No schema, migration, index, or cross-family fallback was added.
+
+`resolve_jra_target_horse_history_response(...)` is a pure injected response-binding
+boundary. It validates exact target lineage and retained locator alignment, passes the
+caller's exact `observed_at_not_after` to its provider once, and accepts only that exact
+canonical accessU response before the explicit cutoff and target start. It supplies no
+scheduled-start fallback, backdating, live HTTP, or synthetic zero-history evidence;
+missing evidence is an explicit unavailable error and provider exceptions remain
+unchanged.
+
+Verification passed: target/resolver/repository dedicated tests 41 passed; related JRA
+tests 121 passed; full suite 2666 passed; `git diff --check` passed. No real trusted
+capture was performed.
+
+### Regression-contract correction
+
+The prior `124` label was not the exact related-suite command and is superseded. The
+correction reran the exact related command:
+`test_jra_historical_input_source_collection.py`,
+`test_jra_historical_past_race_discovery.py`,
+`test_jra_historical_past_race_absence_source.py`,
+`test_jra_historical_past_race_source.py`,
+`test_jra_final_win_odds_request_locator.py`,
+`test_jra_official_identity.py`,
+`test_jra_official_response_capture.py`,
+`test_jra_official_response_capture_migration.py`,
+`test_jra_official_response_live_capture.py`,
+`test_historical_input_source_records.py`, and
+`test_historical_input_snapshot_builder.py`: **121 passed**.
+
+Test-only contract coverage now directly pins malformed/non-JRA track and entry lineage,
+forged entry identity, locator race/entry/horse mismatch, non-exact locator/provider
+types, accessS/accessD/accessO and wrong-horse/different-accessU response boundaries,
+inclusive explicit bounds, provider call count, and no broad catch. Repository coverage
+now directly pins exact URL/family rejection, no fallback to future or other accessU
+navigation/horse evidence, same-time ambiguity, corrupt selected response body, and
+corrupt selected schema-v1 request metadata. Target-locator coverage explicitly rejects
+accessD/accessO/noncanonical/wrong-horse URLs and retains the URL only in aligned JRA
+locator data, never neutral record values. No production files changed.
+
+Fresh correction verification: dedicated target/resolver/repository suites **56 passed**;
+the exact related command above **121 passed**; full pytest suite **2681 passed**.

@@ -29,7 +29,12 @@ from scripts.simulation.jra_official_identity import (
     parse_jra_horse_profile_url_identity as _parse_profile_url,
     parse_jra_race_card_url_identity as _parse_card_url,
 )
-from scripts.simulation.jra_official_response_capture import JRASuppliedOfficialResponse as _Response
+from scripts.simulation.jra_official_response_capture import (
+    JRAOfficialPageKind as _PageKind,
+    JRAOfficialResponseCaptureError as _CaptureError,
+    JRASuppliedOfficialResponse as _Response,
+    canonicalize_jra_official_capture_url as _canonicalize_capture_url,
+)
 
 
 class JRATargetRaceSourceError(ValueError):
@@ -42,6 +47,35 @@ class JRATargetRaceSourceValidationError(JRATargetRaceSourceError):
 
 class JRATargetRaceSourceUnsupportedError(JRATargetRaceSourceError):
     """Raised for one unique direct value outside the normal-runner envelope."""
+
+
+@_dataclass(frozen=True, slots=True)
+class JRATargetHorseHistoryLocator:
+    """Exact row-local accessU navigation retained beside neutral target records."""
+
+    external_race_id: str
+    external_entry_id: str
+    external_horse_id: str
+    canonical_horse_history_url: str
+
+    def __post_init__(self) -> None:
+        try:
+            race = _parse_race_id(self.external_race_id)
+            horse = _parse_horse_id(self.external_horse_id)
+            prefix = f"{race.external_race_id}:entry:"
+            if type(self.external_entry_id) is not str or not self.external_entry_id.startswith(prefix):
+                raise ValueError
+            horse_no = self.external_entry_id.removeprefix(prefix)
+            if _build_entry_id(race_identity=race, horse_no=horse_no) != self.external_entry_id:
+                raise ValueError
+            canonical = _canonicalize_capture_url(
+                page_kind=_PageKind.HORSE_PROFILE_HISTORY,
+                response_url=self.canonical_horse_history_url,
+            )
+            if canonical != self.canonical_horse_history_url or _parse_profile_url(canonical) != horse:
+                raise ValueError
+        except (_IdentityError, _CaptureError, TypeError, ValueError, OverflowError) as error:
+            raise _validation("target horse-history locator is invalid") from error
 
 
 _VENUES = {"01": "札幌", "02": "函館", "03": "福島", "04": "新潟", "05": "東京", "06": "中山", "07": "中京", "08": "京都", "09": "阪神", "10": "小倉"}
@@ -197,10 +231,11 @@ def _record(kind: str, race_id: str, entry_id: str | None, values: dict[str, obj
 class JRATargetRaceSourceCollection:
     target_track_record: _Record
     target_entry_records: tuple[_Record, ...]
+    target_horse_history_locators: tuple[JRATargetHorseHistoryLocator, ...]
     source_records: tuple[_Record, ...]
 
     def __post_init__(self) -> None:
-        if type(self.target_track_record) is not _Record or type(self.target_entry_records) is not tuple or type(self.source_records) is not tuple:
+        if type(self.target_track_record) is not _Record or type(self.target_entry_records) is not tuple or type(self.target_horse_history_locators) is not tuple or type(self.source_records) is not tuple:
             raise _validation("target source collection has invalid types")
         track = self.target_track_record
         if track.record_kind != "track" or track.organization != "JRA" or track.source_system != "jra_official" or track.external_entry_id is not None:
@@ -216,12 +251,14 @@ class JRATargetRaceSourceCollection:
             race = _parse_race_id(track.external_race_id)
         except _IdentityError as error:
             raise _validation("target track race identity is invalid") from error
-        if len(self.source_records) != 1 + 3 * len(self.target_entry_records):
+        if len(self.source_records) != 1 + 3 * len(self.target_entry_records) or len(self.target_horse_history_locators) != len(self.target_entry_records):
             raise _validation("target source record count is invalid")
         expected: list[_Record] = [track]
         seen_no: set[int] = set()
         seen_horse: set[str] = set()
         previous = 0
+        locator_entries: set[str] = set()
+        locator_horses: set[str] = set()
         for index, entry in enumerate(self.target_entry_records):
             if type(entry) is not _Record or entry.record_kind != "entry" or entry.organization != "JRA" or entry.source_system != "jra_official" or entry.external_race_id != track.external_race_id or entry.external_entry_id is None:
                 raise _validation("target entry record is invalid")
@@ -244,6 +281,18 @@ class JRATargetRaceSourceCollection:
                 or group[2].record_values["horse_no"] != horse_no
             ):
                 raise _validation("target source record group is invalid")
+            locator = self.target_horse_history_locators[index]
+            if (
+                type(locator) is not JRATargetHorseHistoryLocator
+                or locator.external_race_id != track.external_race_id
+                or locator.external_entry_id != rebuilt
+                or locator.external_horse_id != horse.external_horse_id
+                or locator.external_entry_id in locator_entries
+                or locator.external_horse_id in locator_horses
+            ):
+                raise _validation("target horse-history locator is not entry-bound")
+            locator_entries.add(locator.external_entry_id)
+            locator_horses.add(locator.external_horse_id)
             expected.extend(group)
         if not self.target_entry_records or self.source_records != tuple(expected):
             raise _validation("target source record ordering is invalid")
@@ -271,7 +320,7 @@ def normalize_jra_target_race_input_source_records(*, response: _Response) -> JR
         raise _validation("official JRA accessD runner rows are missing")
     try:
         track = _record("track", identity.external_race_id, None, {"target_race_date": facts.race_date, "scheduled_start_at": facts.scheduled_start_at, "place": facts.place, "distance_m": facts.distance_m, "track": facts.track, "track_condition": facts.track_condition, "race_name": facts.race_name, "race_class": facts.race_class, "weather": facts.weather}, response)
-        parsed: list[tuple[int, str, _Record, _Record, _Record]] = []
+        parsed: list[tuple[int, str, JRATargetHorseHistoryLocator, _Record, _Record, _Record]] = []
         seen_no: set[int] = set()
         seen_horse: set[str] = set()
         for row in rows:
@@ -281,26 +330,37 @@ def normalize_jra_target_race_input_source_records(*, response: _Response) -> JR
             if type(href) is not str or not href:
                 raise _validation("official JRA accessU horse anchor is invalid")
             try:
-                horse = _parse_profile_url(_urljoin("https://www.jra.go.jp", href))
-            except _IdentityError as error:
+                canonical_history_url = _canonicalize_capture_url(
+                    page_kind=_PageKind.HORSE_PROFILE_HISTORY,
+                    response_url=_urljoin("https://www.jra.go.jp", href),
+                )
+                horse = _parse_profile_url(canonical_history_url)
+            except (_IdentityError, _CaptureError) as error:
                 raise _validation("official JRA accessU horse anchor is invalid") from error
             if horse_no in seen_no or horse.external_horse_id in seen_horse:
                 raise _validation("official JRA target runner identity is duplicated")
             seen_no.add(horse_no)
             seen_horse.add(horse.external_horse_id)
             entry_id = _build_entry_id(race_identity=identity, horse_no=horse_no)
+            locator = JRATargetHorseHistoryLocator(
+                external_race_id=identity.external_race_id,
+                external_entry_id=entry_id,
+                external_horse_id=horse.external_horse_id,
+                canonical_horse_history_url=canonical_history_url,
+            )
             odds_node = _cell(row, "td.horse > div.name_line > div.odds > div.odds_line > span.num", "official JRA target odds")
             odds = _odds(_display(odds_node.get_text(" ", strip=True)))
             jockey = _text(_cell(row, "td.jockey > p.jockey", "official JRA target jockey"), "official JRA target jockey")
             entry = _record("entry", identity.external_race_id, entry_id, {"external_entry_id": entry_id, "external_horse_id": horse.external_horse_id, "horse_no": horse_no}, response)
             jockey_record = _record("jockey", identity.external_race_id, entry_id, {"external_entry_id": entry_id, "jockey": jockey}, response)
             odds_record = _record("odds_win", identity.external_race_id, entry_id, {"external_entry_id": entry_id, "horse_no": horse_no, "win_odds": odds}, response)
-            parsed.append((horse_no, horse.external_horse_id, entry, jockey_record, odds_record))
+            parsed.append((horse_no, horse.external_horse_id, locator, entry, jockey_record, odds_record))
         parsed.sort(key=lambda item: item[0])
-        entries = tuple(item[2] for item in parsed)
-        records: tuple[_Record, ...] = (track,) + tuple(record for item in parsed for record in item[2:])
+        entries = tuple(item[3] for item in parsed)
+        locators = tuple(item[2] for item in parsed)
+        records: tuple[_Record, ...] = (track,) + tuple(record for item in parsed for record in item[3:])
         validated = _validate_record_set(records=records)
-        return JRATargetRaceSourceCollection(track, entries, validated)
+        return JRATargetRaceSourceCollection(track, entries, locators, validated)
     except (_SourceError, _SourceConflictError, TypeError, ValueError, OverflowError) as error:
         if isinstance(error, JRATargetRaceSourceError):
             raise
@@ -311,6 +371,7 @@ __all__ = (
     "JRATargetRaceSourceError",
     "JRATargetRaceSourceValidationError",
     "JRATargetRaceSourceUnsupportedError",
+    "JRATargetHorseHistoryLocator",
     "JRATargetRaceSourceCollection",
     "normalize_jra_target_race_input_source_records",
 )

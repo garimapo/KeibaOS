@@ -12,6 +12,7 @@ import pytest
 import scripts.simulation.jra_target_race_input_source as _module
 from scripts.simulation.jra_official_response_capture import JRASuppliedOfficialResponse
 from scripts.simulation.jra_target_race_input_source import (
+    JRATargetHorseHistoryLocator,
     JRATargetRaceSourceCollection,
     JRATargetRaceSourceUnsupportedError,
     JRATargetRaceSourceValidationError,
@@ -42,6 +43,7 @@ def test_public_surface_signature_and_immutable_collection() -> None:
         "JRATargetRaceSourceError",
         "JRATargetRaceSourceValidationError",
         "JRATargetRaceSourceUnsupportedError",
+        "JRATargetHorseHistoryLocator",
         "JRATargetRaceSourceCollection",
         "normalize_jra_target_race_input_source_records",
     )
@@ -63,6 +65,13 @@ def test_happy_path_maps_track_entries_odds_evidence_and_order() -> None:
         "race_name": "テストレース", "race_class": "3歳1勝", "weather": "晴",
     }
     assert [record.record_values["horse_no"] for record in result.target_entry_records] == [1, 2]
+    assert [locator.external_entry_id for locator in result.target_horse_history_locators] == [
+        record.external_entry_id for record in result.target_entry_records
+    ]
+    assert [locator.canonical_horse_history_url for locator in result.target_horse_history_locators] == [
+        "https://www.jra.go.jp/JRADB/accessU.html?CNAME=pw01dud001234567891%2FAB",
+        "https://www.jra.go.jp/JRADB/accessU.html?CNAME=pw01dud001234567890%2FAB",
+    ]
     assert [record.record_kind for record in result.source_records] == ["track", "entry", "jockey", "odds_win", "entry", "jockey", "odds_win"]
     assert result.source_records[3].record_values["win_odds"] == Decimal("3.1")
     assert result.target_entry_records[0].external_entry_id == "jra:race:2025:05:01:01:01:entry:1"
@@ -131,6 +140,61 @@ def test_determinism_and_no_package_root_export() -> None:
     assert not hasattr(package, "normalize_jra_target_race_input_source_records")
 
 
+def test_locator_is_frozen_canonical_and_neutral_values_do_not_contain_url() -> None:
+    result = normalize_jra_target_race_input_source_records(response=_response())
+    locator = result.target_horse_history_locators[0]
+    assert isinstance(locator, JRATargetHorseHistoryLocator)
+    with pytest.raises(FrozenInstanceError):
+        locator.external_horse_id = "jra:horse:0000000000"  # type: ignore[misc]
+    for record in result.source_records:
+        assert "accessU" not in repr(record.record_values)
+    for url in (
+        "https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde0105202501010120250105%2FAB",
+        URL,
+        "https://www.jra.go.jp/JRADB/accessO.html",
+        locator.canonical_horse_history_url.replace("%2F", "/"),
+        "https://www.jra.go.jp/JRADB/accessU.html?CNAME=pw01dud001234567890%2FAB",
+    ):
+        with pytest.raises(JRATargetRaceSourceValidationError):
+            JRATargetHorseHistoryLocator(
+                external_race_id=locator.external_race_id,
+                external_entry_id=locator.external_entry_id,
+                external_horse_id=locator.external_horse_id,
+                canonical_horse_history_url=url,
+            )
+    for changes in (
+        {"external_race_id": "not-a-jra-race"},
+        {"external_entry_id": locator.external_entry_id + ":extra"},
+        {"external_horse_id": "jra:horse:123"},
+    ):
+        with pytest.raises(JRATargetRaceSourceValidationError):
+            JRATargetHorseHistoryLocator(**{  # type: ignore[arg-type]
+                "external_race_id": locator.external_race_id,
+                "external_entry_id": locator.external_entry_id,
+                "external_horse_id": locator.external_horse_id,
+                "canonical_horse_history_url": locator.canonical_horse_history_url,
+                **changes,
+            })
+
+
+def test_collection_requires_one_aligned_locator_per_entry() -> None:
+    result = normalize_jra_target_race_input_source_records(response=_response())
+    with pytest.raises(JRATargetRaceSourceValidationError):
+        JRATargetRaceSourceCollection(
+            result.target_track_record,
+            result.target_entry_records,
+            result.target_horse_history_locators[:-1],
+            result.source_records,
+        )
+    with pytest.raises(JRATargetRaceSourceValidationError):
+        JRATargetRaceSourceCollection(
+            result.target_track_record,
+            result.target_entry_records,
+            tuple(reversed(result.target_horse_history_locators)),
+            result.source_records,
+        )
+
+
 @pytest.mark.parametrize(
     ("index", "changes"),
     [
@@ -147,7 +211,7 @@ def test_collection_rejects_foreign_jockey_or_odds_family(index: int, changes: d
     records = list(result.source_records)
     records[index] = replace(records[index], **changes)
     with pytest.raises(JRATargetRaceSourceValidationError):
-        JRATargetRaceSourceCollection(result.target_track_record, result.target_entry_records, tuple(records))
+        JRATargetRaceSourceCollection(result.target_track_record, result.target_entry_records, result.target_horse_history_locators, tuple(records))
 
 
 def test_collection_rejects_odds_horse_number_mismatch_and_non_record_item() -> None:
@@ -159,11 +223,11 @@ def test_collection_rejects_odds_horse_number_mismatch_and_non_record_item() -> 
         "win_odds": records[3].record_values["win_odds"],
     })
     with pytest.raises(JRATargetRaceSourceValidationError):
-        JRATargetRaceSourceCollection(result.target_track_record, result.target_entry_records, tuple(records))
+        JRATargetRaceSourceCollection(result.target_track_record, result.target_entry_records, result.target_horse_history_locators, tuple(records))
     malformed = list(result.source_records)
     malformed[2] = object()  # type: ignore[assignment]
     with pytest.raises(JRATargetRaceSourceValidationError):
-        JRATargetRaceSourceCollection(result.target_track_record, result.target_entry_records, tuple(malformed))  # type: ignore[arg-type]
+        JRATargetRaceSourceCollection(result.target_track_record, result.target_entry_records, result.target_horse_history_locators, tuple(malformed))  # type: ignore[arg-type]
 
 
 def test_normalizer_calls_neutral_validator_exactly_once(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -189,3 +253,9 @@ def test_static_purity_excludes_forbidden_runtime_dependencies() -> None:
         elif isinstance(node, ast.ImportFrom) and node.module:
             modules.add(node.module.split(".")[0])
     assert not modules & {"requests", "sqlite3", "pathlib", "subprocess", "random", "os", "time"}
+    assert not any(
+        isinstance(node, ast.ExceptHandler)
+        and isinstance(node.type, ast.Name)
+        and node.type.id in {"Exception", "BaseException"}
+        for node in ast.walk(tree)
+    )
