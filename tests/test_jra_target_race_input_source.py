@@ -148,13 +148,20 @@ def test_locator_is_frozen_canonical_and_neutral_values_do_not_contain_url() -> 
         locator.external_horse_id = "jra:horse:0000000000"  # type: ignore[misc]
     for record in result.source_records:
         assert "accessU" not in repr(record.record_values)
-    with pytest.raises(JRATargetRaceSourceValidationError):
-        JRATargetHorseHistoryLocator(
-            external_race_id=locator.external_race_id,
-            external_entry_id=locator.external_entry_id,
-            external_horse_id=locator.external_horse_id,
-            canonical_horse_history_url="https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde0105202501010120250105%2FAB",
-        )
+    for url in (
+        "https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde0105202501010120250105%2FAB",
+        URL,
+        "https://www.jra.go.jp/JRADB/accessO.html",
+        locator.canonical_horse_history_url.replace("%2F", "/"),
+        "https://www.jra.go.jp/JRADB/accessU.html?CNAME=pw01dud001234567890%2FAB",
+    ):
+        with pytest.raises(JRATargetRaceSourceValidationError):
+            JRATargetHorseHistoryLocator(
+                external_race_id=locator.external_race_id,
+                external_entry_id=locator.external_entry_id,
+                external_horse_id=locator.external_horse_id,
+                canonical_horse_history_url=url,
+            )
     for changes in (
         {"external_race_id": "not-a-jra-race"},
         {"external_entry_id": locator.external_entry_id + ":extra"},
@@ -246,3 +253,9 @@ def test_static_purity_excludes_forbidden_runtime_dependencies() -> None:
         elif isinstance(node, ast.ImportFrom) and node.module:
             modules.add(node.module.split(".")[0])
     assert not modules & {"requests", "sqlite3", "pathlib", "subprocess", "random", "os", "time"}
+    assert not any(
+        isinstance(node, ast.ExceptHandler)
+        and isinstance(node.type, ast.Name)
+        and node.type.id in {"Exception", "BaseException"}
+        for node in ast.walk(tree)
+    )

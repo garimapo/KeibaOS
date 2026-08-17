@@ -63,6 +63,9 @@ public-surface and forbidden-dependency checks; and `git diff --check`. No real 
 capture, schema/index/migration, package-root export, snapshot orchestration, or bridge
 change is authorized.
 
+The exact related command is the eleven-suite historical/JRA/source/snapshot selection
+recorded in `LATEST_CODEX_REPORT.md`; its fresh correction-run result is `121 passed`.
+
 ## Stop Condition
 
 Stop after one review commit is pushed for independent review.

@@ -12,6 +12,8 @@ from scripts.simulation.repositories.sqlite_jra_official_response_capture_reposi
 
 URL = "https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde0106202504030420250913%2FDC"
 HURL = "https://www.jra.go.jp/JRADB/accessU.html?CNAME=pw01dud001234567890%2FAB"
+HURL_OTHER_HORSE = "https://www.jra.go.jp/JRADB/accessU.html?CNAME=pw01dud001234567891%2FAB"
+HURL_OTHER_NAVIGATION = "https://www.jra.go.jp/JRADB/accessU.html?CNAME=pw01dud001234567890%2FAC"
 BODY = "<meta charset=\"Shift_JIS\">\u30c6\u30b9\u30c8".encode("cp932")
 T = datetime(2026, 1, 1, tzinfo=timezone.utc)
 DURL = "https://www.jra.go.jp/JRADB/accessD.html?CNAME=pw01dde0106202504030420250913%2FDC"
@@ -107,6 +109,12 @@ class SQLiteJRACaptureTests(unittest.TestCase):
         with self.assertRaises(RepositoryValidationError):
             r.load_latest_horse_profile_history_supplied_response(canonical_horse_history_url=URL, observed_at_not_after=T)
         with self.assertRaises(RepositoryValidationError):
+            r.load_latest_horse_profile_history_supplied_response(canonical_horse_history_url=DURL, observed_at_not_after=T)
+        with self.assertRaises(RepositoryValidationError):
+            r.load_latest_horse_profile_history_supplied_response(canonical_horse_history_url="https://www.jra.go.jp/JRADB/accessO.html", observed_at_not_after=T)
+        with self.assertRaises(RepositoryValidationError):
+            r.load_latest_horse_profile_history_supplied_response(canonical_horse_history_url=HURL.replace("%2F", "/"), observed_at_not_after=T)
+        with self.assertRaises(RepositoryValidationError):
             r.load_latest_horse_profile_history_supplied_response(canonical_horse_history_url=HURL, observed_at_not_after=datetime(2026, 1, 1))
         r.save_capture(capture=item(canonical_source_url=HURL, response_body=b"<meta charset=\"Shift_JIS\">conflict", observed_at=T + timedelta(hours=2), stored_at=T + timedelta(hours=2)))
         with self.assertRaises(RepositoryDataIntegrityError):
@@ -116,3 +124,16 @@ class SQLiteJRACaptureTests(unittest.TestCase):
         c.execute("PRAGMA foreign_keys=OFF"); c.execute("DELETE FROM jra_official_response_bodies WHERE response_sha256=?", (later.response_sha256,)); c.commit()
         with self.assertRaises(RepositoryDataIntegrityError):
             r.load_latest_horse_profile_history_supplied_response(canonical_horse_history_url=HURL, observed_at_not_after=T + timedelta(hours=2))
+
+    def test_latest_horse_history_lookup_excludes_other_urls_and_corrupt_metadata(self):
+        c, r = self.repo()
+        value = item(canonical_source_url=HURL)
+        r.save_capture(capture=value)
+        self.assertIsNone(r.load_latest_horse_profile_history_supplied_response(canonical_horse_history_url=HURL_OTHER_HORSE, observed_at_not_after=T))
+        self.assertIsNone(r.load_latest_horse_profile_history_supplied_response(canonical_horse_history_url=HURL_OTHER_NAVIGATION, observed_at_not_after=T))
+        c.execute("PRAGMA ignore_check_constraints=ON")
+        c.execute("UPDATE jra_official_response_captures SET request_method='POST' WHERE capture_id=?", (value.capture_id,))
+        c.execute("PRAGMA ignore_check_constraints=OFF")
+        c.commit()
+        with self.assertRaises(RepositoryDataIntegrityError):
+            r.load_latest_horse_profile_history_supplied_response(canonical_horse_history_url=HURL, observed_at_not_after=T)
