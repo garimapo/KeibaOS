@@ -3980,3 +3980,43 @@ review commit after they complete. No real trusted capture was performed.
 
 Final verification: full pytest suite **2689 passed**. The collector public surface,
 forbidden dependency, and broad-catch AST check passed; `git diff --check` passed.
+
+
+## Phase 4C-2d3b1i6d1d5f1c4c JRA Target accessD Historical Causal Resolution PREPARE
+
+Investigation found that the final missing target-card causal boundary cannot safely be
+implemented yet because the exact canonical accessD URL is not retained as a formal JRA
+replay input before target normalization. The schema-v3 archive and supplied response
+persist the URL only after a caller already selected a card; the existing target source
+intentionally retains row-local accessU locators only. The live target-card capture
+service likewise accepts a caller-supplied accessD URL rather than discovering or
+retaining one.
+
+The legacy `races.deba_table_url` column is explicitly not a JRA workaround: its write
+path is the NAR parser and its consumer is the NAR local fetcher. It has no canonical
+JRA accessD/race-identity contract. Race-ID-only archive scanning is also unsafe: the
+formal accessD grammar includes an opaque two-hex tail, the archive has no external-race
+identity column, and no existing contract proves one canonical URL per race identity.
+No CNAME synthesis, display-text identity, broad enumeration, or corrupt-row filtering
+is approved.
+
+The frozen predecessor is target accessD locator-source retention: an immutable
+JRA-specific locator must bind canonical external race identity to the exact canonical
+accessD URL emitted by the official navigation/acquisition boundary that first receives
+it. It must remain outside neutral source-record values. Only after that predecessor may
+the repository add exact-URL, latest-inclusive-cutoff v3 lookup and a pure injected
+target-card resolver. Both inherit the c4a/c4b policy: explicit caller cutoff, selected
+row reconstruction before family validation, same-time/corruption integrity failure,
+`None` only for genuine no-result, resolver unavailable error, and no live fallback.
+
+Snapshot causality analysis confirms that the later effective acquisition bound is
+`captured_at`, because the existing builder requires evidence observation no later than
+both `captured_at` and `information_cutoff`, with `captured_at <= information_cutoff`.
+The selected target normalizer still owns its response-to-scheduled-start check; later
+orchestration must also prove its explicit bound is not after that parsed start. The
+separate external-entry/internal-entry mapping remains unready: legacy `horses` has
+race-local horse numbers but no formal external-entry resolver or uniqueness proof, so a
+later exact horse-number-only mapping boundary is required.
+
+No production code, tests, schema, migration, index, HTTP, real capture, source union,
+or snapshot assembly changed in this PREPARE.
