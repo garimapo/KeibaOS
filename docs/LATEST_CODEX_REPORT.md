@@ -3945,3 +3945,38 @@ locator data, never neutral record values. No production files changed.
 
 Fresh correction verification: dedicated target/resolver/repository suites **56 passed**;
 the exact related command above **121 passed**; full pytest suite **2681 passed**.
+
+
+## Phase 4C-2d3b1i6d1d5f1c4b JRA Historical Causal Archive Resolution
+
+Implemented replay-causal accessS and accessO acquisition without changing the
+historical discovery, response-capture schemas, indexes, live transport, or snapshot
+boundary. `collect_jra_historical_input_source_records(...)` now receives one explicit,
+inclusive, timezone-aware `observed_at_not_after` and passes that unchanged exact value
+to every accessS and final-odds provider call. It rejects a bound later than the target
+scheduled start and rechecks the supplied accessU, accessS, and accessO observations
+against the explicit bound as well as the established outer start limit.
+
+The collector still calls discovery once, rejects non-JRA/unsupported actual starts
+before providers, uses the same deterministic result/odds caches, retains every actual
+JRA start, and returns only after the existing neutral validator accepts the full set.
+`None` from a required causal provider now raises the dedicated
+`JRAHistoricalSourceCollectionUnavailableError`; provider errors, including archive
+integrity errors, are deliberately propagated unchanged.
+
+The repository adds only family-specific latest-before-cutoff methods for schema-v1
+accessS and schema-v2 accessO. Both use stable exact requested identity and an inclusive
+UTC cutoff, choose the sole latest eligible row, and reconstruct the selected row before
+validating its full family/domain/request material. SQL does not filter family metadata
+whose corruption must surface as `RepositoryDataIntegrityError`; tied latest rows and
+selected metadata/body/request corruption therefore fail closed, while a genuine
+no-result is `None`. No current/live fallback, backdating, synthetic odds/result, or
+historical-start skip is possible in this boundary.
+
+Verification after implementation: collector and repository dedicated tests **26
+passed**; the JRA/accessU/discovery/past-race/final-odds/capture/source/snapshot related
+selection **155 passed**. Full-suite and final static verification are recorded with the
+review commit after they complete. No real trusted capture was performed.
+
+Final verification: full pytest suite **2689 passed**. The collector public surface,
+forbidden dependency, and broad-catch AST check passed; `git diff --check` passed.

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass as _dataclass
-from datetime import datetime as _datetime
+from datetime import datetime as _datetime, timezone as _timezone
 import re as _re
 from typing import Protocol as _Protocol
 
@@ -58,12 +58,26 @@ class JRAHistoricalSourceCollectionUnsupportedError(JRAHistoricalSourceCollectio
     """Raised for complete history containing an unsupported actual-start kind."""
 
 
+class JRAHistoricalSourceCollectionUnavailableError(JRAHistoricalSourceCollectionError):
+    """Raised when an otherwise required causal historical response is unavailable."""
+
+
 class JRAHistoricalRaceResultResponseProvider(_Protocol):
-    def __call__(self, *, race_reference: _Reference) -> _ResultResponse: ...
+    def __call__(
+        self,
+        *,
+        race_reference: _Reference,
+        observed_at_not_after: _datetime,
+    ) -> _ResultResponse | None: ...
 
 
 class JRAHistoricalFinalWinOddsResponseProvider(_Protocol):
-    def __call__(self, *, request_locator: _Locator) -> _FinalOddsResponse: ...
+    def __call__(
+        self,
+        *,
+        request_locator: _Locator,
+        observed_at_not_after: _datetime,
+    ) -> _FinalOddsResponse | None: ...
 
 
 _POSITIVE = _re.compile(r"[1-9][0-9]*\Z")
@@ -143,7 +157,27 @@ def _scheduled_start(track: object) -> _datetime:
     return value
 
 
-def _result_response(*, response: object, reference: _Reference, scheduled: _datetime) -> _ResultResponse:
+def _bound(value: object, scheduled: _datetime) -> _datetime:
+    if type(value) is not _datetime:
+        raise _validation("observed_at_not_after is invalid")
+    try:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError
+        result = value.astimezone(_timezone.utc)
+    except (TypeError, ValueError, OverflowError) as error:
+        raise _validation("observed_at_not_after is invalid") from error
+    if result > scheduled.astimezone(_timezone.utc):
+        raise _validation("observed_at_not_after is after target scheduled start")
+    return result
+
+
+def _horse_history_response(*, response: object, scheduled: _datetime, bound: _datetime) -> _ResultResponse:
+    if type(response) is not _ResultResponse or response.observed_at > scheduled or response.observed_at > bound:
+        raise _validation("horse-history response is outside the causal bound")
+    return response
+
+
+def _result_response(*, response: object, reference: _Reference, scheduled: _datetime, bound: _datetime) -> _ResultResponse:
     if type(response) is not _ResultResponse:
         raise _validation("race-result provider response is invalid")
     try:
@@ -154,15 +188,16 @@ def _result_response(*, response: object, reference: _Reference, scheduled: _dat
         response.response_url != reference.canonical_race_result_url
         or identity != reference.race_identity
         or response.observed_at > scheduled
+        or response.observed_at > bound
     ):
         raise _validation("race-result provider response disagrees with historical reference")
     return response
 
 
-def _odds_response(*, response: object, locator: _Locator, scheduled: _datetime) -> _FinalOddsResponse:
+def _odds_response(*, response: object, locator: _Locator, scheduled: _datetime, bound: _datetime) -> _FinalOddsResponse:
     if type(response) is not _FinalOddsResponse:
         raise _validation("final-odds provider response is invalid")
-    if response.request_locator != locator or response.observed_at > scheduled:
+    if response.request_locator != locator or response.observed_at > scheduled or response.observed_at > bound:
         raise _validation("final-odds provider response disagrees with request locator")
     return response
 
@@ -190,17 +225,24 @@ def collect_jra_historical_input_source_records(
     target_track_record: _HistoricalInputSourceRecord,
     target_entry_record: _HistoricalInputSourceRecord,
     horse_history_response: _ResultResponse,
+    observed_at_not_after: _datetime,
     race_result_response_provider: JRAHistoricalRaceResultResponseProvider,
     final_win_odds_response_provider: JRAHistoricalFinalWinOddsResponseProvider,
 ) -> JRAHistoricalSourceCollection:
     """Collect one complete, all-or-nothing JRA historical source set."""
 
+    scheduled = _scheduled_start(target_track_record)
+    bound = _bound(observed_at_not_after, scheduled)
+    horse_history_response = _horse_history_response(
+        response=horse_history_response,
+        scheduled=scheduled,
+        bound=bound,
+    )
     discovery = _discovery(
         target_track_record=target_track_record,
         target_entry_record=target_entry_record,
         horse_history_response=horse_history_response,
     )
-    scheduled = _scheduled_start(target_track_record)
     for reference in discovery.events:
         if reference.event_kind is _EventKind.NON_JRA_ACTUAL_START:
             raise _unsupported("non-JRA actual start prevents JRA-only collection")
@@ -215,23 +257,30 @@ def collect_jra_historical_input_source_records(
     else:
         if not callable(race_result_response_provider) or not callable(final_win_odds_response_provider):
             raise _validation("historical response providers must be callable")
-        result_cache: dict[str, _ResultResponse] = {}
+        result_cache: dict[tuple[str, str], _ResultResponse] = {}
         odds_cache: dict[str, _FinalOddsResponse] = {}
         records_list: list[_HistoricalInputSourceRecord] = []
         for reference in actual:
             if reference.race_identity is None or reference.canonical_race_result_url is None:
                 raise _validation("JRA actual-start reference is invalid")
-            race_key = reference.race_identity.external_race_id
+            race_key = (reference.race_identity.external_race_id, reference.canonical_race_result_url)
             result = result_cache.get(race_key)
             if result is None:
+                provided = race_result_response_provider(
+                    race_reference=reference,
+                    observed_at_not_after=observed_at_not_after,
+                )
+                if provided is None:
+                    raise JRAHistoricalSourceCollectionUnavailableError("causally eligible JRA race-result response is unavailable")
                 result = _result_response(
-                    response=race_result_response_provider(race_reference=reference),
+                    response=provided,
                     reference=reference,
                     scheduled=scheduled,
+                    bound=bound,
                 )
                 result_cache[race_key] = result
             else:
-                _result_response(response=result, reference=reference, scheduled=scheduled)
+                _result_response(response=result, reference=reference, scheduled=scheduled, bound=bound)
             try:
                 locator = _extract_locator(race_result_response=result)
             except _LocatorValidationError as error:
@@ -240,14 +289,21 @@ def collect_jra_historical_input_source_records(
                 raise _validation("JRA final-odds locator disagrees with historical reference")
             odds = odds_cache.get(locator.request_identity_sha256)
             if odds is None:
+                provided_odds = final_win_odds_response_provider(
+                    request_locator=locator,
+                    observed_at_not_after=observed_at_not_after,
+                )
+                if provided_odds is None:
+                    raise JRAHistoricalSourceCollectionUnavailableError("causally eligible JRA final-odds response is unavailable")
                 odds = _odds_response(
-                    response=final_win_odds_response_provider(request_locator=locator),
+                    response=provided_odds,
                     locator=locator,
                     scheduled=scheduled,
+                    bound=bound,
                 )
                 odds_cache[locator.request_identity_sha256] = odds
             else:
-                _odds_response(response=odds, locator=locator, scheduled=scheduled)
+                _odds_response(response=odds, locator=locator, scheduled=scheduled, bound=bound)
             try:
                 records_list.append(
                     _normalize_past_race(
@@ -280,6 +336,7 @@ __all__ = (
     "JRAHistoricalSourceCollectionError",
     "JRAHistoricalSourceCollectionValidationError",
     "JRAHistoricalSourceCollectionUnsupportedError",
+    "JRAHistoricalSourceCollectionUnavailableError",
     "collect_jra_historical_input_source_records",
 )
 

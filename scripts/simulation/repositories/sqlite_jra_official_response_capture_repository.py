@@ -18,6 +18,7 @@ from scripts.simulation.jra_official_response_capture import (
     JRASuppliedOfficialResponse as _Supplied,
     canonicalize_jra_official_capture_url as _canonicalize,
 )
+from scripts.simulation.jra_official_identity import JRAOfficialFinalWinOddsRequestLocator as _FinalLocator
 from .errors import RepositoryConflictError as _Conflict, RepositoryDataIntegrityError as _Integrity, RepositoryValidationError as _Validation
 
 _V1_CAPTURE = _re.compile(r"jra-capture-v1:[0-9a-f]{64}\Z")
@@ -194,6 +195,86 @@ class SQLiteJRAOfficialResponseCaptureRepository:
             raise _Validation("canonical_horse_history_url is invalid") from error
         except _sqlite3.Error as error:
             raise _Integrity("JRA horse-history archive lookup failed") from error
+
+    def load_latest_race_result_supplied_response(
+        self,
+        *,
+        canonical_race_result_url: str,
+        observed_at_not_after: _datetime,
+    ) -> _Supplied | None:
+        """Return one latest inclusive-cutoff schema-v1 accessS capture, if present."""
+
+        try:
+            canonical = _canonicalize(
+                page_kind=_PageKind.RACE_RESULT,
+                response_url=canonical_race_result_url,
+            )
+            if canonical != canonical_race_result_url:
+                raise _Validation("canonical_race_result_url is not canonical")
+            bound = self._lookup_time(observed_at_not_after)
+            rows = self._connection.execute(
+                f"SELECT {_COLUMNS} FROM jra_official_response_captures "
+                "WHERE canonical_source_url=? AND observed_at_utc<=? "
+                "ORDER BY observed_at_utc DESC",
+                (canonical, self._time(bound)),
+            ).fetchall()
+            if not rows:
+                return None
+            latest = rows[0][7]
+            selected = tuple(row for row in rows if row[7] == latest)
+            if len(selected) != 1:
+                raise _Integrity("latest race-result capture is ambiguous")
+            item = self._reconstruct(selected[0])
+            if type(item) is not _Capture or item.page_kind is not _PageKind.RACE_RESULT:
+                raise _Integrity("stored race-result capture family differs")
+            return item.to_supplied_official_response()
+        except (_Integrity, _Validation):
+            raise
+        except _CaptureError as error:
+            raise _Validation("canonical_race_result_url is invalid") from error
+        except _sqlite3.Error as error:
+            raise _Integrity("JRA race-result archive lookup failed") from error
+
+    def load_latest_final_win_odds_supplied_response(
+        self,
+        *,
+        request_locator: _FinalLocator,
+        observed_at_not_after: _datetime,
+    ) -> _FinalSupplied | None:
+        """Return one latest inclusive-cutoff schema-v2 final-odds capture, if present."""
+
+        if type(request_locator) is not _FinalLocator:
+            raise _Validation("request_locator is invalid")
+        try:
+            bound = self._lookup_time(observed_at_not_after)
+            rows = self._connection.execute(
+                f"SELECT {_COLUMNS} FROM jra_official_response_captures "
+                "WHERE canonical_source_url=? AND request_identity_sha256=? "
+                "AND observed_at_utc<=? ORDER BY observed_at_utc DESC",
+                (
+                    request_locator.endpoint_url,
+                    request_locator.request_identity_sha256,
+                    self._time(bound),
+                ),
+            ).fetchall()
+            if not rows:
+                return None
+            latest = rows[0][7]
+            selected = tuple(row for row in rows if row[7] == latest)
+            if len(selected) != 1:
+                raise _Integrity("latest final-odds capture is ambiguous")
+            item = self._reconstruct(selected[0])
+            if (
+                type(item) is not _FinalCapture
+                or item.page_kind is not _PageKind.FINAL_WIN_ODDS
+                or item.request_locator != request_locator
+            ):
+                raise _Integrity("stored final-odds capture family differs")
+            return item.to_supplied_official_response()
+        except (_Integrity, _Validation):
+            raise
+        except _sqlite3.Error as error:
+            raise _Integrity("JRA final-odds archive lookup failed") from error
 
     def _save(self, *, capture: _Capture | _FinalCapture | _TargetCapture, final: bool) -> None:
         pattern = _V2_CAPTURE if final else (_V3_CAPTURE if type(capture) is _TargetCapture else _V1_CAPTURE)
