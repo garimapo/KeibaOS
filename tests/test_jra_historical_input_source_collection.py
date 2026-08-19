@@ -20,9 +20,10 @@ from scripts.simulation.jra_final_win_odds_request_locator import (
 )
 from scripts.simulation.jra_historical_input_source_collection import (
     JRAHistoricalSourceCollection,
+    JRAHistoricalSourceCollectionUnavailableError,
     JRAHistoricalSourceCollectionUnsupportedError,
     JRAHistoricalSourceCollectionValidationError,
-    collect_jra_historical_input_source_records,
+    collect_jra_historical_input_source_records as _collect,
 )
 from scripts.simulation.jra_historical_past_race_absence_source import (
     JRAHistoricalPastRaceAbsenceSourceValidationError,
@@ -46,6 +47,7 @@ from scripts.simulation.jra_official_response_capture import (
     JRAFinalWinOddsSuppliedOfficialResponse,
     JRASuppliedOfficialResponse,
 )
+from scripts.simulation.repositories.errors import RepositoryDataIntegrityError
 
 
 UTC = timezone.utc
@@ -131,19 +133,29 @@ def _odds(
     return JRAFinalWinOddsSuppliedOfficialResponse(request_locator, b"x", "cp932", observed)
 
 
+def collect_jra_historical_input_source_records(**kwargs: object) -> JRAHistoricalSourceCollection:
+    """Preserve pre-c4b regression call sites with the formal outer cutoff."""
+    kwargs.setdefault("observed_at_not_after", SCHEDULED)
+    return _collect(**kwargs)  # type: ignore[arg-type]
+
+
 class JRAHistoricalInputSourceCollectionTests(unittest.TestCase):
     def test_public_surface_and_purity(self) -> None:
         import scripts.simulation as package
         import scripts.simulation.jra_historical_input_source_collection as module
 
-        self.assertEqual({name for name in vars(module) if not name.startswith("_")}, {"JRAHistoricalRaceResultResponseProvider", "JRAHistoricalFinalWinOddsResponseProvider", "JRAHistoricalSourceCollection", "JRAHistoricalSourceCollectionError", "JRAHistoricalSourceCollectionValidationError", "JRAHistoricalSourceCollectionUnsupportedError", "collect_jra_historical_input_source_records"})
-        self.assertEqual(tuple(inspect.signature(collect_jra_historical_input_source_records).parameters), ("target_track_record", "target_entry_record", "horse_history_response", "race_result_response_provider", "final_win_odds_response_provider"))
+        self.assertEqual({name for name in vars(module) if not name.startswith("_")}, {"JRAHistoricalRaceResultResponseProvider", "JRAHistoricalFinalWinOddsResponseProvider", "JRAHistoricalSourceCollection", "JRAHistoricalSourceCollectionError", "JRAHistoricalSourceCollectionValidationError", "JRAHistoricalSourceCollectionUnsupportedError", "JRAHistoricalSourceCollectionUnavailableError", "collect_jra_historical_input_source_records"})
+        self.assertEqual(tuple(inspect.signature(_collect).parameters), ("target_track_record", "target_entry_record", "horse_history_response", "observed_at_not_after", "race_result_response_provider", "final_win_odds_response_provider"))
+        self.assertEqual(tuple(inspect.signature(module.JRAHistoricalRaceResultResponseProvider.__call__).parameters), ("self", "race_reference", "observed_at_not_after"))
+        self.assertEqual(tuple(inspect.signature(module.JRAHistoricalFinalWinOddsResponseProvider.__call__).parameters), ("self", "request_locator", "observed_at_not_after"))
         self.assertTrue(JRAHistoricalSourceCollection.__dataclass_params__.frozen)
         self.assertTrue(hasattr(JRAHistoricalSourceCollection, "__slots__"))
         self.assertFalse(hasattr(package, "collect_jra_historical_input_source_records"))
         tree = ast.parse(Path(module.__file__).read_text(encoding="utf-8"))
         forbidden = {"requests", "httpx", "sqlite3", "pathlib", "random", "subprocess", "time", "urllib", "bs4"}
         self.assertFalse(any((isinstance(node, ast.Import) and any(item.name.split(".")[0] in forbidden for item in node.names)) or (isinstance(node, ast.ImportFrom) and node.module and node.module.split(".")[0] in forbidden) for node in ast.walk(tree)))
+        self.assertFalse(any(isinstance(node, ast.ExceptHandler) and isinstance(node.type, ast.Name) and node.type.id in {"Exception", "BaseException"} for node in ast.walk(tree)))
+        self.assertTrue(issubclass(JRAHistoricalSourceCollectionUnavailableError, ValueError))
 
     def test_direct_constructor_validates_target_lineage_and_record_binding(self) -> None:
         record = _past("valid")
@@ -341,3 +353,92 @@ class JRAHistoricalInputSourceCollectionTests(unittest.TestCase):
         with patch("scripts.simulation.jra_historical_input_source_collection._discover", return_value=discovery), patch("scripts.simulation.jra_historical_input_source_collection._extract_locator", return_value=LOCATOR), patch("scripts.simulation.jra_historical_input_source_collection._normalize_past_race", side_effect=(_past("first"), JRAHistoricalPastRaceSourceValidationError("bad"))):
             with self.assertRaises(JRAHistoricalSourceCollectionValidationError):
                 collect_jra_historical_input_source_records(target_track_record=_track(), target_entry_record=_entry(), horse_history_response=_horse_response(), race_result_response_provider=lambda **_: _result(), final_win_odds_response_provider=lambda **_: _odds())
+
+    def test_explicit_causal_bound_rejects_invalid_and_late_accessu_before_discovery(self) -> None:
+        result_provider = Mock()
+        odds_provider = Mock()
+        discovery = Mock()
+        common = dict(
+            target_track_record=_track(),
+            target_entry_record=_entry(),
+            horse_history_response=_horse_response(),
+            race_result_response_provider=result_provider,
+            final_win_odds_response_provider=odds_provider,
+        )
+        for bound in (datetime(2026, 6, 1, 10), SCHEDULED + timedelta(microseconds=1)):
+            with self.subTest(bound=bound), patch(
+                "scripts.simulation.jra_historical_input_source_collection._discover", discovery
+            ), self.assertRaises(JRAHistoricalSourceCollectionValidationError):
+                _collect(**common, observed_at_not_after=bound)
+            discovery.assert_not_called()
+            result_provider.assert_not_called()
+            odds_provider.assert_not_called()
+        late_history = _horse_response()
+        object.__setattr__(late_history, "observed_at", OBSERVED + timedelta(seconds=1))
+        with patch("scripts.simulation.jra_historical_input_source_collection._discover", discovery), self.assertRaises(
+            JRAHistoricalSourceCollectionValidationError
+        ):
+            _collect(**dict(common, horse_history_response=late_history), observed_at_not_after=OBSERVED)
+        discovery.assert_not_called()
+        result_provider.assert_not_called()
+        odds_provider.assert_not_called()
+
+    def test_explicit_causal_bound_is_inclusive_and_propagates_exact_object(self) -> None:
+        bound = SCHEDULED
+        horse_at_bound = _horse_response()
+        object.__setattr__(horse_at_bound, "observed_at", bound)
+        result_provider = Mock(return_value=_result(bound))
+        odds_provider = Mock(return_value=_odds(bound))
+        discovery = _discovery(events=(_reference(),))
+        with patch("scripts.simulation.jra_historical_input_source_collection._discover", return_value=discovery), patch(
+            "scripts.simulation.jra_historical_input_source_collection._extract_locator", return_value=LOCATOR
+        ), patch(
+            "scripts.simulation.jra_historical_input_source_collection._normalize_past_race", return_value=_past("causal")
+        ):
+            output = _collect(
+                target_track_record=_track(), target_entry_record=_entry(), horse_history_response=horse_at_bound,
+                observed_at_not_after=bound, race_result_response_provider=result_provider,
+                final_win_odds_response_provider=odds_provider,
+            )
+        self.assertEqual(output.source_records, (_past("causal"),))
+        self.assertIs(result_provider.call_args.kwargs["observed_at_not_after"], bound)
+        self.assertIs(odds_provider.call_args.kwargs["observed_at_not_after"], bound)
+
+    def test_accesss_and_accesso_unavailable_or_late_fail_closed(self) -> None:
+        discovery = _discovery(events=(_reference(),))
+        common = dict(
+            target_track_record=_track(), target_entry_record=_entry(), horse_history_response=_horse_response(),
+            observed_at_not_after=OBSERVED,
+        )
+        with patch("scripts.simulation.jra_historical_input_source_collection._discover", return_value=discovery):
+            with self.assertRaises(JRAHistoricalSourceCollectionUnavailableError):
+                _collect(**common, race_result_response_provider=Mock(return_value=None), final_win_odds_response_provider=Mock())
+        for result, odds in ((
+            _result(OBSERVED + timedelta(microseconds=1)), _odds(),
+        ), (
+            _result(), _odds(OBSERVED + timedelta(microseconds=1)),
+        )):
+            with self.subTest(result_observed=result.observed_at, odds_observed=odds.observed_at), patch(
+                "scripts.simulation.jra_historical_input_source_collection._discover", return_value=discovery
+            ), patch(
+                "scripts.simulation.jra_historical_input_source_collection._extract_locator", return_value=LOCATOR
+            ), patch(
+                "scripts.simulation.jra_historical_input_source_collection._normalize_past_race", return_value=_past("unused")
+            ):
+                with self.assertRaises(JRAHistoricalSourceCollectionValidationError):
+                    _collect(**common, race_result_response_provider=Mock(return_value=result), final_win_odds_response_provider=Mock(return_value=odds))
+        with patch("scripts.simulation.jra_historical_input_source_collection._discover", return_value=discovery), patch(
+            "scripts.simulation.jra_historical_input_source_collection._extract_locator", return_value=LOCATOR
+        ):
+            with self.assertRaises(JRAHistoricalSourceCollectionUnavailableError):
+                _collect(**common, race_result_response_provider=Mock(return_value=_result()), final_win_odds_response_provider=Mock(return_value=None))
+
+    def test_provider_integrity_error_propagates_unchanged(self) -> None:
+        marker = RepositoryDataIntegrityError("corrupt archive")
+        with patch("scripts.simulation.jra_historical_input_source_collection._discover", return_value=_discovery(events=(_reference(),))):
+            with self.assertRaisesRegex(RepositoryDataIntegrityError, "corrupt archive"):
+                _collect(
+                    target_track_record=_track(), target_entry_record=_entry(), horse_history_response=_horse_response(),
+                    observed_at_not_after=SCHEDULED, race_result_response_provider=Mock(side_effect=marker),
+                    final_win_odds_response_provider=Mock(),
+                )

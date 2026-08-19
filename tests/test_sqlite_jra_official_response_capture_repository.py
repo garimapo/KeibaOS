@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 import sqlite3
 import unittest
 
-from scripts.simulation.jra_official_identity import JRAExternalRaceIdentity, JRAOfficialFinalWinOddsRequestLocator
+from scripts.simulation.jra_official_identity import JRAExternalRaceIdentity, JRAOfficialFinalWinOddsRequestLocator, build_jra_final_win_odds_request_locator
 from scripts.simulation.jra_official_response_capture import JRAFinalWinOddsResponseCapture, JRAOfficialResponseCapture, JRAOfficialResponseCaptureMissingError, JRAOfficialTargetRaceCardResponseCapture
 from scripts.simulation.jra_official_response_capture_migration_runner import apply_jra_capture_schema_migrations
 from scripts.simulation.repositories.errors import RepositoryConflictError, RepositoryDataIntegrityError, RepositoryValidationError
@@ -33,6 +33,9 @@ def final_item(**changes):
     values = dict(request_locator=locator, response_body=BODY, charset="cp932", requested_at=T, observed_at=T, stored_at=T, http_status=200, content_type="text/html")
     values.update(changes)
     return JRAFinalWinOddsResponseCapture(**values)
+
+def other_final_locator():
+    return build_jra_final_win_odds_request_locator(cname="pw151ou1006202601021220260105Z/2F")
 
 def target_item(**changes):
     values = dict(canonical_source_url=DURL, response_body=BODY, charset="cp932", requested_at=T, observed_at=T, stored_at=T, http_status=200, content_type="text/html")
@@ -137,3 +140,96 @@ class SQLiteJRACaptureTests(unittest.TestCase):
         c.commit()
         with self.assertRaises(RepositoryDataIntegrityError):
             r.load_latest_horse_profile_history_supplied_response(canonical_horse_history_url=HURL, observed_at_not_after=T)
+
+    def test_latest_race_result_lookup_is_exact_inclusive_and_integrity_checked(self):
+        c, r = self.repo()
+        early = item()
+        late = item(response_body=b"<meta charset=\"Shift_JIS\">late", observed_at=T + timedelta(hours=2), stored_at=T + timedelta(hours=2))
+        r.save_capture(capture=early)
+        r.save_capture(capture=late)
+        self.assertEqual(r.load_latest_race_result_supplied_response(canonical_race_result_url=URL, observed_at_not_after=T).response_body, BODY)
+        self.assertEqual(r.load_latest_race_result_supplied_response(canonical_race_result_url=URL, observed_at_not_after=T + timedelta(hours=1)).response_body, BODY)
+        self.assertIsNone(r.load_latest_race_result_supplied_response(canonical_race_result_url=URL, observed_at_not_after=T - timedelta(microseconds=1)))
+        for invalid in (HURL, DURL, "https://www.jra.go.jp/JRADB/accessO.html", URL.replace("%2F", "/")):
+            with self.subTest(invalid=invalid), self.assertRaises(RepositoryValidationError):
+                r.load_latest_race_result_supplied_response(canonical_race_result_url=invalid, observed_at_not_after=T)
+        with self.assertRaises(RepositoryValidationError):
+            r.load_latest_race_result_supplied_response(canonical_race_result_url=URL, observed_at_not_after=datetime(2026, 1, 1))
+        r.save_capture(capture=item(response_body=b"<meta charset=\"Shift_JIS\">tie", observed_at=T + timedelta(hours=2), stored_at=T + timedelta(hours=2)))
+        with self.assertRaises(RepositoryDataIntegrityError):
+            r.load_latest_race_result_supplied_response(canonical_race_result_url=URL, observed_at_not_after=T + timedelta(hours=2))
+        c.execute("DELETE FROM jra_official_response_captures WHERE observed_at_utc=?", ((T + timedelta(hours=2)).isoformat(timespec="microseconds"),))
+        c.commit()
+        r.save_capture(capture=late)
+        c.execute("PRAGMA foreign_keys=OFF")
+        c.execute("DELETE FROM jra_official_response_bodies WHERE response_sha256=?", (late.response_sha256,))
+        c.commit()
+        with self.assertRaises(RepositoryDataIntegrityError):
+            r.load_latest_race_result_supplied_response(canonical_race_result_url=URL, observed_at_not_after=T + timedelta(hours=2))
+
+    def test_latest_race_result_metadata_corruption_is_not_hidden_by_lookup(self):
+        corruptions = (
+            ("schema_version", 2),
+            ("page_kind", "horse_profile_history"),
+            ("request_method", "POST"),
+            ("request_identity_sha256", "0" * 64),
+            ("request_cname", "pw151ou1006202601021220260105Z/2E"),
+        )
+        for column, value in corruptions:
+            with self.subTest(column=column):
+                c, r = self.repo()
+                saved = item()
+                r.save_capture(capture=saved)
+                c.execute("PRAGMA ignore_check_constraints=ON")
+                c.execute(f"UPDATE jra_official_response_captures SET {column}=? WHERE capture_id=?", (value, saved.capture_id))
+                c.execute("PRAGMA ignore_check_constraints=OFF")
+                c.commit()
+                with self.assertRaises(RepositoryDataIntegrityError):
+                    r.load_latest_race_result_supplied_response(canonical_race_result_url=URL, observed_at_not_after=T)
+
+    def test_latest_final_odds_lookup_is_exact_inclusive_and_integrity_checked(self):
+        c, r = self.repo()
+        early = final_item()
+        late = final_item(response_body=b"<meta charset=\"Shift_JIS\">late", observed_at=T + timedelta(hours=2), stored_at=T + timedelta(hours=2))
+        other = final_item(request_locator=other_final_locator(), response_body=b"<meta charset=\"Shift_JIS\">other")
+        r.save_final_win_odds_capture(capture=early)
+        r.save_final_win_odds_capture(capture=late)
+        r.save_final_win_odds_capture(capture=other)
+        self.assertEqual(r.load_latest_final_win_odds_supplied_response(request_locator=early.request_locator, observed_at_not_after=T).response_body, BODY)
+        self.assertEqual(r.load_latest_final_win_odds_supplied_response(request_locator=early.request_locator, observed_at_not_after=T + timedelta(hours=1)).response_body, BODY)
+        self.assertIsNone(r.load_latest_final_win_odds_supplied_response(request_locator=early.request_locator, observed_at_not_after=T - timedelta(microseconds=1)))
+        self.assertIsNone(r.load_latest_final_win_odds_supplied_response(request_locator=other_final_locator(), observed_at_not_after=T - timedelta(microseconds=1)))
+        with self.assertRaises(RepositoryValidationError):
+            r.load_latest_final_win_odds_supplied_response(request_locator=object(), observed_at_not_after=T)
+        with self.assertRaises(RepositoryValidationError):
+            r.load_latest_final_win_odds_supplied_response(request_locator=early.request_locator, observed_at_not_after=datetime(2026, 1, 1))
+        r.save_final_win_odds_capture(capture=final_item(response_body=b"<meta charset=\"Shift_JIS\">tie", observed_at=T + timedelta(hours=2), stored_at=T + timedelta(hours=2)))
+        with self.assertRaises(RepositoryDataIntegrityError):
+            r.load_latest_final_win_odds_supplied_response(request_locator=early.request_locator, observed_at_not_after=T + timedelta(hours=2))
+        c.execute("DELETE FROM jra_official_response_captures WHERE observed_at_utc=?", ((T + timedelta(hours=2)).isoformat(timespec="microseconds"),))
+        c.commit()
+        r.save_final_win_odds_capture(capture=late)
+        c.execute("PRAGMA foreign_keys=OFF")
+        c.execute("DELETE FROM jra_official_response_bodies WHERE response_sha256=?", (late.response_sha256,))
+        c.commit()
+        with self.assertRaises(RepositoryDataIntegrityError):
+            r.load_latest_final_win_odds_supplied_response(request_locator=early.request_locator, observed_at_not_after=T + timedelta(hours=2))
+
+    def test_latest_final_odds_metadata_corruption_is_not_hidden_by_lookup(self):
+        corruptions = (
+            ("schema_version", 1),
+            ("page_kind", "race_result"),
+            ("request_method", "GET"),
+            ("request_cname", "pw151ou1006202601021220260105Z/2F"),
+        )
+        for column, value in corruptions:
+            with self.subTest(column=column):
+                c, r = self.repo()
+                saved = final_item()
+                r.save_final_win_odds_capture(capture=saved)
+                c.execute("PRAGMA ignore_check_constraints=ON")
+                c.execute(f"UPDATE jra_official_response_captures SET {column}=? WHERE capture_id=?", (value, saved.capture_id))
+                c.execute("PRAGMA ignore_check_constraints=OFF")
+                c.commit()
+                with self.assertRaises(RepositoryDataIntegrityError):
+                    r.load_latest_final_win_odds_supplied_response(request_locator=saved.request_locator, observed_at_not_after=T)
