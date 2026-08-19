@@ -4020,3 +4020,23 @@ later exact horse-number-only mapping boundary is required.
 
 No production code, tests, schema, migration, index, HTTP, real capture, source union,
 or snapshot assembly changed in this PREPARE.
+
+### Locator-persistence terminology correction
+
+The archive does persist a target-card URL: every schema-v3 capture row contains the
+exact canonical `canonical_source_url`, and the exact-evidence replay loader can use it
+once the evidence identity is already known. This is now frozen as
+`ACCESSD_URL_PERSISTED_IN_CAPTURE_ARCHIVE: YES` and
+`EXACT_ACCESSD_URL_CURRENTLY_PERSISTED: YES_AS_SCHEMA_V3_CAPTURE_METADATA_ONLY`.
+
+The remaining gap is strictly pre-normalization acquisition: no formal replay domain
+binds target `external_race_id` to the exact canonical accessD URL before the response is
+selected. This is `PRE_NORMALIZATION_ACCESSD_REPLAY_LOCATOR_PERSISTED: NO` and
+`EXACT_ACCESSD_URL_CURRENTLY_FORMAL: NO_AS_PRE_NORMALIZATION_REPLAY_LOCATOR`. The live
+target-card service receives its URL from a caller; it does not discover it. Hence the
+URL source is exactly `CALLER_SUPPLIED_TO_TARGET_CAPTURE;
+NO_FORMAL_PRE_NORMALIZATION_LOCATOR_SOURCE`.
+
+The c4c0 prerequisite remains locator-source retention for that upstream official
+navigation/request-domain handoff, not additional v3 archive URL storage. No production,
+test, schema, or index change was made by this correction.

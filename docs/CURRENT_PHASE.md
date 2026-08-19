@@ -23,15 +23,25 @@ real capture.
 
 ### Exact accessD URL source
 
-`EXACT_ACCESSD_URL_CURRENTLY_PERSISTED: NO` for a formal JRA replay input.
+`ACCESSD_URL_PERSISTED_IN_CAPTURE_ARCHIVE: YES`.
 
-`EXACT_ACCESSD_URL_CURRENTLY_FORMAL: NO` before a target-card response is supplied.
+Schema-v3 target-card capture rows persist the exact canonical `canonical_source_url`.
+Once an accessD response has already been captured/selected, that URL survives in the
+archive metadata and the exact-evidence loader can reconstruct it from its already-known
+evidence identity.
 
-The schema-v3 JRA archive persists `canonical_source_url` only on an already-known
-capture. Its target-card evidence loader likewise requires the exact URL, body digest,
-and observation timestamp. `JRASuppliedOfficialResponse.response_url` proves the URL
-only after the caller has already selected the response, while
-`JRATargetRaceSourceCollection` deliberately retains only row-local accessU locators.
+`PRE_NORMALIZATION_ACCESSD_REPLAY_LOCATOR_PERSISTED: NO`.
+
+There is no separately retained formal target-race locator available to replay
+orchestration before it has selected the target accessD response. No current domain
+binds `external_race_id` to an exact canonical accessD URL for acquisition, and target
+normalization cannot create that locator because it already requires the response as its
+input. `JRATargetRaceSourceCollection` deliberately retains only row-local accessU
+locators.
+
+`EXACT_ACCESSD_URL_CURRENTLY_PERSISTED: YES_AS_SCHEMA_V3_CAPTURE_METADATA_ONLY`.
+
+`EXACT_ACCESSD_URL_CURRENTLY_FORMAL: NO_AS_PRE_NORMALIZATION_REPLAY_LOCATOR`.
 
 The legacy `races.deba_table_url` column is not a JRA locator source: current writes
 are populated by `scripts/parsers/nar_parser.py`, and `scripts/fetch_local.py` consumes
@@ -39,7 +49,7 @@ it through the NAR provider. The generic sample `JRAFetcher` is not an official 
 navigation/capture pipeline. The v3 live accessD service accepts a caller-provided URL;
 it does not discover, retain, or expose one from a formal JRA race domain.
 
-`EXACT_ACCESSD_URL_SOURCE: NONE_FORMAL_BEFORE_TARGET_NORMALIZATION`.
+`EXACT_ACCESSD_URL_SOURCE: CALLER_SUPPLIED_TO_TARGET_CAPTURE; NO_FORMAL_PRE_NORMALIZATION_LOCATOR_SOURCE`.
 
 `TARGET_ACCESSD_LOCATOR_SOURCE_READY: NO`.
 
@@ -72,8 +82,10 @@ neutral `HistoricalInputSourceRecord.record_values`.
 
 No current formal boundary owns that source. The next prerequisite is therefore
 `4C-2d3b1i6d1d5f1c4c0 — JRA target accessD locator-source retention PREPARE`, to locate
-and formalize the exact official navigation/acquisition handoff. It must not reuse the
-NAR legacy column or invent a race-ID query.
+and formalize the upstream exact official navigation/request-domain handoff that owns
+the canonical target accessD URL before archive selection and target normalization. It
+must not add redundant schema-v3 URL storage, reuse the NAR legacy column, or invent a
+race-ID query.
 
 ## Frozen Subsequent Causal Contract
 
