@@ -86,36 +86,32 @@ construction, no display-text identity, and no package-root export. Its ownershi
 `scripts/simulation/jra_target_race_card_locator.py`, not neutral
 `HistoricalInputSourceRecord.record_values` and not a capture-row retrofit.
 
-The locator is immutable request metadata, not target-card response evidence. It carries
-no observed timestamp and does not invent `available_at`. But the upstream discovery
-that creates and retains it must preserve the exact official navigation source evidence
-(canonical navigation URL, raw response SHA-256, and actual observation time) under its
-own future formal evidence/capture contract. The later resolved accessD response remains
-the sole evidence for target track/entry/jockey/odds source records.
+The locator is expected to be immutable request metadata, not target-card response
+evidence. Discovery must be auditable and must not invent `available_at`, but c4c0 does
+not yet choose whether an observation time or source evidence belongs on the locator,
+a discovery-result domain, or a retained evidence record. The later resolved accessD
+response remains the sole evidence for target track/entry/jockey/odds source records.
 
-`CAN_MULTIPLE_CANONICAL_ACCESSD_URLS_BIND_ONE_RACE_ID: YES_BY_LEXICAL_OPAQUE_TAIL`.
-Identical URLs are equivalent duplicates. The upstream official discovery must emit one
-exact locator for one target-navigation request. Different canonical URLs for the same
-race in the same retained request context are a conflict and fail closed; timestamp or
-provenance alone does not authorize choosing one. A future versioned/revision policy
-would need its own approved design before differing locators could coexist.
+The accessD grammar permits different opaque-tail values while parsing to the same race
+identity. It therefore proves only that inverse race-ID-to-URL uniqueness is not
+established; it does not prove JRA emits multiple simultaneously legitimate locators for
+one race. The official discovery contract must define duplicate, continuation, revision,
+and selection semantics. Until it does, a differing URL is a fail-closed conflict and
+timestamp or provenance alone cannot select one.
 
-For deterministic automated replay, locator retention must be durable. Existing
-persisted simulation requests, neutral source records, snapshots, and the response
-archive are not reusable because none owns this pre-capture JRA association. The future
-discovery/retention prerequisite therefore needs a dedicated append-only JRA locator
-repository domain and schema table. Its minimum immutable payload is the canonical race
-ID, canonical accessD URL, and the source-navigation evidence identity above, with a
-unique race-to-locator association and conflict-on-different-URL behavior. This is a
-new locator-source persistence schema, not a change to capture schema-v3.
+Persistence is deliberately not frozen here. The discovery contract must first establish
+the official navigation response, request/response identity, causal observation semantics,
+discovery result, evidence, and whether replay needs durable locator state beyond those
+facts. Only then may a later design select an existing request/dataset domain or a new
+repository/table. c4c0 authorizes neither a new table/schema nor a dedicated locator
+repository.
 
 ### Future live/replay handoff
 
-Once the retained source exists, both live capture and replay must consume the same exact
-locator. A later live API should accept `locator: JRATargetRaceCardLocator` rather than
-a bare string, validate it, fetch only `locator.canonical_target_race_card_url`, and
-preserve the race-identity agreement in its schema-v3 response. Live capture still does
-not discover a locator.
+Once discovery/retention is formal, a later design may evaluate using the same exact
+locator for live capture and replay. The preferred direction may be locator-bound live
+capture, but c4c0 does not commit an API change before the discovery-result domain and
+its evidence semantics are frozen. Live capture must never discover a locator itself.
 
 The later replay sequence is:
 
@@ -151,29 +147,29 @@ JRA_TARGET_RACE_DISCOVERY_RETURNS_EXACT_ACCESSD_URL: NO
 JRA_TARGET_RACE_DISCOVERY_CAUSALLY_AUDITABLE: NO
 
 EARLIEST_EXACT_ACCESSD_URL_OWNER: MISSING_OFFICIAL_JRA_TARGET_NAVIGATION_DISCOVERY
-LOCATOR_RETENTION_MOMENT: IMMEDIATELY_ON_EXACT_OFFICIAL_NAVIGATION_EXTRACTION_BEFORE_CAPTURE_OR_REPLAY
+LOCATOR_RETENTION_MOMENT: IMMEDIATELY_WHEN_EXACT_OFFICIAL_NAVIGATION_DISCOVERY_PRODUCES_THE_LOCATOR; REPRESENTATION_UNDECIDED
 
 LOCATOR_DOMAIN_READY: YES_LEXICAL_DOMAIN_ONLY
 LOCATOR_MODULE: scripts/simulation/jra_target_race_card_locator.py
-LOCATOR_PROVENANCE_REQUIRED: YES_AT_UPSTREAM_DISCOVERY_RETENTION_BOUNDARY
-LOCATOR_OBSERVED_AT_REQUIRED: NO_ON_LOCATOR_DOMAIN
-LOCATOR_SOURCE_EVIDENCE_REQUIRED: YES
+LOCATOR_PROVENANCE_REQUIRED: YES_DISCOVERY_MUST_BE_AUDITABLE
+LOCATOR_OBSERVED_AT_REQUIRED: UNDECIDED_ON_LOCATOR_DOMAIN
+LOCATOR_SOURCE_EVIDENCE_REQUIRED: YES_AT_DISCOVERY_BOUNDARY
 
-LOCATOR_PERSISTENCE_REQUIRED: YES
-LOCATOR_PERSISTENCE_OWNER: DEDICATED_APPEND_ONLY_JRA_TARGET_LOCATOR_REPOSITORY
-EXISTING_PERSISTENCE_DOMAIN_REUSABLE: NO
-NEW_SCHEMA_REQUIRED: YES
-NEW_TABLE_REQUIRED: YES
+LOCATOR_PERSISTENCE_REQUIRED: UNDECIDED_PENDING_OFFICIAL_DISCOVERY_CONTRACT
+LOCATOR_PERSISTENCE_OWNER: UNDECIDED
+EXISTING_PERSISTENCE_DOMAIN_REUSABLE: UNDECIDED_PENDING_DISCOVERY_CONTRACT
+NEW_SCHEMA_REQUIRED: UNDECIDED
+NEW_TABLE_REQUIRED: UNDECIDED
 
-CAN_MULTIPLE_CANONICAL_ACCESSD_URLS_BIND_ONE_RACE_ID: YES_BY_LEXICAL_OPAQUE_TAIL
-LOCATOR_UNIQUENESS_POLICY: ONE_EXACT_UPSTREAM_LOCATOR_PER_RETAINED_TARGET_REQUEST; IDENTICAL_URL_DUPLICATES_EQUIVALENT
-LOCATOR_CONFLICT_POLICY: DIFFERENT_CANONICAL_URLS_FOR_SAME_RACE_AND_REQUEST_CONTEXT_FAIL_CLOSED
+CAN_MULTIPLE_CANONICAL_ACCESSD_URLS_BIND_ONE_RACE_ID: NOT_PROVEN
+LOCATOR_UNIQUENESS_POLICY: MUST_BE_DEFINED_BY_OFFICIAL_DISCOVERY_CONTRACT
+LOCATOR_CONFLICT_POLICY: FAIL_CLOSED_UNTIL_OFFICIAL_DISCOVERY_PROVES_SELECTION_SEMANTICS
 
-LOCATOR_SOURCE_PROTOCOL_REQUIRED: YES_AFTER_OFFICIAL_DISCOVERY_AND_RETENTION_ARE_FORMAL
+LOCATOR_SOURCE_PROTOCOL_REQUIRED: UNDECIDED_PENDING_DISCOVERY_CONTRACT
 EXTERNAL_RACE_ID_ONLY_LOCATOR_LOOKUP_SAFE: NO
 
-LIVE_CAPTURE_API_CHANGE_REQUIRED: YES
-LIVE_CAPTURE_LOCATOR_BINDING_READY: YES_AFTER_DISCOVERY_AND_RETENTION_IMPLEMENTATION
+LIVE_CAPTURE_API_CHANGE_REQUIRED: UNDECIDED_AFTER_LOCATOR_DOMAIN_AND_DISCOVERY_FORMALIZATION
+LIVE_CAPTURE_LOCATOR_BINDING_READY: NO_PENDING_DISCOVERY
 
 TARGET_ACCESSD_LOCATOR_SOURCE_READY: NO
 TARGET_ACCESSD_LOCATOR_RETENTION_READY: NO
@@ -190,10 +186,12 @@ REAL_TRUSTED_CAPTURE_REQUIRED: NO
 
 ## Next Phase
 
-Recommend `4C-2d3b1i6d1d5f1c4c0a — JRA official target-navigation locator discovery
-and retention PREPARE`. It must first identify the exact official navigation response
-family, supplied-response/capture/evidence contract, selector, race/request binding,
-and append-only locator persistence contract. It must not implement c4c resolver or
+Recommend `4C-2d3b1i6d1d5f1c4c0a — JRA official target accessD discovery/navigation
+PREPARE`. It must first freeze the exact official navigation entrypoint; method/request
+identity; page/byte/charset family; race binding; accessD anchor selector and URL
+derivation; observation/causality; pagination; duplicate/multiple-locator semantics;
+immutable discovery result; evidence/provenance; and only then persistence/reuse/schema
+need and potential live-capture locator binding. It must not implement c4c resolver or
 accessD archive lookup. Only after that phase is implemented and the three target-locator
 readiness fields are `YES` may c4c implement its exact accessD lookup/resolver.
 

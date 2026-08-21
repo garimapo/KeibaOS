@@ -4019,3 +4019,29 @@ later c4c resolver/repository lookup consumes its exact URL at or before the rep
 availability fields are all formally implemented. External-entry/internal-entry mapping
 is still a separate prerequisite. No production, tests, schema, capture, or real trusted
 HTTP activity occurred in this PREPARE.
+
+### Discovery-first architecture correction
+
+The initial c4c0 PREPARE prematurely selected a dedicated append-only locator repository
+and a new table/schema. That persistence choice is now explicitly deferred. The only
+architecture commitment is **D — NEW_OFFICIAL_JRA_TARGET_DISCOVERY_BOUNDARY_REQUIRED**:
+the next phase is `4C-2d3b1i6d1d5f1c4c0a — JRA official target accessD
+discovery/navigation PREPARE`.
+
+`JRATargetRaceCardLocator(external_race_id, canonical_target_race_card_url)` remains an
+approved lexical downstream candidate only. Its provenance placement, observation-time
+membership, discovery identity, uniqueness over time, replay persistence, and live
+capture binding are deliberately unresolved until official discovery establishes the
+navigation response, request identity, causal semantics, anchor extraction, duplicate
+and continuation behavior, immutable result, and evidence contract. Discovery must be
+auditable; no `available_at` may be invented and accessD response evidence must not be
+duplicated.
+
+The CNAME grammar proves only that inverse race-ID-to-URL uniqueness is not established:
+different opaque tails can parse to the same race identity. It does not prove JRA emits
+multiple simultaneously legitimate URLs. Accordingly multiple-URL status is
+`NOT_PROVEN`, external-race-ID-only lookup remains unsafe, and all selection/conflict
+semantics fail closed until official discovery proves them. A locator source Protocol,
+schema/table, existing persistence reuse, and live-capture API change are all undecided.
+No production, tests, schema, migration, capture, or real trusted HTTP activity occurred
+in this correction.
