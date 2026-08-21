@@ -3980,3 +3980,42 @@ review commit after they complete. No real trusted capture was performed.
 
 Final verification: full pytest suite **2689 passed**. The collector public surface,
 forbidden dependency, and broad-catch AST check passed; `git diff --check` passed.
+
+
+## Phase 4C-2d3b1i6d1d5f1c4c0 JRA Target accessD Locator-Source Retention PREPARE
+
+Repository-wide ownership tracing confirms that the accessD URL is retained only after
+capture: schema-v3 persists `canonical_source_url`, but no formal pre-normalization
+replay domain binds a JRA external race ID to that exact URL. The v3 live method
+`capture_target_race_card_response(*, response_url)` has no production caller; it only
+accepts a caller-provided URL. There is likewise no official JRA target-race navigation
+or discovery implementation. The sample `JRAFetcher`, hard-coded examples, and the NAR
+legacy `races.deba_table_url` are not a JRA locator source. Existing persisted simulation
+request input has an exact v1 schema with no locator field and is not reusable without
+its own schema evolution.
+
+The PREPARE therefore chooses **D — NEW_OFFICIAL_JRA_TARGET_DISCOVERY_BOUNDARY_REQUIRED**.
+The next predecessor must extract and retain one exact URL from official navigation
+evidence before live capture or archive replay. Its JRA-specific immutable request
+domain is `JRATargetRaceCardLocator(external_race_id,
+canonical_target_race_card_url)`, validated solely by the existing canonical race-ID and
+accessD URL parser relationship. No CNAME-tail inference, race-ID-only archive scan,
+display matching, current/live fallback, or neutral source-record URL field is allowed.
+
+The locator itself has no observation time: it is request metadata. Its upstream official
+navigation discovery must, however, retain auditable source-navigation evidence with its
+actual URL, raw-body digest, and observation time. Because automated historical replay
+requires durable pre-capture association and no current persistence domain owns it, the
+future discovery/retention boundary needs a dedicated append-only locator repository and
+schema table. The minimal immutable association is race ID, canonical accessD URL, and
+source-navigation evidence identity. Identical URLs are equivalent; different URLs for
+the same retained race/request context are a fail-closed conflict. Opaque tail grammar
+means external race ID alone is not a safe lookup key unless this exact unique association
+has first been retained.
+
+The later live capture API should consume this locator rather than a bare URL, while a
+later c4c resolver/repository lookup consumes its exact URL at or before the replay
+`captured_at` bound. c4c remains blocked until the source, retention, and pre-resolution
+availability fields are all formally implemented. External-entry/internal-entry mapping
+is still a separate prerequisite. No production, tests, schema, capture, or real trusted
+HTTP activity occurred in this PREPARE.
