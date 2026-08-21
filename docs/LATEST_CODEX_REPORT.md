@@ -3980,3 +3980,38 @@ review commit after they complete. No real trusted capture was performed.
 
 Final verification: full pytest suite **2689 passed**. The collector public surface,
 forbidden dependency, and broad-catch AST check passed; `git diff --check` passed.
+
+
+## Phase 4C-2d3b1i6d1d5f1c4c0a Official JRA Target accessD Discovery PREPARE
+
+Read-only current official observation proved the missing upstream chain without storing
+or trusting any response bytes. The JRA menu POSTs lower-case `cname=pw01dli00/F3` to
+`/JRADB/accessD.html` for 出馬表 開催選択. That response directly supplies exact raw
+`pw01drl00.../<HH>` request material through `doAction`; posting it to the same endpoint
+returns 出馬表 レース選択 for one date/venue/meeting/day. Its
+`#contentsBody > div.race_select > table#race_list.basic.mt20` rows contain literal,
+relative accessD target-card hrefs in both the race-number and 出馬表 cells. The two
+designated same-row hrefs were identical in the observation. The raw accessD CNAME,
+including its opaque tail and site variant, therefore originates directly from the
+official race-selection response and is never synthesized.
+
+The formal source is a new strict-CP932 POST page family,
+`TARGET_RACE_SELECTION`, with a dedicated request locator for the fixed accessD endpoint
+and raw selection CNAME plus canonical POST fingerprint. Existing
+`JRASuppliedOfficialResponse` cannot represent it because that type is limited to
+accessS/accessU/accessD target-card GET identities. The pure future API selects a target
+only by comparing every row's parsed direct card URL identity with canonical
+`external_race_id`, returning a locator plus request identity, raw-body SHA-256, and
+actual navigation observation time. Missing target is unavailable; malformed structure
+or two distinct matching URLs fails validation. Display names and race labels never form
+identity.
+
+The direct selection response and its exact POST request identity are sufficient durable
+replay material, so no separate locator table is needed. Replay must retain/reconstruct
+that exact navigation evidence rather than scan by race ID. The existing JRA capture
+archive is reusable only through a dedicated v004 target-race-selection capture family,
+page kind, request identity, archive methods, and migration that preserve v1/v2/v3. The
+future capture uses the established transport mechanics, but no generic POST union or
+real capture is authorized. Multiple distinct official URLs for one race over time remain
+not proven; current policy is exactly one distinct matching URL per supplied selection
+response and fail closed otherwise.
