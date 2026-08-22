@@ -262,9 +262,7 @@ def parse_jra_horse_profile_url_identity(value: str) -> JRAExternalHorseIdentity
     return JRAExternalHorseIdentity(match.group("horse_key"))
 
 
-def parse_jra_race_card_url_identity(value: str) -> JRAExternalRaceIdentity:
-    """Validate a canonical official accessD card URL and return its race identity."""
-
+def _race_card_url_fields(value: object) -> dict[str, str]:
     if type(value) is not str or "%2F" not in value or "/" not in value.split("CNAME=", 1)[-1].replace("%2F", "/"):
         raise _validation("race_card_url must use the canonical %2F delimiter")
     cname = _resolved_cname(value, _RACE_CARD_PATH, "race_card_url")
@@ -273,9 +271,62 @@ def parse_jra_race_card_url_identity(value: str) -> JRAExternalRaceIdentity:
         raise _validation("race_card_url CNAME is outside the approved accessD family")
     fields = match.groupdict()
     _validate_cname_date(fields["date"], fields["year"])
+    return fields
+
+
+def parse_jra_race_card_url_identity(value: str) -> JRAExternalRaceIdentity:
+    """Validate a canonical official accessD card URL and return its race identity."""
+
+    fields = _race_card_url_fields(value)
     return JRAExternalRaceIdentity(
         fields["year"], fields["venue"], fields["meeting"], fields["day"], fields["race"]
     )
+
+
+def parse_jra_race_card_url_calendar_date(value: str) -> str:
+    """Return the validated YYYYMMDD embedded in one canonical accessD card URL."""
+
+    return _race_card_url_fields(value)["date"]
+
+
+def canonicalize_jra_race_card_href(value: str) -> str:
+    """Canonicalize one direct official accessD href without synthesizing its CNAME."""
+
+    href = _strict_str(value, "race_card_href")
+    if _bad_percent_encoding(href):
+        raise _validation("race_card_href contains malformed percent encoding")
+    try:
+        parsed = _urlsplit(href)
+        port = parsed.port
+    except ValueError as error:
+        raise _validation("race_card_href is invalid") from error
+    if parsed.scheme or parsed.netloc:
+        if (
+            parsed.scheme != "https"
+            or parsed.netloc != _HOST
+            or parsed.hostname != _HOST
+            or port is not None
+            or parsed.username is not None
+            or parsed.password is not None
+        ):
+            raise _validation("race_card_href host, scheme, or port is invalid")
+    if parsed.fragment or parsed.path != _RACE_CARD_PATH or not parsed.query or "+" in parsed.query:
+        raise _validation("race_card_href structure is invalid")
+    pairs = parsed.query.split("&")
+    if len(pairs) != 1 or "=" not in pairs[0]:
+        raise _validation("race_card_href query is invalid")
+    key, raw_cname = pairs[0].split("=", 1)
+    if key != "CNAME" or not raw_cname:
+        raise _validation("race_card_href query is invalid")
+    if "%" in raw_cname:
+        if raw_cname.count("%2F") != 1 or raw_cname.replace("%2F", "/") != raw_cname.replace("%2F", "/", 1):
+            raise _validation("race_card_href CNAME encoding is invalid")
+        raw_cname = raw_cname.replace("%2F", "/")
+    if raw_cname.count("/") != 1:
+        raise _validation("race_card_href CNAME delimiter is invalid")
+    canonical = f"https://{_HOST}{_RACE_CARD_PATH}?CNAME={raw_cname.replace('/', '%2F')}"
+    parse_jra_race_card_url_identity(canonical)
+    return canonical
 
 
 def _entry_horse_number(value: object) -> str:
