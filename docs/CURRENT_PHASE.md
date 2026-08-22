@@ -65,12 +65,32 @@ second transport stack.
 
 ### Root menu to meeting-selection request
 
-The first supplied domain is a dedicated immutable root-menu response. Existing
-`JRASuppliedOfficialResponse` cannot represent it because that type accepts the JRA DB
+The root contract is exact and family-fixed:
+
+```text
+TARGET_NAVIGATION_ROOT_URL: https://www.jra.go.jp/
+TARGET_NAVIGATION_ROOT_REQUEST_METHOD: GET
+TARGET_NAVIGATION_ROOT_CHARSET: cp932
+```
+
+The URL is canonical, query-free, and a family constant rather than a caller field. The
+observed root bytes declare `Shift_JIS` and decode strictly as CP932; they do not decode
+strictly as UTF-8. The first supplied domain is therefore exactly:
+
+```python
+@dataclass(frozen=True, slots=True)
+class JRAOfficialTargetNavigationMenuSuppliedResponse:
+    response_body: bytes
+    charset: str
+    observed_at: datetime
+```
+
+Construction requires exact types, nonempty raw bytes, exact `charset == "cp932"`,
+strict CP932 decoding, and an actual timezone-aware observation. The canonical root URL
+and GET method are fixed family constants, not stored caller inputs. The domain invents
+no `available_at`, samples no clock, and does not rewrite observation time. Existing
+`JRASuppliedOfficialResponse` is not reusable because it accepts JRA DB
 accessS/accessU/accessD response families rather than the public root navigation page.
-The future exact domain retains at least canonical root source URL, raw response bytes,
-the strictly established source charset, and actual aware `observed_at`; it has no clock
-or `available_at` ownership.
 
 The future pure first producer is:
 
@@ -83,13 +103,64 @@ discover_jra_target_meeting_selection_request_locator(
 
 `JRATargetMeetingSelectionRequestLocator` is a dedicated immutable POST locator for the
 fixed `https://www.jra.go.jp/JRADB/accessD.html` endpoint, the raw lower-case `cname`,
-and its deterministic canonical POST fingerprint. Discovery inspects only the exact
-official quick-menu control `#quick_menu a[href="#"][data-ga-click="quick_pc-1"]` with
-one direct `doAction('/JRADB/accessD.html', '<raw-cname>')` invocation. Missing,
-duplicate, malformed, escaped, wrong-endpoint, or distinct raw request controls fail
-closed; duplicate exact markup may not create an arbitrary choice. The raw CNAME must
-be validated only as direct official request material under the frozen meeting-selection
-grammar; no target race identity is accepted as a substitute.
+and its deterministic canonical POST fingerprint. Its exact candidate API is:
+
+```python
+@dataclass(frozen=True, slots=True)
+class JRATargetMeetingSelectionRequestLocator:
+    endpoint_url: str
+    cname: str
+    request_identity_sha256: str
+
+def build_jra_target_meeting_selection_request_locator(
+    *,
+    cname: str,
+) -> JRATargetMeetingSelectionRequestLocator: ...
+```
+
+The locator has no parsed target-race/navigation identity: this generic command selects
+the meeting-list family and carries no year, venue, meeting day, or race number. The
+builder validates lexical material and owns its fingerprint only. It is not a discovery
+substitute; the normal production path obtains `cname` only from
+`discover_jra_target_meeting_selection_request_locator(...)` applied to exact supplied
+root bytes.
+
+The exact accepted raw CNAME grammar is:
+
+```text
+MEETING_SELECTION_CNAME_GRAMMAR: \Apw01dli00/[0-9A-F]{2}\Z
+```
+
+`pw` is fixed provider material, `01` is the approved directly observed site component,
+and `dli00` is the fixed accessD meeting-list command family. Exactly one literal raw
+`/` delimiter is required. Its two-character uppercase ASCII hexadecimal suffix is
+opaque and may only be retained from the direct official root control. Lowercase suffix,
+percent encoding (including `%2F`), `+`, whitespace, controls, escapes, extra delimiter,
+missing/extra characters, and alternate site/family prefixes are rejected. Neither the
+suffix nor any prefix is synthesized.
+
+The meeting-selection request fingerprint is exactly lowercase hexadecimal SHA-256 of
+these canonical JSON UTF-8 bytes:
+
+```json
+{"endpoint_url":"https://www.jra.go.jp/JRADB/accessD.html","form":{"cname":"<raw-cname>"},"method":"POST","schema_version":1}
+```
+
+Serialization uses sorted keys, compact separators `(',', ':')`, and
+`ensure_ascii=True`. This is exactly the already-frozen JRA POST fingerprint shape, but
+the meeting- and race-selection locator types remain distinct. No shared type or
+cross-family builder is introduced.
+
+Discovery inspects only
+`#quick_menu a[href="#"][data-ga-click="quick_pc-1"]` and requires exactly one
+qualifying direct control. The selected anchor's structurally corresponding raw
+`onclick` attribute must match exactly
+`doAction('/JRADB/accessD.html','<raw-cname>');return false;`, using literal ASCII
+single quotes and exactly one raw CNAME argument. The `href` is exactly `#`. Entity-
+recovered quotes, escapes, double-quoted JavaScript arguments, concatenation, computed
+values, extra JavaScript other than the exact `;return false;`, wrong endpoint/function
+case, missing or duplicate candidate, or multiple distinct controls fail validation.
+Comments, scripts, unrelated anchors, and visible text cannot prove the selected control.
 
 ### Meeting-selection response to race-selection request
 
@@ -249,13 +320,29 @@ arbitrary observed variant, or reconstruct a synthetic canonical URL.
 ```text
 OFFICIAL_NAVIGATION_CHAIN_PROVEN: YES_THREE_RESPONSE_DERIVED_STAGES_FROM_CANONICAL_OFFICIAL_ROOT_MENU
 
+TARGET_NAVIGATION_ROOT_URL: https://www.jra.go.jp/
+TARGET_NAVIGATION_ROOT_REQUEST_METHOD: GET
+TARGET_NAVIGATION_ROOT_CHARSET: cp932
+ROOT_MENU_SUPPLIED_RESPONSE_READY: YES_EXACT_FROZEN_SLOTTED_DOMAIN
+
 MEETING_SELECTION_ENTRYPOINT_SOURCE: CANONICAL_OFFICIAL_JRA_ROOT_MENU_DIRECT_DOACTION
 MEETING_SELECTION_REQUEST_IDENTITY_READY: YES_AS_RESPONSE_DERIVED_DEDICATED_POST_LOCATOR
 MEETING_SELECTION_REQUEST_IS_FORMAL_CONSTANT: NO
 MEETING_SELECTION_REQUEST_REQUIRES_UPSTREAM_DISCOVERY: YES_FROM_EXACT_OFFICIAL_ROOT_MENU_CONTROL
+MEETING_SELECTION_CNAME_GRAMMAR: \Apw01dli00/[0-9A-F]{2}\Z_RAW_ASCII_ONLY
+MEETING_SELECTION_REQUEST_FINGERPRINT_READY: YES
+MEETING_SELECTION_REQUEST_FINGERPRINT_SCHEMA: SHA256_LOWER_HEX_OF_SORTED_COMPACT_ENSURE_ASCII_TRUE_CANONICAL_JSON_UTF8_SCHEMA_VERSION_1
+MEETING_SELECTION_REQUEST_LOCATOR_READY: YES_EXACT_DOMAIN_AND_BUILDER
 MEETING_SELECTION_SUPPLIED_RESPONSE_READY: YES_DEDICATED_STRICT_CP932_REQUEST_BOUND_DOMAIN
 MEETING_SELECTION_DISCOVERY_PUBLIC_API_READY: YES
 MEETING_SELECTION_PERSISTENCE_REQUIRED: NO_OPERATIONAL_DISCOVERY_ONLY
+
+ROOT_MENU_CONTROL_SELECTOR_READY: YES_EXACT_UNIQUE_QUICK_MENU_CONTROL
+ROOT_MENU_CONTROL_EXTRACTION_GRAMMAR_READY: YES_RAW_DIRECT_DOACTION_LITERAL
+
+PURE_DISCOVERY_IMPLEMENTATION_PHASE: 4C-2d3b1i6d1d5f1c4c0b1
+V004_CAPTURE_IMPLEMENTATION_PHASE: 4C-2d3b1i6d1d5f1c4c0b2
+LIVE_COMPOSITION_PHASE: 4C-2d3b1i6d1d5f1c4c0b3_IF_STILL_NECESSARY
 
 RACE_SELECTION_REQUEST_DISCOVERY_READY: YES_AFTER_MEETING_SELECTION_RESPONSE_DOMAIN
 RACE_SELECTION_REQUEST_LOCATOR_READY: YES_DEDICATED_RAW_CNAME_POST_LOCATOR
@@ -281,6 +368,7 @@ EXACT_ACCESSD_LOCATOR_AVAILABLE_BEFORE_RESOLUTION: YES_ONLY_FROM_RETAINED_EXACT_
 
 IMPLEMENTATION_READY: NO_PENDING_COMPLETE_FIRST_STAGE_DISCOVERY_CONTRACT_APPROVAL
 BLOCKERS: independent approval and implementation of root-menu-derived meeting-selection request production, meeting-selection-to-race-selection request discovery, dedicated v004 race-selection capture/archive/migration, and final direct-href discovery; external-entry/internal-entry mapping remains later
+IMPLEMENTATION_READY_AFTER_THIS_APPROVAL: YES_FOR_SPLIT_PURE_DISCOVERY_PHASE_C0B1_ONLY
 REAL_TRUSTED_CAPTURE_REQUIRED: NO
 REAL_TRUSTED_CAPTURE_MISSING_FACT: NONE
 ```
@@ -300,14 +388,22 @@ must pin v1/v2/v3 immutability and v4 family-only POST archive/load/corruption/m
 behavior. Causal tests must reject retained selection evidence after the future explicit
 replay bound without a live/current fallback.
 
-After independent approval, `4C-2d3b1i6d1d5f1c4c0b — JRA target race-selection discovery
-and capture v004 IMPLEMENTATION` may implement the lexical target locator, root-menu and
-meeting-selection navigation/request discovery domains, `JRATargetRaceSelectionRequestLocator`,
-race-selection supplied response, pure target-card discovery, dedicated v4
-capture/archive/migration, and dedicated live POST composition from an exact discovered
-locator. It must not accept arbitrary raw CNAME input on the production path or implement
-accessD latest lookup/resolver, target normalization, source union, entry mapping,
-snapshot assembly, or real capture.
+After independent approval, implementation is split into three reviewable phases:
+
+1. `4C-2d3b1i6d1d5f1c4c0b1 — PURE NAVIGATION / LOCATOR DISCOVERY`. Implement only the
+   root-menu supplied domain, meeting-selection locator/builder and pure discovery,
+   meeting-selection supplied domain, race-selection locator/builder and pure discovery,
+   lexical `JRATargetRaceCardLocator`, race-selection supplied response, final pure
+   target-card discovery, and synthetic tests. No HTTP, archive, schema, or migration.
+2. `4C-2d3b1i6d1d5f1c4c0b2 — TARGET_RACE_SELECTION CAPTURE V004`. Implement the
+   dedicated v4 capture domain/page kind, migration, family-specific archive persistence
+   and exact evidence load, v1/v2/v3 immutability, and tests. No live orchestration.
+3. `4C-2d3b1i6d1d5f1c4c0b3 — LIVE NAVIGATION CAPTURE COMPOSITION`, only if still
+   necessary after b1/b2 review. Compose existing transport responsibilities with exact
+   discovered request locators; do not introduce arbitrary raw CNAME input.
+
+None of these phases may implement c4c accessD latest lookup/resolver, target
+normalization, source union, entry mapping, snapshot assembly, or real capture.
 
 ## Allowed Files
 

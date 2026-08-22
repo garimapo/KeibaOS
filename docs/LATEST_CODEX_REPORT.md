@@ -4044,3 +4044,35 @@ defined only by retained navigation evidence, and site synthesis is forbidden. V
 implementation is now explicitly pending independent approval of this complete first-
 stage contract. No trusted capture, production, test, schema, or migration change was
 made.
+
+
+### Phase 4C-2d3b1i6d1d5f1c4c0a root-navigation identity correction
+
+The root-menu response contract is now implementation-exact. A fresh transient read-only
+check of `https://www.jra.go.jp/` established a query-free GET response declaring
+Shift_JIS, strictly decodable as CP932 and not strict UTF-8. The frozen supplied domain
+is a frozen/slotted exact-type value containing nonempty raw bytes, exact `charset ==
+"cp932"`, and an actual aware `observed_at`; canonical root URL and GET method are family
+constants. It invents neither `available_at` nor clock time.
+
+The exact meeting-selection CNAME grammar is
+`\Apw01dli00/[0-9A-F]{2}\Z`: fixed approved `pw`/site `01`/accessD meeting-list
+`dli00`, one literal raw slash, and an opaque two-character uppercase hexadecimal tail
+retained only from official root markup. Percent encoding, plus, whitespace, controls,
+case variants, escapes, alternate site/family prefixes, and delimiter/length changes are
+rejected. The builder validates this lexical material but is not a discovery substitute;
+normal production obtains it only from the exact unique quick-menu anchor and its raw
+literal `doAction('/JRADB/accessD.html','<cname>');return false;` attribute.
+
+`JRATargetMeetingSelectionRequestLocator` now has exact endpoint, CNAME, and request-
+identity fields. Its identity is lowercase SHA-256 over sorted, compact,
+`ensure_ascii=True` canonical JSON UTF-8 bytes containing the fixed endpoint, lower-case
+form key, POST, raw CNAME, and schema version 1. Its type remains distinct from the
+structurally equivalent race-selection locator. It carries no target-race identity.
+
+Implementation sequencing is split for reviewability: c0b1 is synthetic-only pure
+navigation/locator discovery; c0b2 is the dedicated v004 capture/archive/migration;
+c0b3 is later live navigation composition if still needed. The approved architecture,
+persistence decision, multi-site accessD counterexample, fail-closed rules, and ban on
+trusted capture remain unchanged. No production, test, schema, migration, archive, or
+network implementation was performed.
