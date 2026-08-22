@@ -4015,3 +4015,32 @@ future capture uses the established transport mechanics, but no generic POST uni
 real capture is authorized. Multiple distinct official URLs for one race over time remain
 not proven; current policy is exactly one distinct matching URL per supplied selection
 response and fail closed otherwise.
+
+
+### Phase 4C-2d3b1i6d1d5f1c4c0a navigation-chain correction
+
+The initial PREPARE left the raw race-selection request CNAME dependent on a caller-
+supplied preceding meeting-selection response without freezing a formal producer for that
+response's own POST request. The corrected chain now starts at the canonical official
+JRA root GET. A read-only official root observation directly established the quick-menu
+`doAction('/JRADB/accessD.html', 'pw01dli00/F3')` control. Its raw value is official
+response material, not a formal CNAME constant: a future pure root-menu discovery must
+produce a dedicated meeting-selection request locator from that exact direct control.
+
+The corrected flow is root-menu supplied response -> meeting-selection request locator
+-> strict-CP932 meeting-selection supplied response -> pure selection of one exact
+race-selection request locator by canonical year/venue/meeting/day -> retained
+strict-CP932 race-selection response -> pure direct accessD locator discovery. No stage
+may synthesize an opaque CNAME tail, accept arbitrary raw request material, select by
+display name, or choose an arbitrary candidate. Root and meeting-selection responses are
+operational discovery inputs only; the exact race-selection POST response and request
+identity are the sole required persistent v004 evidence for deterministic replay.
+
+The correction also freezes the official counterexample that distinct canonical accessD
+site-variant URLs (including differing opaque tails) can parse to one external race ID.
+Race-ID-only locator/archive lookup is therefore unsafe. One selection response must
+contain exactly one distinct matching URL; cross-observation or site-variant choice is
+defined only by retained navigation evidence, and site synthesis is forbidden. V004
+implementation is now explicitly pending independent approval of this complete first-
+stage contract. No trusted capture, production, test, schema, or migration change was
+made.
