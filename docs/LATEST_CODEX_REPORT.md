@@ -4095,14 +4095,17 @@ schema-v4 capture ID, but no raw response bytes or HTTP object. Its custom exact
 constructor receives the exact v4 capture, checks request locator, response digest, and
 observation against the discovery, then retains only its capture ID; an unrelated valid
 v4 ID cannot be paired by direct construction. The caller supplies only
-the target identity. The meeting request, race-selection request, site variant, opaque
+the target identity, which the existing formal JRA race-ID parser must validate before
+any clock, HTTP, or archive call. Invalid/noncanonical identity therefore has zero
+collaborator side effects. The meeting request, race-selection request, site variant, opaque
 tail, and card URL are derived exclusively from each immediately preceding formal
 official response.
 
 The existing private requests transport is reusable through typed root/meeting/race
 entry points and one shared private complete-byte validation core. Root is a fixed,
 cookie-free `GET https://www.jra.go.jp/`; both selection requests are cookie-, Referer-,
-and Origin-free POSTs with exactly one lower-case `cname` form field. The locator types
+and Origin-free POSTs as a formal request-identity audit invariant, with exactly one
+lower-case `cname` form field. The locator types
 remain distinct. Existing `Accept-Encoding: identity`, User-Agent, TLS, disabled
 redirects, zero retries, 10/10-second timeout, exact effective URL, 200-only status,
 Content-Length, 4 MiB, raw-stream, accepted HTML Content-Type, and strict-CP932 policies
@@ -4110,11 +4113,14 @@ remain fail closed.
 
 A bounded memory-only official observation from
 `2026-08-22T08:20:17.926952Z` through `2026-08-22T08:20:18.936977Z` established the
-previously unresolved state policy. The root returned no Set-Cookie/session cookie. For
+compatibility of that frozen policy with the observed site state. The root returned no Set-Cookie/session cookie. For
 both response-derived selection requests, cookie-/Referer-/Origin-free POSTs returned
 HTTP 200 and exact bytes identical in length and SHA-256 to the same POSTs through the
-root-used Session. Session reuse is therefore connection pooling only; cookies are not
-allowed into navigation requests and are not replay evidence. No observed bytes were
+root-used Session. This is supporting evidence, not permanent proof of future provider
+behavior. Session reuse is connection pooling only; formal request identities do not
+bind hidden state, so even a pre-seeded jar or future Set-Cookie must never affect the
+next navigation request. A future cookie requirement fails closed pending identity/replay
+architecture review. Cookies are not replay evidence. No observed bytes were
 saved, archived, or committed, and no trusted capture was performed.
 
 Clock order is frozen around complete entities: root and meeting `observed_at` are
@@ -4134,7 +4140,10 @@ remain operational-only, race selection is persisted as schema v4, and no schema
 migration, repository, pure discovery, target normalizer, replay resolver, source union,
 entry mapping, or snapshot change is prepared.
 
-Implementation readiness is `YES` with no blocker. The future allowed implementation
+Implementation readiness remains `YES` with no blocker. Future offline tests explicitly
+pin target-ID validation before every collaborator, pre-seeded cookie exclusion,
+Set-Cookie non-propagation at both response stages, absent Referer/Origin, and no
+cookie-enabled retry. The future allowed implementation
 surface is only `jra_official_response_live_capture.py`, its focused live-capture test,
 and the two phase documents. Offline tests must pin typed request derivation, cookie-free
 HTTP shapes, complete-entity clock order, archive-before-discovery/return, v4 provenance,
@@ -4142,3 +4151,18 @@ all fail-closed stages, site/tail retention, no retry/fallback/network fixture, 
 unchanged final-odds/target-card behavior. This docs-only PREPARE intentionally did not
 run pytest; `git diff --check`, exact two-file scope, clean final status, and formal remote
 immutability are the required checks.
+
+### C0b3 causal-boundary correction
+
+The PREPARE now freezes external-race-ID parsing at the absolute public service boundary:
+malformed or noncanonical IDs fail before every clock, root/POST transport, and archive
+interaction. The validated original canonical ID is passed to the formal discoveries;
+no parsed field constructs a navigation locator.
+
+Cookie-free navigation is now explicitly grounded in audit identity rather than a single
+provider observation. Meeting/race request identities bind only their approved explicit
+HTTP material, so Cookie, Referer, Origin, pre-seeded cookie jars, and response-derived
+Set-Cookie state may not alter outgoing navigation. Future cookie-dependent provider
+behavior must fail closed pending a new identity/replay architecture review. The prior
+2026-08-22 observation remains bounded compatibility evidence only and was not repeated
+for this correction. No pytest, production/test change, or trusted capture was performed.
