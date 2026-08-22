@@ -5,10 +5,11 @@ import sqlite3
 import unittest
 
 from scripts.simulation.jra_official_identity import JRAExternalRaceIdentity, JRAOfficialFinalWinOddsRequestLocator, build_jra_final_win_odds_request_locator
-from scripts.simulation.jra_official_response_capture import JRAFinalWinOddsResponseCapture, JRAOfficialResponseCapture, JRAOfficialResponseCaptureMissingError, JRAOfficialTargetRaceCardResponseCapture
+from scripts.simulation.jra_official_response_capture import JRAFinalWinOddsResponseCapture, JRAOfficialResponseCapture, JRAOfficialResponseCaptureMissingError, JRAOfficialTargetRaceCardResponseCapture, JRATargetRaceSelectionResponseCapture
 from scripts.simulation.jra_official_response_capture_migration_runner import apply_jra_capture_schema_migrations
 from scripts.simulation.repositories.errors import RepositoryConflictError, RepositoryDataIntegrityError, RepositoryValidationError
 from scripts.simulation.repositories.sqlite_jra_official_response_capture_repository import SQLiteJRAOfficialResponseCaptureRepository
+from scripts.simulation.jra_target_race_card_locator import build_jra_target_race_selection_request_locator
 
 URL = "https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde0106202504030420250913%2FDC"
 HURL = "https://www.jra.go.jp/JRADB/accessU.html?CNAME=pw01dud001234567890%2FAB"
@@ -41,6 +42,16 @@ def target_item(**changes):
     values = dict(canonical_source_url=DURL, response_body=BODY, charset="cp932", requested_at=T, observed_at=T, stored_at=T, http_status=200, content_type="text/html")
     values.update(changes)
     return JRAOfficialTargetRaceCardResponseCapture(**values)
+
+
+def selection_locator():
+    return build_jra_target_race_selection_request_locator(cname="pw01drl00062025040320250403/DC")
+
+
+def selection_item(**changes):
+    values = dict(request_locator=selection_locator(), response_body=BODY, charset="cp932", requested_at=T, observed_at=T, stored_at=T, http_status=200, content_type="text/html")
+    values.update(changes)
+    return JRATargetRaceSelectionResponseCapture(**values)
 
 class SQLiteJRACaptureTests(unittest.TestCase):
     def repo(self):
@@ -92,6 +103,88 @@ class SQLiteJRACaptureTests(unittest.TestCase):
         self.assertIsNone(r.load_target_race_card_capture(capture_id=legacy.capture_id))
         self.assertIsNone(r.load_target_race_card_capture(capture_id=final.capture_id))
         self.assertEqual(r.load_target_race_card_supplied_response_for_evidence(canonical_source_url=DURL, response_sha256=target.response_sha256, observed_at=T).response_body, BODY)
+
+    def test_target_race_selection_family_save_load_evidence_and_cross_family_closure(self):
+        _c, r = self.repo(); legacy, final, target, selection = item(), final_item(), target_item(), selection_item()
+        r.save_capture(capture=legacy); r.save_final_win_odds_capture(capture=final); r.save_target_race_card_capture(capture=target)
+        r.save_target_race_selection_capture(capture=selection)
+        r.save_target_race_selection_capture(capture=selection)
+        self.assertEqual(r.load_target_race_selection_capture(capture_id=selection.capture_id), selection)
+        self.assertEqual(
+            _c.execute(
+                "SELECT schema_version,page_kind,canonical_source_url,request_method,request_identity_sha256,request_cname FROM jra_official_response_captures WHERE capture_id=?",
+                (selection.capture_id,),
+            ).fetchone(),
+            (4, "target_race_selection", selection.request_locator.endpoint_url, "POST", selection.request_locator.request_identity_sha256, selection.request_locator.cname),
+        )
+        self.assertIsNone(r.load_capture(capture_id=selection.capture_id))
+        self.assertIsNone(r.load_final_win_odds_capture(capture_id=selection.capture_id))
+        self.assertIsNone(r.load_target_race_card_capture(capture_id=selection.capture_id))
+        self.assertIsNone(r.load_target_race_selection_capture(capture_id=legacy.capture_id))
+        self.assertIsNone(r.load_target_race_selection_capture(capture_id=final.capture_id))
+        self.assertIsNone(r.load_target_race_selection_capture(capture_id=target.capture_id))
+        supplied = r.load_target_race_selection_supplied_response_for_evidence(
+            request_locator=selection.request_locator,
+            response_sha256=selection.response_sha256,
+            observed_at=T,
+        )
+        self.assertEqual(supplied.response_body, BODY)
+        with self.assertRaises(JRAOfficialResponseCaptureMissingError):
+            r.load_target_race_selection_supplied_response_for_evidence(
+                request_locator=selection.request_locator,
+                response_sha256="0" * 64,
+                observed_at=T,
+            )
+        with self.assertRaises(JRAOfficialResponseCaptureMissingError):
+            r.load_target_race_selection_supplied_response_for_evidence(
+                request_locator=build_jra_target_race_selection_request_locator(cname="pw01drl00062025040320250403/DD"),
+                response_sha256=selection.response_sha256,
+                observed_at=T,
+            )
+        with self.assertRaises(RepositoryValidationError):
+            r.load_target_race_selection_capture(capture_id="jra-capture-v4:not-a-digest")
+        with self.assertRaises(RepositoryValidationError):
+            r.save_capture(capture=selection)
+        with self.assertRaises(RepositoryValidationError):
+            r.save_final_win_odds_capture(capture=selection)
+        with self.assertRaises(RepositoryValidationError):
+            r.save_target_race_card_capture(capture=selection)
+        with self.assertRaises(RepositoryValidationError):
+            r.save_target_race_selection_capture(capture=legacy)
+
+    def test_target_race_selection_conflict_and_corrupt_selected_evidence_fail_closed(self):
+        c, r = self.repo(); selection = selection_item(); r.save_target_race_selection_capture(capture=selection)
+        with self.assertRaises(RepositoryConflictError):
+            r.save_target_race_selection_capture(capture=selection_item(http_date="x"))
+        c.execute("PRAGMA ignore_check_constraints=ON")
+        c.execute("UPDATE jra_official_response_captures SET page_kind='target_race_card' WHERE capture_id=?", (selection.capture_id,))
+        c.execute("PRAGMA ignore_check_constraints=OFF")
+        c.commit()
+        with self.assertRaises(RepositoryDataIntegrityError):
+            r.load_target_race_selection_capture(capture_id=selection.capture_id)
+        with self.assertRaises(RepositoryDataIntegrityError):
+            r.load_target_race_selection_supplied_response_for_evidence(
+                request_locator=selection.request_locator,
+                response_sha256=selection.response_sha256,
+                observed_at=T,
+            )
+        c.execute("PRAGMA foreign_keys=OFF")
+        c.execute("DELETE FROM jra_official_response_bodies WHERE response_sha256=?", (selection.response_sha256,))
+        c.commit()
+        with self.assertRaises(RepositoryDataIntegrityError):
+            r.save_target_race_selection_capture(capture=selection)
+        c2, r2 = self.repo(); selection2 = selection_item(); r2.save_target_race_selection_capture(capture=selection2)
+        c2.execute("DROP INDEX ux_jra_official_response_captures_request_evidence")
+        c2.execute("""INSERT INTO jra_official_response_captures(
+            capture_id,schema_version,page_kind,canonical_source_url,response_sha256,charset,requested_at_utc,observed_at_utc,stored_at_utc,http_status,content_type,content_encoding,http_date,etag,last_modified,content_length,request_method,request_identity_sha256,request_cname
+        ) SELECT ?,schema_version,page_kind,canonical_source_url,response_sha256,charset,requested_at_utc,observed_at_utc,stored_at_utc,http_status,content_type,content_encoding,http_date,etag,last_modified,content_length,request_method,request_identity_sha256,request_cname FROM jra_official_response_captures WHERE capture_id=?""", ("jra-capture-v4:" + "f" * 64, selection2.capture_id))
+        c2.commit()
+        with self.assertRaises(RepositoryDataIntegrityError):
+            r2.load_target_race_selection_supplied_response_for_evidence(
+                request_locator=selection2.request_locator,
+                response_sha256=selection2.response_sha256,
+                observed_at=T,
+            )
 
     def test_latest_horse_history_lookup_is_exact_inclusive_and_fail_closed(self):
         c, r = self.repo()

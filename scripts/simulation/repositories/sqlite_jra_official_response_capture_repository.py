@@ -13,17 +13,24 @@ from scripts.simulation.jra_official_response_capture import (
     JRAOfficialPageKind as _PageKind,
     JRAOfficialResponseCapture as _Capture,
     JRAOfficialTargetRaceCardResponseCapture as _TargetCapture,
+    JRATargetRaceSelectionResponseCapture as _SelectionCapture,
     JRAOfficialResponseCaptureError as _CaptureError,
     JRAOfficialResponseCaptureMissingError as _Missing,
     JRASuppliedOfficialResponse as _Supplied,
     canonicalize_jra_official_capture_url as _canonicalize,
 )
 from scripts.simulation.jra_official_identity import JRAOfficialFinalWinOddsRequestLocator as _FinalLocator
+from scripts.simulation.jra_target_race_card_discovery import JRATargetRaceSelectionSuppliedOfficialResponse as _SelectionSupplied
+from scripts.simulation.jra_target_race_card_locator import (
+    JRATargetRaceSelectionRequestLocator as _SelectionLocator,
+    build_jra_target_race_selection_request_locator as _build_selection_locator,
+)
 from .errors import RepositoryConflictError as _Conflict, RepositoryDataIntegrityError as _Integrity, RepositoryValidationError as _Validation
 
 _V1_CAPTURE = _re.compile(r"jra-capture-v1:[0-9a-f]{64}\Z")
 _V2_CAPTURE = _re.compile(r"jra-capture-v2:[0-9a-f]{64}\Z")
 _V3_CAPTURE = _re.compile(r"jra-capture-v3:[0-9a-f]{64}\Z")
+_V4_CAPTURE = _re.compile(r"jra-capture-v4:[0-9a-f]{64}\Z")
 _SHA = _re.compile(r"[0-9a-f]{64}\Z")
 _COLUMNS = "capture_id,schema_version,page_kind,canonical_source_url,response_sha256,charset,requested_at_utc,observed_at_utc,stored_at_utc,http_status,content_type,content_encoding,http_date,etag,last_modified,content_length,request_method,request_identity_sha256,request_cname"
 
@@ -52,9 +59,14 @@ class SQLiteJRAOfficialResponseCaptureRepository:
             raise _Validation("capture must be exact JRAOfficialTargetRaceCardResponseCapture")
         self._save(capture=capture, final=False)
 
+    def save_target_race_selection_capture(self, *, capture: _SelectionCapture) -> None:
+        if type(capture) is not _SelectionCapture:
+            raise _Validation("capture must be exact JRATargetRaceSelectionResponseCapture")
+        self._save(capture=capture, final=False)
+
     def load_capture(self, *, capture_id: str) -> _Capture | None:
         if type(capture_id) is not str or _V1_CAPTURE.fullmatch(capture_id) is None:
-            if type(capture_id) is str and (_V2_CAPTURE.fullmatch(capture_id) is not None or _V3_CAPTURE.fullmatch(capture_id) is not None):
+            if type(capture_id) is str and (_V2_CAPTURE.fullmatch(capture_id) is not None or _V3_CAPTURE.fullmatch(capture_id) is not None or _V4_CAPTURE.fullmatch(capture_id) is not None):
                 return None
             raise _Validation("capture_id is invalid")
         item = self._load_by_id(capture_id)
@@ -66,7 +78,7 @@ class SQLiteJRAOfficialResponseCaptureRepository:
 
     def load_final_win_odds_capture(self, *, capture_id: str) -> _FinalCapture | None:
         if type(capture_id) is not str or _V2_CAPTURE.fullmatch(capture_id) is None:
-            if type(capture_id) is str and (_V1_CAPTURE.fullmatch(capture_id) is not None or _V3_CAPTURE.fullmatch(capture_id) is not None):
+            if type(capture_id) is str and (_V1_CAPTURE.fullmatch(capture_id) is not None or _V3_CAPTURE.fullmatch(capture_id) is not None or _V4_CAPTURE.fullmatch(capture_id) is not None):
                 return None
             raise _Validation("capture_id is invalid")
         item = self._load_by_id(capture_id)
@@ -78,13 +90,25 @@ class SQLiteJRAOfficialResponseCaptureRepository:
 
     def load_target_race_card_capture(self, *, capture_id: str) -> _TargetCapture | None:
         if type(capture_id) is not str or _V3_CAPTURE.fullmatch(capture_id) is None:
-            if type(capture_id) is str and (_V1_CAPTURE.fullmatch(capture_id) is not None or _V2_CAPTURE.fullmatch(capture_id) is not None):
+            if type(capture_id) is str and (_V1_CAPTURE.fullmatch(capture_id) is not None or _V2_CAPTURE.fullmatch(capture_id) is not None or _V4_CAPTURE.fullmatch(capture_id) is not None):
                 return None
             raise _Validation("capture_id is invalid")
         item = self._load_by_id(capture_id)
         if item is None:
             return None
         if type(item) is not _TargetCapture:
+            raise _Integrity("stored JRA capture family differs")
+        return item
+
+    def load_target_race_selection_capture(self, *, capture_id: str) -> _SelectionCapture | None:
+        if type(capture_id) is not str or _V4_CAPTURE.fullmatch(capture_id) is None:
+            if type(capture_id) is str and (_V1_CAPTURE.fullmatch(capture_id) is not None or _V2_CAPTURE.fullmatch(capture_id) is not None or _V3_CAPTURE.fullmatch(capture_id) is not None):
+                return None
+            raise _Validation("capture_id is invalid")
+        item = self._load_by_id(capture_id)
+        if item is None:
+            return None
+        if type(item) is not _SelectionCapture:
             raise _Integrity("stored JRA capture family differs")
         return item
 
@@ -153,6 +177,38 @@ class SQLiteJRAOfficialResponseCaptureRepository:
             raise
         except _sqlite3.Error as error:
             raise _Integrity("JRA target-card archive evidence read failed") from error
+
+    def load_target_race_selection_supplied_response_for_evidence(
+        self,
+        *,
+        request_locator: _SelectionLocator,
+        response_sha256: str,
+        observed_at: _datetime,
+    ) -> _SelectionSupplied:
+        if type(request_locator) is not _SelectionLocator or type(response_sha256) is not str or _SHA.fullmatch(response_sha256) is None:
+            raise _Validation("target race-selection evidence identity is invalid")
+        try:
+            rows = self._connection.execute(
+                f"SELECT {_COLUMNS} FROM jra_official_response_captures WHERE canonical_source_url=? AND request_identity_sha256=? AND response_sha256=? AND observed_at_utc=?",
+                (
+                    request_locator.endpoint_url,
+                    request_locator.request_identity_sha256,
+                    response_sha256,
+                    self._time(self._lookup_time(observed_at)),
+                ),
+            ).fetchall()
+            if not rows:
+                raise _Missing("exact trusted JRA target race-selection evidence is not archived")
+            if len(rows) != 1:
+                raise _Integrity("target race-selection capture evidence is duplicated")
+            item = self._reconstruct(rows[0])
+            if type(item) is not _SelectionCapture or item.request_locator != request_locator:
+                raise _Integrity("stored target race-selection evidence family differs")
+            return item.to_supplied_official_response()
+        except (_Missing, _Integrity, _Validation):
+            raise
+        except _sqlite3.Error as error:
+            raise _Integrity("JRA target race-selection archive evidence read failed") from error
 
     def load_latest_horse_profile_history_supplied_response(
         self,
@@ -276,8 +332,9 @@ class SQLiteJRAOfficialResponseCaptureRepository:
         except _sqlite3.Error as error:
             raise _Integrity("JRA final-odds archive lookup failed") from error
 
-    def _save(self, *, capture: _Capture | _FinalCapture | _TargetCapture, final: bool) -> None:
-        pattern = _V2_CAPTURE if final else (_V3_CAPTURE if type(capture) is _TargetCapture else _V1_CAPTURE)
+    def _save(self, *, capture: _Capture | _FinalCapture | _TargetCapture | _SelectionCapture, final: bool) -> None:
+        selection = type(capture) is _SelectionCapture
+        pattern = _V2_CAPTURE if final else (_V4_CAPTURE if selection else (_V3_CAPTURE if type(capture) is _TargetCapture else _V1_CAPTURE))
         if pattern.fullmatch(capture.capture_id) is None or _SHA.fullmatch(capture.response_sha256) is None or _hashlib.sha256(capture.response_body).hexdigest() != capture.response_sha256:
             raise _Validation("capture identity is invalid")
         if self._connection.in_transaction:
@@ -291,12 +348,15 @@ class SQLiteJRAOfficialResponseCaptureRepository:
                     raise _Conflict("capture identity conflicts with immutable content")
                 self._connection.commit()
                 return
-            self._require_evidence_absent(capture=capture, final=final)
+            self._require_evidence_absent(capture=capture, final=(final or selection))
             self._require_body_not_repair(capture.response_sha256)
             self._body(capture.response_sha256, capture.response_body)
             if final:
                 assert type(capture) is _FinalCapture
                 values = (capture.capture_id, 2, _PageKind.FINAL_WIN_ODDS.value, capture.canonical_source_url, capture.response_sha256, capture.charset, self._time(capture.requested_at), self._time(capture.observed_at), self._time(capture.stored_at), capture.http_status, capture.content_type, capture.content_encoding, capture.http_date, capture.etag, capture.last_modified, capture.content_length, "POST", capture.request_locator.request_identity_sha256, capture.request_locator.cname)
+            elif selection:
+                assert type(capture) is _SelectionCapture
+                values = (capture.capture_id, 4, _PageKind.TARGET_RACE_SELECTION.value, capture.canonical_source_url, capture.response_sha256, capture.charset, self._time(capture.requested_at), self._time(capture.observed_at), self._time(capture.stored_at), capture.http_status, capture.content_type, capture.content_encoding, capture.http_date, capture.etag, capture.last_modified, capture.content_length, "POST", capture.request_locator.request_identity_sha256, capture.request_locator.cname)
             elif type(capture) is _TargetCapture:
                 values = (capture.capture_id, 3, _PageKind.TARGET_RACE_CARD.value, capture.canonical_source_url, capture.response_sha256, capture.charset, self._time(capture.requested_at), self._time(capture.observed_at), self._time(capture.stored_at), capture.http_status, capture.content_type, capture.content_encoding, capture.http_date, capture.etag, capture.last_modified, capture.content_length, "GET", None, None)
             else:
@@ -311,7 +371,7 @@ class SQLiteJRAOfficialResponseCaptureRepository:
             self._connection.rollback()
             raise _Integrity("JRA capture archive write failed") from error
 
-    def _load_by_id(self, capture_id: str) -> _Capture | _FinalCapture | _TargetCapture | None:
+    def _load_by_id(self, capture_id: str) -> _Capture | _FinalCapture | _TargetCapture | _SelectionCapture | None:
         try:
             rows = self._connection.execute(f"SELECT {_COLUMNS} FROM jra_official_response_captures WHERE capture_id=?", (capture_id,)).fetchall()
             if not rows:
@@ -324,7 +384,7 @@ class SQLiteJRAOfficialResponseCaptureRepository:
         except _sqlite3.Error as error:
             raise _Integrity("JRA capture archive read failed") from error
 
-    def _reconstruct(self, row: object) -> _Capture | _FinalCapture | _TargetCapture:
+    def _reconstruct(self, row: object) -> _Capture | _FinalCapture | _TargetCapture | _SelectionCapture:
         try:
             capture_id, version, kind, url, digest, charset, requested, observed, stored, status, content_type, encoding, http_date, etag, last_modified, length, method, request_digest, cname = tuple(row)
             body_rows = self._connection.execute("SELECT response_body,byte_length FROM jra_official_response_bodies WHERE response_sha256=?", (digest,)).fetchall()
@@ -336,7 +396,7 @@ class SQLiteJRAOfficialResponseCaptureRepository:
             if version == 1:
                 if method != "GET" or request_digest is not None or cname is not None:
                     raise _Integrity("stored legacy JRA request family is invalid")
-                capture: _Capture | _FinalCapture | _TargetCapture = _Capture(canonical_source_url=url, response_body=body, charset=charset, requested_at=self._stored_time(requested), observed_at=self._stored_time(observed), stored_at=self._stored_time(stored), http_status=status, content_type=content_type, content_encoding=encoding, http_date=http_date, etag=etag, last_modified=last_modified, content_length=length)
+                capture: _Capture | _FinalCapture | _TargetCapture | _SelectionCapture = _Capture(canonical_source_url=url, response_body=body, charset=charset, requested_at=self._stored_time(requested), observed_at=self._stored_time(observed), stored_at=self._stored_time(stored), http_status=status, content_type=content_type, content_encoding=encoding, http_date=http_date, etag=etag, last_modified=last_modified, content_length=length)
             elif version == 2:
                 if method != "POST" or type(cname) is not str or type(request_digest) is not str:
                     raise _Integrity("stored final odds request family is invalid")
@@ -352,6 +412,13 @@ class SQLiteJRAOfficialResponseCaptureRepository:
                 if method != "GET" or request_digest is not None or cname is not None:
                     raise _Integrity("stored target-card JRA request family is invalid")
                 capture = _TargetCapture(canonical_source_url=url, response_body=body, charset=charset, requested_at=self._stored_time(requested), observed_at=self._stored_time(observed), stored_at=self._stored_time(stored), http_status=status, content_type=content_type, content_encoding=encoding, http_date=http_date, etag=etag, last_modified=last_modified, content_length=length)
+            elif version == 4:
+                if method != "POST" or type(cname) is not str or type(request_digest) is not str:
+                    raise _Integrity("stored target race-selection JRA request family is invalid")
+                locator = _build_selection_locator(cname=cname)
+                if locator.endpoint_url != url or locator.request_identity_sha256 != request_digest:
+                    raise _Integrity("stored target race-selection request identity is invalid")
+                capture = _SelectionCapture(request_locator=locator, response_body=body, charset=charset, requested_at=self._stored_time(requested), observed_at=self._stored_time(observed), stored_at=self._stored_time(stored), http_status=status, content_type=content_type, content_encoding=encoding, http_date=http_date, etag=etag, last_modified=last_modified, content_length=length)
             else:
                 raise _Integrity("stored JRA capture schema version is invalid")
         except _Integrity:
@@ -366,13 +433,15 @@ class SQLiteJRAOfficialResponseCaptureRepository:
         elif type(capture) is _FinalCapture:
             if _V2_CAPTURE.fullmatch(capture_id) is None:
                 raise _Integrity("stored final odds JRA capture ID is invalid")
-        elif _V3_CAPTURE.fullmatch(capture_id) is None:
+        elif type(capture) is _TargetCapture and _V3_CAPTURE.fullmatch(capture_id) is None:
             raise _Integrity("stored target-card JRA capture ID is invalid")
+        elif type(capture) is _SelectionCapture and _V4_CAPTURE.fullmatch(capture_id) is None:
+            raise _Integrity("stored target race-selection JRA capture ID is invalid")
         return capture
 
-    def _require_evidence_absent(self, *, capture: _Capture | _FinalCapture | _TargetCapture, final: bool) -> None:
+    def _require_evidence_absent(self, *, capture: _Capture | _FinalCapture | _TargetCapture | _SelectionCapture, final: bool) -> None:
         if final:
-            assert type(capture) is _FinalCapture
+            assert type(capture) in (_FinalCapture, _SelectionCapture)
             rows = self._connection.execute("SELECT capture_id FROM jra_official_response_captures WHERE canonical_source_url=? AND request_identity_sha256=? AND response_sha256=? AND observed_at_utc=?", (capture.canonical_source_url, capture.request_locator.request_identity_sha256, capture.response_sha256, self._time(capture.observed_at))).fetchall()
         else:
             rows = self._connection.execute("SELECT capture_id FROM jra_official_response_captures WHERE canonical_source_url=? AND response_sha256=? AND observed_at_utc=? AND request_identity_sha256 IS NULL", (capture.canonical_source_url, capture.response_sha256, self._time(capture.observed_at))).fetchall()
