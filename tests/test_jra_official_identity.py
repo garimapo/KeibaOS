@@ -15,6 +15,7 @@ from scripts.simulation.jra_official_identity import (
     build_jra_final_win_odds_request_locator,
     build_jra_external_entry_id,
     build_jra_provider_record_id,
+    canonicalize_jra_race_card_href,
     parse_jra_external_horse_id,
     parse_jra_external_race_id,
     parse_jra_horse_profile_url_identity,
@@ -40,7 +41,7 @@ class JRAOfficialIdentityTests(unittest.TestCase):
             {
                 "JRAOfficialIdentityError", "JRAOfficialIdentityValidationError", "JRAExternalRaceIdentity",
                 "JRAExternalHorseIdentity", "JRAOfficialFinalWinOddsRequestLocator", "parse_jra_external_race_id", "parse_jra_external_horse_id",
-                "parse_jra_result_url_identity", "parse_jra_horse_profile_url_identity", "parse_jra_race_card_url_identity",
+                "parse_jra_result_url_identity", "parse_jra_horse_profile_url_identity", "parse_jra_race_card_url_identity", "canonicalize_jra_race_card_href",
                 "build_jra_external_entry_id", "build_jra_provider_record_id", "build_jra_final_win_odds_request_locator",
             },
         )
@@ -51,6 +52,7 @@ class JRAOfficialIdentityTests(unittest.TestCase):
         self.assertEqual(tuple(inspect.signature(build_jra_external_entry_id).parameters), ("race_identity", "horse_no"))
         self.assertEqual(tuple(inspect.signature(build_jra_provider_record_id).parameters), ("race_identity", "horse_identity"))
         self.assertEqual(tuple(inspect.signature(build_jra_final_win_odds_request_locator).parameters), ("cname",))
+        self.assertEqual(tuple(inspect.signature(canonicalize_jra_race_card_href).parameters), ("value",))
         source = Path(module.__file__).read_text(encoding="utf-8")
         tree = ast.parse(source)
         forbidden = {"requests", "httpx", "sqlite3", "pathlib", "random", "subprocess", "time", "socket"}
@@ -162,6 +164,20 @@ class JRAOfficialIdentityTests(unittest.TestCase):
         for value in (card.replace("%2F", "/"), card.replace("dde01", "dde11"), card.replace("DC", "dc"), card.replace("accessD", "accessS"), card + "&x=1"):
             with self.subTest(value=value), self.assertRaises(JRAOfficialIdentityValidationError):
                 parse_jra_race_card_url_identity(value)
+
+    def test_access_d_direct_href_canonicalizer_preserves_exact_navigation_material(self) -> None:
+        raw = "/JRADB/accessD.html?CNAME=pw01dde1006202504030420250913/DC"
+        canonical = "https://www.jra.go.jp/JRADB/accessD.html?CNAME=pw01dde1006202504030420250913%2FDC"
+        self.assertEqual(canonicalize_jra_race_card_href(raw), canonical)
+        self.assertEqual(canonicalize_jra_race_card_href(canonical), canonical)
+        self.assertEqual(parse_jra_race_card_url_identity(canonical).external_race_id, RACE_ID)
+        for value in (
+            raw.replace("/DC", "%2fDC"), raw.replace("/DC", "%252FDC"), raw.replace("/DC", "+DC"),
+            raw.replace("/DC", "/D/C"), raw.replace("accessD", "accessS"), canonical.replace("https://", "http://"),
+            "https://jra.go.jp" + raw, raw + "&x=1", raw.replace("pw01dde10", "pw01dde11"),
+        ):
+            with self.subTest(value=value), self.assertRaises(JRAOfficialIdentityValidationError):
+                canonicalize_jra_race_card_href(value)
 
     def test_entry_and_result_builders_are_exact_and_fail_closed(self) -> None:
         race = parse_jra_external_race_id(RACE_ID)

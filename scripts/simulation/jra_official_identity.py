@@ -278,6 +278,46 @@ def parse_jra_race_card_url_identity(value: str) -> JRAExternalRaceIdentity:
     )
 
 
+def canonicalize_jra_race_card_href(value: str) -> str:
+    """Canonicalize one direct official accessD href without synthesizing its CNAME."""
+
+    href = _strict_str(value, "race_card_href")
+    if _bad_percent_encoding(href):
+        raise _validation("race_card_href contains malformed percent encoding")
+    try:
+        parsed = _urlsplit(href)
+        port = parsed.port
+    except ValueError as error:
+        raise _validation("race_card_href is invalid") from error
+    if parsed.scheme or parsed.netloc:
+        if (
+            parsed.scheme != "https"
+            or parsed.netloc != _HOST
+            or parsed.hostname != _HOST
+            or port is not None
+            or parsed.username is not None
+            or parsed.password is not None
+        ):
+            raise _validation("race_card_href host, scheme, or port is invalid")
+    if parsed.fragment or parsed.path != _RACE_CARD_PATH or not parsed.query or "+" in parsed.query:
+        raise _validation("race_card_href structure is invalid")
+    pairs = parsed.query.split("&")
+    if len(pairs) != 1 or "=" not in pairs[0]:
+        raise _validation("race_card_href query is invalid")
+    key, raw_cname = pairs[0].split("=", 1)
+    if key != "CNAME" or not raw_cname:
+        raise _validation("race_card_href query is invalid")
+    if "%" in raw_cname:
+        if raw_cname.count("%2F") != 1 or raw_cname.replace("%2F", "/") != raw_cname.replace("%2F", "/", 1):
+            raise _validation("race_card_href CNAME encoding is invalid")
+        raw_cname = raw_cname.replace("%2F", "/")
+    if raw_cname.count("/") != 1:
+        raise _validation("race_card_href CNAME delimiter is invalid")
+    canonical = f"https://{_HOST}{_RACE_CARD_PATH}?CNAME={raw_cname.replace('/', '%2F')}"
+    parse_jra_race_card_url_identity(canonical)
+    return canonical
+
+
 def _entry_horse_number(value: object) -> str:
     if type(value) is int:
         if value <= 0:
