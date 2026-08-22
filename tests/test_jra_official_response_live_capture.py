@@ -5,6 +5,7 @@ import ast
 import inspect
 from pathlib import Path
 import unittest
+from unittest import mock
 
 import scripts.simulation.jra_official_response_live_capture as module
 from scripts.simulation.jra_official_response_capture import (
@@ -13,14 +14,17 @@ from scripts.simulation.jra_official_response_capture import (
     JRAOfficialResponseCaptureUnsupportedError,
     JRAOfficialResponseCaptureValidationError,
     JRAOfficialTargetRaceCardResponseCapture,
+    JRATargetRaceSelectionResponseCapture,
 )
 from scripts.simulation.jra_official_identity import (
     JRAExternalRaceIdentity,
     JRAOfficialFinalWinOddsRequestLocator,
+    JRAOfficialIdentityValidationError,
 )
 from scripts.simulation.jra_official_response_live_capture import (
     JRAOfficialLiveResponseCaptureService,
     JRAOfficialResponseCaptureTransportError,
+    JRATargetRaceNavigationCaptureResult,
     build_jra_official_live_response_capture_service,
 )
 
@@ -32,6 +36,13 @@ _O = "https://www.jra.go.jp/JRADB/accessO.html"
 _CNAME = "pw151ou1006202601021220260105Z/2E"
 _BODY = "<meta charset=\"Shift_JIS\">テスト".encode("cp932")
 _TIME = datetime(2026, 1, 1, tzinfo=timezone.utc)
+_ROOT = "https://www.jra.go.jp/"
+_TARGET_RACE_ID = "jra:race:2025:06:04:03:04"
+_MEETING_CNAME = "pw01dli00/AA"
+_RACE_CNAME = "pw01drl00062025040320250913/AB"
+_ROOT_BODY = ('<div id="quick_menu"><a href="#" data-ga-click="quick_pc-1" onclick="doAction(\'/JRADB/accessD.html\',\'pw01dli00/AA\');return false;">x</a></div>').encode("cp932")
+_MEETING_BODY = ('<div id="contentsBody"><div class="link_list multi div3 center"><div class="waku"><a href="#" onclick="return doAction(\'/JRADB/accessD.html\', \'pw01drl00062025040320250913/AB\');">x</a></div></div></div>').encode("cp932")
+_RACE_BODY = (f'<div id="contentsBody"><div class="race_select"><table id="race_list" class="basic mt20"><tbody><tr><th class="race_num"><a href="{_D}">4</a></th><td class="syutsuba"><a class="btn-def btn-sm btn-narrow" href="{_D}">x</a></td></tr></tbody></table></div></div>').encode("cp932")
 
 
 def _locator() -> JRAOfficialFinalWinOddsRequestLocator:
@@ -51,6 +62,7 @@ class _Archive:
         self.legacy_calls = 0
         self.final_calls = 0
         self.target_calls = 0
+        self.selection_calls = 0
 
     def save_capture(self, *, capture) -> None:
         self.legacy_calls += 1
@@ -66,6 +78,12 @@ class _Archive:
 
     def save_target_race_card_capture(self, *, capture) -> None:
         self.target_calls += 1
+        if self.error is not None:
+            raise self.error
+        self.values.append(capture)
+
+    def save_target_race_selection_capture(self, *, capture) -> None:
+        self.selection_calls += 1
         if self.error is not None:
             raise self.error
         self.values.append(capture)
@@ -89,6 +107,33 @@ class _Transport:
         if self.error is not None:
             raise self.error
         return self.result
+
+
+class _NavigationTransport:
+    def __init__(self, *, root: object, meeting: object, race: object, error: BaseException | None = None) -> None:
+        self.root, self.meeting, self.race, self.error = root, meeting, race, error
+        self.calls: list[tuple[str, object | None]] = []
+
+    def _result(self, name: str, value: object):
+        self.calls.append((name, None))
+        if self.error is not None:
+            raise self.error
+        return value
+
+    def fetch_target_navigation_root(self):
+        return self._result("root", self.root)
+
+    def fetch_target_meeting_selection(self, *, request_locator):
+        self.calls.append(("meeting", request_locator))
+        if self.error is not None:
+            raise self.error
+        return self.meeting
+
+    def fetch_target_race_selection(self, *, request_locator):
+        self.calls.append(("race", request_locator))
+        if self.error is not None:
+            raise self.error
+        return self.race
 
 
 class _Clock:
@@ -181,6 +226,7 @@ class JRAOfficialLiveResponseCaptureTests(unittest.TestCase):
             {
                 "JRAOfficialLiveResponseCaptureService",
                 "JRAOfficialResponseCaptureTransportError",
+                "JRATargetRaceNavigationCaptureResult",
                 "build_jra_official_live_response_capture_service",
             },
         )
@@ -190,6 +236,12 @@ class JRAOfficialLiveResponseCaptureTests(unittest.TestCase):
             ("self", "response_url"),
         )
         self.assertEqual(tuple(inspect.signature(JRAOfficialLiveResponseCaptureService.capture_final_win_odds_response).parameters), ("self", "request_locator"))
+        self.assertEqual(
+            tuple(inspect.signature(JRAOfficialLiveResponseCaptureService.capture_target_race_navigation).parameters),
+            ("self", "external_race_id"),
+        )
+        self.assertTrue(getattr(JRATargetRaceNavigationCaptureResult, "__dataclass_params__").frozen)
+        self.assertEqual(JRATargetRaceNavigationCaptureResult.__slots__, ("discovery", "target_race_selection_capture_id"))
         source = Path(module.__file__).read_text(encoding="utf-8")
         self.assertNotIn("response.text", source)
         self.assertNotIn(".decode(", source)
@@ -569,3 +621,163 @@ class JRAOfficialLiveResponseCaptureTests(unittest.TestCase):
         value = service._utc_clock()
         self.assertIs(type(value), datetime)
         self.assertIsNotNone(value.tzinfo)
+
+    def test_target_navigation_composes_response_derived_chain_and_archives_v4_before_return(self):
+        archive = _Archive()
+        transport = _NavigationTransport(
+            root=_result(url=_ROOT, body=_ROOT_BODY, content_length=len(_ROOT_BODY)),
+            meeting=_result(url=_D.split("?")[0], body=_MEETING_BODY, content_length=len(_MEETING_BODY)),
+            race=_result(url=_D.split("?")[0], body=_RACE_BODY, content_length=len(_RACE_BODY)),
+        )
+        clock = _Clock(
+            _TIME,
+            _TIME + timedelta(microseconds=1),
+            _TIME + timedelta(microseconds=2),
+            _TIME + timedelta(microseconds=3),
+            _TIME + timedelta(microseconds=4),
+        )
+        discovery = module._discover_jra_target_race_card_locator
+
+        def after_save(**kwargs):
+            self.assertEqual(archive.selection_calls, 1)
+            return discovery(**kwargs)
+
+        with mock.patch.object(module, "_discover_jra_target_race_card_locator", side_effect=after_save):
+            result = JRAOfficialLiveResponseCaptureService(
+                archive=archive, transport=transport, utc_clock=clock
+            ).capture_target_race_navigation(external_race_id=_TARGET_RACE_ID)
+        self.assertIs(type(result), JRATargetRaceNavigationCaptureResult)
+        self.assertEqual([name for name, _ in transport.calls], ["root", "meeting", "race"])
+        self.assertEqual(transport.calls[1][1].cname, _MEETING_CNAME)
+        self.assertEqual(transport.calls[2][1].cname, _RACE_CNAME)
+        self.assertEqual(archive.selection_calls, 1)
+        self.assertEqual(archive.legacy_calls, 0)
+        self.assertEqual(archive.final_calls, 0)
+        self.assertEqual(archive.target_calls, 0)
+        capture = archive.values[0]
+        self.assertIs(type(capture), JRATargetRaceSelectionResponseCapture)
+        self.assertEqual(result.target_race_selection_capture_id, capture.capture_id)
+        self.assertEqual(result.discovery.locator.canonical_target_race_card_url, _D)
+        self.assertEqual(clock.calls, 5)
+
+    def test_target_navigation_invalid_id_has_zero_collaborator_calls(self):
+        archive = _Archive()
+        transport = _NavigationTransport(root=object(), meeting=object(), race=object())
+        clock = _Clock(_TIME)
+        service = JRAOfficialLiveResponseCaptureService(archive=archive, transport=transport, utc_clock=clock)
+        for value in (object(), "jra:race:2025:06:04:03:04 ", "not-a-race"):
+            with self.subTest(value=value), self.assertRaises(JRAOfficialIdentityValidationError):
+                service.capture_target_race_navigation(external_race_id=value)
+        self.assertEqual(clock.calls, 0)
+        self.assertEqual(transport.calls, [])
+        self.assertEqual(archive.values, [])
+
+    def test_target_navigation_archive_failure_prevents_discovery_and_success(self):
+        archive_error = RuntimeError("archive unavailable")
+        archive = _Archive(error=archive_error)
+        transport = _NavigationTransport(
+            root=_result(url=_ROOT, body=_ROOT_BODY, content_length=len(_ROOT_BODY)),
+            meeting=_result(url=_D.split("?")[0], body=_MEETING_BODY, content_length=len(_MEETING_BODY)),
+            race=_result(url=_D.split("?")[0], body=_RACE_BODY, content_length=len(_RACE_BODY)),
+        )
+        with mock.patch.object(module, "_discover_jra_target_race_card_locator") as discovery:
+            with self.assertRaises(RuntimeError) as raised:
+                JRAOfficialLiveResponseCaptureService(
+                    archive=archive,
+                    transport=transport,
+                    utc_clock=_Clock(_TIME, _TIME, _TIME, _TIME, _TIME),
+                ).capture_target_race_navigation(external_race_id=_TARGET_RACE_ID)
+        discovery.assert_not_called()
+        self.assertIs(raised.exception, archive_error)
+        self.assertEqual(archive.selection_calls, 1)
+        self.assertEqual(archive.values, [])
+
+    def test_target_navigation_post_save_discovery_failure_keeps_saved_capture_without_result(self):
+        archive = _Archive()
+        transport = _NavigationTransport(
+            root=_result(url=_ROOT, body=_ROOT_BODY, content_length=len(_ROOT_BODY)),
+            meeting=_result(url=_D.split("?")[0], body=_MEETING_BODY, content_length=len(_MEETING_BODY)),
+            race=_result(url=_D.split("?")[0], body=_RACE_BODY, content_length=len(_RACE_BODY)),
+        )
+        error = RuntimeError("target unavailable")
+        with mock.patch.object(module, "_discover_jra_target_race_card_locator", side_effect=error):
+            with self.assertRaises(RuntimeError) as raised:
+                JRAOfficialLiveResponseCaptureService(
+                    archive=archive,
+                    transport=transport,
+                    utc_clock=_Clock(_TIME, _TIME, _TIME, _TIME, _TIME),
+                ).capture_target_race_navigation(external_race_id=_TARGET_RACE_ID)
+        self.assertIs(raised.exception, error)
+        self.assertEqual(archive.selection_calls, 1)
+        self.assertEqual(len(archive.values), 1)
+
+    def test_navigation_private_transport_is_cookie_referer_origin_free_for_all_requests(self):
+        root = _Response(url=_ROOT, headers={"Set-Cookie": "root=1", "Content-Length": str(len(_ROOT_BODY))}, chunks=(_ROOT_BODY,))
+        meeting = _Response(url=_D.split("?")[0], headers={"Set-Cookie": "meeting=1", "Content-Length": str(len(_MEETING_BODY))}, chunks=(_MEETING_BODY,))
+        race = _Response(url=_D.split("?")[0], headers={"Content-Length": str(len(_RACE_BODY))}, chunks=(_RACE_BODY,))
+        transport = module._RequestsJRAOfficialHTTPTransport()
+        session = transport._session
+        session.cookies.set("seed", "1", domain="www.jra.go.jp", path="/")
+        calls = []
+
+        def send(request, **kwargs):
+            calls.append((request, kwargs))
+            return (root, meeting, race)[len(calls) - 1]
+
+        session.send = send
+        self.assertEqual(session.cookies.get_dict(domain="www.jra.go.jp"), {"seed": "1"})
+        root_value = transport.fetch_target_navigation_root()
+        self.assertEqual(root_value.response_body, _ROOT_BODY)
+        session.cookies.set("root", "1", domain="www.jra.go.jp", path="/")
+        self.assertEqual(session.cookies.get_dict(domain="www.jra.go.jp"), {"seed": "1", "root": "1"})
+        from scripts.simulation.jra_target_race_card_locator import (
+            build_jra_target_meeting_selection_request_locator,
+            build_jra_target_race_selection_request_locator,
+        )
+        transport.fetch_target_meeting_selection(request_locator=build_jra_target_meeting_selection_request_locator(cname=_MEETING_CNAME))
+        session.cookies.set("meeting", "1", domain="www.jra.go.jp", path="/")
+        self.assertEqual(
+            session.cookies.get_dict(domain="www.jra.go.jp"),
+            {"seed": "1", "root": "1", "meeting": "1"},
+        )
+        transport.fetch_target_race_selection(request_locator=build_jra_target_race_selection_request_locator(cname=_RACE_CNAME))
+        self.assertEqual([call[0].method for call in calls], ["GET", "POST", "POST"])
+        for request, kwargs in calls:
+            self.assertNotIn("Cookie", request.headers)
+            self.assertNotIn("Referer", request.headers)
+            self.assertNotIn("Origin", request.headers)
+            self.assertEqual(kwargs, {"stream": True, "allow_redirects": False, "verify": True, "timeout": (10.0, 10.0)})
+
+    def test_navigation_cookie_free_send_failure_has_no_cookie_enabled_retry(self):
+        transport = module._RequestsJRAOfficialHTTPTransport()
+        transport._session.cookies.set("seed", "1", domain="www.jra.go.jp", path="/")
+        calls = []
+
+        def fail(request, **kwargs):
+            calls.append((request, kwargs))
+            raise module._requests.Timeout("offline")
+
+        transport._session.send = fail
+        with self.assertRaises(JRAOfficialResponseCaptureTransportError):
+            transport.fetch_target_navigation_root()
+        self.assertEqual(len(calls), 1)
+        request, kwargs = calls[0]
+        self.assertNotIn("Cookie", request.headers)
+        self.assertNotIn("Referer", request.headers)
+        self.assertNotIn("Origin", request.headers)
+        self.assertEqual(kwargs, {"stream": True, "allow_redirects": False, "verify": True, "timeout": (10.0, 10.0)})
+
+    def test_target_navigation_result_rejects_unrelated_capture(self):
+        archive = _Archive()
+        transport = _NavigationTransport(
+            root=_result(url=_ROOT, body=_ROOT_BODY, content_length=len(_ROOT_BODY)),
+            meeting=_result(url=_D.split("?")[0], body=_MEETING_BODY, content_length=len(_MEETING_BODY)),
+            race=_result(url=_D.split("?")[0], body=_RACE_BODY, content_length=len(_RACE_BODY)),
+        )
+        result = JRAOfficialLiveResponseCaptureService(
+            archive=archive,
+            transport=transport,
+            utc_clock=_Clock(_TIME, _TIME, _TIME, _TIME, _TIME),
+        ).capture_target_race_navigation(external_race_id=_TARGET_RACE_ID)
+        with self.assertRaises(JRAOfficialResponseCaptureValidationError):
+            JRATargetRaceNavigationCaptureResult(discovery=result.discovery, capture=object())

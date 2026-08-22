@@ -4074,3 +4074,44 @@ Verification passed: capture **7**, migration **12**, repository **12** (**31**
 dedicated); c0b1 identity/locator/discovery plus live-capture regressions **42**; full
 pytest suite **2711**. `git diff --check`, public-surface/family-separation, changed-file
 scope, and no-live-production-change checks are recorded with the review commit.
+
+
+## Phase 4C-2d3b1i6d1d5f1c4c0b3 JRA Live Target-Navigation Composition
+
+Implemented the approved live composition exclusively in the existing JRA live capture
+service. `capture_target_race_navigation(...)` first validates the supplied canonical
+JRA external race ID, before any clock sample, root GET, POST, or archive interaction.
+It then obtains the meeting-selection locator only from strict-CP932 root-menu bytes,
+the race-selection locator only from strict-CP932 meeting response bytes, and never
+synthesizes a CNAME, tail, site variant, or target-card URL from race identity.
+
+All three navigation requests use explicit prepared requests: root is the fixed HTTPS
+GET and both selections are exact one-field POSTs. Cookie, Referer, and Origin are
+removed before sending, so neither a pre-seeded Session jar nor root/meeting Set-Cookie
+can alter a formal navigation request. A cookie-dependent future site state fails closed
+until its request-identity implications receive separate review.
+
+The race-selection entity becomes the formal v4 capture with requested, observed, and
+stored timestamps sampled in the frozen order. It is saved before discovery; only the
+immutable saved capture's supplied-response conversion reaches target-card locator
+discovery. `JRATargetRaceNavigationCaptureResult` is frozen/slotted and verifies that the
+exact v4 capture matches discovery request-locator, response-digest, and observed-time
+provenance while retaining only its capture ID. C0b3 deliberately stops at that locator:
+it performs no target-card GET and changes no schema, migration, repository, or pure
+discovery boundary.
+
+Verification passed: focused live-capture **22 passed**; related
+locator/discovery/capture/repository **33 passed**; full pytest suite **2717 passed**.
+Static public-surface, no-broad-catch, no-package-export, no-new-module, changed-file
+scope, and `git diff --check` checks are recorded with the review commit. No live HTTP,
+read-only observation, or real trusted capture was performed.
+
+### Cookie-isolation test correction
+
+The navigation hidden-state regression now uses an actual populated `requests.Session`
+cookie jar rather than synthetic Session headers. It seeds an applicable cookie before
+the root request, deterministically adds root and meeting response cookie states before
+the following formal POSTs, and proves all three outbound prepared requests still omit
+Cookie, Referer, and Origin. A separate offline failure regression proves one cookie-free
+send failure makes exactly one attempt and does not retry with hidden state. Production
+code is unchanged from the prior review tip.
