@@ -4074,3 +4074,71 @@ Verification passed: capture **7**, migration **12**, repository **12** (**31**
 dedicated); c0b1 identity/locator/discovery plus live-capture regressions **42**; full
 pytest suite **2711**. `git diff --check`, public-surface/family-separation, changed-file
 scope, and no-live-production-change checks are recorded with the review commit.
+
+
+## Phase 4C-2d3b1i6d1d5f1c4c0b3 JRA Live Target Navigation PREPARE
+
+Prepared the narrow live composition on formal base
+`b506973ac7718126c24795af2d457b721453cc90`. No production code or tests changed. The
+existing `JRAOfficialLiveResponseCaptureService` remains the sole live HTTPS, injected
+clock, and archive-before-return owner; c0b3 adds one future method there rather than a
+second module or transport stack:
+
+```python
+capture_target_race_navigation(
+    *, external_race_id: str
+) -> JRATargetRaceNavigationCaptureResult
+```
+
+The frozen/slotted result retains the exact `JRATargetRaceCardDiscovery` and the saved
+schema-v4 capture ID, but no raw response bytes or HTTP object. Its custom exact
+constructor receives the exact v4 capture, checks request locator, response digest, and
+observation against the discovery, then retains only its capture ID; an unrelated valid
+v4 ID cannot be paired by direct construction. The caller supplies only
+the target identity. The meeting request, race-selection request, site variant, opaque
+tail, and card URL are derived exclusively from each immediately preceding formal
+official response.
+
+The existing private requests transport is reusable through typed root/meeting/race
+entry points and one shared private complete-byte validation core. Root is a fixed,
+cookie-free `GET https://www.jra.go.jp/`; both selection requests are cookie-, Referer-,
+and Origin-free POSTs with exactly one lower-case `cname` form field. The locator types
+remain distinct. Existing `Accept-Encoding: identity`, User-Agent, TLS, disabled
+redirects, zero retries, 10/10-second timeout, exact effective URL, 200-only status,
+Content-Length, 4 MiB, raw-stream, accepted HTML Content-Type, and strict-CP932 policies
+remain fail closed.
+
+A bounded memory-only official observation from
+`2026-08-22T08:20:17.926952Z` through `2026-08-22T08:20:18.936977Z` established the
+previously unresolved state policy. The root returned no Set-Cookie/session cookie. For
+both response-derived selection requests, cookie-/Referer-/Origin-free POSTs returned
+HTTP 200 and exact bytes identical in length and SHA-256 to the same POSTs through the
+root-used Session. Session reuse is therefore connection pooling only; cookies are not
+allowed into navigation requests and are not replay evidence. No observed bytes were
+saved, archived, or committed, and no trusted capture was performed.
+
+Clock order is frozen around complete entities: root and meeting `observed_at` are
+sampled after their complete validated responses; race-selection `requested_at` is
+sampled immediately before its transport call, `observed_at` after complete receipt, and
+`stored_at` after supplied-response validation immediately before v4 construction. The
+immutable v4 capture is saved before discovery or return. Discovery uses
+`capture.to_supplied_official_response()` only after successful save; immediate repository
+reload is unnecessary under the established append-only service pattern. Archive failure
+produces no discovery/result. A later discovery failure also returns no success, while
+the already-retained exact observation remains append-only evidence.
+
+C0b3 stops at durable navigation evidence plus the exact target-card locator. It does not
+invoke or reimplement `capture_target_race_card_response(...)`; that existing schema-v3
+method remains the separate target-card persistence owner. Root and meeting responses
+remain operational-only, race selection is persisted as schema v4, and no schema,
+migration, repository, pure discovery, target normalizer, replay resolver, source union,
+entry mapping, or snapshot change is prepared.
+
+Implementation readiness is `YES` with no blocker. The future allowed implementation
+surface is only `jra_official_response_live_capture.py`, its focused live-capture test,
+and the two phase documents. Offline tests must pin typed request derivation, cookie-free
+HTTP shapes, complete-entity clock order, archive-before-discovery/return, v4 provenance,
+all fail-closed stages, site/tail retention, no retry/fallback/network fixture, and
+unchanged final-odds/target-card behavior. This docs-only PREPARE intentionally did not
+run pytest; `git diff --check`, exact two-file scope, clean final status, and formal remote
+immutability are the required checks.

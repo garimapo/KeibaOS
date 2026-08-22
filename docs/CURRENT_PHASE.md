@@ -2,145 +2,281 @@
 
 ## Status
 
-READY_FOR_REVIEW
+DRAFT_FOR_REVIEW
 
 ## Phase
 
-`4C-2d3b1i6d1d5f1c4c0b2` — JRA target race-selection capture v004.
+`4C-2d3b1i6d1d5f1c4c0b3` — JRA live target-navigation composition PREPARE.
 
-Formal base: `d2e5afde954ed8eb374e6e45244b7129cc77e12b`.
-
-Approved prepare: `95612e45dad6baa4670e659fe51683f341036b59`.
+Formal base: `b506973ac7718126c24795af2d457b721453cc90`.
 
 Review branch:
-`review/4c-2d3b1i6d1d5f1c4c0b2-jra-target-race-selection-capture-v004`.
+`review/4c-2d3b1i6d1d5f1c4c0b3-jra-live-target-navigation-prepare`.
 
-## Implemented Contract
+This phase freezes architecture only. It adds no production code, test, schema,
+migration, trusted capture, or formal-branch change.
 
-Added the distinct frozen/slotted schema-v4 POST family:
+## Ownership and Public Boundary
 
-```python
-JRATargetRaceSelectionResponseCapture
-```
+Live composition remains in `jra_official_response_live_capture.py`. The existing
+`JRAOfficialLiveResponseCaptureService` already exclusively owns the injected JRA HTTPS
+transport, UTC clock, archive-before-return behavior, and production builder. Adding one
+narrow method there avoids a second HTTP stack and avoids a new module whose only way to
+reuse the existing transport would be to depend on its private implementation.
 
-It accepts only the formal `JRATargetRaceSelectionRequestLocator`, preserves exact
-strict-CP932 response bytes and the existing capture HTTP/timestamp validations, fixes
-`schema_version=4`, `page_kind=TARGET_RACE_SELECTION`, and `request_method="POST"`, and
-derives its endpoint, request identity, and raw CNAME only from that locator. It converts
-only to `JRATargetRaceSelectionSuppliedOfficialResponse`; no URL-bound supplied response
-or navigation discovery is widened.
-
-Its capture ID is exactly `jra-capture-v4:` plus lower-case SHA-256 over sorted, compact,
-UTF-8 `ensure_ascii=False` JSON containing fixed endpoint, normalized observation time,
-`target_race_selection`, locator request identity, `POST`, raw-body SHA-256, and schema
-version 4. It intentionally excludes raw CNAME as duplicate identity material because
-the locator request digest already binds it.
-
-`JRAOfficialPageKind.TARGET_RACE_SELECTION = "target_race_selection"` is added without
-altering any v1/v2/v3 enum meaning. The legacy GET URL canonicalizer and live
-`capture_response(...)` remain v1-only and reject this page kind before clock, transport,
-or archive use. No live v4 capture method exists.
-
-The archive Protocol and SQLite repository now expose only:
+The frozen API is:
 
 ```python
-save_target_race_selection_capture(
-    *, capture: JRATargetRaceSelectionResponseCapture
-) -> None
-
-load_target_race_selection_capture(
-    *, capture_id: str
-) -> JRATargetRaceSelectionResponseCapture | None
-
-load_target_race_selection_supplied_response_for_evidence(
+def capture_target_race_navigation(
+    self,
     *,
-    request_locator: JRATargetRaceSelectionRequestLocator,
-    response_sha256: str,
-    observed_at: datetime,
-) -> JRATargetRaceSelectionSuppliedOfficialResponse
+    external_race_id: str,
+) -> JRATargetRaceNavigationCaptureResult: ...
 ```
 
-Save is exact-type, append-only, idempotent for exact identical content, conflict- and
-corruption-fail-closed, transaction-owned by the repository, and never auto-migrates or
-repairs a missing/corrupt body. V4 ID loaders accept valid v1/v2/v3 IDs as foreign and
-return `None`; older loaders reciprocally return `None` for a valid v4 ID. Malformed IDs
-remain repository validation errors.
+`JRATargetRaceNavigationCaptureResult` is frozen/slotted and retains exactly:
 
-Exact evidence replay queries only fixed endpoint, request identity, response digest, and
-UTC observation time. It deliberately does not SQL-filter schema/page/method/CNAME,
-then fully reconstructs the selected row as v4 and requires exact locator equality.
-Absent evidence is the established capture-missing error; duplicates or corruption are
-repository integrity errors. There is no race-ID lookup, latest-by-race lookup, HTTP,
-clock, CNAME synthesis, site selection, or live fallback.
-
-## Migration v004
-
-`jra_official_response_capture_migration_v004.py` registers:
-
-```text
-VERSION = 4
-NAME = v004_jra_official_response_capture_target_race_selection_schema
+```python
+discovery: JRATargetRaceCardDiscovery
+target_race_selection_capture_id: str
 ```
 
-The runner now applies v001, v002, v003, then v004 under its existing foreign-key,
-`BEGIN IMMEDIATE`, registry, commit, and rollback ownership. V004 itself is transaction
-neutral.
+It retains no HTTP object or response bytes. Its custom exact constructor accepts the
+exact discovery and exact `JRATargetRaceSelectionResponseCapture`, checks that capture
+request locator, response SHA-256, and observed instant equal the discovery provenance,
+then stores only the capture ID. This prevents direct public construction with an
+unrelated syntactically valid v4 ID while avoiding retained/duplicated raw bytes. The
+service invokes that constructor only after the exact capture has saved successfully.
+No package-root export is added.
 
-Before mutation, v004 pins and validates exact v003 body/capture/index DDL, columns,
-`WITHOUT ROWID`, foreign key, partial-index order/predicates, constraint SAVEPOINT
-probes, body SHA integrity, and full v1/v2/v3 domain/capture-ID reconstruction. A
-corrupt or lookalike v003 schema fails before rename or v4 registration.
+The caller supplies only canonical `external_race_id`. The composition never derives a
+CNAME, opaque tail, site variant, URL, meeting, or date from it. Each locator is produced
+only by the immediately preceding formal supplied response.
 
-Only `jra_official_response_captures` is rebuilt. Its 19 columns remain unchanged; the
-new DDL admits version 4, page kind `target_race_selection`, and exactly the v4 POST
-non-null request-identity/CNAME family branch. Existing v1/v2/v3 scalar and family
-checks, response-body foreign key, timestamp order, `WITHOUT ROWID`, and both partial
-unique indexes are preserved. `jra_official_response_bodies` is neither rebuilt nor
-copied. No column, new table, global migration, or index was added.
+## Transport Contract
 
-## Verification
+One existing `_RequestsJRAOfficialHTTPTransport` instance remains the sole requests
+stack. It gains typed private root, meeting-selection, and race-selection methods. The
+two locator types remain distinct at their typed transport entry points; those wrappers
+share one private form-POST/send/read validation primitive.
+
+The root request is fixed, query-free `GET https://www.jra.go.jp/`. A dedicated private
+root entry point reuses the existing TLS-verified, zero-retry, 10/10-second timeout,
+disabled-redirect, effective-URL, raw-stream, identity-encoding, canonical
+Content-Length, and 4 MiB response checks. It prepares a cookie-free request rather than
+calling the session's cookie-merging convenience GET. The response must be HTTP 200,
+exact effective root URL, accepted `text/html` with no unsupported parameters, absent or
+identity Content-Encoding, complete exact bytes, and strict CP932 when the formal root
+supplied domain is built.
+
+Both selection requests are exact POSTs to the locator endpoint with one lower-case
+standard form field:
 
 ```text
-tests/test_jra_official_response_capture.py: 7 passed
-tests/test_jra_official_response_capture_migration.py: 12 passed
-tests/test_sqlite_jra_official_response_capture_repository.py: 12 passed
-dedicated capture/migration/repository: 31 passed
-
-tests/test_jra_official_identity.py
-tests/test_jra_target_race_card_locator.py
-tests/test_jra_target_race_card_discovery.py
-tests/test_jra_official_response_live_capture.py: 42 passed
-
-full pytest suite: 2711 passed
+cname=<exact locator cname>
+Content-Type: application/x-www-form-urlencoded
+Accept-Encoding: identity
+User-Agent: existing frozen JRA live User-Agent
 ```
 
-Public-surface/family-separation coverage pins the v4 domain, deterministic known ID,
-supplied conversion, exact repository APIs, cross-family loaders/saves, corrupt selected
-evidence, exact v003 pre-mutation rejection, v1/v2/v3 19-field and body preservation,
-v4 DDL family rejection, rollback/no-temp-table behavior, and no live collaborator use
-for the new page kind.
+Requests owns the form encoding and exact Content-Length; the raw `/` therefore becomes
+standard `%2F` request-body material without changing the locator's retained raw CNAME.
+Cookie, Referer, and Origin are deliberately absent. Redirects remain disabled; TLS
+verification, zero retries, 10/10-second timeouts, exact endpoint/effective-URL equality,
+200-only status, absent/identity encoding, Content-Length agreement, 4 MiB maximum, and
+complete raw bytes match the existing transport. Operational root and meeting responses
+also require the established accepted HTML Content-Type grammar before supplied-domain
+construction. The v4 capture domain performs the same check for race selection.
 
-## Allowed Files
+The requests Session may be reused only for adapter/connection pooling. Navigation
+requests are prepared without session cookies, and no response cookie affects a later
+request. There is no logical session continuity or hidden cookie state.
+
+### Narrow read-only observation
+
+A transient memory-only official observation from
+`2026-08-22T08:20:17.926952Z` through `2026-08-22T08:20:18.936977Z` resolved the only
+remaining transport question. The root returned 200 `text/html`, no Content-Encoding,
+no Set-Cookie, and no session cookie. For both response-derived selection locators, an
+exact cookie-/Referer-/Origin-free form POST returned 200 `text/html`, no
+Content-Encoding, and bytes identical in length and SHA-256 to the same POST through the
+root-used Session. No response bytes were saved, archived, or committed; this was not a
+trusted capture.
+
+## Causal Clock and Composition Order
+
+The existing injected `utc_clock` is the only clock owner. Every sample must be an exact
+aware datetime; domain construction normalizes/compares under the existing rules.
 
 ```text
-scripts/simulation/jra_official_response_capture.py
-scripts/simulation/jra_official_response_capture_migration_runner.py
-scripts/simulation/jra_official_response_capture_migration_v004.py
-scripts/simulation/repositories/sqlite_jra_official_response_capture_repository.py
-tests/test_jra_official_response_capture.py
-tests/test_jra_official_response_capture_migration.py
-tests/test_sqlite_jra_official_response_capture_repository.py
+complete root GET and validate transport result
+-> sample root observed_at
+-> construct strict-CP932 root supplied response
+-> discover meeting-selection request locator
+
+complete meeting-selection POST and validate transport result
+-> sample meeting observed_at
+-> construct strict-CP932 meeting supplied response
+-> discover race-selection request locator
+
+sample race-selection requested_at immediately before transport call
+-> send exact race-selection POST and receive complete validated entity
+-> sample race-selection observed_at
+-> construct/validate strict-CP932 race-selection supplied response
+-> sample stored_at immediately before capture construction
+-> construct exact schema-v4 capture
+-> save_target_race_selection_capture(...)
+-> derive supplied evidence from the saved immutable capture object
+-> discover exact target-card locator
+-> return result containing discovery plus v4 capture ID
+```
+
+The v4 domain enforces `requested_at <= observed_at <= stored_at`. No timestamp is
+backdated, copied from a later event, or exposed as invented `available_at`.
+
+Archive save must succeed before discovery or a success result is exposed. Archive
+exceptions propagate unchanged. Discovery uses `capture.to_supplied_official_response()`
+only after save succeeds. Reload after save is not required: this matches existing
+append-only capture service behavior, avoids an unnecessary database round trip, and the
+immutable capture object is the exact object accepted by the archive. Exact evidence
+reload remains available later for replay/audit. If post-save discovery fails, no API
+success is returned; the already-retained append-only observation is not deleted or
+misrepresented as a locator.
+
+## Target-card Boundary Decision
+
+C0b3 stops after durable race-selection evidence and the exact target-card locator. It
+does not call `capture_target_race_card_response(...)`. Schema-v3 target-card GET
+acquisition is already a complete independent live-capture responsibility. Returning its
+exact input locator enables a later caller to invoke that existing method without a
+second implementation, while keeping navigation failure and card-acquisition failure
+separate and reviewable. C0b3 adds no target-card GET or second success contract.
+
+## Failure and Persistence Policy
+
+Root, meeting POST, race-selection POST, HTTP status/effective URL/redirect,
+Content-Length, compression, size, CP932, formal supplied-domain, discovery, clock,
+capture-domain, and archive failures all propagate through their existing narrow error
+families and produce no result. There is no broad catch, automatic retry, stale/current
+fallback, guessed locator, partial success result, or live target-card fallback.
+
+Persistence remains:
+
+```text
+root menu response: operational only; not persisted
+meeting-selection response: operational only; not persisted
+race-selection response: schema-v4 archive; required before success
+target race card: existing schema-v3 capture owner; not invoked by c0b3
+```
+
+No schema, migration v005, table, index, repository API, pure discovery domain, target
+normalizer, replay resolver, source union, entry mapping, or snapshot contract changes.
+
+## Future Implementation Files
+
+```text
+scripts/simulation/jra_official_response_live_capture.py
+tests/test_jra_official_response_live_capture.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-## Exclusions
+No new production module is required. Existing locator/discovery, capture, repository,
+and migration files remain unchanged.
 
-No live navigation composition, HTTP acquisition, trusted capture, c0b3/c4c work,
-target-source normalization, snapshot assembly, race-ID archive lookup, latest-by-race
-lookup, package-root export, or global schema/migration work was added.
+## Required Implementation Tests
+
+Offline synthetic fake-transport/clock/archive tests must pin the exact public method and
+result, fixed cookie-free root GET, response-derived locators only, exact typed form POSTs,
+session/Cookie/Referer/Origin policy, complete-entity clock order, v4 metadata and save
+before discovery/return, archive and post-save discovery failure behavior, exact
+capture-bound discovery source, site/tail preservation, target unavailable/ambiguity,
+transport/domain/CP932/HTML failures at every stage, no hard-coded CNAME or identity URL
+synthesis, no retry/fallback, and no real network. Existing final-odds and target-card
+live behavior must remain unchanged; static checks must prove no schema/migration,
+package-root export, or new transport stack. Dedicated, related, and full pytest suites
+remain required in implementation.
+
+## Readiness Matrix
+
+```text
+LIVE_COMPOSITION_OWNER: JRAOfficialLiveResponseCaptureService_IN_jra_official_response_live_capture.py
+NEW_MODULE_REQUIRED: NO
+OWNERSHIP_REASON: existing sole JRA HTTPS/clock/archive owner can compose the formal stages without a second transport stack
+
+LIVE_NAVIGATION_API_READY: YES
+LIVE_NAVIGATION_API_SIGNATURE: JRAOfficialLiveResponseCaptureService.capture_target_race_navigation(*, external_race_id: str) -> JRATargetRaceNavigationCaptureResult
+LIVE_NAVIGATION_RESULT_DOMAIN: frozen/slotted custom-exact-construction JRATargetRaceNavigationCaptureResult retaining discovery + target_race_selection_capture_id and validating lineage from the exact v4 capture
+
+ROOT_TRANSPORT_REUSE_SAFE: YES_VIA_DEDICATED_COOKIE_FREE_ROOT_ENTRY_AND_EXISTING_PRIVATE_VALIDATION_READ_CORE
+ROOT_RESPONSE_ARCHIVED: NO
+ROOT_OBSERVED_AT_SEMANTICS: ACTUAL_CLOCK_SAMPLE_AFTER_COMPLETE_VALIDATED_ENTITY_RECEIPT
+
+MEETING_POST_REQUEST_SEMANTICS_READY: YES
+MEETING_POST_COOKIE_POLICY: DELIBERATELY_ABSENT
+MEETING_POST_REFERER_POLICY: DELIBERATELY_ABSENT
+MEETING_POST_ORIGIN_POLICY: DELIBERATELY_ABSENT
+MEETING_POST_SESSION_POLICY: NO_LOGICAL_SESSION_CONTINUITY; CONNECTION_POOL_ONLY
+
+RACE_SELECTION_POST_REQUEST_SEMANTICS_READY: YES_IDENTICAL_HTTP_POLICY_WITH_EXACT_RACE_LOCATOR
+POST_TRANSPORT_PRIMITIVE_SHARED: YES_PRIVATE_ONLY
+POST_FORMAL_TYPES_REMAIN_DISTINCT: YES
+
+CLOCK_OWNER: EXISTING_INJECTED_JRA_LIVE_SERVICE_UTC_CLOCK
+ROOT_OBSERVED_AT_ORDER: AFTER_COMPLETE_ROOT_ENTITY_AND_TRANSPORT_VALIDATION
+MEETING_OBSERVED_AT_ORDER: AFTER_COMPLETE_MEETING_ENTITY_AND_TRANSPORT_VALIDATION
+RACE_SELECTION_REQUESTED_AT_ORDER: IMMEDIATELY_BEFORE_RACE_SELECTION_TRANSPORT_CALL
+RACE_SELECTION_OBSERVED_AT_ORDER: AFTER_COMPLETE_RACE_SELECTION_ENTITY_AND_TRANSPORT_VALIDATION
+RACE_SELECTION_STORED_AT_ORDER: AFTER_SUPPLIED_RESPONSE_VALIDATION_AND_IMMEDIATELY_BEFORE_V4_CAPTURE_CONSTRUCTION
+
+ARCHIVE_BEFORE_SUCCESS_RETURN: YES
+ARCHIVE_FAILURE_FAILS_CLOSED: YES_NO_DISCOVERY_OR_RESULT
+DISCOVERY_USES_ARCHIVED_OR_CAPTURE_BOUND_BYTES: YES_IMMUTABLE_SAVED_CAPTURE_BOUND_BYTES
+
+POST_ARCHIVE_DISCOVERY_SOURCE: capture.to_supplied_official_response_AFTER_SUCCESSFUL_SAVE
+RELOAD_AFTER_SAVE_REQUIRED: NO
+RELOAD_REASON: immutable accepted capture is exact evidence; existing service precedent and no added audit value from immediate round trip
+
+C0B3_STOPS_AT_LOCATOR: YES
+C0B3_INVOKES_EXISTING_TARGET_CARD_CAPTURE: NO
+DECISION_REASON: navigation owns durable locator proof; existing schema-v3 method separately owns the exact card GET
+
+SESSION_CONTINUITY_REQUIRED: NO
+COOKIE_STATE_ALLOWED: NO_IN_NAVIGATION_REQUESTS
+COOKIE_STATE_REPLAY_EVIDENCE_REQUIRED: NO
+COOKIE_CAUSALITY_REASON: official observation proved cookie-/Referer-/Origin-free and same-session requests yield byte-identical responses; retained exact request identity and v4 bytes are sufficient replay evidence
+
+PARTIAL_SUCCESS_ALLOWED: NO
+LIVE_FALLBACK_ALLOWED: NO
+AUTOMATIC_RETRY_ADDED: NO
+
+ROOT_PERSISTENCE: NO_OPERATIONAL_ONLY
+MEETING_SELECTION_PERSISTENCE: NO_OPERATIONAL_ONLY
+RACE_SELECTION_PERSISTENCE: YES_SCHEMA_V4_BEFORE_SUCCESS
+TARGET_CARD_PERSISTENCE_OWNER: EXISTING_SCHEMA_V3_capture_target_race_card_response
+SCHEMA_CHANGE_REQUIRED: NO
+
+IMPLEMENTATION_FILES: jra_official_response_live_capture.py; CURRENT_PHASE.md; LATEST_CODEX_REPORT.md
+IMPLEMENTATION_TEST_FILES: test_jra_official_response_live_capture.py
+
+C0B3_IMPLEMENTATION_READY: YES
+BLOCKERS: NONE
+
+READ_ONLY_LIVE_OBSERVATION_REQUIRED: YES_ONLY_TO_CLOSE_COOKIE_SESSION_REFERER_ORIGIN_POLICY
+READ_ONLY_LIVE_OBSERVATION_PERFORMED: YES_TRANSIENT_MEMORY_ONLY_2026-08-22
+REAL_TRUSTED_CAPTURE_REQUIRED: NO
+REAL_TRUSTED_CAPTURE_PERFORMED: NO
+```
+
+## Allowed Files
+
+```text
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+```
 
 ## Stop Condition
 
-Stop after one pushed review commit for independent ChatGPT implementation review. Do not
-start c0b3 or c4c and do not perform live HTTP or a real trusted capture.
+Stop after the two documentation files are committed and the review branch is pushed for
+independent ChatGPT architecture review. Do not implement c0b3, start c4c, alter the
+formal branch, or perform a real trusted capture.
