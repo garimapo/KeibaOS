@@ -52,6 +52,19 @@ No HTTP, archive, repository, SQLite, migration, filesystem, clock, live capture
 real trusted capture was added. V004 capture work and live navigation composition remain
 separate future phases.
 
+### Calendar-date binding correction
+
+`parse_jra_race_card_url_calendar_date(value)` now exposes the exact validated
+`YYYYMMDD` from a canonical accessD card URL through the same private CNAME resolution,
+grammar, and calendar-validation path used by `parse_jra_race_card_url_identity(...)`.
+It does not alter `JRAExternalRaceIdentity` or external race-ID semantics.
+
+Final discovery obtains the validated date for both direct row anchors and requires each
+to equal `navigation_response.request_locator.calendar_date` before considering race
+number. A same-race URL with a different same-year calendar date is validation failure,
+not unavailable and not skippable. `JRATargetRaceCardDiscovery.__post_init__` applies the
+same invariant to direct public-domain construction.
+
 ## Allowed Files
 
 ```text
@@ -67,10 +80,10 @@ docs/LATEST_CODEX_REPORT.md
 
 ## Verification
 
-- Dedicated identity/locator/discovery: 23 passed.
+- Dedicated identity/locator/discovery: 26 passed.
 - Related JRA target-source, accessU, historical collector, final-odds, capture, and live-capture tests: 95 passed.
-- Dedicated plus related selection: 118 passed.
-- Full suite: 2702 passed.
+- Dedicated plus related selection: 121 passed.
+- Full suite: 2705 passed.
 - Public-surface, forbidden-dependency, no-broad-catch, no-package-export, diff, and scope checks passed.
 
 ## Stop Condition

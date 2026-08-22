@@ -98,6 +98,21 @@ def test_final_discovery_canonicalizes_relative_href_and_binds_exact_navigation_
     assert result.navigation_observed_at is OBSERVED
 
 
+def test_final_discovery_rejects_card_calendar_date_disagreement() -> None:
+    wrong_date = RAW_CARD.replace("20250913", "20250914")
+    response = _response(_row(race_href=wrong_date, card_href=wrong_date))
+    with pytest.raises(JRATargetRaceCardDiscoveryValidationError):
+        discover_jra_target_race_card_locator(external_race_id=RACE_ID, navigation_response=response)
+
+
+def test_discovery_domain_rejects_direct_locator_navigation_date_disagreement() -> None:
+    wrong_date_url = CANONICAL_CARD.replace("20250913", "20250914")
+    locator = JRATargetRaceCardLocator(RACE_ID, wrong_date_url)
+    request = build_jra_target_race_selection_request_locator(cname=RACE_CNAME)
+    with pytest.raises(JRATargetRaceCardDiscoveryValidationError):
+        JRATargetRaceCardDiscovery(locator, request, "0" * 64, OBSERVED)
+
+
 def test_final_discovery_requires_two_same_row_anchors_and_exact_table_scope() -> None:
     response = _response(_row(card_href=RAW_CARD.replace("/DC", "/DD")))
     with pytest.raises(JRATargetRaceCardDiscoveryValidationError):

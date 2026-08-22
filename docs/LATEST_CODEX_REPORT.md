@@ -4015,3 +4015,23 @@ passed** (**118 combined**); full pytest suite **2702 passed**. Static public-su
 no-broad-catch, package-root export, changed-file scope, and `git diff --check` checks
 passed. No archive, migration, HTTP/live capture, real official response fixture, or
 trusted capture was added.
+
+
+### Phase 4C-2d3b1i6d1d5f1c4c0b1 calendar-date binding correction
+
+The accessD URL identity boundary now exposes the CNAME's validated `YYYYMMDD` through
+`parse_jra_race_card_url_calendar_date(...)`. Both public accessD parsers reuse one
+private resolution/grammar/date-validation path; `JRAExternalRaceIdentity` and canonical
+external race IDs remain unchanged.
+
+Final target-card discovery now reads the validated date from both direct row anchors and
+requires exact equality with the race-selection request locator's `calendar_date` before
+race-number matching. A valid same-race accessD URL dated one day differently fails as
+validation. The public `JRATargetRaceCardDiscovery` constructor independently rechecks
+the same locator/request invariant, preventing forged direct domain construction.
+
+Fresh verification passed: dedicated c0b1 identity/locator/discovery tests **26 passed**;
+related JRA target/accessD/accessU/accessS/accessO regressions **95 passed**; full suite
+**2705 passed**. Site variants remain distinct, and no locator module, HTTP, archive,
+database, migration, filesystem, clock, package export, or trusted-capture behavior was
+changed.

@@ -14,6 +14,7 @@ from scripts.simulation.jra_official_identity import (
     JRAOfficialIdentityValidationError as _IdentityValidationError,
     canonicalize_jra_race_card_href as _canonicalize_card_href,
     parse_jra_external_race_id as _parse_race_id,
+    parse_jra_race_card_url_calendar_date as _parse_card_date,
     parse_jra_race_card_url_identity as _parse_card_url,
 )
 from scripts.simulation.jra_target_race_card_locator import (
@@ -106,19 +107,25 @@ class JRATargetRaceCardDiscovery:
             request.meeting_day,
         ):
             raise _validation("target-card locator disagrees with navigation request identity")
+        try:
+            card_date = _parse_card_date(self.locator.canonical_target_race_card_url)
+        except _IdentityValidationError as error:
+            raise _validation("target-card discovery calendar date is invalid") from error
+        if card_date != request.calendar_date:
+            raise _validation("target-card locator disagrees with navigation request calendar date")
 
 
 def _document(response: JRATargetRaceSelectionSuppliedOfficialResponse) -> _BeautifulSoup:
     return _BeautifulSoup(response.response_body.decode("cp932", errors="strict"), "html.parser")
 
 
-def _canonical_href(node: _Tag, name: str) -> tuple[str, object]:
+def _canonical_href(node: _Tag, name: str) -> tuple[str, object, str]:
     href = node.get("href")
     if type(href) is not str:
         raise _validation(f"{name} href is invalid")
     try:
         canonical = _canonicalize_card_href(href)
-        return canonical, _parse_card_url(canonical)
+        return canonical, _parse_card_url(canonical), _parse_card_date(canonical)
     except (_IdentityValidationError, TypeError, ValueError) as error:
         raise _validation(f"{name} href is invalid") from error
 
@@ -159,10 +166,12 @@ def discover_jra_target_race_card_locator(
             row.select("td.syutsuba > a.btn-def.btn-sm.btn-narrow[href]"),
             "official target-card anchor",
         )
-        race_url, race_identity = _canonical_href(race_anchor, "official race-number")
-        card_url, card_identity = _canonical_href(card_anchor, "official target-card")
-        if race_url != card_url or race_identity != card_identity:
+        race_url, race_identity, race_date = _canonical_href(race_anchor, "official race-number")
+        card_url, card_identity, card_date = _canonical_href(card_anchor, "official target-card")
+        if race_url != card_url or race_identity != card_identity or race_date != card_date:
             raise _validation("same-row official target-card anchors disagree")
+        if race_date != request.calendar_date or card_date != request.calendar_date:
+            raise _validation("official target-card URL disagrees with navigation request calendar date")
         if (race_identity.year, race_identity.venue_code, race_identity.meeting_number, race_identity.meeting_day) != (
             request.year,
             request.venue_code,
