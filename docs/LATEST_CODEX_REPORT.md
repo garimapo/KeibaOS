@@ -4105,3 +4105,13 @@ locator/discovery/capture/repository **33 passed**; full pytest suite **2717 pas
 Static public-surface, no-broad-catch, no-package-export, no-new-module, changed-file
 scope, and `git diff --check` checks are recorded with the review commit. No live HTTP,
 read-only observation, or real trusted capture was performed.
+
+### Cookie-isolation test correction
+
+The navigation hidden-state regression now uses an actual populated `requests.Session`
+cookie jar rather than synthetic Session headers. It seeds an applicable cookie before
+the root request, deterministically adds root and meeting response cookie states before
+the following formal POSTs, and proves all three outbound prepared requests still omit
+Cookie, Referer, and Origin. A separate offline failure regression proves one cookie-free
+send failure makes exactly one attempt and does not retry with hidden state. Production
+code is unchanged from the prior review tip.

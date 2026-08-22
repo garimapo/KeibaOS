@@ -712,36 +712,60 @@ class JRAOfficialLiveResponseCaptureTests(unittest.TestCase):
         self.assertEqual(len(archive.values), 1)
 
     def test_navigation_private_transport_is_cookie_referer_origin_free_for_all_requests(self):
-        class _SequenceSession:
-            def __init__(self, responses):
-                self.responses = list(responses)
-                self.headers = {"Cookie": "seed=1", "Referer": "https://bad.invalid/", "Origin": "https://bad.invalid"}
-                self.calls = []
-
-            def send(self, request, **kwargs):
-                self.calls.append((request, kwargs))
-                return self.responses.pop(0)
-
         root = _Response(url=_ROOT, headers={"Set-Cookie": "root=1", "Content-Length": str(len(_ROOT_BODY))}, chunks=(_ROOT_BODY,))
         meeting = _Response(url=_D.split("?")[0], headers={"Set-Cookie": "meeting=1", "Content-Length": str(len(_MEETING_BODY))}, chunks=(_MEETING_BODY,))
         race = _Response(url=_D.split("?")[0], headers={"Content-Length": str(len(_RACE_BODY))}, chunks=(_RACE_BODY,))
-        session = _SequenceSession((root, meeting, race))
-        transport = object.__new__(module._RequestsJRAOfficialHTTPTransport)
-        transport._session = session
+        transport = module._RequestsJRAOfficialHTTPTransport()
+        session = transport._session
+        session.cookies.set("seed", "1", domain="www.jra.go.jp", path="/")
+        calls = []
+
+        def send(request, **kwargs):
+            calls.append((request, kwargs))
+            return (root, meeting, race)[len(calls) - 1]
+
+        session.send = send
+        self.assertEqual(session.cookies.get_dict(domain="www.jra.go.jp"), {"seed": "1"})
         root_value = transport.fetch_target_navigation_root()
         self.assertEqual(root_value.response_body, _ROOT_BODY)
+        session.cookies.set("root", "1", domain="www.jra.go.jp", path="/")
+        self.assertEqual(session.cookies.get_dict(domain="www.jra.go.jp"), {"seed": "1", "root": "1"})
         from scripts.simulation.jra_target_race_card_locator import (
             build_jra_target_meeting_selection_request_locator,
             build_jra_target_race_selection_request_locator,
         )
         transport.fetch_target_meeting_selection(request_locator=build_jra_target_meeting_selection_request_locator(cname=_MEETING_CNAME))
+        session.cookies.set("meeting", "1", domain="www.jra.go.jp", path="/")
+        self.assertEqual(
+            session.cookies.get_dict(domain="www.jra.go.jp"),
+            {"seed": "1", "root": "1", "meeting": "1"},
+        )
         transport.fetch_target_race_selection(request_locator=build_jra_target_race_selection_request_locator(cname=_RACE_CNAME))
-        self.assertEqual([call[0].method for call in session.calls], ["GET", "POST", "POST"])
-        for request, kwargs in session.calls:
+        self.assertEqual([call[0].method for call in calls], ["GET", "POST", "POST"])
+        for request, kwargs in calls:
             self.assertNotIn("Cookie", request.headers)
             self.assertNotIn("Referer", request.headers)
             self.assertNotIn("Origin", request.headers)
             self.assertEqual(kwargs, {"stream": True, "allow_redirects": False, "verify": True, "timeout": (10.0, 10.0)})
+
+    def test_navigation_cookie_free_send_failure_has_no_cookie_enabled_retry(self):
+        transport = module._RequestsJRAOfficialHTTPTransport()
+        transport._session.cookies.set("seed", "1", domain="www.jra.go.jp", path="/")
+        calls = []
+
+        def fail(request, **kwargs):
+            calls.append((request, kwargs))
+            raise module._requests.Timeout("offline")
+
+        transport._session.send = fail
+        with self.assertRaises(JRAOfficialResponseCaptureTransportError):
+            transport.fetch_target_navigation_root()
+        self.assertEqual(len(calls), 1)
+        request, kwargs = calls[0]
+        self.assertNotIn("Cookie", request.headers)
+        self.assertNotIn("Referer", request.headers)
+        self.assertNotIn("Origin", request.headers)
+        self.assertEqual(kwargs, {"stream": True, "allow_redirects": False, "verify": True, "timeout": (10.0, 10.0)})
 
     def test_target_navigation_result_rejects_unrelated_capture(self):
         archive = _Archive()

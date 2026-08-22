@@ -30,9 +30,10 @@ lineage before retaining that ID.
 
 Navigation requests are explicit prepared requests with identity encoding, the existing
 User-Agent, one exact form field for POST, and no Cookie, Referer, or Origin. The session
-is used only for adapters and connection pooling: pre-seeded cookies and Set-Cookie
-responses cannot affect a subsequent formal navigation request. A future cookie
-requirement fails closed pending review of request identity.
+is used only for adapters and connection pooling: a real populated `requests.Session`
+cookie jar before root, meeting, and race-selection requests cannot affect any outgoing
+formal navigation request. A future cookie requirement fails closed pending review of
+request identity.
 
 Root and meeting supplied responses are operational only. The race-selection response is
 constructed as the frozen v4 capture, saved before target-card discovery, and discovery
@@ -56,8 +57,8 @@ before collaborators, response-derived locators, strict CP932 domains, v4 archiv
 discovery behavior, result lineage, clock ordering, and cookie-/Referer-/Origin-free root
 and POST requests. Existing capture, final-odds, and target-card paths remain covered.
 
-Focused live suite: **22 passed**. Related locator/discovery/capture/repository suite:
-**33 passed**. Full suite: **2717 passed**. `git diff --check` passed.
+Focused live suite: **23 passed**. Related locator/discovery/capture/repository suite:
+**33 passed**. Full suite: **2718 passed**. `git diff --check` passed.
 
 No real HTTP, read-only live observation, or trusted capture was performed.
 
