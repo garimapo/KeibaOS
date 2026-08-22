@@ -4035,3 +4035,42 @@ related JRA target/accessD/accessU/accessS/accessO regressions **95 passed**; fu
 **2705 passed**. Site variants remain distinct, and no locator module, HTTP, archive,
 database, migration, filesystem, clock, package export, or trusted-capture behavior was
 changed.
+
+
+## Phase 4C-2d3b1i6d1d5f1c4c0b2 JRA Target Race-Selection Capture v004
+
+Implemented the durable schema-v4 JRA target-race-selection POST capture boundary from
+the approved PREPARE. `JRATargetRaceSelectionResponseCapture` is frozen/slotted, accepts
+only the formal c0b1 race-selection request locator, preserves strict CP932 bytes and
+the established capture metadata/timestamp contract, fixes v4/`target_race_selection`/
+POST, and reconstructs only `JRATargetRaceSelectionSuppliedOfficialResponse`.
+
+Its `jra-capture-v4:` identity uses the established v2 POST canonical JSON convention:
+fixed accessD endpoint, normalized observed instant, page kind, exact locator request
+digest, POST, raw-body digest, and version 4. The raw CNAME is deliberately not a second
+capture-ID component because the formal locator digest already binds it; it remains
+persisted and is rebuilt through the formal locator builder during repository reads.
+
+V004 is registered after v003 in the dedicated JRA capture migration runner. It first
+pins exact v003 DDL/index/FK/`WITHOUT ROWID` structure, runs constraint probes, validates
+all stored body digests, and reconstructs every v1/v2/v3 capture before mutation. It
+then rebuilds only the unchanged 19-column capture table to admit the v4 page/family
+branch, copies old fields byte-for-byte, preserves both existing partial unique indexes,
+and reuses the untouched body table. No new column, table, index, global migration, or
+legacy identity behavior was introduced.
+
+The repository adds only family-specific v4 save, v4-ID load, and exact-evidence replay
+methods. Exact evidence lookup uses endpoint/request digest/body digest/observed instant,
+then reconstructs the full row and exact locator so corrupt metadata cannot turn into
+false absence. There is no race-ID or latest-by-race retrieval, HTTP, clock, CNAME
+synthesis, site-variant choice, or live fallback. Existing v1/v2/v3 loaders recognize a
+valid v4 ID as foreign and return `None`; the inverse also holds.
+
+The existing v1 live GET boundary remains unchanged and now has a regression proving it
+rejects `TARGET_RACE_SELECTION` before clock, transport, or archive use. No v4 live
+method and no real HTTP/trusted capture were added.
+
+Verification passed: capture **7**, migration **12**, repository **12** (**31**
+dedicated); c0b1 identity/locator/discovery plus live-capture regressions **42**; full
+pytest suite **2711**. `git diff --check`, public-surface/family-separation, changed-file
+scope, and no-live-production-change checks are recorded with the review commit.

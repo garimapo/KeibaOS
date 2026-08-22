@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from dataclasses import FrozenInstanceError
 import hashlib
 import inspect
 import unittest
@@ -10,9 +11,12 @@ from scripts.simulation.jra_official_response_capture import (
     JRAFinalWinOddsResponseCapture, JRAFinalWinOddsSuppliedOfficialResponse, JRAOfficialPageKind,
     JRAOfficialResponseCapture, JRAOfficialResponseCaptureUnsupportedError,
     JRAOfficialTargetRaceCardResponseCapture,
+    JRATargetRaceSelectionResponseCapture,
     JRAOfficialResponseCaptureValidationError, JRASuppliedOfficialResponse, canonicalize_jra_official_capture_url,
 )
 from scripts.simulation.jra_official_identity import JRAExternalRaceIdentity, JRAOfficialFinalWinOddsRequestLocator
+from scripts.simulation.jra_target_race_card_discovery import JRATargetRaceSelectionSuppliedOfficialResponse
+from scripts.simulation.jra_target_race_card_locator import build_jra_target_race_selection_request_locator
 
 S = "https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde0106202504030420250913%2FDC"
 U = "https://www.jra.go.jp/JRADB/accessU.html?CNAME=pw01dud002020102902%2F22"
@@ -46,9 +50,21 @@ def target_capture(**changes):
     return JRAOfficialTargetRaceCardResponseCapture(**values)
 
 
+def selection_locator():
+    return build_jra_target_race_selection_request_locator(
+        cname="pw01drl00062025040320250403/DC"
+    )
+
+
+def selection_capture(**changes):
+    values = dict(request_locator=selection_locator(), response_body=BODY, charset="cp932", requested_at=T, observed_at=T, stored_at=T, http_status=200, content_type="text/html")
+    values.update(changes)
+    return JRATargetRaceSelectionResponseCapture(**values)
+
+
 class JRAOfficialResponseCaptureTests(unittest.TestCase):
     def test_public_surface_and_signature(self):
-        self.assertEqual({n for n in vars(module) if not n.startswith("_")}, {"JRAOfficialPageKind", "JRAOfficialResponseCaptureError", "JRAOfficialResponseCaptureValidationError", "JRAOfficialResponseCaptureUnsupportedError", "JRAOfficialResponseCaptureMissingError", "JRASuppliedOfficialResponse", "JRAFinalWinOddsSuppliedOfficialResponse", "JRAOfficialResponseCapture", "JRAFinalWinOddsResponseCapture", "JRAOfficialTargetRaceCardResponseCapture", "JRAOfficialResponseCaptureArchive", "canonicalize_jra_official_capture_url"})
+        self.assertEqual({n for n in vars(module) if not n.startswith("_")}, {"JRAOfficialPageKind", "JRAOfficialResponseCaptureError", "JRAOfficialResponseCaptureValidationError", "JRAOfficialResponseCaptureUnsupportedError", "JRAOfficialResponseCaptureMissingError", "JRASuppliedOfficialResponse", "JRAFinalWinOddsSuppliedOfficialResponse", "JRAOfficialResponseCapture", "JRAFinalWinOddsResponseCapture", "JRAOfficialTargetRaceCardResponseCapture", "JRATargetRaceSelectionResponseCapture", "JRAOfficialResponseCaptureArchive", "canonicalize_jra_official_capture_url"})
         self.assertEqual(tuple(inspect.signature(canonicalize_jra_official_capture_url).parameters), ("page_kind", "response_url"))
 
     def test_canonical_urls_and_supplied_reconstruction(self):
@@ -101,3 +117,44 @@ class JRAOfficialResponseCaptureTests(unittest.TestCase):
         self.assertEqual(value.page_kind, JRAOfficialPageKind.TARGET_RACE_CARD)
         self.assertTrue(value.capture_id.startswith("jra-capture-v3:"))
         self.assertEqual(value.to_supplied_official_response(), JRASuppliedOfficialResponse(response_url=D, response_body=BODY, observed_at=T))
+
+    def test_target_race_selection_v4_domain_identity_and_supplied_reconstruction(self):
+        value = selection_capture()
+        self.assertEqual(value.schema_version, 4)
+        self.assertEqual(value.page_kind, JRAOfficialPageKind.TARGET_RACE_SELECTION)
+        self.assertEqual(value.request_method, "POST")
+        self.assertEqual(value.canonical_source_url, selection_locator().endpoint_url)
+        self.assertEqual(value.response_sha256, hashlib.sha256(BODY).hexdigest())
+        self.assertEqual(value.capture_id, "jra-capture-v4:e39676d980b5f68ac8cfc9f8b7b26a098b39cf9858d11ba13b051ad77ed8a7df")
+        self.assertEqual(value.to_supplied_official_response(), JRATargetRaceSelectionSuppliedOfficialResponse(selection_locator(), BODY, "cp932", T))
+        with self.assertRaises(FrozenInstanceError):
+            value.capture_id = "x"
+        with self.assertRaises(JRAOfficialResponseCaptureValidationError):
+            selection_capture(request_locator=object())
+        with self.assertRaises(JRAOfficialResponseCaptureUnsupportedError):
+            selection_capture(response_body=b"\x81")
+        with self.assertRaises(JRAOfficialResponseCaptureValidationError):
+            selection_capture(observed_at=datetime(2026, 1, 1))
+        with self.assertRaises(JRAOfficialResponseCaptureValidationError):
+            selection_capture(content_length=len(BODY) + 1)
+        self.assertNotEqual(value.capture_id, selection_capture(observed_at=T + timedelta(microseconds=1), stored_at=T + timedelta(microseconds=1)).capture_id)
+        self.assertEqual(value.capture_id, selection_capture(etag="different", content_encoding="identity").capture_id)
+
+    def test_v1_live_boundary_rejects_target_race_selection_before_collaborators(self):
+        from scripts.simulation.jra_official_response_live_capture import JRAOfficialLiveResponseCaptureService
+
+        class Archive:
+            def save_capture(self, *, capture):
+                raise AssertionError("archive must not be called")
+
+        class Transport:
+            def fetch(self, *, canonical_source_url):
+                raise AssertionError("transport must not be called")
+
+        service = JRAOfficialLiveResponseCaptureService(
+            archive=Archive(),
+            transport=Transport(),
+            utc_clock=lambda: (_ for _ in ()).throw(AssertionError("clock must not be called")),
+        )
+        with self.assertRaises(JRAOfficialResponseCaptureValidationError):
+            service.capture_response(page_kind=JRAOfficialPageKind.TARGET_RACE_SELECTION, response_url=D)
