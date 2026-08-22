@@ -4035,3 +4035,81 @@ related JRA target/accessD/accessU/accessS/accessO regressions **95 passed**; fu
 **2705 passed**. Site variants remain distinct, and no locator module, HTTP, archive,
 database, migration, filesystem, clock, package export, or trusted-capture behavior was
 changed.
+
+
+## Phase 4C-2d3b1i6d1d5f1c4c0b2 JRA Target Race-Selection Capture v004 PREPARE
+
+Prepared the minimum durable family for the already-formal race-selection POST locator
+and supplied response. The proposed frozen/slotted
+`JRATargetRaceSelectionResponseCapture` is schema v4/page kind
+`target_race_selection`, uses the fixed accessD endpoint and POST method, persists the
+exact formal request identity and raw CNAME, retains strict CP932 bytes and established
+HTTP/timestamp metadata, and reconstructs the existing supplied response without
+navigation discovery or network work.
+
+The v004 capture ID is `jra-capture-v4:` plus SHA-256 of the same canonical JSON shape
+used by the established v2 POST family: fixed endpoint, normalized observation instant,
+page kind, exact request identity, POST, raw response digest, and schema version 4. The
+raw CNAME is already bound by the formal request fingerprint and remains separately
+stored for exact locator reconstruction. V1/v2/v3 capture identity material and behavior
+remain unchanged.
+
+Repository inspection proves that a physical migration is required: current v003 DDL
+admits only schema versions 1–3, enumerates no target-race-selection page kind, and has
+no v4 family CHECK branch. No column, body table, new table, or new index is required.
+Migration v004 will validate exact v003 before mutation, rebuild only the 19-column
+capture table, copy all v1/v2/v3 rows without transformation, leave the shared body
+table untouched, and recreate both existing partial unique indexes. The existing
+non-null-request evidence index exactly covers v004 exact-evidence identity.
+
+The archive remains family-specific through exact save, v4-ID load, and exact-evidence
+replay methods. Exact replay receives the formal request locator, response digest, and
+observation instant; it reconstructs and validates the full selected v4 row and exact
+locator rather than filtering corrupt family metadata into false absence. It has no
+race-ID/latest lookup, live fallback, CNAME synthesis, site selection, filesystem, or
+clock ownership.
+
+Legacy family separation is unchanged: the v1 URL canonicalizer and live
+`capture_response(...)` continue to reject the new POST page kind before collaborators,
+the supplied response remains locator-bound rather than URL-bound, and only future c0b3
+may compose a dedicated live v4 path.
+
+Readiness is frozen as follows:
+
+```text
+TARGET_RACE_SELECTION_CAPTURE_DOMAIN_READY: YES
+TARGET_RACE_SELECTION_CAPTURE_DOMAIN_NAME: JRATargetRaceSelectionResponseCapture
+V004_CAPTURE_ID_PREFIX: jra-capture-v4:
+V004_CAPTURE_ID_READY: YES
+V004_CANONICAL_SOURCE_URL: https://www.jra.go.jp/JRADB/accessD.html
+V004_REQUEST_METHOD: POST
+V004_REQUEST_IDENTITY_REQUIRED: YES_EXACT_LOCATOR_SHA256
+V004_REQUEST_CNAME_REQUIRED: YES_EXACT_RAW_LOCATOR_CNAME
+V004_ROW_CONTRACT_READY: YES
+V004_ROW_CONSTRAINT_OWNER: DDL_CHECK + CAPTURE_DOMAIN + REPOSITORY_RECONSTRUCTION
+LOGICAL_CAPTURE_SCHEMA_V004_REQUIRED: YES
+PHYSICAL_SQLITE_DDL_CHANGE_REQUIRED: YES
+TABLE_REBUILD_REQUIRED: YES_CAPTURE_TABLE_ONLY
+NEW_COLUMN_REQUIRED: NO
+NEW_TABLE_REQUIRED: NO
+NEW_INDEX_REQUIRED: NO
+MIGRATION_REQUIRED: YES
+MIGRATION_NUMBER: 4_IN_DEDICATED_JRA_CAPTURE_REGISTRY; GLOBAL_APPLICATION_MIGRATIONS_UNCHANGED
+V1_IMMUTABILITY: REQUIRED_BYTE_FOR_BYTE_AND_BEHAVIORALLY
+V2_IMMUTABILITY: REQUIRED_BYTE_FOR_BYTE_AND_BEHAVIORALLY
+V3_IMMUTABILITY: REQUIRED_BYTE_FOR_BYTE_AND_BEHAVIORALLY
+SAVE_API_READY: YES
+LOAD_BY_ID_API_READY: YES
+EXACT_EVIDENCE_LOADER_READY: YES
+RACE_ID_ONLY_ARCHIVE_LOOKUP_SAFE: NO
+EXTERNAL_RACE_ID_ONLY_LOCATOR_LOOKUP_SAFE: NO
+LIVE_HTTP_IN_C0B2: NO
+LIVE_COMPOSITION_DEFERRED_TO: 4C-2d3b1i6d1d5f1c4c0b3
+C0B2_IMPLEMENTATION_READY: YES
+IMPLEMENTATION_READY: YES
+BLOCKERS: NONE
+REAL_TRUSTED_CAPTURE_REQUIRED: NO
+```
+
+Only the two phase documents changed. No production code, tests, schema, database,
+migration, formal branch, live HTTP, or trusted capture was changed or performed.
