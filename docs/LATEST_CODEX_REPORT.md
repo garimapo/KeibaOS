@@ -4146,3 +4146,37 @@ Verification passed: resolver **14 passed**; repository **13 passed**; related t
 locator/discovery/source/capture/live suite **74 passed**; full pytest suite **2733
 passed**. `git diff --check` and the six-file/pure-boundary/no-`stored_at`-filter static
 checks passed. No live HTTP or real trusted capture was performed.
+
+
+## Phase 4C-2d3b1i6d1d5f1c4d JRA Race-Level Historical Replay PREPARE
+
+Prepared the pure one-race orchestration contract that composes formal c4c target-card
+resolution, accessD target normalization, aligned c4a accessU resolution, c4b historical
+collection, deterministic source union, caller-owned external-entry mapping, and the
+existing snapshot builder. All four official response families use `captured_at` as the
+inclusive observation bound, and the completed flow requires every evidence observation
+to satisfy `observed_at <= captured_at <= information_cutoff <= scheduled_start_at`.
+`stored_at` has no replay role.
+
+The proposed frozen/slotted race-level result contains the built
+`HistoricalInputSnapshot` plus the exact v4 and v3 capture IDs, target-card SHA,
+`captured_at`, and `information_cutoff`, without duplicating raw HTML. The source union is
+track followed by each ascending entry's target group and its formal newest-to-oldest
+past races or single proven absence. Existing builders and validators remain the only
+record/snapshot validation owners. Missing evidence is unavailable, supported-envelope
+failures remain unsupported, provider archive integrity errors propagate unchanged, and
+there is no HTTP, archive write, auto-capture, current fallback, name linkage, or partial
+result.
+
+Investigation found that the pure orchestration mechanics need no new archive/snapshot
+read API or schema, but production replay lacks a formal durable handoff for its mandatory
+exact v4 input. C0b3 returns the ID only in a transient result; the v4 archive can load it
+by ID but intentionally cannot discover it by race; and the neutral snapshot schema does
+not retain v4/v3 capture IDs. C4d is therefore ready as a pure caller-supplied contract
+but not ready for production implementation until a separate acquisition-manifest or
+JRA-specific replay-provenance design owns the exact v4 ID. Race-ID scanning, latest-v4
+selection, and live c0b3 fallback remain forbidden. No speculative table, column, index,
+or migration was authorized.
+
+This PREPARE changed documentation only. No pytest, live HTTP, or trusted capture was
+performed, as required.
