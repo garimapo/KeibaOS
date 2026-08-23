@@ -4152,8 +4152,9 @@ checks passed. No live HTTP or real trusted capture was performed.
 
 Prepared the pure one-race orchestration contract that composes formal c4c target-card
 resolution, accessD target normalization, aligned c4a accessU resolution, c4b historical
-collection, deterministic source union, caller-owned external-entry mapping, and the
-existing snapshot builder. All four official response families use `captured_at` as the
+collection, deterministic source union, provisionally caller-supplied external-entry
+mapping, and the existing snapshot builder. All four official response families use
+`captured_at` as the
 inclusive observation bound, and the completed flow requires every evidence observation
 to satisfy `observed_at <= captured_at <= information_cutoff <= scheduled_start_at`.
 `stored_at` has no replay role.
@@ -4172,11 +4173,35 @@ Investigation found that the pure orchestration mechanics need no new archive/sn
 read API or schema, but production replay lacks a formal durable handoff for its mandatory
 exact v4 input. C0b3 returns the ID only in a transient result; the v4 archive can load it
 by ID but intentionally cannot discover it by race; and the neutral snapshot schema does
-not retain v4/v3 capture IDs. C4d is therefore ready as a pure caller-supplied contract
-but not ready for production implementation until a separate acquisition-manifest or
-JRA-specific replay-provenance design owns the exact v4 ID. Race-ID scanning, latest-v4
-selection, and live c0b3 fallback remain forbidden. No speculative table, column, index,
-or migration was authorized.
+not retain v4/v3 capture IDs. It also cannot bootstrap the external-entry map needed for
+a first snapshot. The logical c4d composition is ready, but its final API and production
+implementation remain blocked until a separate replay-seed/handoff design owns both
+inputs. Race-ID scanning, latest-v4 selection, live c0b3 fallback, name matching, and
+implicit horse-number mapping remain forbidden. No speculative table, column, index, or
+migration was authorized.
 
 This PREPARE changed documentation only. No pytest, live HTTP, or trusted capture was
 performed, as required.
+
+### Replay-handoff prerequisite correction
+
+Corrected the c4d readiness boundary without changing its causal orchestration design.
+Production replay has two unresolved handoffs: the exact c0b3 v4 capture ID and the exact
+canonical JRA `external_entry_id` to internal `race_entry_id` map required before the
+first snapshot can be built. The historical snapshot repository cannot bootstrap that
+map because it creates external-entry mappings only while saving an already-built
+snapshot. `SQLiteRaceEntrySource` and legacy `horses.id` are prediction-horse ownership,
+not canonical JRA external-entry identity, and cannot be reused. Name matching and an
+implicit horse-number mapping remain forbidden.
+
+The logical c4d order, causal bounds, deterministic source union, one snapshot-builder
+call, fail-closed taxonomy, and read-only behavior remain ready. The previously proposed
+decomposed function signature is now explicitly provisional: a future approved design
+must decide whether one JRA race replay seed/acquisition manifest owns both exact
+handoffs and whether replay times belong in it or remain policy inputs. Physical storage
+is not frozen; schema, migration, table, column, index, and repository impact remain
+unknown until that identity and lifecycle are approved. Neutral source records and the
+neutral snapshot remain unchanged and receive no provider-specific v4 or mapping fields.
+
+C4d must not be implemented yet. No pytest, live HTTP, trusted capture, production code,
+test, schema, migration, or repository change was performed.

@@ -22,10 +22,13 @@ The adjacent formal sequence is c4a target-horse accessU resolution, c4b histori
 accessS/accessO causal resolution, and c4c target accessD causal resolution. The next
 identifier is therefore `4C-2d3b1i6d1d5f1c4d`.
 
-C4d should add one new pure one-race module,
+C4d logically belongs in one new pure one-race module,
 `scripts/simulation/jra_race_historical_replay.py`. It composes existing formal
 boundaries; it does not duplicate their parsing, archive lookup, source normalization,
-or snapshot validation. Its intended public surface is:
+or snapshot validation. The logical inputs and result responsibilities are ready, but
+the exact public API shape remains provisional until the durable replay-seed/handoff
+contract is approved. The following decomposed signature is a candidate, not a frozen
+implementation API:
 
 ```python
 class JRARaceHistoricalReplayError(ValueError): ...
@@ -61,12 +64,14 @@ def build_jra_race_historical_replay(
 ) -> JRARaceHistoricalReplayResult: ...
 ```
 
-The caller is a future dataset/replay composition root that owns dataset and internal
-race identity, replay times, the exact retained v4 capture ID, the established external-
-to-internal entry map, and injected read-only provider adapters. The immediate downstream
-consumer is the existing historical snapshot repository/input flow through the returned
-`HistoricalInputSnapshot`. Prediction, betting, settlement, multi-race scheduling, and
-CLI ownership remain outside c4d.
+The eventual caller is a future dataset/replay composition root. It must receive dataset
+and internal race identity, replay times, the exact retained v4 capture ID, an exact
+canonical external-entry-to-internal-entry map, and injected read-only provider adapters.
+The final API may receive those values separately or through one formal replay-seed/
+manifest domain; c4d must not be implemented before that choice is approved. The
+immediate downstream consumer remains the existing historical snapshot repository/input
+flow through the returned `HistoricalInputSnapshot`. Prediction, betting, settlement,
+multi-race scheduling, and CLI ownership remain outside c4d.
 
 No package-root export is required.
 
@@ -84,12 +89,12 @@ but neither the neutral `HistoricalInputSnapshot` nor its repository stores the 
 The archive intentionally cannot rediscover it from external race identity. A future
 production caller therefore cannot yet recover the required input after process loss.
 
-This is an explicit prerequisite, not permission to add a fallback. A narrow upstream
-acquisition manifest or JRA-specific replay-provenance persistence boundary must retain
-the c0b3 result's exact v4 ID and hand it to c4d. The neutral source-record values must
-not gain provider-specific capture IDs. The exact persistence owner and physical shape
-require a separate approved design because no current durable caller identity exists to
-key such a record safely.
+This is the first explicit prerequisite, not permission to add a fallback. A narrow
+upstream acquisition manifest or JRA-specific replay-seed boundary must retain the c0b3
+result's exact v4 ID and hand it to c4d. The neutral source-record values must not gain
+provider-specific capture IDs. The exact persistence owner and physical shape require a
+separate approved design because no current durable caller identity exists to key such a
+record safely.
 
 ## Causal Order and Time Guard
 
@@ -173,13 +178,21 @@ record itself. Existing collection constructors plus the neutral validator calle
 `build_historical_input_snapshot(...)` own duplicate/conflict validation; c4d adds no
 parallel neutral schema.
 
-No current resolver maps canonical JRA external entry IDs to internal race-entry IDs.
-`RaceEntrySelectionResolver` and `RaceEntrySource` resolve prediction horse selections,
-not JRA external identities, and must not be repurposed. The c4d caller supplies
-`race_entry_id_by_external_entry_id` from its already-established dataset/import
-identity ownership. Keys must be exactly the target normalizer's canonical
-`external_entry_id` values; the existing snapshot builder validates complete,
-one-to-one mapping. Horse or jockey names are never mapping keys.
+No current formal bootstrap boundary maps canonical JRA external entry IDs to internal
+race-entry IDs before the first historical snapshot is built. The historical snapshot
+repository cannot bootstrap this map: it creates its external-entry mapping rows only
+while saving an already-built snapshot. `RaceEntrySelectionResolver` and
+`SQLiteRaceEntrySource` resolve prediction horse selections against legacy `horses.id`,
+not canonical JRA external identities, and must not be repurposed. The legacy `horses`
+table does not formally retain canonical JRA `external_entry_id`.
+
+This exact complete one-to-one mapping is the second production prerequisite. Its owner
+must be a future approved dataset-import or replay-seed identity boundary. Keys come only
+from the target normalizer's canonical `external_entry_id` values, and values are the
+corresponding internal race-entry IDs. Horse/jockey names are never mapping keys, and an
+implicit horse-number mapping is forbidden unless separately formalized. The existing
+snapshot builder continues to validate completeness and uniqueness once the exact map
+is supplied.
 
 C4d calls the existing `build_historical_input_snapshot(...)` exactly once and passes
 `dataset_id`, `internal_race_id`, `information_cutoff`, `captured_at`, the complete
@@ -220,11 +233,22 @@ source evidence, including the target accessD URL/SHA/observation, but it cannot
 the v4 navigation capture ID or the explicit c4c v3 capture ID as race-level companion
 provenance.
 
-Accordingly, production historical replay is not implementation-ready until the exact
-v4 handoff receives its own approved ownership. If that owner is database-backed, a
-schema migration and a JRA-specific provenance save/load API will be required; whether
-that is a new table or columns cannot be frozen safely until the durable manifest key
-and lifecycle are defined. No speculative schema/index is authorized in c4d.
+Accordingly, production historical replay is not implementation-ready until both the
+exact v4 handoff and first-snapshot external-entry mapping handoff receive approved
+ownership. The preferred next design question is whether one narrow JRA race replay seed
+or acquisition manifest should own both exact inputs. That PREPARE must determine the
+durable identity and lifecycle for `dataset_id`, `internal_race_id`, canonical
+`external_race_id`, exact v4 capture ID, and the complete canonical external-entry map.
+It must separately decide whether `captured_at` and `information_cutoff` belong in that
+domain or remain caller replay-policy inputs.
+
+No physical storage choice is frozen. Pure c4d logic requires no schema change. Whether
+the prerequisite handoff needs a schema, migration, table, columns, indexes, or
+repository APIs remains unknown until its identity and lifecycle are approved. No
+speculative DDL is authorized here. The neutral snapshot and source-record contracts
+remain unchanged: they already persist target URL/SHA/observation, source identity,
+`captured_at`, and `information_cutoff`, but neither the exact v4 ID nor a bootstrap
+source for the entry map.
 
 ## Future Test Intent
 
@@ -237,7 +261,12 @@ accessO missing behavior; formal zero-history absence only; unsupported history 
 skip; integrity propagation unchanged; no name mapping; complete entry-map pass-through;
 deterministic source order and repeated snapshot build; snapshot-builder compatibility;
 no HTTP/write/current fallback; no partial result; exact result provenance; no raw-byte
-duplication; no broad catch; and no package-root export.
+duplication; no broad catch; and no package-root export. Prerequisite integration tests
+must additionally prove that exact v4 provenance and exact external-entry mapping survive
+a process boundary; the first snapshot obtains its map without an existing snapshot;
+missing v4 or entry handoff fails closed; incomplete, duplicate, or foreign-race mapping
+fails before snapshot construction; no name or implicit horse-number fallback exists;
+restart yields the same inputs; and no race-ID/latest-v4 reconstruction occurs.
 
 ## Readiness Matrix
 
@@ -245,14 +274,17 @@ duplication; no broad catch; and no package-root export.
 NEXT_PHASE_ID: 4C-2d3b1i6d1d5f1c4d
 NEXT_PHASE_NAME: JRA_RACE_LEVEL_HISTORICAL_REPLAY_ORCHESTRATION
 
-ORCHESTRATION_OWNER: NEW_PURE_scripts/simulation/jra_race_historical_replay.py
-PUBLIC_API: build_jra_race_historical_replay_WITH_EXACT_V4_ID_CAPTURED_AT_INFORMATION_CUTOFF_MAPPING_AND_INJECTED_PROVIDERS
+ORCHESTRATION_OWNER: FUTURE_NEW_PURE_scripts/simulation/jra_race_historical_replay.py_AFTER_PREREQUISITE_APPROVAL
+PUBLIC_API: CANDIDATE_build_jra_race_historical_replay; FINAL_SHAPE_NOT_FROZEN
 RESULT_DOMAIN: FROZEN_SLOTTED_JRARaceHistoricalReplayResult_CONTAINING_SNAPSHOT_AND_CAPTURE_PROVENANCE
 CALLER: FUTURE_DATASET_OR_REPLAY_COMPOSITION_ROOT
 DOWNSTREAM_CONSUMER: EXISTING_HISTORICAL_SNAPSHOT_REPOSITORY_AND_SIMULATION_INPUT_FLOW
 
+C4D_LOGICAL_CONTRACT: READY
+C4D_PUBLIC_API_SHAPE: PROVISIONAL_PENDING_DURABLE_REPLAY_SEED_CONTRACT
+
 V4_CAPTURE_ID_INPUT_OWNER: C4D_CALLER_FROM_PREVIOUSLY_RETAINED_C0B3_PROVENANCE
-V4_CAPTURE_ID_PERSISTENCE_OR_HANDOFF: NOT_CURRENTLY_FORMAL_OR_DURABLE; TRANSIENT_C0B3_RESULT_ONLY
+V4_CAPTURE_ID_PERSISTENCE_OR_HANDOFF: NOT_CURRENTLY_FORMAL_OR_DURABLE
 RACE_ID_ONLY_V4_DISCOVERY_ALLOWED: NO
 LATEST_V4_LOOKUP_ALLOWED: NO
 LIVE_C0B3_FALLBACK_ALLOWED: NO
@@ -280,10 +312,16 @@ SOURCE_RECORD_ORDER: TRACK_THEN_EACH_ASCENDING_ENTRY_TARGET_GROUP_THEN_ITS_FORMA
 SOURCE_RECORD_DUPLICATE_POLICY: FAIL_CLOSED_THROUGH_EXISTING_NEUTRAL_VALIDATION
 SOURCE_RECORD_CONFLICT_POLICY: FAIL_CLOSED_THROUGH_EXISTING_NEUTRAL_VALIDATION
 
-ENTRY_MAPPING_OWNER: CALLER_EXISTING_DATASET_IMPORT_IDENTITY_BOUNDARY
+ENTRY_MAPPING_HANDOFF_STATUS: NOT_CURRENTLY_FORMAL_FOR_FIRST_JRA_HISTORICAL_SNAPSHOT
+ENTRY_MAPPING_OWNER: FUTURE_APPROVED_DATASET_IMPORT_OR_REPLAY_SEED_IDENTITY_BOUNDARY
+EXTERNAL_ENTRY_TO_INTERNAL_ENTRY_MAPPING_REQUIRED: YES
+EXISTING_SNAPSHOT_REPOSITORY_CAN_BOOTSTRAP_MAPPING: NO
+SQLITE_RACE_ENTRY_SOURCE_REUSED_FOR_JRA_EXTERNAL_MAPPING: NO
+LEGACY_HORSES_TABLE_IS_FORMAL_JRA_EXTERNAL_IDENTITY_SOURCE: NO
 EXTERNAL_ENTRY_ID_SOURCE: FORMAL_TARGET_ACCESSD_NORMALIZER_ONLY
-INTERNAL_ENTRY_MAPPING_SOURCE: CALLER_SUPPLIED_EXACT_EXTERNAL_ENTRY_TO_INTERNAL_RACE_ENTRY_MAP
+INTERNAL_ENTRY_MAPPING_SOURCE: FUTURE_APPROVED_EXACT_EXTERNAL_ENTRY_TO_INTERNAL_RACE_ENTRY_HANDOFF
 NAME_BASED_MAPPING_ALLOWED: NO
+HORSE_NUMBER_IMPLICIT_MAPPING_ALLOWED: NO_UNLESS_SEPARATELY_FORMALIZED
 
 SNAPSHOT_BUILDER_CALLED_IN_THIS_PHASE: YES_EXACTLY_ONCE
 ORCHESTRATION_STOPS_AT: FROZEN_RACE_LEVEL_RESULT_CONTAINING_COMPLETE_HistoricalInputSnapshot_AND_CAPTURE_PROVENANCE
@@ -302,15 +340,27 @@ CAPTURED_AT_RETAINED: YES
 INFORMATION_CUTOFF_RETAINED: YES
 RAW_BYTES_DUPLICATED: NO
 
-SCHEMA_CHANGE_REQUIRED: NO_FOR_PURE_C4D; YES_OR_EQUIVALENT_DURABLE_MANIFEST_REQUIRED_FOR_PRODUCTION_HANDOFF
-MIGRATION_REQUIRED: NOT_IN_C4D; REQUIRED_ONLY_IF_THE_SEPARATE_HANDOFF_IS_DATABASE_BACKED
-NEW_TABLE_REQUIRED: NOT_DETERMINED_PENDING_DURABLE_MANIFEST_IDENTITY_AND_LIFECYCLE
-NEW_COLUMN_REQUIRED: NOT_DETERMINED; DO_NOT_ADD_PROVIDER_FIELDS_TO_NEUTRAL_SOURCE_RECORDS
-NEW_INDEX_REQUIRED: NO_C4D_INDEX; FUTURE_PROVENANCE_STORAGE_MUST_JUSTIFY_ITS_OWN_INDEX
-NEW_REPOSITORY_API_REQUIRED: NO_FOR_C4D_READ_COMPOSITION; YES_IF_A_DATABASE_PROVENANCE_HANDOFF_IS_SELECTED
+NEUTRAL_SNAPSHOT_CHANGED: NO_IN_C4D_PREPARE
+V4_ID_ADDED_TO_NEUTRAL_SOURCE_RECORD: NO
+ENTRY_MAPPING_PROVIDER_FIELDS_ADDED_TO_NEUTRAL_SOURCE_RECORD: NO
 
-IMPLEMENTATION_READY: NO_FOR_PRODUCTION_REPLAY_PENDING_FORMAL_DURABLE_EXACT_V4_CAPTURE_ID_HANDOFF; PURE_ORCHESTRATION_CONTRACT_OTHERWISE_READY
-BLOCKERS: NO_CURRENT_DURABLE_REPLAY_OR_SNAPSHOT_ASSOCIATION_OWNS_THE_EXACT_C0B3_V4_CAPTURE_ID
+PRODUCTION_PREREQUISITE_COUNT: 2
+PREREQUISITE_1: EXACT_DURABLE_V4_CAPTURE_ID_HANDOFF
+PREREQUISITE_2: EXACT_EXTERNAL_ENTRY_TO_INTERNAL_RACE_ENTRY_IDENTITY_HANDOFF
+NEXT_PREREQUISITE_DESIGN_REQUIRED: YES
+PREFERRED_DESIGN_QUESTION: ONE_JRA_RACE_REPLAY_SEED_OR_MANIFEST_FOR_EXACT_V4_PROVENANCE_AND_ENTRY_IDENTITY_MAPPING
+PHYSICAL_STORAGE_FROZEN: NO
+
+SCHEMA_CHANGE_REQUIRED: NOT_FOR_PURE_C4D_LOGIC; UNKNOWN_FOR_PREREQUISITE_HANDOFF_UNTIL_IDENTITY/LIFECYCLE_IS_FROZEN
+MIGRATION_REQUIRED: UNKNOWN_FOR_PREREQUISITE_HANDOFF
+NEW_TABLE_REQUIRED: NOT_YET_DETERMINED
+NEW_COLUMN_REQUIRED: NOT_YET_DETERMINED
+NEW_INDEX_REQUIRED: NOT_YET_DETERMINED_FOR_PREREQUISITE_HANDOFF
+NEW_REPOSITORY_API_REQUIRED: NOT_FOR_PURE_C4D_READ_COMPOSITION; LIKELY_FOR_DURABLE_HANDOFF_IF_SQLITE_BACKED
+
+PURE_ORCHESTRATION_LOGIC_READY: YES
+IMPLEMENTATION_READY: NO_FOR_PRODUCTION_AND_DO_NOT_IMPLEMENT_C4D_YET
+BLOCKERS: 1_EXACT_DURABLE_V4_CAPTURE_ID_HANDOFF; 2_EXACT_CANONICAL_EXTERNAL_ENTRY_TO_INTERNAL_RACE_ENTRY_MAPPING_HANDOFF
 
 REAL_TRUSTED_CAPTURE_REQUIRED: NO
 REAL_TRUSTED_CAPTURE_PERFORMED: NO
@@ -325,7 +375,7 @@ docs/LATEST_CODEX_REPORT.md
 
 ## Stop Condition
 
-Stop after this docs-only review commit is pushed. Do not implement c4d, provenance
-persistence, schema, migration, repository APIs, HTTP, capture, source normalization,
-snapshot persistence, prediction, betting, or settlement. Independent review must first
-decide the exact durable v4 provenance handoff.
+Stop after this docs-only correction is pushed. Do not implement c4d, replay-seed/
+manifest persistence, schema, migration, repository APIs, HTTP, capture, source
+normalization, snapshot persistence, prediction, betting, or settlement. Independent
+review must first decide ownership of both prerequisite handoffs.
