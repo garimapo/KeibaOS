@@ -104,6 +104,89 @@ class SQLiteJRACaptureTests(unittest.TestCase):
         self.assertIsNone(r.load_target_race_card_capture(capture_id=final.capture_id))
         self.assertEqual(r.load_target_race_card_supplied_response_for_evidence(canonical_source_url=DURL, response_sha256=target.response_sha256, observed_at=T).response_body, BODY)
 
+    def test_latest_target_card_lookup_is_exact_observation_bounded_and_fail_closed(self):
+        c, r = self.repo()
+        early = target_item(observed_at=T, stored_at=T + timedelta(hours=2))
+        future = target_item(
+            response_body=b'<meta charset="Shift_JIS">future',
+            observed_at=T + timedelta(hours=2),
+            stored_at=T + timedelta(hours=3),
+        )
+        other_url = DURL.replace("%2FDC", "%2FDD")
+        other = target_item(canonical_source_url=other_url, response_body=b'<meta charset="Shift_JIS">other')
+        r.save_target_race_card_capture(capture=early)
+        r.save_target_race_card_capture(capture=future)
+        r.save_target_race_card_capture(capture=other)
+        self.assertEqual(
+            r.load_latest_target_race_card_capture(
+                canonical_target_race_card_url=DURL,
+                observed_at_not_after=T,
+            ),
+            early,
+        )
+        self.assertEqual(
+            r.load_latest_target_race_card_capture(
+                canonical_target_race_card_url=DURL,
+                observed_at_not_after=T + timedelta(hours=1),
+            ),
+            early,
+        )
+        self.assertEqual(
+            r.load_latest_target_race_card_capture(
+                canonical_target_race_card_url=DURL,
+                observed_at_not_after=T + timedelta(hours=2),
+            ),
+            future,
+        )
+        self.assertIsNone(
+            r.load_latest_target_race_card_capture(
+                canonical_target_race_card_url=DURL,
+                observed_at_not_after=T - timedelta(microseconds=1),
+            )
+        )
+        self.assertIsNone(
+            r.load_latest_target_race_card_capture(
+                canonical_target_race_card_url=other_url,
+                observed_at_not_after=T - timedelta(microseconds=1),
+            )
+        )
+        for invalid in (URL, HURL, "https://www.jra.go.jp/JRADB/accessO.html", DURL.replace("%2F", "/")):
+            with self.subTest(invalid=invalid), self.assertRaises(RepositoryValidationError):
+                r.load_latest_target_race_card_capture(
+                    canonical_target_race_card_url=invalid,
+                    observed_at_not_after=T,
+                )
+        with self.assertRaises(RepositoryValidationError):
+            r.load_latest_target_race_card_capture(
+                canonical_target_race_card_url=DURL,
+                observed_at_not_after=datetime(2026, 1, 1),
+            )
+        conflict_connection, conflict_repo = self.repo()
+        conflict_repo.save_target_race_card_capture(capture=early)
+        conflict_repo.save_target_race_card_capture(
+            capture=target_item(response_body=b'<meta charset="Shift_JIS">same-time', stored_at=T + timedelta(hours=2))
+        )
+        with self.assertRaises(RepositoryDataIntegrityError):
+            conflict_repo.load_latest_target_race_card_capture(
+                canonical_target_race_card_url=DURL,
+                observed_at_not_after=T,
+            )
+        corrupt_connection, corrupt_repo = self.repo()
+        corrupt = target_item()
+        corrupt_repo.save_target_race_card_capture(capture=corrupt)
+        corrupt_connection.execute("PRAGMA ignore_check_constraints=ON")
+        corrupt_connection.execute(
+            "UPDATE jra_official_response_captures SET request_method='POST' WHERE capture_id=?",
+            (corrupt.capture_id,),
+        )
+        corrupt_connection.execute("PRAGMA ignore_check_constraints=OFF")
+        corrupt_connection.commit()
+        with self.assertRaises(RepositoryDataIntegrityError):
+            corrupt_repo.load_latest_target_race_card_capture(
+                canonical_target_race_card_url=DURL,
+                observed_at_not_after=T,
+            )
+
     def test_target_race_selection_family_save_load_evidence_and_cross_family_closure(self):
         _c, r = self.repo(); legacy, final, target, selection = item(), final_item(), target_item(), selection_item()
         r.save_capture(capture=legacy); r.save_final_win_odds_capture(capture=final); r.save_target_race_card_capture(capture=target)

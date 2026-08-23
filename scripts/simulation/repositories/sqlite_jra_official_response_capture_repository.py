@@ -210,6 +210,50 @@ class SQLiteJRAOfficialResponseCaptureRepository:
         except _sqlite3.Error as error:
             raise _Integrity("JRA target race-selection archive evidence read failed") from error
 
+    def load_latest_target_race_card_capture(
+        self,
+        *,
+        canonical_target_race_card_url: str,
+        observed_at_not_after: _datetime,
+    ) -> _TargetCapture | None:
+        """Return one latest inclusive-observation-bound schema-v3 target-card capture."""
+
+        try:
+            from scripts.simulation.jra_official_response_capture import _canonical_target_race_card_url
+
+            canonical = _canonical_target_race_card_url(
+                canonical_target_race_card_url,
+                "canonical_target_race_card_url",
+            )
+            if canonical != canonical_target_race_card_url:
+                raise _Validation("canonical_target_race_card_url is not canonical")
+            bound = self._lookup_time(observed_at_not_after)
+            rows = self._connection.execute(
+                f"SELECT {_COLUMNS} FROM jra_official_response_captures "
+                "WHERE canonical_source_url=? AND observed_at_utc<=? "
+                "ORDER BY observed_at_utc DESC",
+                (canonical, self._time(bound)),
+            ).fetchall()
+            if not rows:
+                return None
+            captures: list[_TargetCapture] = []
+            for row in rows:
+                item = self._reconstruct(row)
+                if type(item) is not _TargetCapture or item.canonical_source_url != canonical:
+                    raise _Integrity("stored target-card capture family differs")
+                captures.append(item)
+            latest = captures[0].observed_at
+            candidates = tuple(capture for capture in captures if capture.observed_at == latest)
+            if len(candidates) != 1:
+                raise _Integrity("latest target-card capture is ambiguous")
+            return candidates[0]
+        except (_Integrity, _Validation):
+            raise
+        except _CaptureError as error:
+            raise _Validation("canonical_target_race_card_url is invalid") from error
+        except _sqlite3.Error as error:
+            raise _Integrity("JRA target-card archive lookup failed") from error
+
     def load_latest_horse_profile_history_supplied_response(
         self,
         *,
