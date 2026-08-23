@@ -41,7 +41,7 @@ class JRATargetRaceCardCaptureProvider(Protocol):
         self,
         *,
         locator: JRATargetRaceCardLocator,
-        causal_cutoff: datetime,
+        observed_at_not_after: datetime,
     ) -> JRAOfficialTargetRaceCardResponseCapture | None: ...
 
 class JRATargetRaceCardResolutionError(ValueError): ...
@@ -59,13 +59,13 @@ class JRATargetRaceCardResolution:
     target_race_selection_capture_id: str
     target_race_card_capture_id: str
     target_race_card_response_sha256: str
-    causal_cutoff: datetime
+    captured_at: datetime
 
 def resolve_jra_target_race_card_response(
     *,
     external_race_id: str,
     target_race_selection_capture_id: str,
-    causal_cutoff: datetime,
+    captured_at: datetime,
     target_race_selection_capture_provider:
         JRATargetRaceSelectionCaptureProvider,
     target_race_card_capture_provider:
@@ -74,8 +74,9 @@ def resolve_jra_target_race_card_response(
 ```
 
 The future race-level replay orchestration is the caller. It must retain and supply the
-exact v4 capture ID produced by c0b3 and derive `causal_cutoff` from the snapshot replay
-boundary. The existing
+exact v4 capture ID previously produced by c0b3 and supply the snapshot replay
+`captured_at` boundary. Historical replay never invokes c0b3 to create or rediscover that
+provenance. The existing
 `normalize_jra_target_race_input_source_records(response=resolution.response)` is the
 immediate downstream consumer. C4c creates no source records or snapshot.
 
@@ -88,11 +89,10 @@ navigation evidence is unavailable. Otherwise the result must be the exact
 4, `TARGET_RACE_SELECTION`, exact POST locator, valid request identity, and complete
 domain reconstruction.
 
-The resolver requires both:
+The resolver requires:
 
 ```text
-v4 observed_at <= causal_cutoff
-v4 stored_at   <= causal_cutoff
+v4 observed_at <= captured_at
 ```
 
 It converts the validated capture through `to_supplied_official_response()` and invokes
@@ -103,14 +103,17 @@ latest v4 row. Multiple retained v4 captures remain distinct; the caller must su
 exact retained provenance ID. A response containing ambiguous matching URLs continues
 to fail through formal discovery.
 
-## Causal Cutoff
+## Captured-at Bound
 
-`causal_cutoff` is an exact timezone-aware datetime normalized only for comparison. It is
-inclusive and supplied unchanged to the target-card provider. It is not automatically
-replaced by scheduled start or `information_cutoff`.
+`captured_at` is an exact timezone-aware datetime normalized only for comparison and
+retained exactly in the resolution provenance. It is inclusive and supplied as the exact
+same semantic value to the target-card provider through
+`observed_at_not_after=captured_at`. It is not replaced by scheduled start or
+`information_cutoff`.
 
-For the future snapshot flow, the effective value is the snapshot assembly
-`captured_at`, after the caller has established:
+For the future snapshot flow, the effective resolution bound is the snapshot assembly
+`captured_at`. After c4c resolution and target normalization, later orchestration must
+establish:
 
 ```text
 captured_at <= information_cutoff <= scheduled_start_at
@@ -118,13 +121,19 @@ captured_at <= information_cutoff <= scheduled_start_at
 
 This is stricter than filtering only at `information_cutoff`, because every neutral
 evidence observation must also be no later than `captured_at`. The target scheduled start
-is first available after normalization; later orchestration must recheck the bound against
-that value. No timestamp is rewritten and no `available_at` is invented.
+is first available after normalization, so c4c does not by itself establish full
+prediction eligibility. Downstream target normalization and snapshot assembly must obtain
+`scheduled_start_at`, require
+`captured_at <= information_cutoff <= scheduled_start_at`, and only then permit prediction
+use. No timestamp is rewritten and no `available_at` is invented.
 
-`stored_at` is an archive-eligibility guard, not neutral evidence. A response observed
-before the bound but not durably retained until after the bound is unavailable for that
-replay. The returned target source records continue to carry only their established
-response `observed_at` and `available_at=None`.
+`stored_at` is capture audit metadata and participates only in the capture domain's
+internal timestamp-ordering invariant. It is not neutral evidence, is not a replay
+cutoff, and does not prove that archive persistence completed at that instant because
+live capture samples it before capture construction and archive save. A valid capture
+with `observed_at <= captured_at < stored_at` remains causally eligible and must not be
+rejected solely because of `stored_at`. Returned target source records continue to carry
+only their established response `observed_at` and `available_at=None`.
 
 ## Target-Card Archive Lookup
 
@@ -135,15 +144,15 @@ def load_latest_target_race_card_capture(
     self,
     *,
     canonical_target_race_card_url: str,
-    causal_cutoff: datetime,
+    observed_at_not_after: datetime,
 ) -> JRAOfficialTargetRaceCardResponseCapture | None: ...
 ```
 
 It accepts only an exact canonical accessD `TARGET_RACE_CARD` URL and exact aware bound.
-It queries only that exact URL and observations no later than the inclusive bound. It
-reconstructs candidate rows before family acceptance so corrupt schema/page/method/
-request/body/timestamp state cannot become false absence, then retains only captures
-whose `stored_at <= causal_cutoff`.
+It queries only that exact URL and observations no later than the inclusive
+`observed_at_not_after` bound. It reconstructs candidate rows before family acceptance
+so corrupt schema/page/method/request/body/timestamp state cannot become false absence.
+There is no `stored_at` cutoff filter.
 
 The selected capture is the greatest actual eligible `observed_at`. At that latest
 instant, exactly one reconstructed schema-v3 `TARGET_RACE_CARD` GET capture with null
@@ -166,18 +175,20 @@ no speculative performance index is authorized.
 
 ## Resolution Validation and Provenance
 
-The v3 provider is invoked exactly once with the discovered exact locator and the same
-caller-supplied cutoff object/value. `None` raises the dedicated unavailable error. The
-returned value must be exact `JRAOfficialTargetRaceCardResponseCapture`; its capture ID,
+The v3 provider is invoked exactly once with the discovered exact locator and
+`observed_at_not_after` set to the same caller-supplied `captured_at` object/value. `None`
+raises the dedicated unavailable error. The returned value must be exact
+`JRAOfficialTargetRaceCardResponseCapture`; its capture ID,
 canonical URL, parsed external race identity, schema/page/GET family, body digest, and
-timestamps are revalidated. Both `observed_at` and `stored_at` must be no later than the
-bound. It then converts through the existing `to_supplied_official_response()`; the
+timestamps are revalidated. Its `observed_at` must be no later than `captured_at`; no
+`stored_at` replay filter applies. It then converts through the existing
+`to_supplied_official_response()`; the
 normalizer input type and behavior remain unchanged.
 
 The frozen result owns the audit handoff without duplicating raw bytes. Its discovery
 retains exact v4 request locator, request identity, navigation response digest, observed
 time, and target URL. It additionally retains v4 and v3 capture IDs, the selected v3
-response digest, and the exact causal cutoff. The supplied response owns the single raw
+response digest, and the exact `captured_at`. The supplied response owns the single raw
 target-card byte payload and its observation. Direct result construction rechecks all
 cross-domain lineage.
 
@@ -189,11 +200,11 @@ values remain the existing target normalizer's responsibility.
 
 ## Future-Leak and Live Boundaries
 
-Tests must prove that v4 or v3 captures observed after the bound are never inspected as
-eligible; a v4 before the bound with only a future v3 returns unavailable; stored-after-
-bound captures are unavailable even if observed earlier; alternate site variants never
-substitute; and future/current rows cannot become fallback when causal evidence is
-missing. Exact repeated resolution must be deterministic.
+Tests must prove that v4 or v3 captures observed after `captured_at` are never eligible;
+a v4 before the bound with only a future v3 returns unavailable; v4 and v3 captures with
+`observed_at <= captured_at < stored_at` are not rejected solely because of `stored_at`;
+alternate site variants never substitute; and future/current rows cannot become fallback
+when causal evidence is missing. Exact repeated resolution must be deterministic.
 
 C4c contains no HTTP, live service, archive composition, filesystem, clock, random, or
 subprocess ownership. It never invokes `capture_target_race_navigation(...)` or
@@ -204,19 +215,22 @@ navigation discovery needed to recover its retained direct locator.
 ## Future Test Intent
 
 Implementation tests must directly cover canonical success; exact public surfaces and
-signatures; exact v4 ID lookup; exact URL/site/tail retention; inclusive observation and
-storage bounds; future v4/v3 and stored-late rejection; missing v4/v3 unavailable;
-newer/current no-fallback; formal discovery ambiguity; corrupt v4/v3 propagation;
-latest eligible exact-URL v3 selection; identical/changed body policy; same-time conflict;
-provider call counts and unchanged cutoff; exact provenance; supplied response identity;
-unchanged normalizer input; no race-ID/latest-v4 API; no live HTTP/auto-capture; no broad
-catch; no package-root export; and deterministic offline behavior.
+signatures; exact v4 ID lookup from previously retained provenance; exact URL/site/tail
+retention; inclusive `observed_at <= captured_at`; future v4/v3 rejection; v4/v3
+observation eligibility despite `stored_at > captured_at`; missing v4/v3 unavailable;
+newer/current no-fallback; formal discovery ambiguity; corrupt v4/v3 propagation; latest
+eligible exact-URL v3 selection; identical/changed body policy; same-time conflict;
+provider call counts and exact unchanged `captured_at`; exact provenance; supplied
+response identity; unchanged normalizer input; no race-ID/latest-v4 API; no c0b3/live
+HTTP/auto-capture; no broad catch; no package-root export; and deterministic offline
+behavior. A later integration test must prove that a normalized `scheduled_start_at`
+earlier than `information_cutoff` or `captured_at` is rejected before prediction use.
 
 ## Readiness Matrix
 
 ```text
 C4C_OWNER: PURE_INJECTED_jra_target_race_card_resolution_MODULE
-C4C_PUBLIC_API: resolve_jra_target_race_card_response_WITH_EXACT_V4_CAPTURE_ID_AND_CAUSAL_CUTOFF
+C4C_PUBLIC_API: resolve_jra_target_race_card_response_WITH_EXACT_V4_CAPTURE_ID_AND_CAPTURED_AT
 C4C_RESULT_DOMAIN: FROZEN_SLOTTED_JRATargetRaceCardResolution
 C4C_CALLER: FUTURE_RACE_LEVEL_REPLAY_ORCHESTRATION_RETAINING_EXACT_C0B3_V4_CAPTURE_ID
 C4C_DOWNSTREAM_CONSUMER: EXISTING_normalize_jra_target_race_input_source_records
@@ -226,21 +240,27 @@ RACE_ID_URL_SYNTHESIS_ALLOWED: NO
 SITE_VARIANT_GUESSING_ALLOWED: NO
 OPAQUE_TAIL_GUESSING_ALLOWED: NO
 
-CUTOFF_FIELD: EXPLICIT_CALLER_SUPPLIED_CAUSAL_CUTOFF_EXPECTED_TO_EQUAL_FUTURE_SNAPSHOT_CAPTURED_AT
-RACE_SELECTION_ELIGIBILITY: observed_at_AND_stored_at_LE_CAUSAL_CUTOFF
-TARGET_CARD_ELIGIBILITY: observed_at_AND_stored_at_LE_CAUSAL_CUTOFF
-STORED_AT_ROLE: DURABLE_ARCHIVE_ELIGIBILITY_GUARD_NOT_NEUTRAL_EVIDENCE
+CUTOFF_FIELD: captured_at
+EVIDENCE_OBSERVED_BOUND: observed_at_LE_captured_at
+V4_CAUSAL_ELIGIBILITY: observed_at_LE_captured_at
+V3_CAUSAL_ELIGIBILITY: observed_at_LE_captured_at
+RACE_SELECTION_ELIGIBILITY: observed_at_LE_captured_at
+TARGET_CARD_ELIGIBILITY: observed_at_LE_captured_at
+STORED_AT_ROLE: CAPTURE_AUDIT_METADATA_AND_INTERNAL_TIMESTAMP_INVARIANT_ONLY
+STORED_AT_USED_AS_REPLAY_CUTOFF: NO
+STORED_AT_PROVES_DURABLE_SAVE_COMPLETION: NO
 AVAILABLE_AT_ROLE: NONE_NOT_INVENTED
 
 RACE_SELECTION_ARCHIVE_LOOKUP_KEY: EXACT_CALLER_RETAINED_V4_CAPTURE_ID
+V4_CAPTURE_ID_SOURCE: PREVIOUSLY_RETAINED_PROVENANCE_ONLY
 RACE_ID_ONLY_V4_LOOKUP_ADDED: NO
 LATEST_BY_RACE_V4_LOOKUP_ADDED: NO
 WHY_LOOKUP_IS_AUDITABLE: EXACT_V4_ID_RECONSTRUCTION_THEN_FORMAL_DISCOVERY_AND_EXACT_URL_BOUNDED_V3_SELECTION
 
-TARGET_CARD_V3_LOOKUP_KEY: EXACT_DISCOVERED_CANONICAL_ACCESSD_URL_PLUS_INCLUSIVE_CAUSAL_CUTOFF
+TARGET_CARD_V3_LOOKUP_KEY: EXACT_DISCOVERED_CANONICAL_ACCESSD_URL_PLUS_INCLUSIVE_observed_at_not_after
 TARGET_CARD_URL_MATCH_POLICY: EXACT_CANONICAL_URL_ONLY
 TARGET_CARD_RESPONSE_DIGEST_POLICY: RECONSTRUCT_AND_VERIFY_SELECTED_CAPTURE; RETAIN_DIGEST_IN_RESULT
-TARGET_CARD_OBSERVED_AT_POLICY: GREATEST_ELIGIBLE_OBSERVED_AT_WITH_STORED_AT_ALSO_ELIGIBLE
+TARGET_CARD_OBSERVED_AT_POLICY: GREATEST_observed_at_LE_observed_at_not_after; SAME_LATEST_TIME_FAILS_CLOSED; NO_STORED_AT_FILTER_OR_TIE_BREAK
 TARGET_CARD_MISSING_POLICY: REPOSITORY_NONE_TO_DEDICATED_RESOLUTION_UNAVAILABLE
 
 MULTIPLE_ELIGIBLE_V4_POLICY: NO_ENUMERATION_OR_SELECTION; EXACT_CALLER_SUPPLIED_CAPTURE_ID_ONLY
@@ -250,6 +270,7 @@ DIFFERENT_BODY_MULTIPLE_CAPTURE_POLICY: DISTINCT_TIMES_LATEST_ELIGIBLE_WINS; SAM
 SITE_VARIANT_COLLAPSE_ALLOWED: NO
 
 LIVE_HTTP_IN_C4C: NO
+LIVE_C0B3_CALLED_DURING_REPLAY: NO
 LIVE_FALLBACK_ALLOWED: NO
 CURRENT_TARGET_CARD_FALLBACK_ALLOWED: NO
 AUTO_CAPTURE_ON_MISSING_ALLOWED: NO
@@ -261,22 +282,24 @@ RAW_HTML_REPARSE_PATH_ADDED: NO_TARGET_CARD_REPARSE; EXISTING_FORMAL_V4_NAVIGATI
 PROVENANCE_OWNER: JRATargetRaceCardResolution
 V4_CAPTURE_ID_RETAINED: YES
 V3_CAPTURE_ID_RETAINED: YES
-CUT_OFF_RETAINED: YES_EXACT_CAUSAL_CUTOFF
+CUT_OFF_RETAINED: YES_EXACT_captured_at
 DUPLICATE_RAW_BYTES_RETAINED: NO
 
 C4C_STOPS_AT: EXACT_TARGET_CARD_SUPPLIED_RESPONSE_PLUS_AUDIT_PROVENANCE
 SOURCE_RECORD_CREATED_IN_C4C: NO
 SNAPSHOT_ASSEMBLY_IN_C4C: NO
+FULL_PREDICTION_ELIGIBILITY_ESTABLISHED_IN_C4C: NO
+SCHEDULED_START_GUARD_OWNER: DOWNSTREAM_TARGET_NORMALIZATION_AND_SNAPSHOT_ASSEMBLY
 
 SCHEMA_CHANGE_REQUIRED: NO
 MIGRATION_REQUIRED: NO
 NEW_TABLE_REQUIRED: NO
 NEW_COLUMN_REQUIRED: NO
 NEW_INDEX_REQUIRED: NO
-NEW_REPOSITORY_API_REQUIRED: YES_ONE_FAMILY_SPECIFIC_LATEST_EXACT_URL_CAUSAL_V3_CAPTURE_LOOKUP
+NEW_REPOSITORY_API_REQUIRED: YES_ONE_FAMILY_SPECIFIC_LATEST_EXACT_URL_OBSERVED_AT_NOT_AFTER_V3_CAPTURE_LOOKUP
 
 C4C_IMPLEMENTATION_READY: YES
-BLOCKERS: NONE_FOR_C4C; LATER_RACE_LEVEL_ORCHESTRATION_MUST_RETAIN_V4_ID_AND_SUPPLY_SNAPSHOT_DERIVED_BOUND
+BLOCKERS: NONE_FOR_C4C; LATER_RACE_LEVEL_ORCHESTRATION_MUST_RETAIN_V4_ID, SUPPLY_captured_at, NORMALIZE_TARGET, AND_ENFORCE_captured_at_LE_information_cutoff_LE_scheduled_start_at
 REAL_TRUSTED_CAPTURE_REQUIRED: NO
 REAL_TRUSTED_CAPTURE_PERFORMED: NO
 ```

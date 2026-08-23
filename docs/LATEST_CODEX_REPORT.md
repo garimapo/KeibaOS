@@ -4125,27 +4125,52 @@ formal race-selection discovery. No race-ID v4 scan, latest-by-race lookup, site
 opaque-tail inference, or URL synthesis is admitted.
 
 The proposed pure resolver receives the canonical external race ID, exact v4 capture ID,
-and an explicit `causal_cutoff`. Future race-level orchestration must derive that bound
-from snapshot `captured_at`, which is stricter than `information_cutoff`. Both v4
-navigation and v3 target-card captures must have `observed_at` and `stored_at` no later
-than the inclusive bound. `stored_at` is used only as durable archive eligibility; it is
-not invented as neutral `available_at` evidence.
+and the explicit snapshot `captured_at`. Both v4 navigation and v3 target-card captures
+must have `observed_at <= captured_at`. `stored_at` is capture audit metadata and an
+internal timestamp invariant only: it is neither a replay cutoff nor proof that durable
+save completed at that instant. A capture with
+`observed_at <= captured_at < stored_at` remains observation-eligible, timestamps are
+never rewritten, and no neutral `available_at` is invented.
 
 One narrow repository method is required to return the latest eligible schema-v3 capture
-for the exact discovered canonical accessD URL. It reconstructs selected candidates,
-rejects corrupt family/body/timestamp state, and fails on multiple rows at the latest
-eligible observation rather than choosing a digest or capture-ID tie-break. Identical or
-changed bodies at distinct times remain distinct and the latest eligible observation
-wins. Different site/tail URLs never match.
+for the exact discovered canonical accessD URL and inclusive
+`observed_at_not_after=captured_at`. It reconstructs selected candidates, applies no
+`stored_at` filter or tie-break, rejects corrupt family/body/timestamp state, and fails on
+multiple rows at the latest eligible observation rather than choosing a digest or
+capture-ID tie-break. Identical or changed bodies at distinct times remain distinct and
+the latest eligible observation wins. Different site/tail URLs never match.
 
 The frozen/slotted resolution result retains the supplied target-card response, formal
-navigation discovery, exact v4/v3 capture IDs, selected v3 response digest, and causal
-cutoff without duplicating raw bytes. The existing target normalizer remains unchanged
-and is the immediate downstream consumer. Missing exact v4 or eligible v3 evidence is a
-dedicated unavailable condition; corruption and ambiguity remain validation/integrity
-errors and provider exceptions propagate.
+navigation discovery, exact v4/v3 capture IDs, selected v3 response digest, and exact
+`captured_at` without duplicating raw bytes. The v4 ID must come only from previously
+retained provenance; replay never calls live c0b3 to produce or rediscover it. Missing
+exact v4 or eligible v3 evidence is a dedicated unavailable condition; corruption and
+ambiguity remain validation/integrity errors and provider exceptions propagate.
+
+C4c does not establish full prediction eligibility because `scheduled_start_at` is first
+derived by the unchanged target normalizer. Future orchestration must resolve c4c,
+normalize the supplied response, obtain the target scheduled start, and enforce
+`captured_at <= information_cutoff <= scheduled_start_at` before prediction or snapshot
+use. Downstream target normalization and snapshot assembly own that scheduled-start
+guard.
 
 No schema, migration, table, column, index, live HTTP, fallback, auto-capture, source
 record, mapping, source union, snapshot assembly, or trusted capture is required. C4c is
 ready for implementation; later race-level orchestration remains responsible for
-retaining the c0b3 v4 capture ID and supplying the snapshot-derived effective bound.
+retaining the c0b3 v4 capture ID as prior provenance and supplying exact `captured_at`.
+
+### Replay cutoff semantics correction
+
+The public cutoff field is now exactly `captured_at`, and the v3 provider/repository
+boundary names its inclusive observation limit `observed_at_not_after`. Causal eligibility
+for both v4 and v3 is solely `observed_at <= captured_at`; `stored_at` remains capture
+audit metadata and an internal timestamp invariant, is never a replay cutoff or save-
+completion proof, and cannot by itself disqualify an otherwise observation-eligible
+capture.
+
+The exact v4 capture ID must be previously retained provenance, and historical replay
+never invokes live c0b3. C4c remains pre-normalization and therefore cannot establish full
+prediction eligibility. Downstream target normalization and snapshot assembly own the
+scheduled-start guard and must enforce
+`captured_at <= information_cutoff <= scheduled_start_at` before prediction use. No tests
+or live HTTP were run for this requested docs-only correction.
