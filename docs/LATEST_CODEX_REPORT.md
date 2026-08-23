@@ -4115,3 +4115,37 @@ the following formal POSTs, and proves all three outbound prepared requests stil
 Cookie, Referer, and Origin. A separate offline failure regression proves one cookie-free
 send failure makes exactly one attempt and does not retry with hidden state. Production
 code is unchanged from the prior review tip.
+
+
+## Phase 4C-2d3b1i6d1d5f1c4c JRA Causal Target accessD Resolution PREPARE
+
+Prepared the post-c0b3 historical target-card resolution boundary. The exact target URL
+is recovered only by loading the caller-retained schema-v4 capture ID and replaying the
+formal race-selection discovery. No race-ID v4 scan, latest-by-race lookup, site choice,
+opaque-tail inference, or URL synthesis is admitted.
+
+The proposed pure resolver receives the canonical external race ID, exact v4 capture ID,
+and an explicit `causal_cutoff`. Future race-level orchestration must derive that bound
+from snapshot `captured_at`, which is stricter than `information_cutoff`. Both v4
+navigation and v3 target-card captures must have `observed_at` and `stored_at` no later
+than the inclusive bound. `stored_at` is used only as durable archive eligibility; it is
+not invented as neutral `available_at` evidence.
+
+One narrow repository method is required to return the latest eligible schema-v3 capture
+for the exact discovered canonical accessD URL. It reconstructs selected candidates,
+rejects corrupt family/body/timestamp state, and fails on multiple rows at the latest
+eligible observation rather than choosing a digest or capture-ID tie-break. Identical or
+changed bodies at distinct times remain distinct and the latest eligible observation
+wins. Different site/tail URLs never match.
+
+The frozen/slotted resolution result retains the supplied target-card response, formal
+navigation discovery, exact v4/v3 capture IDs, selected v3 response digest, and causal
+cutoff without duplicating raw bytes. The existing target normalizer remains unchanged
+and is the immediate downstream consumer. Missing exact v4 or eligible v3 evidence is a
+dedicated unavailable condition; corruption and ambiguity remain validation/integrity
+errors and provider exceptions propagate.
+
+No schema, migration, table, column, index, live HTTP, fallback, auto-capture, source
+record, mapping, source union, snapshot assembly, or trusted capture is required. C4c is
+ready for implementation; later race-level orchestration remains responsible for
+retaining the c0b3 v4 capture ID and supplying the snapshot-derived effective bound.
