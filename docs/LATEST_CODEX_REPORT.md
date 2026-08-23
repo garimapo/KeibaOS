@@ -4115,3 +4115,34 @@ the following formal POSTs, and proves all three outbound prepared requests stil
 Cookie, Referer, and Origin. A separate offline failure regression proves one cookie-free
 send failure makes exactly one attempt and does not retry with hidden state. Production
 code is unchanged from the prior review tip.
+
+
+## Phase 4C-2d3b1i6d1d5f1c4c JRA Causal Target accessD Resolution
+
+Implemented the pure injected c4c resolver from exact previously retained v4 navigation
+provenance to one causally eligible v3 target-card supplied response. It validates the
+canonical external race ID, exact v4 capture ID, aware `captured_at`, and provider
+callability before either provider call. The v4 provider is called exactly once by the
+retained ID; formal race-selection discovery is the only accessD URL source; and the v3
+provider is called exactly once with that exact locator and
+`observed_at_not_after=captured_at`.
+
+Both capture families use only `observed_at <= captured_at` for replay causality.
+`stored_at` remains audit/internal timestamp metadata, not a replay cutoff, selection key,
+tie-break, or proof of durable save completion. The frozen/slotted result rechecks v4
+request/digest/observation lineage and v3 exact URL/race/capture lineage before deriving
+the retained IDs, response SHA, caller `captured_at`, and supplied target-card response.
+Provider integrity and validation exceptions propagate; genuine absent v4/v3 evidence is
+the dedicated unavailable condition.
+
+The repository adds one exact-URL target-card latest-observation method. It accepts only
+canonical accessD input and an inclusive aware `observed_at_not_after`, reconstructs
+candidate rows without a `stored_at` filter, selects the greatest eligible observation,
+and fails closed on same-time multiplicity or corrupted selected family/body metadata. No
+schema, migration, index, capture-domain, live-capture, normalizer, snapshot, or package
+export change was made.
+
+Verification passed: resolver **14 passed**; repository **13 passed**; related target
+locator/discovery/source/capture/live suite **74 passed**; full pytest suite **2733
+passed**. `git diff --check` and the six-file/pure-boundary/no-`stored_at`-filter static
+checks passed. No live HTTP or real trusted capture was performed.
