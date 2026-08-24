@@ -57,7 +57,7 @@ class CaptureMigrationTests(unittest.TestCase):
         )
         self.assertEqual(connection.execute("PRAGMA foreign_keys").fetchone()[0], 1)
         self.assertEqual(connection.execute("PRAGMA foreign_key_check").fetchall(), [])
-        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS), (8, 9, 10, 11, 12, 13, 14))
+        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS), (8, 9, 10, 11, 12, 13, 14, 15))
         self.assertEqual(tuple(item.VERSION for item in CAPTURE_MIGRATIONS), (1,))
         columns = [row[1] for row in connection.execute("PRAGMA table_info(nar_official_response_captures)")]
         self.assertEqual(

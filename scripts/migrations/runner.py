@@ -10,6 +10,7 @@ from .versions import (
     v012_historical_input_evidence_schema,
     v013_historical_past_race_race_time_domain_schema,
     v014_historical_input_request_identity_schema,
+    v015_jra_race_replay_seed_schema,
 )
 
 MIGRATIONS = (
@@ -20,6 +21,7 @@ MIGRATIONS = (
     v012_historical_input_evidence_schema,
     v013_historical_past_race_race_time_domain_schema,
     v014_historical_input_request_identity_schema,
+    v015_jra_race_replay_seed_schema,
 )
 
 def _enable_foreign_keys(connection: sqlite3.Connection) -> None:
