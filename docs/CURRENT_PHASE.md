@@ -2,103 +2,231 @@
 
 ## Status
 
-READY_FOR_REVIEW
+DRAFT_FOR_REVIEW
 
 ## Phase
 
-`4C-2d3b1i6d1d5f1c4d` — JRA race-level historical replay orchestration.
+`4C-2d3b1i6d1d5f1c4e` — JRA historical replay snapshot persistence composition.
 
-Formal base: `f07a91fb55248d562202513f7b70c528528e7143`.
-
-Approved prepare: `079a86ade450ff0e40b04cc2e3044d0710e71ec0`.
+Formal base: `ce5e749337a4d8675b728ee99368f024de29fef2`.
 
 Review branch:
-`review/4c-2d3b1i6d1d5f1c4d-jra-race-level-historical-replay`.
+`review/4c-2d3b1i6d1d5f1c4e-jra-historical-snapshot-persistence-prepare`.
 
-## Implemented Contract
+## Purpose and Phase Split
 
-The phase adds one pure, read-only `build_jra_race_historical_replay(...)` boundary.
-Its sole domain input is an exact immutable `JRARaceReplaySeed`; five injected read-only
-providers supply exact v4 navigation, exact v3 target card by capture ID, accessU horse
-history, accessS race results, and accessO final odds. No decomposed caller identity,
-mapping, capture, URL, digest, or time fields are accepted.
+C4d already turns one exact durable `JRARaceReplaySeed` into one complete
+`HistoricalInputSnapshot` without writing. It remains unchanged and read-only.
 
-The private seed-bound v3 adapter satisfies formal c4c's locator-and-cutoff provider
-shape while loading only `seed.target_race_card_capture_id`. It requires the requested
-locator and bound to equal the seed, calls the exact-by-ID provider once, and validates
-the returned capture's exact type, ID, body digest, canonical URL, race identity, and
-observation bound. Missing exact evidence remains unavailable. The generic latest-v3
-archive lookup is never used, so later archive enrichment cannot change an existing
-seed replay.
+The next work is split to preserve ownership:
 
-Formal c4c is called exactly once with the seed's race, v4 capture ID, and captured
-instant. Its complete v4/v3/URL/digest/time provenance must equal the seed before its
-supplied response is normalized exactly once. The normalized track, ordered entries,
-and aligned accessU locators must equal the seed position-by-position before any
-per-entry history provider is called.
+1. **c4e** loads one exact seed by `seed_id`, runs c4d, atomically persists the exact
+   completed snapshot, exact-reloads it by its immutable identity, and returns a compact
+   persisted reference.
+2. **c4f** consumes an exact persisted snapshot and purely adapts it to the established
+   `SimulationRaceInput` / `PredictionPipelineInput` boundary. It does not reacquire,
+   rebuild, or enrich historical facts.
 
-Every accessU resolution and historical collector call uses `seed.captured_at` as the
-inclusive evidence observation bound. C4d rechecks:
+Combining these would mix SQLite transaction/restart behavior with prediction-domain
+conversion. C4e therefore performs no prediction, simulation, bet construction, or
+snapshot-to-pipeline conversion.
 
-```text
-seed.captured_at <= seed.information_cutoff <= normalized target scheduled_start_at
+## Existing Snapshot Repository
+
+`SQLiteHistoricalInputSnapshotRepository` already consumes the exact snapshot emitted by
+c4d and requires no schema, migration, table, column, trigger, or index change.
+
+Existing APIs are:
+
+```python
+save_snapshot(
+    *,
+    snapshot: HistoricalInputSnapshot,
+) -> None
+
+load_latest_snapshot(
+    *,
+    dataset_id: str,
+    race_id: int,
+    information_cutoff: datetime,
+    source_identity: HistoricalExternalRaceIdentity,
+) -> HistoricalInputSnapshot | None
 ```
 
-`stored_at` has no causal role. For every seed entry, the formal accessU resolver and
-historical collector each run once. The complete source tuple is formed only after all
-entries succeed: canonical target records first, then each complete historical
-collection in seed order. Source IDs must be globally unique; no partial result is
-possible.
-
-The snapshot entry map is derived only from seed entries. The existing snapshot builder
-is called exactly once with the seed's dataset, internal race, captured instant,
-information cutoff, complete source tuple, and exact mapping. C4d performs no snapshot
-persistence. The frozen/slotted public result retains exactly the supplied seed object
-and the completed `HistoricalInputSnapshot`, and independently verifies all seed/
-snapshot race, time, and ordered-entry identities.
-
-Validation, unavailable, and unsupported errors from the formal composed boundaries
-are translated into the matching c4d error family. Provider-owned integrity errors
-propagate unchanged. There is no broad catch, HTTP, SQLite/repository dependency,
-database or archive write, clock, filesystem, live capture, current fallback, seed
-construction, latest lookup, raw HTML parser, legacy/name mapping, package-root export,
-or multi-race ownership.
-
-## Verification
-
-Dedicated c4d tests: **35 passed**.
-
-Related formal d0, c4c, target-source, accessU, historical collector, source-record,
-snapshot-builder, and archive repository tests: **183 passed**.
-
-Full pytest suite: **2843 passed**.
-
-The dedicated suite includes actual formal end-to-end zero-history replay, multi-entry
-ordering and mapping, every error translation, provider-integrity propagation, exact
-result construction, and the deferred durable d0 restart/archive-enrichment regression.
-That regression materializes the seed through `SQLiteJRARaceReplaySeedRepository`,
-persists v4 navigation plus v3 capture A in the separate capture archive, closes and
-reopens both databases, reloads an equal but distinct seed object, then adds later
-causally eligible capture B. Replay of that reloaded seed requests and consumes only A
-by its retained capture ID while the generic latest-v3 method is forbidden. The c4c
-post-resolution regression directly contradicts every checked v4/v3 ID, digest,
-discovery race/URL, supplied-response URL, and captured-time provenance field.
-
-`git diff --check`, correction-scope, unchanged-production-blob, public-surface,
-no-broad-catch, forbidden dependency, no latest lookup, no write/persistence, and no
-package-root export checks pass. No live HTTP or real trusted capture was performed.
-
-## Changed Files
+The stored natural identity is exactly:
 
 ```text
-scripts/simulation/jra_race_historical_replay.py
-tests/test_jra_race_historical_replay.py
-docs/CURRENT_PHASE.md
-docs/LATEST_CODEX_REPORT.md
+dataset_id
++ organization
++ source_system
++ external_race_id
++ captured_at
 ```
+
+`source_url`, internal IDs, `information_cutoff`, and `content_sha256` are not natural
+identity fields. They are immutable canonical content and therefore affect the derived
+`content_sha256`. Save requires an exact `HistoricalInputSnapshot`, starts one
+`BEGIN IMMEDIATE` transaction, writes the complete normalized object graph, and commits
+only after all children succeed. Re-saving the same natural identity and digest is an
+idempotent no-op. The same natural identity with a different digest raises
+`RepositoryConflictError`; no overwrite or repair occurs.
+
+The existing latest loader is causal and source-isolated, but it is not an exact
+persistence-reference loader. It selects the greatest eligible `captured_at` for the
+requested dataset, internal race, source race, and cutoff. A later eligible snapshot can
+therefore supersede an earlier candidate. That is correct for its existing API but is not
+the restart-stable handoff required by c4e.
+
+## Exact Persistence Reference and Load
+
+C4e adds no schema. It adds a narrow exact natural-identity load method to the existing
+concrete repository:
+
+```python
+load_snapshot_by_identity(
+    *,
+    identity: HistoricalInputSnapshotIdentity,
+) -> HistoricalInputSnapshot | None
+```
+
+It queries only the five natural-identity columns. Zero rows returns `None`; more than
+one row or any malformed header/child/mapping/digest is `RepositoryDataIntegrityError`.
+It fully reconstructs and validates the snapshot and never falls back to an older,
+newer, other-source, or legacy row. The existing `load_latest_snapshot(...)` contract is
+unchanged.
+
+The composition returns a frozen/slotted reference containing exactly:
+
+```text
+seed_id
+snapshot_identity
+content_sha256
+```
+
+After `save_snapshot(...)` succeeds, c4e calls the exact identity loader once and requires
+the reconstructed identity and digest to equal the c4d snapshot. Archive or snapshot
+enrichment cannot change that reference. Missing exact reload is unavailable; mismatch or
+corruption fails closed. Repository/provider integrity and conflict exceptions propagate
+unchanged.
+
+## C4e Composition Contract
+
+The future pure-application orchestration accepts one canonical `seed_id` plus injected
+read-only seed/capture/history providers and an injected snapshot persistence boundary.
+Its deterministic order is:
+
+```text
+validate seed_id and collaborators
+-> load exact durable JRARaceReplaySeed once
+-> require returned seed.seed_id equals requested seed_id
+-> call build_jra_race_historical_replay(...) once
+-> require replay result retains that exact seed
+-> save the exact replay snapshot once
+-> exact-reload by snapshot identity once
+-> require exact identity and content_sha256 equality
+-> return persisted snapshot reference
+```
+
+No result is returned before durable save and exact reload succeed. `None` from the seed
+source or exact snapshot reload is a dedicated unavailable error. C4d validation,
+unavailable, and unsupported categories remain distinguishable; provider/repository
+exceptions are not collapsed into absence. There is no broad exception catch.
+
+The d0 materializer already creates the same application-database `races`, `horses`,
+`historical_input_source_identities`, `historical_input_external_races`, and
+`historical_input_external_entries` lineage that the snapshot repository checks. C4d
+uses the seed's exact internal race/entry IDs. Consequently d0-created mappings satisfy
+all snapshot-save prerequisites; c4e reuses them exactly and any forward/reverse mismatch
+remains `RepositoryConflictError` or `RepositoryDataIntegrityError`.
+
+## Prediction Handoff Finding
+
+`HistoricalInputSnapshot` is not currently accepted directly by prediction or simulation:
+
+- `PredictionPipeline.run(...)` accepts the structural `PredictionPipelineInput` contract.
+- `SimulationRaceInput` accepts `RacePredictionInput` or `ImmutableRacePredictionInput`
+  plus `InputSnapshotAudit`.
+- `assemble_persisted_simulation_race_inputs(...)` currently builds those values from
+  mutable request-document race mappings, not from the formal snapshot repository.
+- CLI `DatabaseRaceInputProvider` still reads legacy `races`, `horses`, `past_races`, and
+  `horses.odds`; that path is ineligible for historical replay input.
+
+C4f therefore requires a new pure adapter from one exact `HistoricalInputSnapshot` to one
+`SimulationRaceInput`. It must use only the snapshot's exact internal race-entry IDs,
+track, entry, jockey, win-odds, ordered past-race, cutoff, and provenance values. It may
+not query mutable tables, map by horse name, equate horse and entry IDs by numeric
+coincidence, or use result/payout/settlement facts. Exact Decimal-to-prediction-number and
+provenance-to-`InputAuditEntry` conversion will be frozen in c4f's own PREPARE before
+implementation.
+
+## Future-Leakage Guard
+
+For both phases:
+
+- no live/current fallback;
+- no latest-snapshot substitution for an exact persisted reference;
+- no legacy race, horse, past-race, jockey, or odds content after the formal snapshot is
+  available;
+- no horse-name mapping or entry-identity reconstruction;
+- no information observed or available after `snapshot.information_cutoff`;
+- no race result, payout, settlement, or final-odds substitution into prediction input;
+- no timestamp rewriting and no invented availability;
+- no snapshot overwrite, partial save, silent repair, or cross-source fallback.
+
+## Future Implementation Files
+
+Immediate c4e production:
+
+```text
+scripts/simulation/jra_race_historical_snapshot_persistence.py
+scripts/simulation/repositories/sqlite_historical_input_snapshot_repository.py
+```
+
+Immediate c4e tests:
+
+```text
+tests/test_jra_race_historical_snapshot_persistence.py
+tests/test_sqlite_historical_input_snapshot_repository.py
+```
+
+Following c4f candidate production:
+
+```text
+scripts/simulation/historical_input_snapshot_simulation_adapter.py
+```
+
+Following c4f candidate tests:
+
+```text
+tests/test_historical_input_snapshot_simulation_adapter.py
+```
+
+Both implementation phases may also update only `docs/CURRENT_PHASE.md` and
+`docs/LATEST_CODEX_REPORT.md`. C4e must not modify c4d, prediction, simulation models,
+snapshot schema/migrations, package-root exports, CLI, live capture, or settlement.
+
+## Required C4e Tests
+
+- exact public surface/signatures and frozen/slotted persisted reference;
+- malformed seed ID or collaborator rejected before provider/repository use;
+- exact seed loaded once and exact seed ID rechecked;
+- c4d called once with the exact loaded seed and unchanged providers;
+- exact c4d snapshot saved once and no success before save;
+- idempotent existing equivalent snapshot succeeds;
+- same-identity/different-content conflict propagates unchanged;
+- exact identity load returns the persisted snapshot after process restart;
+- exact load never calls or delegates to `load_latest_snapshot`;
+- later eligible snapshot enrichment cannot substitute the referenced snapshot;
+- missing exact seed or exact persisted snapshot is unavailable;
+- malformed/corrupt selected snapshot is integrity failure, never absence;
+- d0-created race and entry mappings are reused exactly without new identity inference;
+- archive/c4d/provider errors propagate according to their established contracts;
+- no prediction, simulation, snapshot persistence inside c4d, HTTP, clock, current/legacy
+  fallback, result/payout use, package-root export, or schema/migration change;
+- full related and repository regressions plus full pytest suite and `git diff --check`.
 
 ## Stop Condition
 
-Stop after the single implementation review commit is pushed. Do not integrate the
-formal branch, persist a snapshot, add repository/schema behavior, perform live HTTP,
-or begin a later phase until independent review approves this exact result.
+Stop after this docs-only PREPARE review commit is pushed. Do not implement c4e, begin
+c4f, modify the formal branch, or run prediction/simulation until independent review
+approves this contract.

@@ -4250,3 +4250,32 @@ ordering proves storage time has no causal role. Direct c4c-result contradiction
 all seven production-checked provenance fields. Static correction scope, unchanged
 production blob, public-surface, forbidden-dependency, no-broad-catch, no-latest/no-write,
 and `git diff --check` checks passed. No live HTTP or real trusted capture was performed.
+
+## Phase 4C-2d3b1i6d1d5f1c4e JRA Historical Snapshot Persistence — PREPARE
+
+Prepared the next boundary on formal base
+`ce5e749337a4d8675b728ee99368f024de29fef2`. The existing
+`SQLiteHistoricalInputSnapshotRepository` can persist the exact c4d
+`HistoricalInputSnapshot` without a schema or migration change. Its natural identity is
+dataset, organization, source system, external race ID, and captured time; its separately
+derived content digest controls idempotence and conflict. The d0 materializer already
+creates the exact race, entry, and external-identity mappings required by the snapshot
+repository, so no legacy mapping or identity reconstruction is needed.
+
+The current `load_latest_snapshot(...)` API is causal but intentionally selects the
+latest eligible snapshot. It cannot serve as a restart-stable exact persistence reference
+because later eligible snapshot enrichment could change its result. C4e therefore adds a
+narrow exact natural-identity loader without changing storage, saves the c4d snapshot,
+exact-reloads it, verifies identity plus digest, and returns an immutable seed/snapshot
+reference. C4d remains pure and read-only.
+
+Prediction integration is deliberately split into c4f. `HistoricalInputSnapshot` is not
+accepted directly by `PredictionPipeline` or `SimulationRaceInput`; the current persisted
+request adapter builds prediction input from request-document mappings, while the CLI
+database provider reads legacy mutable race/horse/past-race/odds data. C4f will instead
+define a pure exact-snapshot-to-`SimulationRaceInput` adapter and forbid those lookups once
+the formal snapshot exists. Decimal conversion and exact audit mapping remain c4f design
+work, not c4e persistence work.
+
+No production code, tests, schema, migration, formal branch, HTTP, trusted capture,
+prediction, or simulation execution changed during this PREPARE.
