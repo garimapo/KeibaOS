@@ -91,6 +91,14 @@ entry ID in that same transaction. It writes the corresponding existing
 `historical_input_external_races` and `historical_input_external_entries` associations
 before the seed becomes visible.
 
+Before either mapping can be inserted, the same transaction ensures the fixed formal
+source identity `("JRA", "jra_official")` exists in the existing
+`historical_input_source_identities` table required by v010's mapping foreign keys. The
+caller never supplies either value. If absent, the materializer inserts exactly that
+row; if present, it accepts only that exact row unchanged. There is no alias,
+normalization, provider discovery, mutation, or fallback. A later failure rolls back a
+new source-identity row with every other materialization write.
+
 Horse number is formalized only as a race-bound **creation binding**. The external entry
 ID is already canonically rebuilt from JRA external race identity plus official positive
 horse number, and `JRATargetRaceSourceCollection` proves ascending unique horse numbers,
@@ -263,6 +271,11 @@ checks, a natural-identity `UNIQUE` constraint, child uniqueness for order/exter
 entry/external horse/horse number/internal entry, and `WITHOUT ROWID` where consistent
 with current migration style.
 
+V015 does not add or alter a source-identity table. Materialization reuses
+`historical_input_source_identities` exactly as defined by v010. Source registration is
+runtime transactional bootstrap of an already-frozen provider identity, not schema or
+identity discovery.
+
 V010 already declares a `UNIQUE` constraint across organization, source system,
 external race ID, and internal race ID in `historical_input_external_races`; that is the
 exact race-mapping parent key, so v015 adds no redundant race index. The existing entry
@@ -311,8 +324,8 @@ class SQLiteJRARaceReplaySeedRepository:
     ) -> JRARaceReplaySeed | None: ...
 ```
 
-The repository performs no HTTP and does not invoke c0b3 or c4c. Its inputs are already
-formal proof objects. Creation validation order is frozen:
+The repository performs no HTTP, capture-archive query, c0b3 call, c4c call, or latest-v3
+lookup. Its inputs are already formal proof objects. Creation validation order is frozen:
 
 1. require exact input domain/scalar types, canonical dataset/race/capture/digest/URL
    shapes, aware times, and exact target collection types;
@@ -321,18 +334,21 @@ formal proof objects. Creation validation order is frozen:
 3. require `captured_at` from the resolution and
    `captured_at <= information_cutoff <= scheduled_start_at`;
 4. begin one `BEGIN IMMEDIATE` transaction with foreign keys enabled;
-5. load and fully validate an existing formal external-race mapping, or create the
+5. ensure exact fixed `("JRA", "jra_official")` source identity, inserting it only if
+   absent;
+6. load and fully validate an existing formal external-race mapping, or create the
    internal race and mapping only when no mapped or colliding unproven legacy row exists;
-6. for every ordered target entry, load and validate its prior formal mapping, or create
+7. for every ordered target entry, load and validate its prior formal mapping, or create
    a new race-bound internal entry and mapping only when no colliding unproven row exists;
-7. construct and revalidate the complete immutable seed and deterministic digest;
-8. enforce natural-identity/idempotence/conflict rules, insert the header and all
-   children, then commit once.
+8. construct and revalidate the complete immutable seed and deterministic digest;
+9. enforce natural-identity/idempotence/conflict rules;
+10. insert the seed header and every child;
+11. commit once.
 
-Any failure rolls back races, horses, external mappings, seed header, and seed entries.
-A partial header or partial mapping is never loadable. Existing formal mappings may be
-shared between dataset-specific seeds only after exact validation; the seeds themselves
-cannot cross datasets.
+Any failure rolls back a newly inserted source identity, races, horses, external
+mappings, seed header, and seed entries. A partial header or partial mapping is never
+loadable. Existing formal mappings may be shared between dataset-specific seeds only
+after exact validation; the seeds themselves cannot cross datasets.
 
 `load_seed` accepts only exact seed-ID grammar. Missing is `None`; malformed input is
 repository validation failure. It loads the header and complete ordered children,
@@ -357,9 +373,11 @@ Provider/repository integrity errors propagate. Corruption never becomes missing
 identity contradiction never becomes missing, and missing never triggers a latest or
 current fallback.
 
-## C4d Handoff
+## Future C4d Handoff
 
-After this phase is implemented, c4d should receive one exact loaded
+The following contract is frozen for future c4d integration, but d0 does not implement
+the c4d orchestrator or the seed-bound target-card adapter. After d0 is implemented, c4d
+should receive one exact loaded
 `JRARaceReplaySeed`, not independently caller-supplied dataset, race, capture, mapping,
 and time fields. Its final candidate API becomes:
 
@@ -416,19 +434,42 @@ Plus `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`. No capture archi
 snapshot, target normalizer, c4d, live acquisition, prediction, betting, or settlement
 file belongs to d0.
 
-Future tests must directly pin canonical creation; deterministic content/ID; exact v4
-and v3 provenance; wrong v4/race and wrong v3/revision rejection; restart equality;
-seed creation selecting causal latest v3 A; restart followed by archive insertion of
-another eligible v3 B for the same URL; replay still consuming A and never substituting
-B; missing exact A; wrong exact v3 ID/SHA/URL/race/site/tail; v3 observation after seed
-`captured_at`; and no latest-v3 repository query during seed replay;
-identical idempotence; natural-identity content conflict; no race/latest-v4 lookup;
-first snapshot readiness without an existing historical snapshot; atomic new internal
-race/entry creation; exact prior formal mapping reuse; unproven legacy natural-key and
-horse-number collision failure; no name matching; exact complete ordered entry set;
-missing/extra/duplicate/foreign mappings; membership FKs; digest corruption; partial
-write rollback; migration rollback and exact v014 validation; neutral records unchanged;
-no live HTTP/current fallback; and no c4d implementation.
+### D0 implementation test intent
+
+D0 tests own only seed domain, persistence, identity materialization, and migration. They
+must directly pin canonical creation; deterministic content/ID; exact v4 provenance;
+receipt of an exact formal `JRATargetRaceCardResolution`; retention of its exact v3
+capture ID, response SHA, canonical URL, and `captured_at`; inclusion of that exact v3
+provenance in the deterministic digest; restart/load equality of the complete v3
+provenance; corrupt persisted v3 ID/SHA/URL integrity failure; different v3 provenance
+under the same natural identity conflict; no latest-v3 API in the seed repository; no
+capture-archive query by the seed repository; and no seed mutation when unrelated
+archive state changes.
+
+D0 tests also pin identical idempotence; natural-identity content conflict; no race/
+latest-v4 lookup; first snapshot readiness without an existing historical snapshot;
+atomic new internal race/entry creation; exact prior formal mapping reuse; unproven
+legacy natural-key and horse-number collision failure; no name matching; exact complete
+ordered entry set; missing/extra/duplicate/foreign mappings; membership FKs; digest
+corruption; partial-write rollback; migration rollback and exact v014 validation; and
+neutral records unchanged.
+
+Source bootstrap tests start from a pristine v014 database with no JRA identity and prove
+materialization inserts exactly `("JRA", "jra_official")`. They prove an existing exact
+row is reused unchanged, a failure after first insertion rolls back that row with the
+whole transaction, and no API accepts caller-supplied organization/source-system values.
+
+### Future c4d integration test intent
+
+C4d tests, not d0 tests, will materialize a seed bound to exact v3 A, restart, add another
+eligible v3 B for the same canonical URL, replay the existing seed, and prove only A is
+consumed and B is never substituted. C4d tests also own missing or mismatched exact seed
+v3 behavior, wrong SHA/URL/race/site/tail, observation after seed `captured_at`, and proof
+that seed replay makes no latest-v3 repository query. These contracts remain frozen; d0
+does not implement their adapter or orchestration.
+
+Both suites keep no live HTTP/current fallback. D0 additionally proves it contains no
+c4d implementation.
 
 Required implementation verification will include dedicated domain/repository/migration
 tests, related target navigation/resolution/normalization/snapshot repository tests, the
@@ -492,6 +533,11 @@ V3_URL_ONLY_LATEST_REDISCOVERY_ALLOWED: NO
 C4D_TARGET_CARD_PROVIDER_SEMANTICS: EXACT_SEED_BOUND_V3_CAPTURE
 GENERIC_LATEST_TARGET_CARD_PROVIDER_USED_BY_C4D: NO
 EXACT_V3_CAPTURE_ID_RETAINED_FOR_REPLAY: YES
+D0_IMPLEMENTS_C4D: NO
+D0_IMPLEMENTS_SEED_BOUND_V3_ADAPTER: NO
+C4D_EXACT_V3_REPLAY_CONTRACT_FROZEN: YES
+C4D_ARCHIVE_ENRICHMENT_TESTS_DEFERRED_TO_C4D: YES
+D0_V3_PROVENANCE_TEST_SCOPE: EXACT_FORMAL_RESOLUTION_INPUT_RETENTION_DIGEST_RESTART_CORRUPTION_CONFLICT_NO_ARCHIVE_QUERY_AND_NO_MUTATION_FROM_UNRELATED_ARCHIVE_STATE
 
 CAPTURED_AT_OWNER: DATASET_ACQUISITION_AND_SEED_MATERIALIZATION_COORDINATOR
 CAPTURED_AT_PART_OF_SEED_IDENTITY: YES
@@ -527,6 +573,16 @@ NEW_EXACT_MAPPING_INDEX_COUNT: 1
 RACE_MAPPING_PARENT_KEY: EXISTING_V010_UNIQUE
 ENTRY_MAPPING_PARENT_KEY: NEW_V015_FULL_EXACT_MAPPING_UNIQUE
 NEW_INDEXES: ONE_NEW_ENTRY_EXACT_MAPPING_COMPOSITE_UNIQUE_ONLY
+SEED_SOURCE_ORGANIZATION: JRA
+SEED_SOURCE_SYSTEM: jra_official
+SOURCE_IDENTITY_BOOTSTRAP_OWNER: SQLiteJRARaceReplaySeedRepository.materialize_seed
+SOURCE_IDENTITY_BOOTSTRAP_REQUIRED: YES
+SOURCE_IDENTITY_WRITE_TRANSACTION: SAME_BEGIN_IMMEDIATE_AS_RACE_ENTRY_MAPPING_AND_SEED_SAVE
+CALLER_SUPPLIES_SOURCE_IDENTITY: NO
+SOURCE_IDENTITY_FIXED: YES
+SOURCE_IDENTITY_VALUE: (JRA,jra_official)
+NEW_SOURCE_IDENTITY_TABLE: NO
+SOURCE_IDENTITY_SCHEMA_CHANGE: NO
 
 RACE_FK: YES_TO_races.id_AND_EXACT_historical_input_external_races_MAPPING
 ENTRY_FK: YES_TO_EXACT_historical_input_external_entries_MAPPING
@@ -550,9 +606,11 @@ FINAL_C4D_PUBLIC_API_SHAPE: build_jra_race_historical_replay(seed=...,target_rac
 
 RESTART_REPRODUCIBLE: YES
 ARCHIVE_ENRICHMENT_CHANGES_EXISTING_SEED_V3: NO
-SAVE_TRANSACTION: ONE_BEGIN_IMMEDIATE_TRANSACTION_COVERING_INTERNAL_ROWS_MAPPINGS_SEED_HEADER_AND_ALL_ENTRIES
+SAVE_TRANSACTION: ONE_BEGIN_IMMEDIATE_TRANSACTION_COVERING_FIXED_SOURCE_IDENTITY_INTERNAL_ROWS_MAPPINGS_SEED_HEADER_AND_ALL_ENTRIES
 PARTIAL_SEED_LOADABLE: NO
 PARTIAL_ENTRY_MAPPING_LOADABLE: NO
+D0_TEST_OWNER: SEED_DOMAIN_PERSISTENCE_IDENTITY_MATERIALIZATION_MIGRATION
+C4D_TEST_OWNER: SEED_CONSUMPTION_EXACT_V3_ADAPTER_AND_ARCHIVE_ENRICHMENT_REPLAY
 
 IMPLEMENTATION_READY: YES_FOR_NEW_PROVIDER_SPECIFIC_SEED_AND_ATOMIC_MATERIALIZATION_BOUNDARY_AFTER_INDEPENDENT_APPROVAL
 BLOCKERS: NONE_FOR_NEW_FORMAL_MATERIALIZATION; UNPROVEN_LEGACY_ROWS_ARE_INTENTIONALLY_NOT_ADOPTABLE_AND_C4D_REMAINS_BLOCKED_UNTIL_D0_IS_IMPLEMENTED

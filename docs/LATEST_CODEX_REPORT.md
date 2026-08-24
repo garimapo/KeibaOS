@@ -4214,3 +4214,27 @@ seed's replay input while its bound capture remains valid.
 
 This correction changed documentation only. No pytest, implementation, schema,
 migration, c4d, live HTTP, or trusted capture was performed.
+
+### Materialization-scope correction
+
+Finalized d0's implementation ownership without changing seed identity. D0 owns only
+the seed domain, persistence, exact race/entry identity materialization, and global v015
+migration. Its v3 tests retain, digest, reload, and corruption-check the exact provenance
+received through formal `JRATargetRaceCardResolution`; d0 does not implement the c4d
+seed-bound adapter or archive-enrichment replay behavior.
+
+The exact-v3 replay contract remains frozen for c4d. Its integration suite will prove a
+seed bound to capture A still consumes A after another eligible capture B is archived,
+with no latest-v3 query or substitution. Missing or contradictory exact seed evidence is
+also c4d integration ownership, not d0 repository behavior.
+
+The materializer now explicitly bootstraps the fixed formal source identity
+`("JRA", "jra_official")` in existing `historical_input_source_identities` before
+creating external mappings. It accepts no caller provider identity and performs the
+insert-or-exact-reuse step inside the same `BEGIN IMMEDIATE` transaction as internal
+race/entry creation, mappings, seed header, and all children. Any later failure rolls
+back a newly inserted source identity as well. V015 still adds only the two seed tables
+and one full entry-mapping unique index; it adds no source-identity table or column.
+
+This correction changed documentation only. No pytest, implementation, schema,
+migration, c4d, live HTTP, or trusted capture was performed.
