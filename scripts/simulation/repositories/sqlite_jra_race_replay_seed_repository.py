@@ -6,6 +6,7 @@ from datetime import date as _date, datetime as _datetime, timezone as _timezone
 import hashlib as _hashlib
 import sqlite3
 
+from scripts.simulation.historical_input_evidence import HistoricalInputEvidenceReference as _Evidence
 from scripts.simulation.historical_input_source_records import HistoricalInputSourceRecord as _Record
 from scripts.simulation.jra_official_identity import (
     JRAOfficialIdentityValidationError as _IdentityError,
@@ -113,6 +114,9 @@ class SQLiteJRARaceReplaySeedRepository:
         except sqlite3.Error as error:
             self._connection.rollback()
             raise RepositoryDataIntegrityError("SQLite failed JRA replay seed materialization") from error
+        except BaseException:
+            self._connection.rollback()
+            raise
 
     def load_seed(self, *, seed_id: str) -> _Seed | None:
         """Load and fully revalidate one immutable seed by its exact deterministic ID."""
@@ -186,18 +190,29 @@ class SQLiteJRARaceReplaySeedRepository:
             raise RepositoryValidationError("target source track identity is invalid")
         if resolution.response.response_url != resolution.discovery.locator.canonical_target_race_card_url:
             raise RepositoryValidationError("target-card resolution response URL is invalid")
-        evidence = track.evidence
-        if (
-            type(evidence) is not tuple
-            or len(evidence) != 1
-            or evidence[0].evidence_role != "track"
-            or evidence[0].canonical_source_url != resolution.response.response_url
-            or evidence[0].response_sha256 != _hashlib.sha256(resolution.response.response_body).hexdigest()
-            or evidence[0].observed_at != resolution.response.observed_at
-            or evidence[0].available_at is not None
-            or evidence[0].request_identity_sha256 is not None
-        ):
-            raise RepositoryValidationError("target sources do not prove the resolved target-card response")
+        response_sha256 = _hashlib.sha256(resolution.response.response_body).hexdigest()
+        for record in target_sources.source_records:
+            if (
+                type(record) is not _Record
+                or record.organization != _ORGANIZATION
+                or record.source_system != _SOURCE_SYSTEM
+                or record.external_race_id != race.external_race_id
+                or record.provider_record_id is not None
+                or type(record.evidence) is not tuple
+                or len(record.evidence) != 1
+            ):
+                raise RepositoryValidationError("target source record lineage is invalid")
+            evidence = record.evidence[0]
+            if (
+                type(evidence) is not _Evidence
+                or evidence.evidence_role != record.record_kind
+                or evidence.canonical_source_url != resolution.response.response_url
+                or evidence.response_sha256 != response_sha256
+                or evidence.observed_at != resolution.response.observed_at
+                or evidence.available_at is not None
+                or evidence.request_identity_sha256 is not None
+            ):
+                raise RepositoryValidationError("target sources do not prove the resolved target-card response")
         values = track.record_values
         scheduled = values.get("scheduled_start_at")
         if type(scheduled) is not _datetime or scheduled.tzinfo is None or scheduled.utcoffset() is None:
@@ -258,6 +273,10 @@ class SQLiteJRARaceReplaySeedRepository:
             if type(row[0]) is not int or row[0] <= 0:
                 raise RepositoryDataIntegrityError("stored JRA external race mapping is invalid")
             self._validate_mapped_race(internal_race_id=row[0], facts=facts)
+            self._require_race_seed_proof(
+                external_race_id=facts.external_race_id,
+                internal_race_id=row[0],
+            )
             return row[0]
         target_date = facts.track_values["target_race_date"]
         place = facts.track_values["place"]
@@ -268,7 +287,7 @@ class SQLiteJRARaceReplaySeedRepository:
             (target_date.isoformat(), _ORGANIZATION, place, facts.race_number),
         ).fetchall()
         if collisions:
-            raise RepositoryConflictError("unproven legacy race collision prevents JRA materialization")
+            raise RepositoryDataIntegrityError("unproven legacy race collision prevents JRA materialization")
         self._require_legacy_columns(
             "races", ("id", "race_date", "organization", "place", "race_no", "race_name", "distance", "track", "weather", "track_condition", "horse_count")
         )
@@ -301,24 +320,17 @@ class SQLiteJRARaceReplaySeedRepository:
         return internal_race_id
 
     def _validate_mapped_race(self, *, internal_race_id: int, facts: "_MaterializationFacts") -> None:
-        self._require_legacy_columns(
-            "races", ("id", "race_date", "organization", "place", "race_no", "race_name", "distance", "track", "weather", "track_condition", "horse_count")
-        )
+        self._require_legacy_columns("races", ("id", "race_date", "organization", "place", "race_no"))
         row = self._connection.execute(
-            """SELECT id,race_date,organization,place,race_no,race_name,distance,track,weather,track_condition,horse_count
-               FROM races WHERE id=?""",
+            "SELECT id,race_date,organization,place,race_no FROM races WHERE id=?",
             (internal_race_id,),
         ).fetchone()
         date_value = facts.track_values["target_race_date"]
         if type(date_value) is not _date:
             raise RepositoryValidationError("target race date is invalid")
-        expected = (
-            internal_race_id, date_value.isoformat(), _ORGANIZATION, facts.track_values["place"], facts.race_number,
-            facts.track_values["race_name"], facts.track_values["distance_m"], facts.track_values["track"],
-            facts.track_values["weather"], facts.track_values["track_condition"], len(facts.entries),
-        )
+        expected = (internal_race_id, date_value.isoformat(), _ORGANIZATION, facts.track_values["place"], facts.race_number)
         if row is None or tuple(row) != expected:
-            raise RepositoryDataIntegrityError("mapped internal race disagrees with normalized JRA target facts")
+            raise RepositoryDataIntegrityError("mapped internal race identity is invalid")
 
     def _resolve_or_create_entries(
         self, *, facts: "_MaterializationFacts", internal_race_id: int
@@ -337,7 +349,7 @@ class SQLiteJRARaceReplaySeedRepository:
                     (internal_race_id, item.horse_no),
                 ).fetchall()
                 if collision:
-                    raise RepositoryConflictError("unproven legacy horse-number collision prevents JRA materialization")
+                    raise RepositoryDataIntegrityError("unproven legacy horse-number collision prevents JRA materialization")
                 cursor = self._connection.execute(
                     "INSERT INTO horses(race_id,horse_no) VALUES(?,?)", (internal_race_id, item.horse_no)
                 )
@@ -354,6 +366,12 @@ class SQLiteJRARaceReplaySeedRepository:
                 if type(row[0]) is not int or type(row[1]) is not int or row[0] != internal_race_id or row[1] <= 0:
                     raise RepositoryDataIntegrityError("stored JRA external entry mapping is invalid")
                 internal_entry_id = row[1]
+                self._require_entry_seed_proof(
+                    external_race_id=facts.external_race_id,
+                    external_entry_id=item.external_entry_id,
+                    internal_race_id=internal_race_id,
+                    internal_race_entry_id=internal_entry_id,
+                )
                 horse = self._connection.execute(
                     "SELECT id,race_id,horse_no FROM horses WHERE id=?", (internal_entry_id,)
                 ).fetchone()
@@ -369,6 +387,52 @@ class SQLiteJRARaceReplaySeedRepository:
                 )
             )
         return tuple(entries)
+
+    def _require_race_seed_proof(self, *, external_race_id: str, internal_race_id: int) -> None:
+        rows = self._connection.execute(
+            """SELECT seed_id FROM jra_race_replay_seeds
+               WHERE organization=? AND source_system=? AND external_race_id=? AND internal_race_id=?
+               ORDER BY seed_id""",
+            (_ORGANIZATION, _SOURCE_SYSTEM, external_race_id, internal_race_id),
+        ).fetchall()
+        if not rows:
+            raise RepositoryDataIntegrityError("existing JRA race mapping lacks prior d0 seed proof")
+        for (seed_id,) in rows:
+            proof = self._load_seed_unvalidated(seed_id=seed_id)
+            if proof.external_race_id != external_race_id or proof.internal_race_id != internal_race_id:
+                raise RepositoryDataIntegrityError("prior JRA race seed proof is contradictory")
+
+    def _require_entry_seed_proof(
+        self,
+        *,
+        external_race_id: str,
+        external_entry_id: str,
+        internal_race_id: int,
+        internal_race_entry_id: int,
+    ) -> None:
+        rows = self._connection.execute(
+            """SELECT seed_id FROM jra_race_replay_seed_entries
+               WHERE organization=? AND source_system=? AND external_race_id=? AND external_entry_id=?
+                 AND internal_race_id=? AND internal_race_entry_id=? ORDER BY seed_id""",
+            (
+                _ORGANIZATION,
+                _SOURCE_SYSTEM,
+                external_race_id,
+                external_entry_id,
+                internal_race_id,
+                internal_race_entry_id,
+            ),
+        ).fetchall()
+        if not rows:
+            raise RepositoryDataIntegrityError("existing JRA entry mapping lacks prior d0 seed proof")
+        for (seed_id,) in rows:
+            proof = self._load_seed_unvalidated(seed_id=seed_id)
+            if not any(
+                entry.external_entry_id == external_entry_id
+                and entry.internal_race_entry_id == internal_race_entry_id
+                for entry in proof.entries
+            ):
+                raise RepositoryDataIntegrityError("prior JRA entry seed proof is contradictory")
 
     def _find_existing_natural_identity(self, seed: _Seed) -> tuple[str, str] | None:
         return self._connection.execute(
@@ -423,13 +487,17 @@ class SQLiteJRARaceReplaySeedRepository:
         if header[4:6] != (_ORGANIZATION, _SOURCE_SYSTEM):
             raise RepositoryDataIntegrityError("stored JRA replay seed source identity is invalid")
         entries = self._connection.execute(
-            """SELECT entry_order,external_entry_id,external_horse_id,horse_no,internal_race_entry_id
+            """SELECT organization,source_system,external_race_id,internal_race_id,
+                      entry_order,external_entry_id,external_horse_id,horse_no,internal_race_entry_id
                FROM jra_race_replay_seed_entries WHERE seed_id=? ORDER BY entry_order""",
             (seed_id,),
         ).fetchall()
         if not entries:
             raise RepositoryDataIntegrityError("stored JRA replay seed has no entries")
-        seed_entries = tuple(_SeedEntry(*row) for row in entries)
+        expected_child_identity = (_ORGANIZATION, _SOURCE_SYSTEM, header[6], header[7])
+        if any(tuple(row[:4]) != expected_child_identity for row in entries):
+            raise RepositoryDataIntegrityError("stored JRA replay seed child identity is invalid")
+        seed_entries = tuple(_SeedEntry(*row[4:]) for row in entries)
         seed = _build_seed(
             dataset_id=header[3], external_race_id=header[6], internal_race_id=header[7],
             target_race_selection_capture_id=header[8], target_race_card_capture_id=header[9],
@@ -533,7 +601,10 @@ def _parse_datetime_text(value: object) -> _datetime:
         parsed = _datetime.fromisoformat(value)
     except ValueError as error:
         raise RepositoryDataIntegrityError("stored JRA replay seed timestamp is invalid") from error
-    return _normalize_utc(parsed, "stored timestamp")
+    try:
+        return _normalize_utc(parsed, "stored timestamp")
+    except RepositoryValidationError as error:
+        raise RepositoryDataIntegrityError("stored JRA replay seed timestamp is invalid") from error
 
 
 __all__ = ("SQLiteJRARaceReplaySeedRepository",)

@@ -4198,3 +4198,19 @@ No assertion was weakened or made dynamic. The additional-registry command passe
 seed/repository tests passed **7 passed**, the expanded migration coverage passed
 **68 passed**, and the related JRA/source/snapshot stack passed **92 passed**. Full pytest
 verification completed with **2742 passed**. No live HTTP or trusted capture was performed.
+
+### D0 integrity correction
+
+The correction makes prior d0 seed references the sole durable proof for reusing existing
+JRA race and entry mappings. Bare pre-existing mappings and legacy race/horse-number
+collisions now fail as integrity errors. Proven race reuse validates only stable legacy
+identity fields, leaving weather, condition, and runner count revision-specific. Every
+target source record is checked against the same exact v3 response before transaction
+start; repeated child identity columns are validated during load; and a final transaction
+safety boundary rolls back and rethrows any otherwise-unhandled post-begin exception.
+
+V015 prerequisite validation now pins the v014 request-identity evidence column, v010
+source/race/entry keys and foreign keys, horses membership key, and absence of unregistered
+partial v015 objects. Verification passed: domain **29**, repository **33**, migration
+**13**, related **92**, migration regressions **66**, and full suite **2808** tests. No
+HTTP, capture-archive lookup, c4d implementation, or trusted capture was performed.

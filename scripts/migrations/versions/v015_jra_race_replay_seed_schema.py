@@ -37,7 +37,39 @@ def _has_unique_parent_key(connection: sqlite3.Connection, table: str, columns: 
     return False
 
 
+def _primary_key_columns(connection: sqlite3.Connection, table: str) -> tuple[str, ...]:
+    columns = sorted(
+        ((row[5], row[1]) for row in connection.execute(f"PRAGMA table_info({table})") if row[5]),
+        key=lambda item: item[0],
+    )
+    return tuple(name for _, name in columns)
+
+
+def _foreign_keys(
+    connection: sqlite3.Connection,
+    table: str,
+) -> set[tuple[tuple[str, ...], str, tuple[str, ...], str, str]]:
+    grouped: dict[int, list[tuple[object, ...]]] = {}
+    for row in connection.execute(f"PRAGMA foreign_key_list({table})"):
+        grouped.setdefault(row[0], []).append(row)
+    result: set[tuple[tuple[str, ...], str, tuple[str, ...], str, str]] = set()
+    for rows in grouped.values():
+        ordered = sorted(rows, key=lambda row: row[1])
+        result.add(
+            (
+                tuple(str(row[3]) for row in ordered),
+                str(ordered[0][2]),
+                tuple(str(row[4]) for row in ordered),
+                str(ordered[0][5]),
+                str(ordered[0][6]),
+            )
+        )
+    return result
+
+
 def _require_v014(connection: sqlite3.Connection) -> None:
+    if connection.execute("PRAGMA foreign_keys").fetchone() != (1,):
+        raise RuntimeError("v015 requires foreign_keys enabled")
     names = {
         row[0]
         for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")
@@ -53,11 +85,36 @@ def _require_v014(connection: sqlite3.Connection) -> None:
     }
     if not required_tables <= names:
         raise RuntimeError("v015 requires the complete registered v014 application schema")
+    forbidden_objects = {
+        "jra_race_replay_seeds",
+        "jra_race_replay_seed_entries",
+        "ux_historical_input_external_entries_exact_mapping",
+    }
+    if forbidden_objects & {
+        row[0]
+        for row in connection.execute(
+            "SELECT name FROM sqlite_master WHERE name IN (?,?,?)",
+            tuple(sorted(forbidden_objects)),
+        )
+    }:
+        raise RuntimeError("v015 objects already exist without registered migration")
     applied = dict(connection.execute("SELECT version,name FROM schema_migrations"))
     if applied != _EXPECTED_MIGRATIONS:
         raise RuntimeError("v015 requires the exact registered v014 application schema")
     if _columns(connection, "historical_input_source_identities") != ("organization", "source_system"):
         raise RuntimeError("v015 source identity schema is invalid")
+    if _columns(connection, "historical_input_snapshot_provenance_evidence") != (
+        "snapshot_id",
+        "audit_key",
+        "evidence_order",
+        "evidence_role",
+        "canonical_source_url",
+        "response_sha256",
+        "available_at_utc",
+        "observed_at_utc",
+        "request_identity_sha256",
+    ):
+        raise RuntimeError("v015 requires the exact v014 provenance evidence schema")
     if _columns(connection, "historical_input_external_races") != (
         "organization", "source_system", "external_race_id", "internal_race_id"
     ):
@@ -72,6 +129,40 @@ def _require_v014(connection: sqlite3.Connection) -> None:
         ("organization", "source_system", "external_race_id", "internal_race_id"),
     ):
         raise RuntimeError("v015 requires the v010 exact external race mapping key")
+    if _primary_key_columns(connection, "historical_input_source_identities") != (
+        "organization", "source_system"
+    ):
+        raise RuntimeError("v015 requires the v010 source identity primary key")
+    if _primary_key_columns(connection, "historical_input_external_races") != (
+        "organization", "source_system", "external_race_id"
+    ):
+        raise RuntimeError("v015 requires the v010 external race primary key")
+    if not _has_unique_parent_key(
+        connection,
+        "historical_input_external_races",
+        ("organization", "source_system", "internal_race_id"),
+    ):
+        raise RuntimeError("v015 requires the v010 external race reverse key")
+    if _foreign_keys(connection, "historical_input_external_races") != {
+        (("organization", "source_system"), "historical_input_source_identities", ("organization", "source_system"), "RESTRICT", "RESTRICT"),
+        (("internal_race_id",), "races", ("id",), "RESTRICT", "RESTRICT"),
+    }:
+        raise RuntimeError("v015 requires exact v010 external race foreign keys")
+    if _primary_key_columns(connection, "historical_input_external_entries") != (
+        "organization", "source_system", "external_race_id", "external_entry_id"
+    ):
+        raise RuntimeError("v015 requires the v010 external entry primary key")
+    if not _has_unique_parent_key(
+        connection,
+        "historical_input_external_entries",
+        ("organization", "source_system", "internal_race_id", "race_entry_id"),
+    ):
+        raise RuntimeError("v015 requires the v010 external entry reverse key")
+    if _foreign_keys(connection, "historical_input_external_entries") != {
+        (("organization", "source_system", "external_race_id", "internal_race_id"), "historical_input_external_races", ("organization", "source_system", "external_race_id", "internal_race_id"), "RESTRICT", "RESTRICT"),
+        (("internal_race_id", "race_entry_id"), "horses", ("race_id", "id"), "RESTRICT", "RESTRICT"),
+    }:
+        raise RuntimeError("v015 requires exact v010 external entry foreign keys")
     if not _has_unique_parent_key(connection, "horses", ("race_id", "id")):
         raise RuntimeError("v015 requires the v010 horses race-membership key")
 

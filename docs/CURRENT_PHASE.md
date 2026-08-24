@@ -33,10 +33,25 @@ Migration v015 adds only the two replay-seed tables and the one full external-en
 mapping unique index. No capture family, HTTP, archive query, snapshot construction,
 prediction, or live acquisition behavior is added.
 
+The review correction requires every reused race and entry mapping to have valid prior
+d0 seed proof. Unreferenced pre-existing mappings and legacy natural-key/horse-number
+collisions fail as repository integrity errors. Prior proven race reuse checks only stable
+race identity fields, so later exact target revisions may differ in weather, condition,
+or runner count without rebinding the race.
+
+Every target source record must carry the exact v3 response URL, digest, observation,
+record-kind evidence role, and null provider/request availability fields. This validation
+occurs before the transaction. Every failure after `BEGIN IMMEDIATE`, including an
+unexpected Python exception, rolls back; unexpected exceptions are re-raised unchanged.
+Exact loads validate repeated child organization, source, race, and internal-race columns.
+V015 now rejects registered-v014 lookalikes missing request identity, malformed v010
+mapping keys/FKs, and unregistered partial v015 objects before mutation.
+
 ## Verification
 
-Seed/repository tests: **7 passed**. Migration coverage: **68 passed**. Related JRA and
-snapshot stack: **92 passed**. Full pytest suite: **2742 passed**. `git diff --check`
+Seed domain tests: **29 passed**. Seed repository tests: **33 passed**. V015 migration
+tests: **13 passed**. Related JRA and snapshot stack: **92 passed**. Migration regression
+suite: **66 passed**. Full pytest suite: **2808 passed**. `git diff --check`
 passed. No live HTTP or trusted real capture was performed.
 
 ## Stop Condition
