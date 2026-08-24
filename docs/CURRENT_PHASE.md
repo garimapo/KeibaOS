@@ -120,9 +120,10 @@ to the exact normalized target collection.
 immutable, and retained verbatim. Race-ID-only or latest-v4 rediscovery is forbidden.
 
 At creation, the navigation result and `JRATargetRaceCardResolution` must have identical
-discovery provenance and schema-v4 capture ID. The existing c4c resolution contract is
-the lineage authority that loads the exact v4 capture, reruns formal discovery, and
-proves its selected target URL and canonical external race identity. The normalized
+discovery provenance and schema-v4 capture ID. Creation uses formal c4c once to choose
+the causally latest capture for the exact discovered URL at `seed.captured_at`. The
+existing c4c resolution contract loads the exact v4 capture, reruns formal discovery,
+and proves its selected target URL and canonical external race identity. The normalized
 target records must then prove that same race and the exact resolution response.
 
 The seed also retains:
@@ -134,10 +135,33 @@ The seed also retains:
 This is not redundant convenience data. It binds the entry set to the exact schema-v3
 target-card revision from which it was normalized. A later archive insertion at an
 eligible observation time must not silently change the target revision or runner set of
-an existing seed. At c4d consumption, c4c is called using the seed's exact v4 ID and
-`captured_at`, and its returned v3 ID, digest, URL, and race must equal the seed before
-normalization or history acquisition continues. Capture-archive corruption and absence
-remain provider errors; they are never converted to seed missing.
+an existing seed.
+
+Seed replay therefore does **not** perform another latest-v3 lookup. C4d supplies c4c a
+private seed-bound adapter that conforms to c4c's existing target-card provider protocol
+but can load only `seed.target_race_card_capture_id` through an injected exact-by-ID
+provider. This preserves c4c's formal discovery and validation order without redesigning
+c4c or allowing the adapter to select a different v3 capture.
+
+The exact replay sequence is:
+
+1. load the exact v4 capture using
+   `seed.target_race_selection_capture_id`;
+2. rerun existing formal v4 navigation discovery for `seed.external_race_id`;
+3. when c4c invokes its target-card provider with that discovered locator and
+   `observed_at_not_after=seed.captured_at`, the adapter loads only
+   `seed.target_race_card_capture_id` through the exact-by-ID provider;
+4. require the capture ID, response SHA, canonical URL, parsed race identity, and
+   observed time to equal the seed/discovery contract, including
+   `exact_v3.observed_at <= seed.captured_at`;
+5. only then use the established supplied-response conversion and target normalizer.
+
+The adapter returns missing when the exact seed capture is absent; c4c then preserves
+its dedicated unavailable boundary. Corrupt or contradictory exact capture state remains
+provider integrity or formal validation failure. It never falls back to another capture,
+URL, site variant, opaque tail, latest query, current response, or raw-HTML parallel
+parse. If exact capture A remains valid, adding eligible capture B for the same URL does
+not change replay of the seed bound to A.
 
 ## Causal and Dataset Identity
 
@@ -226,12 +250,10 @@ snapshots. The JRA capture archive remains a separately injected repository and 
 assumed to share the same physical database connection.
 
 A global application migration v015 is required. It adds only provider-specific seed
-storage and FK-supporting uniqueness:
+storage and one FK-supporting entry-mapping uniqueness rule:
 
 - `jra_race_replay_seeds` — one immutable header per seed;
 - `jra_race_replay_seed_entries` — the complete ordered mapping, owned by the header;
-- `ux_historical_input_external_races_exact_mapping` over organization, source system,
-  external race ID, and internal race ID;
 - `ux_historical_input_external_entries_exact_mapping` over organization, source
   system, external race ID, external entry ID, internal race ID, and internal entry ID.
 
@@ -241,10 +263,16 @@ checks, a natural-identity `UNIQUE` constraint, child uniqueness for order/exter
 entry/external horse/horse number/internal entry, and `WITHOUT ROWID` where consistent
 with current migration style.
 
-The two explicit unique indexes are logically redundant with existing functional
-mappings but are required as SQLite parent keys for exact composite foreign keys. The
-header has exact FKs to the full external-race mapping and `races(id)`. Each child has
-an exact FK to the full external-entry mapping, a composite membership FK
+V010 already declares a `UNIQUE` constraint across organization, source system,
+external race ID, and internal race ID in `historical_input_external_races`; that is the
+exact race-mapping parent key, so v015 adds no redundant race index. The existing entry
+mapping primary key and separate internal-entry `UNIQUE` do not prove that both identity
+halves occur in the same row. V015 therefore adds exactly one explicit unique index over
+all six entry-mapping fields as the parent key for the seed child's exact composite FK.
+
+The header has exact FKs to the existing v010 full external-race mapping key and
+`races(id)`. Each child has an exact FK to the new full external-entry mapping parent
+key, a composite membership FK
 `(internal_race_id, internal_race_entry_id) -> horses(race_id, id)`, and a cascading FK
 to its seed header. Existing v010 already provides the required unique parent key on
 `horses(race_id, id)`.
@@ -336,12 +364,20 @@ After this phase is implemented, c4d should receive one exact loaded
 and time fields. Its final candidate API becomes:
 
 ```python
+class JRATargetRaceCardCaptureByIdProvider(Protocol):
+    def __call__(
+        self,
+        *,
+        capture_id: str,
+    ) -> JRAOfficialTargetRaceCardResponseCapture | None: ...
+
 def build_jra_race_historical_replay(
     *,
     seed: JRARaceReplaySeed,
     target_race_selection_capture_provider:
         JRATargetRaceSelectionCaptureProvider,
-    target_race_card_capture_provider: JRATargetRaceCardCaptureProvider,
+    target_race_card_capture_by_id_provider:
+        JRATargetRaceCardCaptureByIdProvider,
     horse_history_response_provider: JRATargetHorseHistoryResponseProvider,
     race_result_response_provider: JRAHistoricalRaceResultResponseProvider,
     final_win_odds_response_provider:
@@ -349,10 +385,13 @@ def build_jra_race_historical_replay(
 ) -> JRARaceHistoricalReplayResult: ...
 ```
 
-C4d revalidates the seed domain, invokes c4c with the seed's exact v4 ID and
-`captured_at`, requires the returned v3 ID/SHA/URL to match the seed, normalizes the same
-entry set, requires exact ordered entry-map equality, and then performs its already-
-prepared read-only replay. It never creates or modifies the seed.
+C4d revalidates the seed domain and creates a private adapter closed over the seed's
+exact v3 capture ID and the exact-by-ID provider. It invokes c4c with the seed's exact v4
+ID, `captured_at`, and that adapter. The adapter may return only the exact seed capture
+after matching c4c's discovered locator and observation bound. C4d requires the returned
+v3 ID/SHA/URL to match the seed, normalizes the same entry set, requires exact ordered
+entry-map equality, and then performs its already-prepared read-only replay. The generic
+latest target-card provider is not a c4d input. C4d never creates or modifies the seed.
 
 The restart guarantee is exact: after acquisition/materialization terminates, loading
 the same `seed_id` yields the same v4 and v3 provenance, dataset/race identity, causal
@@ -379,6 +418,10 @@ file belongs to d0.
 
 Future tests must directly pin canonical creation; deterministic content/ID; exact v4
 and v3 provenance; wrong v4/race and wrong v3/revision rejection; restart equality;
+seed creation selecting causal latest v3 A; restart followed by archive insertion of
+another eligible v3 B for the same URL; replay still consuming A and never substituting
+B; missing exact A; wrong exact v3 ID/SHA/URL/race/site/tail; v3 observation after seed
+`captured_at`; and no latest-v3 repository query during seed replay;
 identical idempotence; natural-identity content conflict; no race/latest-v4 lookup;
 first snapshot readiness without an existing historical snapshot; atomic new internal
 race/entry creation; exact prior formal mapping reuse; unproven legacy natural-key and
@@ -441,6 +484,14 @@ V3_CAPTURE_ID_IN_SEED: YES
 V3_RESPONSE_SHA_IN_SEED: YES
 TARGET_CARD_URL_IN_SEED: YES
 WHY: BINDS_THE_ENTRY_MAPPING_TO_ONE_EXACT_TARGET_CARD_REVISION_AND_PREVENTS_LATER_ARCHIVE_CONTENT_FROM_CHANGING_AN_EXISTING_SEED
+SEED_CREATION_V3_SELECTION: CAUSAL_LATEST_EXACT_URL_AT_seed_captured_at_VIA_FORMAL_C4C
+SEED_CONSUMPTION_V3_SELECTION: EXACT_seed.target_race_card_capture_id
+LATEST_V3_LOOKUP_ALLOWED_DURING_SEED_REPLAY: NO
+V3_RACE_ID_ONLY_REDISCOVERY_ALLOWED: NO
+V3_URL_ONLY_LATEST_REDISCOVERY_ALLOWED: NO
+C4D_TARGET_CARD_PROVIDER_SEMANTICS: EXACT_SEED_BOUND_V3_CAPTURE
+GENERIC_LATEST_TARGET_CARD_PROVIDER_USED_BY_C4D: NO
+EXACT_V3_CAPTURE_ID_RETAINED_FOR_REPLAY: YES
 
 CAPTURED_AT_OWNER: DATASET_ACQUISITION_AND_SEED_MATERIALIZATION_COORDINATOR
 CAPTURED_AT_PART_OF_SEED_IDENTITY: YES
@@ -469,7 +520,13 @@ SCHEMA_VERSION: 1_FOR_SEED_DOMAIN
 MIGRATION_REQUIRED: YES_GLOBAL_APPLICATION_V015
 NEW_TABLES: jra_race_replay_seeds_AND_jra_race_replay_seed_entries
 NEW_COLUMNS: NEW_TABLE_COLUMNS_ONLY; NO_EXISTING_TABLE_COLUMN_CHANGE
-NEW_INDEXES: TWO_EXPLICIT_EXACT_MAPPING_UNIQUE_INDEXES_FOR_COMPOSITE_FK_PARENT_KEYS; TABLE_PK_UNIQUE_CONSTRAINTS_AS_DECLARED
+EXISTING_RACE_EXACT_MAPPING_PARENT_KEY: YES_V010_UNIQUE_CONSTRAINT
+NEW_RACE_EXACT_MAPPING_INDEX_REQUIRED: NO
+NEW_ENTRY_EXACT_MAPPING_INDEX_REQUIRED: YES
+NEW_EXACT_MAPPING_INDEX_COUNT: 1
+RACE_MAPPING_PARENT_KEY: EXISTING_V010_UNIQUE
+ENTRY_MAPPING_PARENT_KEY: NEW_V015_FULL_EXACT_MAPPING_UNIQUE
+NEW_INDEXES: ONE_NEW_ENTRY_EXACT_MAPPING_COMPOSITE_UNIQUE_ONLY
 
 RACE_FK: YES_TO_races.id_AND_EXACT_historical_input_external_races_MAPPING
 ENTRY_FK: YES_TO_EXACT_historical_input_external_entries_MAPPING
@@ -489,9 +546,10 @@ RACE_ID_ONLY_LOOKUP_ALLOWED: NO
 AMBIGUITY_POLICY: IMPOSSIBLE_FOR_VALID_PK; ANY_DUPLICATE_PARTIAL_CONFLICT_OR_DIGEST_DRIFT_IS_INTEGRITY_ERROR
 
 FINAL_C4D_INPUT_STYLE: ONE_EXACT_JRARaceReplaySeed_PLUS_READ_ONLY_PROVIDERS
-FINAL_C4D_PUBLIC_API_SHAPE: build_jra_race_historical_replay(seed=...,target_race_selection_capture_provider=...,target_race_card_capture_provider=...,horse_history_response_provider=...,race_result_response_provider=...,final_win_odds_response_provider=...)
+FINAL_C4D_PUBLIC_API_SHAPE: build_jra_race_historical_replay(seed=...,target_race_selection_capture_provider=...,target_race_card_capture_by_id_provider=...,horse_history_response_provider=...,race_result_response_provider=...,final_win_odds_response_provider=...)
 
 RESTART_REPRODUCIBLE: YES
+ARCHIVE_ENRICHMENT_CHANGES_EXISTING_SEED_V3: NO
 SAVE_TRANSACTION: ONE_BEGIN_IMMEDIATE_TRANSACTION_COVERING_INTERNAL_ROWS_MAPPINGS_SEED_HEADER_AND_ALL_ENTRIES
 PARTIAL_SEED_LOADABLE: NO
 PARTIAL_ENTRY_MAPPING_LOADABLE: NO

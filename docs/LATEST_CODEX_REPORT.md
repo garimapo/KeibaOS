@@ -4189,3 +4189,28 @@ providers, eliminating contradictory decomposed caller inputs.
 
 This PREPARE changed documentation only. No pytest was run, as required. No production,
 test, schema, migration, importer, c4d, HTTP, or trusted-capture activity was performed.
+
+### Exact seed evidence correction
+
+Corrected the d0 persistence plan to reuse v010's existing full race-mapping `UNIQUE`
+constraint as the seed header's exact parent key. V015 now adds only one explicit mapping
+index: the six-column external-plus-internal entry association required to prove that
+both halves belong to the same mapping row. The two provider-specific seed tables and
+global v015 migration remain required; no existing-table column is added.
+
+Seed creation still uses formal c4c to select the causal latest exact-URL v3 response at
+the seed's `captured_at`. Seed replay is now explicitly different: it must load only the
+persisted `target_race_card_capture_id`. C4d receives an exact v3 capture-by-ID provider
+and supplies c4c a private adapter closed over that seed ID. The adapter preserves c4c's
+v4 discovery and validation semantics but cannot perform a latest query or substitute a
+different v3 capture.
+
+The exact replay capture must match the seed's v3 ID, response SHA, canonical URL,
+external race, discovered v4 locator, and observation cutoff before supplied-response
+conversion and target normalization. Missing exact evidence is unavailable; corruption
+or contradiction remains integrity/validation failure; neither falls back. Consequently,
+adding another eligible v3 capture after seed materialization cannot change an existing
+seed's replay input while its bound capture remains valid.
+
+This correction changed documentation only. No pytest, implementation, schema,
+migration, c4d, live HTTP, or trusted capture was performed.
