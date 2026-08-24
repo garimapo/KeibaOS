@@ -4214,3 +4214,39 @@ source/race/entry keys and foreign keys, horses membership key, and absence of u
 partial v015 objects. Verification passed: domain **29**, repository **33**, migration
 **13**, related **92**, migration regressions **66**, and full suite **2808** tests. No
 HTTP, capture-archive lookup, c4d implementation, or trusted capture was performed.
+
+## Phase 4C-2d3b1i6d1d5f1c4d JRA Race Historical Replay
+
+Implemented the final pure one-race replay orchestrator from an exact formal
+`JRARaceReplaySeed`. The public API accepts no decomposed seed facts. Its private v3
+adapter validates the c4c locator and cutoff against the seed, calls only the injected
+exact capture-ID provider, and proves the returned capture's ID, digest, URL, race, and
+observation. The generic latest-v3 lookup is absent, so archive enrichment cannot change
+an existing seed replay.
+
+The orchestrator calls formal c4c and target normalization once, requires all returned
+v4/v3 and ordered target-entry provenance to equal the seed, then resolves accessU and
+collects accessS/accessO history once per entry in exact seed order. Every evidence
+lookup uses `seed.captured_at`; `seed.information_cutoff` remains the snapshot ceiling,
+and `stored_at` has no causal role. The complete union contains canonical target records
+first and each complete historical collection afterward in seed order, with global
+source-ID uniqueness and no partial result.
+
+The existing snapshot builder receives only the seed's dataset, internal race, replay
+times, seed-derived entry mapping, and complete source tuple and is called exactly once.
+The frozen/slotted result retains the exact seed object plus the completed snapshot and
+rechecks their full race, time, and ordered-entry agreement. The module performs no
+write, persistence, HTTP, current fallback, seed construction, latest lookup, legacy
+mapping, or package export. Provider integrity errors propagate unchanged.
+
+Verification passed: dedicated c4d **35 passed**; related formal d0/c4c/source/accessU/
+collector/snapshot/archive tests **183 passed**; full pytest suite **2843 passed**. The
+dedicated suite now proves the complete durable handoff: materialize a d0 seed against
+exact v3 capture A, persist v4/A evidence separately, close and reopen both SQLite
+databases, load an equal but distinct seed object, add later causally eligible capture B,
+and replay the reloaded seed while requesting only A's exact ID. The generic latest-v3
+method is forbidden, B is not substituted, and deliberately reversed A/B `stored_at`
+ordering proves storage time has no causal role. Direct c4c-result contradictions cover
+all seven production-checked provenance fields. Static correction scope, unchanged
+production blob, public-surface, forbidden-dependency, no-broad-catch, no-latest/no-write,
+and `git diff --check` checks passed. No live HTTP or real trusted capture was performed.
