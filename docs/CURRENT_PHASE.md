@@ -186,13 +186,23 @@ while saving an already-built snapshot. `RaceEntrySelectionResolver` and
 not canonical JRA external identities, and must not be repurposed. The legacy `horses`
 table does not formally retain canonical JRA `external_entry_id`.
 
-This exact complete one-to-one mapping is the second production prerequisite. Its owner
-must be a future approved dataset-import or replay-seed identity boundary. Keys come only
-from the target normalizer's canonical `external_entry_id` values, and values are the
-corresponding internal race-entry IDs. Horse/jockey names are never mapping keys, and an
-implicit horse-number mapping is forbidden unless separately formalized. The existing
-snapshot builder continues to validate completeness and uniqueness once the exact map
-is supplied.
+The analogous canonical race association is also not independently bootstrapped. The
+snapshot builder receives `internal_race_id` from its caller and derives canonical
+`external_race_id` from source records, but it has no formal authority proving that pair.
+`SQLiteHistoricalInputSnapshotRepository._ensure_external_race(...)` can reject a
+conflict against an existing mapping, but on the first snapshot it registers the pair
+from the already-built snapshot. Save-time registration is not acquisition/import
+identity proof and cannot safely bootstrap the association.
+
+These race and entry associations form one coherent second production prerequisite. Its
+owner must be a future approved dataset-import or replay-seed identity boundary. It must
+prove canonical external race to internal race identity, canonical external entry to
+internal race-entry identity, and that every mapped internal race-entry ID belongs to
+that same internal race. Entry keys come only from the target normalizer's canonical
+`external_entry_id` values. Horse/jockey names are never mapping keys, and an implicit
+horse-number mapping is forbidden unless separately formalized. The existing snapshot
+builder continues to validate completeness and uniqueness once the independently proven
+race identity and exact entry map are supplied.
 
 C4d calls the existing `build_historical_input_snapshot(...)` exactly once and passes
 `dataset_id`, `internal_race_id`, `information_cutoff`, `captured_at`, the complete
@@ -234,13 +244,14 @@ the v4 navigation capture ID or the explicit c4c v3 capture ID as race-level com
 provenance.
 
 Accordingly, production historical replay is not implementation-ready until both the
-exact v4 handoff and first-snapshot external-entry mapping handoff receive approved
+exact v4 handoff and first-snapshot race-and-entry identity handoff receive approved
 ownership. The preferred next design question is whether one narrow JRA race replay seed
-or acquisition manifest should own both exact inputs. That PREPARE must determine the
-durable identity and lifecycle for `dataset_id`, `internal_race_id`, canonical
-`external_race_id`, exact v4 capture ID, and the complete canonical external-entry map.
-It must separately decide whether `captured_at` and `information_cutoff` belong in that
-domain or remain caller replay-policy inputs.
+or acquisition manifest should own both prerequisites. That PREPARE must determine the
+durable identity and lifecycle for `dataset_id`, canonical `external_race_id`,
+`internal_race_id`, their exact association, exact v4 capture ID, the complete canonical
+external-entry map, and proof that every mapped internal entry belongs to the selected
+internal race. It must separately decide whether `captured_at` and
+`information_cutoff` belong in that domain or remain caller replay-policy inputs.
 
 No physical storage choice is frozen. Pure c4d logic requires no schema change. Whether
 the prerequisite handoff needs a schema, migration, table, columns, indexes, or
@@ -262,11 +273,15 @@ skip; integrity propagation unchanged; no name mapping; complete entry-map pass-
 deterministic source order and repeated snapshot build; snapshot-builder compatibility;
 no HTTP/write/current fallback; no partial result; exact result provenance; no raw-byte
 duplication; no broad catch; and no package-root export. Prerequisite integration tests
-must additionally prove that exact v4 provenance and exact external-entry mapping survive
-a process boundary; the first snapshot obtains its map without an existing snapshot;
-missing v4 or entry handoff fails closed; incomplete, duplicate, or foreign-race mapping
-fails before snapshot construction; no name or implicit horse-number fallback exists;
-restart yields the same inputs; and no race-ID/latest-v4 reconstruction occurs.
+must additionally prove that exact v4 provenance and exact race/entry associations
+survive a process boundary; the first snapshot cannot invent an external-race to
+internal-race association or bootstrap it from snapshot save; a wrong internal race for
+the canonical external race fails closed; the first snapshot obtains its entry map
+without an existing snapshot; missing v4 or identity handoff fails closed; incomplete,
+duplicate, or foreign-race mapping fails before snapshot construction; every internal
+entry is proven to belong to the selected internal race; no name or implicit horse-number
+fallback exists; restart yields the same race and entry associations; and no race-ID/
+latest-v4 reconstruction occurs.
 
 ## Readiness Matrix
 
@@ -314,7 +329,13 @@ SOURCE_RECORD_CONFLICT_POLICY: FAIL_CLOSED_THROUGH_EXISTING_NEUTRAL_VALIDATION
 
 ENTRY_MAPPING_HANDOFF_STATUS: NOT_CURRENTLY_FORMAL_FOR_FIRST_JRA_HISTORICAL_SNAPSHOT
 ENTRY_MAPPING_OWNER: FUTURE_APPROVED_DATASET_IMPORT_OR_REPLAY_SEED_IDENTITY_BOUNDARY
+RACE_MAPPING_HANDOFF_STATUS: NOT_CURRENTLY_FORMAL_FOR_FIRST_JRA_HISTORICAL_SNAPSHOT
+RACE_MAPPING_OWNER: FUTURE_APPROVED_DATASET_IMPORT_OR_REPLAY_SEED_IDENTITY_BOUNDARY
+EXTERNAL_RACE_TO_INTERNAL_RACE_MAPPING_REQUIRED: YES
+EXISTING_SNAPSHOT_REPOSITORY_CAN_BOOTSTRAP_RACE_MAPPING: NO
 EXTERNAL_ENTRY_TO_INTERNAL_ENTRY_MAPPING_REQUIRED: YES
+ENTRY_MAPPING_MUST_BE_BOUND_TO_INTERNAL_RACE: YES
+INTERNAL_RACE_ENTRY_MEMBERSHIP_PROOF_REQUIRED: YES
 EXISTING_SNAPSHOT_REPOSITORY_CAN_BOOTSTRAP_MAPPING: NO
 SQLITE_RACE_ENTRY_SOURCE_REUSED_FOR_JRA_EXTERNAL_MAPPING: NO
 LEGACY_HORSES_TABLE_IS_FORMAL_JRA_EXTERNAL_IDENTITY_SOURCE: NO
@@ -346,9 +367,9 @@ ENTRY_MAPPING_PROVIDER_FIELDS_ADDED_TO_NEUTRAL_SOURCE_RECORD: NO
 
 PRODUCTION_PREREQUISITE_COUNT: 2
 PREREQUISITE_1: EXACT_DURABLE_V4_CAPTURE_ID_HANDOFF
-PREREQUISITE_2: EXACT_EXTERNAL_ENTRY_TO_INTERNAL_RACE_ENTRY_IDENTITY_HANDOFF
+PREREQUISITE_2: EXACT_DATASET_IMPORT_RACE_AND_ENTRY_IDENTITY_HANDOFF
 NEXT_PREREQUISITE_DESIGN_REQUIRED: YES
-PREFERRED_DESIGN_QUESTION: ONE_JRA_RACE_REPLAY_SEED_OR_MANIFEST_FOR_EXACT_V4_PROVENANCE_AND_ENTRY_IDENTITY_MAPPING
+PREFERRED_DESIGN_QUESTION: ONE_JRA_RACE_REPLAY_SEED_OR_MANIFEST_FOR_EXACT_V4_PROVENANCE_AND_EXACT_RACE_AND_ENTRY_DATASET_IDENTITY
 PHYSICAL_STORAGE_FROZEN: NO
 
 SCHEMA_CHANGE_REQUIRED: NOT_FOR_PURE_C4D_LOGIC; UNKNOWN_FOR_PREREQUISITE_HANDOFF_UNTIL_IDENTITY/LIFECYCLE_IS_FROZEN
@@ -360,7 +381,7 @@ NEW_REPOSITORY_API_REQUIRED: NOT_FOR_PURE_C4D_READ_COMPOSITION; LIKELY_FOR_DURAB
 
 PURE_ORCHESTRATION_LOGIC_READY: YES
 IMPLEMENTATION_READY: NO_FOR_PRODUCTION_AND_DO_NOT_IMPLEMENT_C4D_YET
-BLOCKERS: 1_EXACT_DURABLE_V4_CAPTURE_ID_HANDOFF; 2_EXACT_CANONICAL_EXTERNAL_ENTRY_TO_INTERNAL_RACE_ENTRY_MAPPING_HANDOFF
+BLOCKERS: 1_EXACT_DURABLE_V4_CAPTURE_ID_HANDOFF; 2_EXACT_DATASET_IMPORT_RACE_AND_ENTRY_IDENTITY_HANDOFF
 
 REAL_TRUSTED_CAPTURE_REQUIRED: NO
 REAL_TRUSTED_CAPTURE_PERFORMED: NO
