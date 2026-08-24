@@ -4241,7 +4241,12 @@ mapping, or package export. Provider integrity errors propagate unchanged.
 
 Verification passed: dedicated c4d **35 passed**; related formal d0/c4c/source/accessU/
 collector/snapshot/archive tests **183 passed**; full pytest suite **2843 passed**. The
-dedicated suite includes the restart/archive-enrichment test proving exact capture A is
-still consumed after later eligible capture B is archived. Static scope, public-surface,
-forbidden-dependency, no-broad-catch, no-latest/no-write, and `git diff --check` checks
-passed. No live HTTP or real trusted capture was performed.
+dedicated suite now proves the complete durable handoff: materialize a d0 seed against
+exact v3 capture A, persist v4/A evidence separately, close and reopen both SQLite
+databases, load an equal but distinct seed object, add later causally eligible capture B,
+and replay the reloaded seed while requesting only A's exact ID. The generic latest-v3
+method is forbidden, B is not substituted, and deliberately reversed A/B `stored_at`
+ordering proves storage time has no causal role. Direct c4c-result contradictions cover
+all seven production-checked provenance fields. Static correction scope, unchanged
+production blob, public-surface, forbidden-dependency, no-broad-catch, no-latest/no-write,
+and `git diff --check` checks passed. No live HTTP or real trusted capture was performed.

@@ -75,14 +75,18 @@ Full pytest suite: **2843 passed**.
 
 The dedicated suite includes actual formal end-to-end zero-history replay, multi-entry
 ordering and mapping, every error translation, provider-integrity propagation, exact
-result construction, and the deferred restart/archive-enrichment regression. That
-regression persists capture A, crosses a repository restart, adds later eligible capture
-B for the same URL, and proves c4d requests and consumes only A by its seed capture ID
-while the generic latest-v3 method is forbidden.
+result construction, and the deferred durable d0 restart/archive-enrichment regression.
+That regression materializes the seed through `SQLiteJRARaceReplaySeedRepository`,
+persists v4 navigation plus v3 capture A in the separate capture archive, closes and
+reopens both databases, reloads an equal but distinct seed object, then adds later
+causally eligible capture B. Replay of that reloaded seed requests and consumes only A
+by its retained capture ID while the generic latest-v3 method is forbidden. The c4c
+post-resolution regression directly contradicts every checked v4/v3 ID, digest,
+discovery race/URL, supplied-response URL, and captured-time provenance field.
 
-`git diff --check`, exact four-file scope, public-surface, no-broad-catch, forbidden
-dependency, no latest lookup, no write/persistence, and no package-root export checks
-pass. No live HTTP or real trusted capture was performed.
+`git diff --check`, correction-scope, unchanged-production-blob, public-surface,
+no-broad-catch, forbidden dependency, no latest lookup, no write/persistence, and no
+package-root export checks pass. No live HTTP or real trusted capture was performed.
 
 ## Changed Files
 

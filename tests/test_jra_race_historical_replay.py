@@ -10,6 +10,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from scripts.migrations.runner import apply_migrations
 import scripts.simulation.jra_race_historical_replay as _module
 from scripts.simulation.historical_input_snapshot_builder import (
     HistoricalInputSnapshotAssemblyError,
@@ -27,6 +28,9 @@ from scripts.simulation.jra_official_response_capture import (
 )
 from scripts.simulation.jra_official_response_capture_migration_runner import (
     apply_jra_capture_schema_migrations,
+)
+from scripts.simulation.jra_official_response_live_capture import (
+    JRATargetRaceNavigationCaptureResult,
 )
 from scripts.simulation.jra_race_historical_replay import (
     JRARaceHistoricalReplayError,
@@ -61,6 +65,9 @@ from scripts.simulation.jra_target_race_input_source import (
 from scripts.simulation.repositories.errors import RepositoryDataIntegrityError
 from scripts.simulation.repositories.sqlite_jra_official_response_capture_repository import (
     SQLiteJRAOfficialResponseCaptureRepository,
+)
+from scripts.simulation.repositories.sqlite_jra_race_replay_seed_repository import (
+    SQLiteJRARaceReplaySeedRepository,
 )
 
 
@@ -406,43 +413,94 @@ def test_exact_v3_archive_enrichment_and_restart_never_substitute_latest(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    database = tmp_path / "jra-captures.sqlite3"
+    seed_database = tmp_path / "application.sqlite3"
+    capture_database = tmp_path / "jra-captures.sqlite3"
+    selection = _selection_capture()
     capture_a = _card_capture()
     capture_b = _card_capture(
         body=_target_body(race_name="後から追加"),
         observed=OBSERVED + timedelta(minutes=30),
+        stored=OBSERVED + timedelta(minutes=45),
     )
-    seed = _seed(card=capture_a)
-    connection = sqlite3.connect(database)
-    apply_jra_capture_schema_migrations(connection)
-    archive = SQLiteJRAOfficialResponseCaptureRepository(connection=connection)
+    resolution = _resolution(selection=selection, card=capture_a)
+    navigation = JRATargetRaceNavigationCaptureResult(
+        discovery=resolution.discovery,
+        capture=selection,
+    )
+    target_sources = normalize_jra_target_race_input_source_records(response=resolution.response)
+
+    seed_connection = sqlite3.connect(seed_database)
+    seed_connection.execute(
+        """CREATE TABLE races(
+            id INTEGER PRIMARY KEY, race_date TEXT, organization TEXT, place TEXT, race_no INTEGER,
+            race_name TEXT, distance INTEGER, track TEXT, weather TEXT, track_condition TEXT,
+            horse_count INTEGER
+        )"""
+    )
+    seed_connection.execute(
+        "CREATE TABLE horses(id INTEGER PRIMARY KEY, race_id INTEGER, horse_no INTEGER)"
+    )
+    apply_migrations(seed_connection)
+    seed_repository = SQLiteJRARaceReplaySeedRepository(connection=seed_connection)
+    materialized_seed = seed_repository.materialize_seed(
+        dataset_id="dataset-jra-replay-restart",
+        navigation_capture_result=navigation,
+        target_race_card_resolution=resolution,
+        target_sources=target_sources,
+        information_cutoff=CUTOFF,
+    )
+    assert materialized_seed.target_race_card_capture_id == capture_a.capture_id
+
+    capture_connection = sqlite3.connect(capture_database)
+    apply_jra_capture_schema_migrations(capture_connection)
+    archive = SQLiteJRAOfficialResponseCaptureRepository(connection=capture_connection)
+    archive.save_target_race_selection_capture(capture=selection)
     archive.save_target_race_card_capture(capture=capture_a)
-    connection.close()
+    seed_connection.close()
+    capture_connection.close()
 
-    connection = sqlite3.connect(database)
-    archive = SQLiteJRAOfficialResponseCaptureRepository(connection=connection)
-    archive.save_target_race_card_capture(capture=capture_b)
-    exact_calls: list[str] = []
+    seed_connection = sqlite3.connect(seed_database)
+    capture_connection = sqlite3.connect(capture_database)
+    try:
+        seed_repository = SQLiteJRARaceReplaySeedRepository(connection=seed_connection)
+        archive = SQLiteJRAOfficialResponseCaptureRepository(connection=capture_connection)
+        reloaded_seed = seed_repository.load_seed(seed_id=materialized_seed.seed_id)
+        assert reloaded_seed is not None
+        assert reloaded_seed == materialized_seed
+        assert reloaded_seed is not materialized_seed
+        assert reloaded_seed.target_race_card_capture_id == capture_a.capture_id
 
-    def exact_provider(*, capture_id: str) -> JRAOfficialTargetRaceCardResponseCapture | None:
-        exact_calls.append(capture_id)
-        return archive.load_target_race_card_capture(capture_id=capture_id)
+        archive.save_target_race_card_capture(capture=capture_b)
+        assert capture_b.capture_id != capture_a.capture_id
+        assert capture_b.observed_at <= reloaded_seed.captured_at
+        assert capture_b.stored_at < capture_a.stored_at
+        exact_calls: list[str] = []
 
-    def forbidden_latest(*args: object, **kwargs: object) -> object:
-        pytest.fail("generic latest-v3 lookup must not run")
+        def exact_provider(*, capture_id: str) -> JRAOfficialTargetRaceCardResponseCapture | None:
+            exact_calls.append(capture_id)
+            return archive.load_target_race_card_capture(capture_id=capture_id)
 
-    monkeypatch.setattr(
-        SQLiteJRAOfficialResponseCaptureRepository,
-        "load_latest_target_race_card_capture",
-        forbidden_latest,
-    )
-    values = _providers(seed=seed, card=capture_a)
-    values["target_race_card_capture_by_id_provider"] = exact_provider
-    result = build_jra_race_historical_replay(**values)  # type: ignore[arg-type]
-    assert exact_calls == [capture_a.capture_id]
-    assert result.seed.target_race_card_capture_id == capture_a.capture_id
-    assert result.seed.target_race_card_capture_id != capture_b.capture_id
-    connection.close()
+        def forbidden_latest(*args: object, **kwargs: object) -> object:
+            pytest.fail("generic latest-v3 lookup must not run")
+
+        monkeypatch.setattr(
+            SQLiteJRAOfficialResponseCaptureRepository,
+            "load_latest_target_race_card_capture",
+            forbidden_latest,
+        )
+        values = _providers(seed=reloaded_seed, selection=selection, card=capture_a)
+        values["target_race_selection_capture_provider"] = (
+            archive.load_target_race_selection_capture
+        )
+        values["target_race_card_capture_by_id_provider"] = exact_provider
+        result = build_jra_race_historical_replay(**values)  # type: ignore[arg-type]
+        assert exact_calls == [capture_a.capture_id]
+        assert result.seed is reloaded_seed
+        assert result.seed.target_race_card_capture_id == capture_a.capture_id
+        assert result.seed.target_race_card_capture_id != capture_b.capture_id
+    finally:
+        seed_connection.close()
+        capture_connection.close()
 
 
 def test_exact_v3_missing_is_unavailable_without_fallback() -> None:
@@ -531,12 +589,35 @@ def test_c4c_called_once_with_exact_seed_inputs_and_post_provenance_checked(
     assert calls[0]["external_race_id"] == seed.external_race_id
     assert calls[0]["target_race_selection_capture_id"] == seed.target_race_selection_capture_id
     assert calls[0]["captured_at"] == seed.captured_at
-    for field, value in (
-        ("target_race_card_capture_id", "jra-capture-v3:" + "0" * 64),
-        ("target_race_card_response_sha256", "0" * 64),
-        ("captured_at", CAPTURED + timedelta(microseconds=1)),
-    ):
-        monkeypatch.setattr(_module, "_resolve_target", lambda **_: _forge(real, **{field: value}))
+    contradictory_resolutions = (
+        _forge(real, target_race_selection_capture_id="jra-capture-v4:" + "0" * 64),
+        _forge(real, target_race_card_capture_id="jra-capture-v3:" + "0" * 64),
+        _forge(real, target_race_card_response_sha256="0" * 64),
+        _forge(
+            real,
+            discovery=_forge(
+                real.discovery,
+                locator=_forge(
+                    real.discovery.locator,
+                    external_race_id="jra:race:2025:05:01:01:02",
+                ),
+            ),
+        ),
+        _forge(
+            real,
+            discovery=_forge(
+                real.discovery,
+                locator=_forge(
+                    real.discovery.locator,
+                    canonical_target_race_card_url=OTHER_CARD_URL,
+                ),
+            ),
+        ),
+        _forge(real, response=_forge(real.response, response_url=OTHER_CARD_URL)),
+        _forge(real, captured_at=CAPTURED + timedelta(microseconds=1)),
+    )
+    for contradictory_resolution in contradictory_resolutions:
+        monkeypatch.setattr(_module, "_resolve_target", lambda **_: contradictory_resolution)
         with pytest.raises(JRARaceHistoricalReplayValidationError):
             build_jra_race_historical_replay(**_providers(seed=seed, selection=selection, card=card))
 
