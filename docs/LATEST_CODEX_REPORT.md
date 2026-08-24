@@ -4146,3 +4146,46 @@ Verification passed: resolver **14 passed**; repository **13 passed**; related t
 locator/discovery/source/capture/live suite **74 passed**; full pytest suite **2733
 passed**. `git diff --check` and the six-file/pure-boundary/no-`stored_at`-filter static
 checks passed. No live HTTP or real trusted capture was performed.
+
+
+## Phase 4C-2d3b1i6d1d5f1c4d0 JRA Race Replay Seed Identity PREPARE
+
+Prepared the prerequisite provider-specific durable handoff required before c4d can be
+implemented. The phase identifier follows the established prerequisite convention:
+c4d0. The selected immutable `JRARaceReplaySeed` binds one dataset and replay causal
+policy to the exact c0b3 schema-v4 navigation capture, the exact c4c-selected schema-v3
+target-card revision, one canonical JRA external race, one proven internal race, and the
+complete ordered external/internal entry mapping derived from that exact normalized
+target card.
+
+Investigation rejected reuse of arbitrary legacy race/horse rows. Their apparent natural
+keys are nullable and non-unique, provider external identities are absent, and current
+lookups use first-match semantics. The new JRA repository/materializer therefore owns
+atomic internal row creation and external mapping registration. Horse number is valid
+only as a race-bound creation binding for the canonical external entry ID, never as a
+lookup of an unproven legacy row. Existing rows are reusable only through a previously
+formalized exact mapping; unproven collisions fail closed. Names are never identity.
+
+The seed retains v4 capture ID plus v3 capture ID, raw-body digest, and canonical target
+URL so its entry set remains bound to one exact card revision across archive changes and
+process restarts. `captured_at`, `information_cutoff`, and `dataset_id` are all immutable
+identity inputs. The deterministic seed ID is a versioned SHA-256 content identity over
+canonical JSON and the ascending full entry array. Updates, replacement, different-
+content upserts, latest-by-race lookup, race-ID-only lookup, and live fallback are
+forbidden; identical save is idempotent.
+
+The future persistence design uses two new provider-specific tables in the main
+application SQLite database and global migration v015. Exact composite foreign keys bind
+seed rows to the existing external race/entry mappings and prove every internal entry's
+membership in the same internal race. No provider column is added to neutral source or
+snapshot tables. No cross-database capture FK is claimed; existing formal c4c/provider
+validation proves capture lineage at seed creation and c4d consumption.
+
+The future materialization transaction covers internal race/entry rows, external
+mappings, the seed header, and every child entry. A crash leaves no loadable partial
+seed. Exact `seed_id` load reconstructs and digests the full domain; corruption remains
+integrity error. C4d's final input becomes one exact loaded seed plus existing read-only
+providers, eliminating contradictory decomposed caller inputs.
+
+This PREPARE changed documentation only. No pytest was run, as required. No production,
+test, schema, migration, importer, c4d, HTTP, or trusted-capture activity was performed.
