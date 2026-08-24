@@ -4214,3 +4214,44 @@ source/race/entry keys and foreign keys, horses membership key, and absence of u
 partial v015 objects. Verification passed: domain **29**, repository **33**, migration
 **13**, related **92**, migration regressions **66**, and full suite **2808** tests. No
 HTTP, capture-archive lookup, c4d implementation, or trusted capture was performed.
+
+## Phase 4C-2d3b1i6d1d5f1c4d final PREPARE refresh
+
+The formally integrated d0 seed closes both prerequisites recorded by the historical
+c4d architecture reference. The final orchestrator accepts one exact
+`JRARaceReplaySeed` plus five read-only evidence providers; decomposed dataset, race,
+entry-map, time, URL, digest, and capture-ID caller fields are forbidden. Its public
+result is the frozen/slotted pair of the exact seed object and the completed
+`HistoricalInputSnapshot`, with no duplicated raw response bytes.
+
+Existing archive and c4c contracts support exact replay without production changes.
+C4d owns a private exact-v3-by-ID provider protocol and a private adapter to c4c's
+locator/bound provider shape. The adapter validates c4c's URL, race, and bound against
+the seed, loads only `seed.target_race_card_capture_id`, and requires exact capture ID,
+response digest, canonical URL, race identity, and `observed_at <= seed.captured_at`.
+It never invokes the generic latest-v3 lookup, so later archive enrichment cannot change
+an existing seed's replay.
+
+The c4c result must equal all seed v4/v3/URL/digest/time provenance before its supplied
+accessD response is normalized. Normalized target entries and accessU locators must then
+equal the seed's ordered entry identities exactly. Every accessU resolution and accessS/
+accessO historical collection uses `seed.captured_at` as its observation bound. C4d
+rechecks `captured_at <= information_cutoff <= scheduled_start_at`; `stored_at` has no
+causal role.
+
+The complete source union is all canonical target records followed by each entry's
+complete historical records in seed order. It is built only after full entry coverage.
+The snapshot entry mapping comes only from seed entries, and the existing snapshot
+builder is called exactly once with the seed's dataset, internal race, times, complete
+union, and mapping. C4d performs no database/archive write, snapshot persistence, HTTP,
+live capture, current fallback, name matching, or legacy identity lookup.
+
+The future implementation scope is only
+`scripts/simulation/jra_race_historical_replay.py`, its new dedicated test module, and
+the two phase documents. Required tests include the deferred restart/archive-enrichment
+case proving exact v3 A remains selected after eligible B is added, exact seed/target
+entry equality, causal bounds, complete deterministic union, exact seed mapping, error
+translation, provider integrity propagation, and a single snapshot-builder call. No
+pytest was run for this docs-only PREPARE; changed-file scope, status, and
+`git diff --check` are verified before commit. No live HTTP or trusted capture was
+performed.
