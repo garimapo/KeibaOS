@@ -4146,3 +4146,71 @@ Verification passed: resolver **14 passed**; repository **13 passed**; related t
 locator/discovery/source/capture/live suite **74 passed**; full pytest suite **2733
 passed**. `git diff --check` and the six-file/pure-boundary/no-`stored_at`-filter static
 checks passed. No live HTTP or real trusted capture was performed.
+
+## Phase 4C-2d3b1i6d1d5f1c4d0 JRA Race Replay Seed — implementation blocker
+
+Implementation began only in the independent review workspace on
+`review/4c-2d3b1i6d1d5f1c4d0-jra-race-replay-seed`; no commit or push was made.  The
+required v015 migration registration makes the repository-wide migration runner report
+version 15.  The existing `tests/test_simulation_migrations.py` hard-codes the registry
+through v014, so it fails with the otherwise successful v015 migration solely because it
+expects no v015 row.  That test is outside the phase's Allowed Files (which permits only
+`tests/test_historical_input_snapshot_migration.py` for a registry adjustment).  Updating
+the global registry expectation requires explicit scope authorization; leaving it
+unchanged prevents the required full suite from passing.
+
+Diagnostic command: `python -m pytest tests/test_simulation_migrations.py -q --tb=short`.
+Result after correcting the local v015 DDL formatting: **1 failed, 21 passed**.  The sole
+failure is `MigrationTests.test_apply_idempotent_and_utc_history`, whose expected mapping
+ends at v014 but the actual registered mapping correctly includes
+`15: v015_jra_race_replay_seed_schema`.  No live HTTP or trusted capture was performed.
+
+### Approved scope expansion and full-suite stop condition
+
+The approved one-file expansion updated `tests/test_simulation_migrations.py` without
+weakening its exact registry assertion.  That regression now passes (**22 passed**).  The
+corresponding permitted historical-migration registry expectations were updated in
+`tests/test_historical_input_snapshot_migration.py`; the focused seed/migration run then
+passed (**42 passed**), and the required related JRA/source stack passed (**92 passed**).
+
+The subsequent full suite stopped at **6 failed, 2736 passed**.  Every failure is another
+hard-coded pre-v015 global migration history assertion in a file that remains outside the
+expanded Allowed Files:
+
+- `tests/test_nar_official_response_capture_migration.py::CaptureMigrationTests::test_runner_creates_exact_dedicated_schema_and_no_global_tables`
+- `tests/test_simulation_bet_plan_migration.py::SimulationBetPlanMigrationTests::test_fresh_database_applies_v008_and_v009_once`
+- `tests/test_simulation_bet_plan_migration.py::SimulationBetPlanMigrationTests::test_v008_to_v009_upgrade_preserves_existing_rows`
+- `tests/test_simulation_bet_plan_migration.py::SimulationBetPlanMigrationTests::test_v009_is_registered_after_v008_without_duplicate_version`
+- `tests/test_sqlite_persisted_simulation_application.py::SQLitePersistedSimulationApplicationTests::test_file_backed_settled_run_preserves_caller_collections_and_persists_snapshot`
+- `tests/test_sqlite_persisted_simulation_application.py::SQLitePersistedSimulationApplicationTests::test_pending_migrations_are_applied_for_empty_run_and_connection_closes`
+
+Each expects the complete global registry to end at v014, while correct runner output now
+also contains `15: v015_jra_race_replay_seed_schema`.  Under the explicit d0 stop
+condition, no further changes, commit, or push were made.  No live HTTP or trusted capture
+was performed.
+
+### Second approved scope expansion — complete verification
+
+The three newly approved global-registry test files were changed only to extend their
+literal v8–v14 expectations with exact entry `15: v015_jra_race_replay_seed_schema`.
+No assertion was weakened or made dynamic. The additional-registry command passed
+**33 passed**, the existing simulation migration regression remained **22 passed**, the
+seed/repository tests passed **7 passed**, the expanded migration coverage passed
+**68 passed**, and the related JRA/source/snapshot stack passed **92 passed**. Full pytest
+verification completed with **2742 passed**. No live HTTP or trusted capture was performed.
+
+### D0 integrity correction
+
+The correction makes prior d0 seed references the sole durable proof for reusing existing
+JRA race and entry mappings. Bare pre-existing mappings and legacy race/horse-number
+collisions now fail as integrity errors. Proven race reuse validates only stable legacy
+identity fields, leaving weather, condition, and runner count revision-specific. Every
+target source record is checked against the same exact v3 response before transaction
+start; repeated child identity columns are validated during load; and a final transaction
+safety boundary rolls back and rethrows any otherwise-unhandled post-begin exception.
+
+V015 prerequisite validation now pins the v014 request-identity evidence column, v010
+source/race/entry keys and foreign keys, horses membership key, and absence of unregistered
+partial v015 objects. Verification passed: domain **29**, repository **33**, migration
+**13**, related **92**, migration regressions **66**, and full suite **2808** tests. No
+HTTP, capture-archive lookup, c4d implementation, or trusted capture was performed.

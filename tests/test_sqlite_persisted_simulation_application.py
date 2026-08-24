@@ -415,7 +415,7 @@ class SQLitePersistedSimulationApplicationTests(unittest.TestCase):
         self.addCleanup(verification.close)
         self.assertEqual(
             dict(verification.execute("SELECT version, name FROM schema_migrations")),
-            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema", 14: "v014_historical_input_request_identity_schema"},
+            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema", 14: "v014_historical_input_request_identity_schema", 15: "v015_jra_race_replay_seed_schema"},
         )
         self.assertIsNotNone(
             verification.execute(
@@ -542,7 +542,7 @@ class SQLitePersistedSimulationApplicationTests(unittest.TestCase):
         )
         self.assertEqual(
             dict(verification.execute("SELECT version, name FROM schema_migrations")),
-            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema", 14: "v014_historical_input_request_identity_schema"},
+            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema", 14: "v014_historical_input_request_identity_schema", 15: "v015_jra_race_replay_seed_schema"},
         )
         self.assertFalse(verification.in_transaction)
         self.assertEqual(verification.execute("SELECT 1").fetchone(), (1,))

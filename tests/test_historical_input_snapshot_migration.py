@@ -16,6 +16,7 @@ from scripts.migrations.versions import (
     v012_historical_input_evidence_schema,
     v013_historical_past_race_race_time_domain_schema,
     v014_historical_input_request_identity_schema,
+    v015_jra_race_replay_seed_schema,
 )
 
 
@@ -134,10 +135,12 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         self.assertEqual(v013_historical_past_race_race_time_domain_schema.NAME, "v013_historical_past_race_race_time_domain_schema")
         self.assertEqual(v014_historical_input_request_identity_schema.VERSION, 14)
         self.assertEqual(v014_historical_input_request_identity_schema.NAME, "v014_historical_input_request_identity_schema")
-        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS), (8, 9, 10, 11, 12, 13, 14))
+        self.assertEqual(v015_jra_race_replay_seed_schema.VERSION, 15)
+        self.assertEqual(v015_jra_race_replay_seed_schema.NAME, "v015_jra_race_replay_seed_schema")
+        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS), (8, 9, 10, 11, 12, 13, 14, 15))
         self.assertEqual(
             get_applied_versions(connection),
-            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema", 14: "v014_historical_input_request_identity_schema"},
+            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema", 14: "v014_historical_input_request_identity_schema", 15: "v015_jra_race_replay_seed_schema"},
         )
         self.assertEqual(
             {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'historical_input_%'")},
@@ -150,7 +153,7 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
                 if not row[0].startswith("sqlite_autoindex")
             }
             | {"ux_horses_race_id_id"},
-            V010_INDEXES,
+            V010_INDEXES | {"ux_historical_input_external_entries_exact_mapping"},
         )
         self.assertEqual(
             {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'trg_his_%'")},
@@ -161,7 +164,7 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         apply_migrations(connection)
         self.assertEqual(
             connection.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall(),
-            [(8,), (9,), (10,), (11,), (12,), (13,), (14,)],
+            [(8,), (9,), (10,), (11,), (12,), (13,), (14,), (15,)],
         )
         self.assertEqual(connection.execute("SELECT count(*) FROM historical_input_snapshots").fetchone()[0], 0)
         for table in HISTORICAL_TABLES:
@@ -172,7 +175,7 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
 
     def test_v014_adds_nullable_request_identity_without_rewriting_nonempty_store(self) -> None:
         connection = self.db()
-        apply_migrations(connection, migrations=MIGRATIONS[:-1])
+        apply_migrations(connection, migrations=MIGRATIONS[:-2])
         self.source_and_external_mapping(connection)
         self.header(connection)
         self.entry(connection)
