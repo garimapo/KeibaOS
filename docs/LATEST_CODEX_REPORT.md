@@ -4291,3 +4291,64 @@ Static public-surface, exact-call, no-latest, forbidden-dependency, no-broad-cat
 schema/migration, allowed-file scope, and `git diff --check` checks pass. C4d remained
 read-only, c4f was not implemented, and no HTTP, current/legacy fallback, schema,
 migration, prediction/simulation, or real trusted capture was introduced.
+
+## Phase 4C-2d3b1i6d1d5f1c4f Historical Snapshot Adapter Preparation
+
+Status: `DRAFT_FOR_REVIEW`.
+
+Formal base is `48dde0f5a5d1cce0176b578ccfcc87dbd9fc1fac`. The expected c4f identifier is
+unoccupied and consistent with the hierarchy, but the field-level review found that the
+parent phase cannot proceed directly to adapter implementation.
+
+The exact snapshot provides every target, entry, jockey, odds, track, past-race, audit,
+and simulation envelope value except the currently required prediction field
+`PastRaceInput.margin`. Formal source records and `HistoricalPastRaceSnapshot` do not
+retain margin. The current AbilityEngine gives margin a 15-percent score weight and also
+uses it for race eligibility. Zero, NaN, race-time substitution, legacy lookup, raw
+HTML reparse, or any other synthetic compatibility value is prohibited.
+
+The selected resolution is a prerequisite
+`4C-2d3b1i6d1d5f1c4f0` formal historical prediction-contract alignment, followed by
+`4C-2d3b1i6d1d5f1c4f1` pure snapshot adapter. C4f0 must remove margin as a formal
+required/score-affecting historical prediction input and approve an exact AbilityEngine
+formula using only retained facts. It must also freeze snapshot-derived reference-date
+wiring for date-sensitive prediction engines so later historical execution does not
+depend on their current `date.today()` defaults. Reopening source/snapshot/digest/schema
+and migration contracts merely to preserve the legacy formula is rejected.
+
+All other mappings are ready. Prediction maps use exact internal `race_entry_id`, never
+horse/name/external identity. Past races are consumed by contiguous
+`past_race_index=0..N-1`; formal absence becomes an empty tuple. Target place, distance,
+track, and condition and entry jockeys are direct snapshot facts. Target and past odds,
+weight, and weight difference use checked deterministic Decimal-to-float computation
+conversion because current engines reject Decimal odds; the exact Decimal snapshot and
+digest remain audit truth. Prediction time is the UTC microsecond ISO representation of
+`information_cutoff`, while audit `captured_at` remains the distinct evidence capture
+instant.
+
+Multi-evidence provenance safely reduces to the maximum actual `observed_at` and to
+`None` availability if any required reference has unknown availability, otherwise the
+maximum actual `available_at`. This is order-independent, never hides a later
+observation, and never invents known availability. Provenance input type, audit key,
+source, source ID, race-entry ID, and past index remain exact. The audit-level source is
+the formal snapshot source system (`jra_official` for c4d), and completeness is true only
+because the exact snapshot domain already proves every required key, absence, and causal
+timestamp.
+
+After c4f0, c4f1 should directly build `ImmutableRacePredictionInput` and then the
+existing validated `SimulationRaceInput`; it must not use a transient mutable legacy
+input, add another simulation model, or weaken simulation validation. Its proposed pure
+API is
+`build_simulation_race_input_from_historical_snapshot(*, snapshot)`, with one narrow
+adapter validation family and no repository/provider collaborator or package-root
+export.
+
+C4f1 is snapshot-only and deterministic: no database, latest selection, HTTP, clock,
+current/legacy fallback, name mapping, result, payout, settlement, or final odds after
+cutoff. Equivalent exact snapshots across restart produce equivalent output, and later
+snapshot enrichment cannot affect snapshot A.
+
+Only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` changed. No production,
+tests, HTTP, or real trusted capture were performed. Pytest was not required for this
+docs-only PREPARE. Implementation readiness remains `NO`, blocked only on formal c4f0
+historical prediction-contract alignment.
