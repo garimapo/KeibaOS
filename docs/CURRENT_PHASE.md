@@ -6,484 +6,558 @@ READY_FOR_REVIEW
 
 ## Phase
 
-`4C-2d3b1i6d1d5f1c4f1` — Historical input snapshot -> SimulationRaceInput adapter.
+`4C-2d3b1i6d1d5f1c4g0` — Single-race historical prediction bet-plan persistence composition.
 
-Formal base: `53d85e8a5228fa7b8bef47dab4e74f9d3d1ce115`.
+Formal base: `8ee5440bd7a360c652c3b58f1a67b05c32b682c8`.
 
 Review branch:
-`review/4c-2d3b1i6d1d5f1c4f1-historical-snapshot-simulation-adapter`.
+`review/4c-2d3b1i6d1d5f1c4g0-historical-prediction-bet-plan-execution`.
 
-C4f1 is the direct formal successor to completed c4f0. C4f0 aligned the prediction
-contract to the causally reproducible marginless model; c4f1 now performs only the pure
-data conversion from one exact `HistoricalInputSnapshot` into one exact
-`SimulationRaceInput`.
+The next parent hierarchy slot after completed c4f1 is c4g, historical prediction
+bet-plan execution composition. The work must be split because the formal historical
+pipeline is race-date-specific and the existing multi-race run service owns one pipeline
+for all races. Therefore the immediately implementable phase is c4g0, followed by c4g1
+multi-race planning and c4g2 settlement/simulation.
 
-## Purpose and Boundary
+## Purpose and Exact Boundary
 
-The adapter receives one already validated immutable snapshot and returns one immutable
-simulation race input. It owns no acquisition, persistence, selection, prediction
-execution, clock, or fallback:
+C4g0 is one race only:
 
 ```text
-HistoricalInputSnapshot
--> ImmutableRacePredictionInput
--> InputSnapshotAudit
--> SimulationRaceInput
+exact HistoricalInputSnapshot
+-> c4f1 adapter exactly once
+-> exact SimulationRaceInput
+-> historical pipeline factory exactly once for target_race_date
+-> PredictionPipeline.run exactly once through existing service
+-> existing allocation
+-> exact identity-preserving selection resolution
+-> SimulationBetPlanSnapshot save
+-> exact saved SimulationBetPlanSnapshot result
 ```
+
+It does not load a snapshot, select latest evidence, orchestrate several races, execute
+settlement, or run the simulator.
 
 Freeze:
 
 ```text
-SNAPSHOT_ONLY_INPUT: YES
-DATABASE_READ: NO
-DATABASE_WRITE: NO
-REPOSITORY: NO
-PROVIDER: NO
-LIVE_HTTP: NO
+EXECUTION_INPUT_DOMAIN: EXACT_HISTORICAL_INPUT_SNAPSHOT
+LATEST_SNAPSHOT_LOOKUP: NO
+SOURCE_URL_FALLBACK: NO
+LEGACY_SNAPSHOT_LOOKUP: NO
+RACE_RESULT_READ: NO
+PAYOUT_READ: NO
+SETTLEMENT: NO
+SIMULATOR_RUN: NO
 CURRENT_CLOCK: NO
-FILESYSTEM: NO
-RANDOM: NO
-LEGACY_RACE_LOOKUP: NO
-LEGACY_HORSE_LOOKUP: NO
-LEGACY_PAST_RACE_LOOKUP: NO
-NAME_MAPPING: NO
-RESULT_LOOKUP: NO
-PAYOUT_LOOKUP: NO
-SETTLEMENT_LOOKUP: NO
-PREDICTION_EXECUTION: NO
-HISTORICAL_PIPELINE_FACTORY_CALL: NO
+LIVE_HTTP: NO
 ```
 
-## Public Surface
+Exact persisted-snapshot loading remains the responsibility of a later application
+composition boundary. C4g0 receives the already exact immutable snapshot directly.
+
+## Public Execution API
 
 Create:
 
 ```text
-scripts/simulation/historical_input_snapshot_simulation_adapter.py
+scripts/simulation/historical_prediction_bet_plan_execution.py
 ```
 
-Its module-local public surface is exactly:
+Its intended module-local public surface is exactly:
 
 ```python
 __all__ = (
-    "HistoricalInputSnapshotSimulationAdapterError",
-    "build_simulation_race_input_from_historical_snapshot",
+    "execute_and_persist_historical_bet_plan",
 )
 
-class HistoricalInputSnapshotSimulationAdapterError(ValueError):
-    ...
-
-def build_simulation_race_input_from_historical_snapshot(
+def execute_and_persist_historical_bet_plan(
     *,
     snapshot: HistoricalInputSnapshot,
-) -> SimulationRaceInput:
+    run_context: SimulationRunContext,
+    strategy_identity: StrategyIdentity,
+    budget: BetStakeBudget,
+    snapshot_repository: SimulationBetPlanSnapshotRepository,
+) -> SimulationBetPlanSnapshot:
     ...
 ```
 
-No package-root export is required. The function accepts no collaborator, repository,
-provider, strategy, pipeline, clock, or decomposed snapshot argument.
+No package-root export is required. The function accepts no database connection,
+snapshot identity, pipeline, pipeline factory, allocator, selection source, clock,
+result source, payout source, simulator, or settlement collaborator.
 
-Require `type(snapshot) is HistoricalInputSnapshot`. A subclass, mapping, raw record,
-or reconstructed compatibility shape fails with
-`HistoricalInputSnapshotSimulationAdapterError` before conversion.
-
-The one adapter-owned error class also owns explicit Decimal conversion failures. It
-does not catch or translate `SimulationValidationError`, destination-domain
-`ValueError`/`TypeError`, or any other exception. No broad `Exception` or
-`BaseException` catch is allowed.
-
-## SimulationRaceInput Mapping
-
-Every destination field is explicit:
+Require exact domain types for `snapshot`, `run_context`, `strategy_identity`, and
+`budget`. Require `snapshot_repository` to be a non-type object with callable
+`save_snapshot`. Invalid boundary input raises `ValueError` before adapter, pipeline
+factory, prediction, allocation, builder, or repository activity. Before any of those
+activities also require the exact strategy execution binding:
 
 ```text
-SimulationRaceInput.race_id
-    <- snapshot.internal_race_id
-
-SimulationRaceInput.target_race_date
-    <- snapshot.race.target_race_date
-
-SimulationRaceInput.scheduled_start_at
-    <- snapshot.race.scheduled_start_at
-
-SimulationRaceInput.information_cutoff
-    <- snapshot.information_cutoff
-
-SimulationRaceInput.pipeline_input
-    <- directly constructed exact ImmutableRacePredictionInput
-
-SimulationRaceInput.input_snapshot_audit
-    <- deterministic conversion of snapshot.provenance
+strategy_identity.strategy_name == RuleBasedBetStrategy.__name__
+strategy_identity.strategy_name == "RuleBasedBetStrategy"
 ```
 
-The returned object must pass the unchanged `SimulationRaceInput.__post_init__` and
-`validate_simulation_race_input(...)` boundary.
+A nonmatching strategy name raises `ValueError`. The caller's exact
+`StrategyIdentity` remains the formal identity: do not rewrite its name, reconstruct
+it, substitute a strategy, or fall back.
 
-## Canonical Entity and Entry Order
+No new public execution result or public error hierarchy is needed. Return the exact
+`SimulationBetPlanSnapshot` produced and saved by the existing formal service. Existing
+`SimulationValidationError`, `PipelineExecutionError`, allocator errors, and repository
+validation/conflict/integrity errors propagate unchanged.
 
-The formal prediction entity key is the exact internal race-entry ID:
+## Run Context and Dataset Binding
+
+Before adapter or prediction work require:
 
 ```text
-PREDICTION_ENTITY_KEY: HistoricalRaceEntrySnapshot.race_entry_id
-PAST_RACE_HORSE_ID_SEMANTICS: EXACT_INTERNAL_RACE_ENTRY_ID_ALIAS
+if run_context.dataset_id != snapshot.identity.dataset_id:
+    raise SimulationValidationError(
+        snapshot.internal_race_id,
+        "run_context.dataset_id",
+        "run_context.dataset_id does not match snapshot.identity.dataset_id",
+    )
 ```
 
-The legacy prediction field name `PastRaceSnapshot.horse_id` is a semantic alias at this
-boundary and receives `HistoricalPastRaceSnapshot.race_entry_id`. It does not mean
-`horse_no`, external horse identity, or a separately resolved legacy horse row.
+A mismatch raises exactly the shown `SimulationValidationError` for the snapshot's
+exact internal race and exact input identifier. It occurs before adapter, pipeline
+factory, prediction, allocation, builder, or repository activity and is never converted
+to `ValueError`, `NO_BET`, or a repository error.
 
-The adapter sorts entries by ascending `entry_order`, which the snapshot domain proves
-is contiguous `0..N-1`. It constructs `horse_past_races`,
-`jockey_names_by_horse`, and `odds_by_horse` in that same order. It never relies on the
-incidental order of `snapshot.entries`.
+The adapter-produced audit dataset is necessarily the same snapshot dataset. The
+composition does not invent or reparse a dataset. `run_context.target_commit_id` remains
+retained formal run metadata, but runtime checkout/commit verification is out of scope:
 
-For each entry, past races are selected by exact `race_entry_id` and sorted by ascending
-`past_race_index`, which the snapshot proves is contiguous `0..N-1`. No date/name/finish
-sort is allowed. An entry with no past races receives an empty tuple; no fake race is
-created.
+```text
+RUN_CONTEXT_DATASET_MATCH: REQUIRED_BEFORE_ADAPTER_OR_PREDICTION
+DATASET_MISMATCH_ERROR: SimulationValidationError
+DATASET_MISMATCH_INPUT_IDENTIFIER: run_context.dataset_id
+DATASET_MISMATCH_RACE_ID: snapshot.internal_race_id
+TARGET_COMMIT_RUNTIME_VERIFICATION: OUT_OF_SCOPE
+```
+
+## Strategy Execution Identity
+
+`build_historical_prediction_pipeline(...)` formally constructs exactly
+`RuleBasedBetStrategy()`, while `StrategyIdentity` permits other names. C4g0 therefore
+owns the explicit execution-to-persistence identity binding before any collaborator
+activity:
+
+```text
+HISTORICAL_SUPPORTED_STRATEGY_NAME: RuleBasedBetStrategy
+STRATEGY_NAME_BINDING: REQUIRED_BEFORE_ADAPTER_OR_PIPELINE
+STRATEGY_IDENTITY_EXECUTION_MATCH: EXACT_RULE_BASED_STRATEGY
+ARBITRARY_STRATEGY_IDENTITY_NAME: FORBIDDEN
+```
+
+The exact supported name is `RuleBasedBetStrategy.__name__`, namely
+`"RuleBasedBetStrategy"`. No fallback, rewriting, or reconstructed
+`StrategyIdentity` is allowed.
+
+## Historical Pipeline Ownership
+
+`build_historical_prediction_pipeline(...)` binds Ability, Jockey, and Track engines to
+one explicit target race date. A pipeline is therefore valid for one race-date context,
+not for a heterogeneous historical run.
+
+For each c4g0 invocation call exactly once:
+
+```python
+build_historical_prediction_pipeline(
+    target_race_date=race_input.target_race_date,
+    strategy_config=strategy_identity.strategy_config,
+)
+```
+
+The exact `strategy_identity.strategy_config` object is passed unchanged. It is not
+copied, reconstructed, reparsed, or replaced by an equal configuration. The existing
+`PersistedSimulationBetPlanService` retains its strategy-config consistency check.
+
+Immediately after the one factory call, and before
+`PersistedSimulationBetPlanService.build_and_save(...)`, require defense in depth:
+
+```text
+type(prediction_pipeline) is PredictionPipeline
+type(prediction_pipeline.config) is PipelineConfig
+prediction_pipeline.config.strategy_config is strategy_identity.strategy_config
+type(prediction_pipeline.config.bet_strategy) is RuleBasedBetStrategy
+```
+
+Any failure raises `ValueError`. Do not rebuild, substitute, or call the factory a
+second time.
 
 Freeze:
 
 ```text
-ENTRY_ITERATION_ORDER: ASCENDING_CONTIGUOUS_ENTRY_ORDER
-PAST_RACE_ORDER: ASCENDING_CONTIGUOUS_PAST_RACE_INDEX_PER_RACE_ENTRY_ID
+HISTORICAL_PIPELINE_LIFETIME: ONE_C4G0_RACE_EXECUTION
+PIPELINE_PER_RACE: YES
+ONE_HISTORICAL_PIPELINE_ACROSS_DIFFERENT_RACE_DATES: FORBIDDEN
+DEFAULT_PIPELINE_FALLBACK: FORBIDDEN
+CURRENT_CLOCK_PIPELINE: FORBIDDEN
+PIPELINE_FACTORY_CALL_COUNT: EXACTLY_ONE
+PIPELINE_RUN_CALL_COUNT_PER_RACE: EXACTLY_ONE
+PIPELINE_CONFIG_STRATEGY_CONFIG_IDENTITY: EXACT_CALLER_OBJECT
+PIPELINE_BET_STRATEGY_TYPE: EXACT_RULE_BASED_BET_STRATEGY
 ```
 
-## Immutable Prediction Input
+No preflight, logging, or identity-discovery pipeline execution is permitted.
 
-Construct exact `ImmutableRacePredictionInput` directly. Do not construct
-`RacePredictionInput` or `scripts.models.PastRace` first.
+## Identity-Preserving Selection Resolver
 
-Its fields are:
+C4f1 already makes exact internal `race_entry_id` the prediction entity key. Pipeline
+predictions and recommendations therefore carry race-entry IDs despite the legacy
+protocol parameter name `horse_ids`.
+
+Create:
 
 ```text
-horse_past_races
-    <- entry-order mappings to tuples of directly constructed PastRaceSnapshot
-
-jockey_names_by_horse[entry.race_entry_id]
-    <- entry.jockey
-
-track_conditions
-    <- directly constructed TrackConditionsSnapshot(
-           place=snapshot.race.place,
-           distance=snapshot.race.distance_m,
-           track=snapshot.race.track,
-           track_condition=snapshot.race.track_condition,
-       )
-
-odds_by_horse[entry.race_entry_id]
-    <- checked float conversion of entry.win_odds
-
-race_horse_count
-    <- len(snapshot.entries)
-
-race_id
-    <- snapshot.internal_race_id
-
-prediction_time
-    <- snapshot.information_cutoff.isoformat(timespec="microseconds")
+scripts/simulation/exact_race_entry_selection_resolver.py
 ```
 
-Target-race weather is not part of `TrackConditionsSnapshot`. No current track or jockey
-lookup and no text normalization beyond the formal snapshot value is permitted.
+with the exact module-local public surface:
 
-`PredictionPipeline.run` forwards `prediction_time` as a string and does not parse or
-replace it. C4f1 does not execute the pipeline. The formal timestamp is the prediction
-information boundary, not capture time, scheduled start, persistence time, or execution
-time:
-
-```text
-PREDICTION_TIME_SOURCE: SNAPSHOT_INFORMATION_CUTOFF
-PREDICTION_TIME_FORMAT: UTC_ISO8601_MICROSECONDS_WITH_PLUS_00_00
-PREDICTION_TIME_EXAMPLE: 2026-08-05T12:30:00.000000+00:00
+```python
+__all__ = (
+    "ExactRaceEntrySelectionResolver",
+)
 ```
 
-## PastRaceSnapshot Field Mapping
+It contains one public frozen/slotted type and no other public symbol:
 
-Construct each immutable past race directly with the exact mapping:
+```python
+@dataclass(frozen=True, slots=True)
+class ExactRaceEntrySelectionResolver:
+    race_id: int
+    allowed_race_entry_ids: tuple[int, ...]
 
-```text
-horse_id                 <- item.race_entry_id
-race_date                <- item.race_date.isoformat()
-place                    <- item.place
-race_name                <- item.race_name
-race_class               <- item.race_class
-distance                 <- item.distance_m
-track                    <- item.track
-weather                  <- item.weather
-track_condition          <- item.track_condition
-finish                   <- item.finish
-time                     <- item.race_time
-weight                   <- checked Decimal -> float(item.weight)
-weight_diff              <- checked Decimal -> float(item.weight_diff)
-jockey                   <- item.jockey
-popularity               <- item.popularity
-odds                     <- checked Decimal -> float(item.odds)
-passing_order            <- item.passing_order
-fourth_corner_position   <- item.fourth_corner_position
-```
-
-There is no margin and no replacement performance field.
-
-## Decimal to Float Contract
-
-Use one private pure conversion helper with an exact `Decimal` input and a field-specific
-positivity policy. It performs `float(value)` directly with no decimal rounding, string
-round trip, or fixed decimal places. It fails with
-`HistoricalInputSnapshotSimulationAdapterError` when:
-
-- the input type is not exact `Decimal`;
-- conversion raises a narrow numeric conversion error;
-- the converted value is non-finite;
-- a nonzero Decimal converts to `0.0`;
-- a positive Decimal converts to a non-positive float;
-- a negative Decimal converts to a non-negative float; or
-- the field-specific positive/non-negative rule is violated.
-
-Zero is canonical in the formal snapshot, so signed-zero ambiguity is not retained.
-
-Field rules are:
-
-```text
-WIN_ODDS_CONVERSION:
-EXACT_DECIMAL_TO_FINITE_POSITIVE_FLOAT; OVERFLOW_UNDERFLOW_SIGN_LOSS_FAIL_CLOSED
-
-PAST_ODDS_CONVERSION:
-EXACT_DECIMAL_TO_FINITE_NON_NEGATIVE_FLOAT; ZERO_ALLOWED;
-NONZERO_UNDERFLOW_AND_SIGN_LOSS_FAIL_CLOSED
-
-WEIGHT_CONVERSION:
-EXACT_DECIMAL_TO_FINITE_NON_NEGATIVE_FLOAT; ZERO_ALLOWED;
-NONZERO_UNDERFLOW_AND_SIGN_LOSS_FAIL_CLOSED
-
-WEIGHT_DIFF_CONVERSION:
-EXACT_DECIMAL_TO_FINITE_SIGN_PRESERVING_FLOAT; ZERO_ALLOWED;
-NONZERO_UNDERFLOW_AND_SIGN_LOSS_FAIL_CLOSED
-```
-
-Ordinary deterministic binary-float approximation is accepted only as computation
-representation. The exact Decimal in the immutable snapshot and its `content_sha256`
-remain the audit truth.
-
-## Audit Conversion
-
-One exact `HistoricalInputProvenance` becomes exactly one `InputAuditEntry`. Preserve
-without rewriting:
-
-```text
-input_type
-audit_key
-source
-source_id
-race_entry_id
-past_race_index
-```
-
-The evidence timestamp reduction is conservative and order-independent:
-
-```text
-observed_at = max(evidence.observed_at for evidence in provenance.evidence)
-
-available_at = None
-    if any(evidence.available_at is None for evidence in provenance.evidence)
-    else max(evidence.available_at for evidence in provenance.evidence)
-```
-
-Choosing maximum observed time cannot hide the latest required observation. Unknown
-availability stays unknown. When all availability values are known, their maximum is
-conservative. Because each known `available_at <= observed_at`, the reduced known
-available time is no later than the reduced observed time. The snapshot already proves
-every evidence timestamp is no later than `captured_at`, and
-`captured_at <= information_cutoff`, so the reduced pair remains causal.
-
-Do not substitute observed time, captured time, or cutoff for an unknown availability.
-
-Freeze:
-
-```text
-AUDIT_OBSERVED_AT_REDUCTION: MAXIMUM_REQUIRED_EVIDENCE_OBSERVED_AT
-AUDIT_AVAILABLE_AT_REDUCTION: NONE_IF_ANY_UNKNOWN_ELSE_MAXIMUM_REQUIRED_EVIDENCE_AVAILABLE_AT
-```
-
-## Canonical Audit Order and Header
-
-Do not rely on incidental `snapshot.provenance` tuple order. Build an exact lookup by
-`audit_key`, then emit:
-
-```text
-for each entry in ascending entry_order:
-    entry/{race_entry_id}
-    odds/{race_entry_id}
-    jockey/{race_entry_id}
-    if the entry has no past races:
-        past_race/{race_entry_id}/none
-    else:
-        past_race/{race_entry_id}/0
-        past_race/{race_entry_id}/1
+    def resolve_race_entry_ids(
+        self,
+        *,
+        race_id: int,
+        horse_ids: Sequence[int],
+    ) -> tuple[int, ...]:
         ...
-then:
-    track
 ```
 
-The formal snapshot already proves this exact key set and past-race/absence XOR. Missing,
-extra, contradictory, or duplicate material is never repaired.
+The constructor requires an exact positive non-bool race ID and an exact nonempty tuple
+of unique positive non-bool race-entry IDs. The resolver requires:
 
-Construct the audit header as:
+- requested race ID equals the bound race ID;
+- `horse_ids` is a non-string, non-mapping, nonempty finite `Sequence`;
+- every requested value is a positive non-bool integer;
+- requested values contain no duplicates; and
+- every requested value belongs to the exact allowlist.
+
+It returns `tuple(horse_ids)` unchanged and in the same order. It does not sort, map,
+query, infer, or translate identity. This structurally satisfies the existing
+`RaceEntrySelectionResolver` without changing `SimulationBetPlanBuilder`.
+
+The c4g0 composition obtains the allowlist only after c4f1 conversion from:
 
 ```text
-dataset_id  <- snapshot.identity.dataset_id
-source      <- snapshot.identity.source_identity.source_system
-captured_at <- snapshot.identity.captured_at
-entries     <- canonical audit entries above
-is_complete <- True
+tuple(race_input.pipeline_input.horse_past_races.keys())
 ```
 
-`InputSnapshotAudit.source` is the source system of the complete race-level snapshot;
-each `InputAuditEntry.source` independently preserves the exact provenance source.
+The immutable pipeline domain already proves exact key equality with
+`jockey_names_by_horse` and `odds_by_horse`. No second identity set is loaded.
 
-`is_complete=True` is justified only by the exact `HistoricalInputSnapshot` constructor,
-which has already proven track, nonempty entries, jockey and target odds for every entry,
-past races or formal absence, complete provenance keys, contiguous ordering, and causal
-evidence. The adapter does not fill missing data or synthesize audit records.
-
-## Validation and Determinism
-
-The returned `SimulationRaceInput` must pass unchanged validation proving:
-
-- race and pipeline race IDs agree;
-- captured time is no later than information cutoff;
-- audit completeness and all required categories;
-- no missing or unknown audit key;
-- audit key/type/entry/index metadata equality;
-- every past race date precedes target race date; and
-- every reduced audit timestamp is no later than information cutoff.
-
-No validation weakening or exception translation is allowed.
-
-Canonical sorting and order-independent evidence reduction guarantee:
+Freeze:
 
 ```text
-same exact snapshot content
--> equal SimulationRaceInput
+HISTORICAL_RECOMMENDATION_ID_ALREADY_RACE_ENTRY_ID: YES
+HISTORICAL_SELECTION_RESOLVER: ExactRaceEntrySelectionResolver
+SELECTION_IDENTITY_TRANSFORMATION: NONE_RETURN_EXACT_REQUEST_ORDER
+SELECTION_ALLOWLIST_SOURCE: EXACT_PIPELINE_HORSE_PAST_RACES_KEYS
+LEGACY_SELECTION_DB_LOOKUP: NO
+HORSES_TABLE_LOOKUP: NO
+HORSE_NAME_MAPPING: NO
+NUMERIC_COINCIDENCE_MAPPING: NO
+EXTERNAL_ID_MAPPING: NO
 ```
 
-This remains independent of process date, process restart, database state, later
-snapshots, later archive enrichment, incidental tuple/dict/evidence order, results, and
-payouts. The adapter has no latest selector.
+Existing snapshot-repository foreign-key and integrity enforcement remains unchanged;
+it is not selection resolution and does not authorize a legacy identity lookup.
 
-## C4f0 and Scope Preservation
+C4g0 and the resolver perform no direct SQLite access, `RaceEntrySource` access,
+horses-table lookup, database identity lookup, name lookup, or external-ID lookup. The
+injected `SimulationBetPlanSnapshotRepository` remains the intentional persistence
+boundary. C4g0 calls only its `save_snapshot(...)` contract; a concrete repository may
+perform its own integrity or idempotence reads and writes internally. Such internal
+storage checks are not selection identity resolution and their results must never
+transform recommendation IDs.
 
-C4f1 does not change `PastRaceInput`, `PastRaceSnapshot`, `AbilityEngine`,
-`build_historical_prediction_pipeline`, JockeyEngine, TrackEngine, or ValueEngine. It
-does not change the historical snapshot domain, simulation validation, schema, or any
-migration.
-
-Implementation files are exactly:
+Freeze:
 
 ```text
-scripts/simulation/historical_input_snapshot_simulation_adapter.py
-tests/test_historical_input_snapshot_simulation_adapter.py
+COMPOSITION_DIRECT_DATABASE_READ: NO
+SELECTION_DATABASE_READ: NO
+HORSES_TABLE_SELECTION_LOOKUP: NO
+SNAPSHOT_REPOSITORY_IO: ALLOWED_ONLY_THROUGH_SAVE_SNAPSHOT_CONTRACT
+SNAPSHOT_REPOSITORY_USED_FOR_SELECTION_IDENTITY: NO
+REPOSITORY_READ_RESULT_USED_TO_TRANSFORM_RECOMMENDATION_IDS: NO
+```
+
+## Existing Bet-Plan Service Reuse
+
+Construct an exact `SimulationBetPlanBuilder` with the exact resolver, then construct an
+exact `PersistedSimulationBetPlanService` with:
+
+- the caller's exact `SimulationRunContext`;
+- the caller's exact `StrategyIdentity`;
+- the per-race historical `PredictionPipeline`;
+- the existing `FixedStakeBetAllocator`;
+- the new resolver-backed exact `SimulationBetPlanBuilder`; and
+- the caller's snapshot repository.
+
+Call `build_and_save(race_input=race_input, budget=budget)` exactly once and return its
+exact result. Reuse without modification preserves:
+
+- one pipeline execution;
+- `SimulationBetPlanIdentity` construction from run/race/strategy/cutoff;
+- pipeline-result validation;
+- allocation policy identity;
+- allocator call and plan identity validation;
+- bet-plan builder call and snapshot validation;
+- snapshot repository save exactly once; and
+- repository error propagation.
+
+Freeze:
+
+```text
+PERSISTED_BET_PLAN_SERVICE_REUSED: YES_UNCHANGED
+PERSISTED_BET_PLAN_SERVICE_CHANGE_REQUIRED: NO
+ADAPTER_CALL_COUNT: EXACTLY_ONE
+BET_PLAN_SERVICE_BUILD_AND_SAVE_CALL_COUNT: EXACTLY_ONE
+ALLOCATOR_CALL_COUNT: EXACTLY_ONE
+BET_PLAN_BUILDER_CALL_COUNT: EXACTLY_ONE
+SNAPSHOT_SAVE_CALL_COUNT: EXACTLY_ONE
+```
+
+## Allocation and NO_BET
+
+Use `FixedStakeBetAllocator` unchanged, constructed from the exact
+`strategy_identity.strategy_config.allocation_policy` object. The existing allocator
+supports only its exact formal fixed-stake policy name, version, and parameter contract.
+Missing or unsupported policy fails closed before prediction execution; no alternate
+algorithm or default stake is introduced.
+
+The budget is the caller's exact `BetStakeBudget`. A genuine empty strategy `BetPlan`
+is the only `NO_BET` path: existing allocation and builder produce and persist a valid
+zero-bet `SimulationBetPlanSnapshot`. Validation failure, pipeline failure, insufficient
+budget, unknown selection, or repository failure never becomes `NO_BET`.
+
+```text
+ALLOCATION_POLICY: EXISTING_FIXED_STAKE_ALLOCATOR_FROM_EXACT_STRATEGY_POLICY
+NO_BET_POLICY: PERSIST_EXACT_EMPTY_FORMAL_PLAN_ONLY
+```
+
+## Prediction Visibility and Persistence
+
+The existing service validates `PipelineResult` internally and persists only the final
+bet-plan snapshot. C4g0 does not need public prediction/value/recommendation output for
+the current reproducible ROI path:
+
+```text
+PUBLIC_EXECUTION_RESULT: EXACT_SAVED_SIMULATION_BET_PLAN_SNAPSHOT
+PIPELINE_RESULT_PUBLICLY_REQUIRED: NO
+PREDICTION_PERSISTENCE_REQUIRED: NO
+```
+
+If prediction-result persistence becomes necessary, it requires a separate phase and
+must not widen this service implicitly.
+
+## Future-Information and Failure Boundary
+
+The historical pipeline reads only `race_input.pipeline_input`. The bet-plan identity
+uses the exact information cutoff. Selection uses only formal race-entry IDs. Allocation
+uses only the formal plan, policy, and budget. Persistence receives only the validated
+snapshot.
+
+Prohibited:
+
+```text
+DIRECT_SQLITE_OR_DATABASE_IDENTITY_READ_BY_COMPOSITION
+SELECTION_DATABASE_READ
+CURRENT_RACE_OR_HORSE_STATE
+POST_CUTOFF_ODDS
+TARGET_RACE_RESULTS_OR_FINISH_ORDER
+PAYOUTS
+SETTLEMENT
+CURRENT_TIME
+LIVE_OR_DEFAULT_FALLBACK
+```
+
+No broad `Exception` or `BaseException` catch is allowed. Existing
+`PipelineExecutionError`, `SimulationValidationError`, and repository-owned errors
+propagate unchanged.
+
+Determinism is defined over every formal identity-bearing input, including the run
+context:
+
+```text
+DETERMINISM_INPUTS: SNAPSHOT_PLUS_RUN_CONTEXT_PLUS_STRATEGY_IDENTITY_PLUS_BUDGET_PLUS_CODE_REVISION
+RUN_ID_IS_OUTPUT_IDENTITY_INPUT: YES
+```
+
+The same exact snapshot, run context, strategy identity, budget, and code revision
+produce an equal `SimulationBetPlanSnapshot`, assuming the same successful repository
+contract/state. A different `run_context.run_id` may and normally will produce a
+different `SimulationBetPlanIdentity`.
+
+## Phase Split
+
+The exact hierarchy is:
+
+```text
+4C-2d3b1i6d1d5f1c4g0
+    single-race historical prediction -> persisted bet plan
+
+4C-2d3b1i6d1d5f1c4g1
+    ordered multi-race historical planning orchestration;
+    invoke c4g0 once per exact snapshot and construct one pipeline per race
+
+4C-2d3b1i6d1d5f1c4g2
+    historical result/payout settlement, simulator execution, and summary
+```
+
+C4g0 does not modify or call `PersistedSimulationRunService`. C4g1 must not reuse one
+historical pipeline across different race dates. C4g2 alone may introduce post-race
+facts after independent review.
+
+## Future Implementation Scope
+
+Production:
+
+```text
+scripts/simulation/exact_race_entry_selection_resolver.py
+scripts/simulation/historical_prediction_bet_plan_execution.py
+```
+
+Tests:
+
+```text
+tests/test_exact_race_entry_selection_resolver.py
+tests/test_historical_prediction_bet_plan_execution.py
+```
+
+Docs:
+
+```text
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-No other production file is required.
+No existing production file should change. In particular, c4f0, c4f1,
+`PersistedSimulationBetPlanService`, `SimulationBetPlanBuilder`, simulation validation,
+snapshot domains/repositories, prediction engines, ValueEngine, schemas, and migrations
+remain bit-for-bit unchanged.
 
-## Implemented Test Contract
+## Future Test Matrix
 
-The dedicated test pins:
+Future resolver tests must pin:
 
-- exact module `__all__`, error class, and keyword-only function signature;
-- exact `HistoricalInputSnapshot` input type and rejection before conversion;
-- one and multiple entries in ascending `entry_order`;
-- exact internal `race_entry_id` keys across all mappings;
-- `horse_no`, external IDs, names, and numeric coincidence never used as keys;
-- zero history to empty tuple and exact `/none` provenance;
-- past races in ascending `past_race_index` regardless of source tuple order;
-- every direct `PastRaceSnapshot` field mapping and absence of margin;
-- direct exact `ImmutableRacePredictionInput` construction;
-- exact track and jockey mapping;
-- checked target odds, past odds, weight, and signed weight-difference conversion;
-- overflow, non-finite result, nonzero underflow, and sign loss fail closed;
-- accepted deterministic binary-float approximation with Decimal audit truth unchanged;
-- exact race count, race ID, target date, scheduled start, and cutoff;
-- exact UTC microsecond prediction-time string;
-- exact provenance metadata preservation;
-- single evidence, observed maximum, unknown availability, and all-known availability;
-- evidence-order-independent reduction;
-- canonical audit entry order and formal absence placement;
-- exact source-system audit header and `is_complete=True` justification;
-- final unchanged `SimulationRaceInput` validation;
-- equivalent/reordered snapshot content produces equal output;
-- restart and later-snapshot independence;
-- no database, repository, provider, HTTP, clock, filesystem, random, legacy lookup,
-  name mapping, result/payout/settlement, prediction execution, or historical factory;
-- no broad exception catch or package-root export; and
-- c4f0 production files remain unchanged.
+- exact `__all__ == ("ExactRaceEntrySelectionResolver",)`, no other public symbol,
+  frozen/slotted type, fields, and method signature;
+- exact constructor race ID and allowlist validation;
+- exact requested race match;
+- sequence validation, positive IDs, uniqueness, and allowlist membership;
+- exact unchanged tuple and recommendation order;
+- unknown/unallowed ID and wrong race fail closed;
+- structural `RaceEntrySelectionResolver` compatibility;
+- no SQLite, repository, `RaceEntrySource`, `horses` table, name, or external mapping;
+- no clock, HTTP, filesystem, or broad catch; and
+- no package-root export.
 
-## Implementation Result
+Future execution tests must pin:
+
+- exact public API and exact input types;
+- all input validation and dataset match before adapter/pipeline/repository activity;
+- non-`RuleBasedBetStrategy` strategy identity name fails before adapter, historical
+  pipeline factory, or repository activity;
+- exact `"RuleBasedBetStrategy"` identity is accepted without identity rewriting;
+- adapter exactly once with the same snapshot;
+- historical pipeline factory exactly once;
+- exact target race date and exact strategy-config object identity;
+- returned pipeline has exact `PredictionPipeline` and `PipelineConfig` types, retains
+  the same strategy-config object, and has exact `RuleBasedBetStrategy` type;
+- pipeline run exactly once with the exact immutable pipeline input;
+- exact allowlist derived only from pipeline past-race mapping keys;
+- recommendation IDs remain exact race-entry IDs and order is preserved;
+- unknown selection and wrong race fail closed;
+- dataset mismatch has exact `SimulationValidationError`, snapshot internal race ID,
+  and `run_context.dataset_id` input identifier;
+- no direct SQLite, `RaceEntrySource`, horses-table, database identity, name, or
+  external-ID lookup in either new production module;
+- the injected snapshot repository remains allowed only as the persistence boundary;
+- existing fixed-stake allocator exactly once with exact formal policy and budget;
+- missing/unsupported allocation policy fails closed without prediction;
+- existing bet-plan builder exactly once;
+- existing service `build_and_save` and repository save exactly once;
+- exact returned object is the saved `SimulationBetPlanSnapshot`;
+- legitimate empty plan is persisted as zero-bet `NO_BET`;
+- `PipelineExecutionError`, `SimulationValidationError`, and repository errors propagate;
+- no current clock, result, payout, settlement, simulator, or fallback;
+- identical snapshot, run context, strategy identity, budget, and code revision are
+  deterministic under the same successful repository contract/state;
+- a different run ID produces a different plan identity;
+- process date does not affect output;
+- two different target race dates use distinct correctly dated pipelines in separate
+  c4g0 invocations;
+- no latest snapshot selection or persisted snapshot loading;
+- no public pipeline-result/prediction persistence;
+- c4f0/c4f1 and all existing generic services remain bit-for-bit unchanged; and
+- no schema or migration change.
+
+## Readiness
 
 ```text
-PUBLIC_ADAPTER_API_READY: YES
-FIELD_MAPPING_READY: YES
-ENTITY_IDENTITY_READY: YES
-ORDERING_READY: YES
-DECIMAL_CONVERSION_READY: YES
-PREDICTION_TIMESTAMP_READY: YES
-MULTI_EVIDENCE_AUDIT_REDUCTION_READY: YES
-AUDIT_SOURCE_READY: YES
-ERROR_POLICY_READY: YES
-IMPLEMENTATION_STATUS: READY_FOR_REVIEW
+PUBLIC_EXECUTION_API_READY: YES
+PER_RACE_PIPELINE_OWNERSHIP_READY: YES
+SELECTION_IDENTITY_READY: YES
+DATASET_BINDING_READY: YES
+SERVICE_REUSE_READY: YES
+ALLOCATION_READY: YES_FIXED_STAKE_ONLY
+STRATEGY_EXECUTION_IDENTITY_READY: YES_EXACT_RULE_BASED_STRATEGY
+PIPELINE_POSTCONSTRUCTION_PROOF_READY: YES
+RESOLVER_PUBLIC_SURFACE_READY: YES_EXACT
+REPOSITORY_BOUNDARY_WORDING_READY: YES
+FAILURE_POLICY_READY: YES
+IMPLEMENTATION_READY: YES_AFTER_INDEPENDENT_APPROVAL
 BLOCKERS: NONE
 ```
-
-The implementation constructs only immutable prediction/audit domains. Exact Decimal
-inputs are converted directly to finite floats with field-specific positivity and sign
-requirements; overflow, non-finite output, sign loss, and nonzero-to-zero underflow fail
-with the adapter-owned error. Evidence reduction remains maximum observed time and
-`None` if any availability is unknown, otherwise maximum available time.
-
-Verification:
-
-```text
-dedicated: 15 passed, 2 subtests passed
-related: 53 passed, 31 subtests passed
-full suite: 2886 passed, 1923 subtests passed
-git diff --check: PASS
-static scope/forbidden dependency/public surface: PASS
-```
-
-No live HTTP or real trusted capture was performed.
 
 ## Allowed Files
 
 ```text
-scripts/simulation/historical_input_snapshot_simulation_adapter.py
-tests/test_historical_input_snapshot_simulation_adapter.py
+scripts/simulation/exact_race_entry_selection_resolver.py
+scripts/simulation/historical_prediction_bet_plan_execution.py
+tests/test_exact_race_entry_selection_resolver.py
+tests/test_historical_prediction_bet_plan_execution.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
 ## Forbidden Files
 
-All production, tests, repositories, providers, schemas, migrations, c4f0, c4d, c4e,
-prediction execution, CLI, JRA acquisition, NAR, live capture, betting, settlement, and
-package-root files.
+All production, tests, schema, migration, repositories, prediction engines, c4f0, c4f1,
+multi-race orchestration, settlement, simulator, CLI, JRA/NAR acquisition, and package
+root files.
 
-## Required Checks
+## Verification
 
 ```text
-pytest -q tests/test_historical_input_snapshot_simulation_adapter.py
-pytest -q tests/test_historical_input_snapshot_builder.py tests/test_historical_input_snapshots.py tests/test_prediction_input_contracts.py tests/test_simulation_validation.py tests/test_value_engine.py
-pytest -q
+python -m pytest -q tests/test_exact_race_entry_selection_resolver.py tests/test_historical_prediction_bet_plan_execution.py
+python -m pytest -q tests/test_historical_input_snapshot_simulation_adapter.py tests/test_prediction_pipeline.py tests/test_persisted_bet_plan_service.py tests/test_simulation_bet_plan_builder.py tests/test_fixed_stake_bet_allocator.py tests/test_simulation_bet_plan_snapshot.py tests/test_simulation_validation.py
+python -m pytest -q
 git diff --check
 git status --short
-changed-file scope == the four allowed files
-static scope/forbidden-dependency/public-surface checks
+changed-file scope == the six allowed files
+static public-surface and forbidden-dependency checks
 ```
+
+No HTTP is permitted.
 
 ## Stop Condition
 
 Commit and push the single implementation review commit, then stop for independent
-review. Do not begin the next historical prediction-execution composition phase and do
-not modify the formal branch.
+review. Do not begin c4g1 or c4g2 and do not modify the formal branch.
