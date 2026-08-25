@@ -39,9 +39,6 @@ class PastRaceInput(Protocol):
     def finish(self) -> int: ...
 
     @property
-    def margin(self) -> float: ...
-
-    @property
     def time(self) -> str: ...
 
     @property

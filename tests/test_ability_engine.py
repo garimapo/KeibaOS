@@ -10,6 +10,7 @@ import unittest
 
 from scripts.models import PastRace
 from scripts.prediction.ability_engine import AbilityEngine, AbilityEvaluation
+from scripts.simulation.models import PastRaceSnapshot
 
 
 def make_race(
@@ -145,6 +146,19 @@ class AbilityEngineTest(unittest.TestCase):
         self.assertEqual(evaluation.race_count, 1)
         self.assertGreater(evaluation.ability_index, 50.0)
 
+    def test_each_retained_component_independently_makes_a_race_eligible(self) -> None:
+        """着順・人気・クラスはそれぞれ単独で評価対象を成立させる。"""
+
+        cases = (
+            make_race(finish=1, popularity=0, race_class="", margin=0.0),
+            make_race(finish=0, popularity=1, race_class="", margin=0.0),
+            make_race(finish=0, popularity=0, race_class="G1", margin=0.0),
+        )
+
+        for race in cases:
+            with self.subTest(race=race):
+                self.assertEqual(self.engine.evaluate([race]).race_count, 1)
+
     def test_date_only_race_is_excluded(self) -> None:
         """日付以外の評価項目が全欠損なら計算対象外となる。"""
 
@@ -158,6 +172,19 @@ class AbilityEngineTest(unittest.TestCase):
         evaluation = self.engine.evaluate([date_only])
 
         self.assertEqual(evaluation, AbilityEvaluation(0.0, 0, None))
+
+    def test_distance_and_legacy_margin_alone_do_not_make_a_race_eligible(self) -> None:
+        """距離・日付・legacy着差だけのレースは評価対象外となる。"""
+
+        race = make_race(
+            finish=0,
+            popularity=0,
+            margin=0.1,
+            distance=3200,
+            race_class="",
+        )
+
+        self.assertEqual(self.engine.evaluate([race]), AbilityEvaluation(0.0, 0, None))
 
     def test_all_future_dates_are_excluded(self) -> None:
         """全レースが未来日付なら能力計算の対象外となる。"""
@@ -180,15 +207,56 @@ class AbilityEngineTest(unittest.TestCase):
 
         self.assertEqual(self.engine.evaluate([good, poor]).ability_index, expected)
 
-    def test_extreme_and_non_finite_values_stay_in_range(self) -> None:
-        """極端な着差とNaN・infが能力指数を異常値にしない。"""
+    def test_legacy_margin_values_have_no_effect(self) -> None:
+        """legacy着差の値だけを変えても正式な能力指数は変化しない。"""
 
+        expected = self.engine.evaluate([make_race(margin=0.1)])
         for margin in (1_000_000.0, float("nan"), float("inf"), float("-inf")):
             evaluation = self.engine.evaluate([make_race(margin=margin)])
 
+            self.assertEqual(evaluation, expected)
             self.assertTrue(math.isfinite(evaluation.ability_index))
             self.assertGreaterEqual(evaluation.ability_index, 0.0)
             self.assertLessEqual(evaluation.ability_index, 100.0)
+
+    def test_marginless_structural_input_is_accepted(self) -> None:
+        """正式な入力はmargin属性を持たなくても能力評価できる。"""
+
+        race = PastRaceSnapshot.from_past_race(make_race())
+
+        self.assertFalse(hasattr(race, "margin"))
+        self.assertEqual(self.engine.evaluate([race]).race_count, 1)
+
+    def test_component_weights_are_exactly_nine_three_five(self) -> None:
+        """着順・人気・クラスの正規化比率を9:3:5で固定する。"""
+
+        self.assertEqual(
+            (
+                AbilityEngine._FINISH_WEIGHT,
+                AbilityEngine._POPULARITY_WEIGHT,
+                AbilityEngine._CLASS_WEIGHT,
+                AbilityEngine._COMPONENT_WEIGHT_TOTAL,
+            ),
+            (9, 3, 5, 17),
+        )
+        cases = (
+            (make_race(finish=1, popularity=0, race_class="", margin=99.0), (100.0 * 9 + 50.0 * 3 + 50.0 * 5) / 17),
+            (make_race(finish=0, popularity=1, race_class="", margin=0.0), (50.0 * 9 + 100.0 * 3 + 50.0 * 5) / 17),
+            (make_race(finish=0, popularity=0, race_class="G1", margin=-99.0), (50.0 * 9 + 50.0 * 3 + 100.0 * 5) / 17),
+        )
+        for race, expected in cases:
+            with self.subTest(race=race):
+                self.assertEqual(
+                    self.engine.evaluate([race]).ability_index,
+                    round(expected, 2),
+                )
+
+    def test_margin_implementation_symbols_are_absent(self) -> None:
+        """AbilityEngineに旧着差ロジックを残さない。"""
+
+        self.assertFalse(hasattr(AbilityEngine, "_MARGIN_WEIGHT"))
+        self.assertFalse(hasattr(AbilityEngine, "_margin_score"))
+        self.assertFalse(hasattr(AbilityEngine, "_is_valid_margin"))
 
     def test_zero_values_are_neutral_when_other_field_is_valid(self) -> None:
         """着順0・人気0・距離0でも、他項目が有効なら中立評価で計算する。"""

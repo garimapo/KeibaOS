@@ -22,16 +22,16 @@ class AbilityEvaluation:
 
 
 class AbilityEngine:
-    """着順・人気・着差・距離・クラス・レース日から能力指数を算出する。
+    """着順・人気・距離・クラス・レース日から能力指数を算出する。
 
     騎手、馬場、展開による補正はこのエンジンの責務に含めない。
     新しいレースほど大きな重みを与える加重平均を採用する。
     """
 
-    _FINISH_WEIGHT = 0.45
-    _POPULARITY_WEIGHT = 0.15
-    _MARGIN_WEIGHT = 0.15
-    _CLASS_WEIGHT = 0.25
+    _FINISH_WEIGHT = 9
+    _POPULARITY_WEIGHT = 3
+    _CLASS_WEIGHT = 5
+    _COMPONENT_WEIGHT_TOTAL = 17
 
     def __init__(
         self,
@@ -113,19 +113,17 @@ class AbilityEngine:
         return (
             self._finish_score(past_race.finish) * self._FINISH_WEIGHT
             + self._popularity_score(past_race.popularity) * self._POPULARITY_WEIGHT
-            + self._margin_score(past_race.margin) * self._MARGIN_WEIGHT
             + self._class_score(past_race.race_class) * self._CLASS_WEIGHT
-        )
+        ) / self._COMPONENT_WEIGHT_TOTAL
 
     @classmethod
     def _is_eligible_race(cls, past_race: PastRaceInput) -> bool:
-        """評価4項目のうち少なくとも1項目が有効なレースか判定する。"""
+        """評価3項目のうち少なくとも1項目が有効なレースか判定する。"""
 
         return any(
             (
                 past_race.finish > 0,
                 past_race.popularity > 0,
-                cls._is_valid_margin(past_race.margin),
                 cls._has_race_class(past_race.race_class),
             )
         )
@@ -147,21 +145,6 @@ class AbilityEngine:
             return 50.0
 
         return max(0.0, 100.0 - (popularity - 1) * 8.0)
-
-    @staticmethod
-    def _margin_score(margin: float) -> float:
-        """正の着差が小さいほど高く評価し、不明値は中立評価にする。"""
-
-        if not AbilityEngine._is_valid_margin(margin):
-            return 50.0
-
-        return max(0.0, 100.0 - margin * 20.0)
-
-    @staticmethod
-    def _is_valid_margin(margin: float) -> bool:
-        """着差が評価可能な正の有限値か判定する。"""
-
-        return math.isfinite(margin) and margin > 0
 
     @staticmethod
     def _has_race_class(race_class: str) -> bool:
