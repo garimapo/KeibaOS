@@ -4279,3 +4279,69 @@ work, not c4e persistence work.
 
 No production code, tests, schema, migration, formal branch, HTTP, trusted capture,
 prediction, or simulation execution changed during this PREPARE.
+
+### Phase 4C-2d3b1i6d1d5f1c4e exact persistence-contract correction
+
+The approved c4e/c4f split is unchanged. This correction freezes c4e's exact future
+module-local public surface, keyword-only application function, ValueError-based error
+hierarchy, and narrow c4d-error translation. It also freezes the immutable persisted
+reference as exactly `seed_id`, `HistoricalInputSnapshotIdentity`, and
+`content_sha256`, with no package-root export.
+
+C4e will use private structural protocols for exact seed-by-ID load, exact-v3 capture
+load, and snapshot save/exact reload. It validates the canonical seed ID and every
+collaborator before any call, loads the exact seed once, invokes c4d once with the same
+seed and five evidence providers, saves the exact replay snapshot once, and exact-reloads
+it once. Repository conflict, validation, integrity, and other provider-owned integrity
+exceptions propagate unchanged; legitimate seed/reload absence maps to the dedicated
+persistence unavailable error. C4e owns no cross-provider transaction: the existing
+snapshot repository alone owns its save transaction.
+
+The concrete repository extension is frozen as
+`load_snapshot_by_identity(*, identity)` with exact
+`HistoricalInputSnapshotIdentity` type validation and exact equality on the five natural
+columns: dataset ID, organization, source system, external race ID, and captured time.
+Source URL, information cutoff, internal race ID, and digest are not selectors. The
+loader is multiplicity-aware, never delegates to the latest loader, fully reconstructs
+the normalized snapshot graph, and treats duplicate or corrupt stored state as
+`RepositoryDataIntegrityError`. Later snapshot B can never replace explicitly requested
+snapshot A.
+
+After reload, c4e explicitly rechecks all five natural fields, the complete content
+digest, and source URL. The separate source-URL check is required because it is immutable
+digest-bound content while intentionally excluded from dataclass identity comparison.
+The existing schema, natural identity, idempotence/conflict behavior, d0 mappings, and
+read-only c4d contract remain unchanged. C4f remains unimplemented and reserved for the
+later pure snapshot-to-simulation adapter phase.
+
+```text
+STATUS: REVISION_READY_FOR_REVIEW
+PREVIOUS_PREPARE_TIP: 91a89d3f11102b633eb039d126fac68c02a0d4eb
+C4E_PUBLIC_FUNCTION: persist_jra_race_historical_snapshot
+C4E_PUBLIC_RESULT: JRAPersistedHistoricalSnapshotReference
+C4E_PUBLIC_ERRORS: EXACT_FOUR_CLASS_VALUEERROR_HIERARCHY
+C4E_PUBLIC_API_SHAPE: EXACT_KEYWORD_ONLY_SEED_AND_INJECTED_COLLABORATORS
+SEED_BY_ID_PROTOCOL: PRIVATE_STRUCTURAL_CALLABLE_SATISFIED_BY_LOAD_SEED
+SNAPSHOT_PERSISTENCE_PROTOCOL: PRIVATE_SAVE_AND_EXACT_LOAD_STRUCTURAL_PROTOCOL
+EXACT_V3_PROTOCOL_OWNER: PRIVATE_TO_C4E_WITH_PROVIDER_PASSED_UNCHANGED_TO_C4D
+EXACT_SNAPSHOT_LOAD_API: load_snapshot_by_identity(*, identity)
+EXACT_SELECTOR_FIELDS: dataset_id,organization,source_system,external_race_id,captured_at
+SOURCE_URL_IS_SELECTOR: NO
+INFORMATION_CUTOFF_IS_SELECTOR: NO
+INTERNAL_RACE_ID_IS_SELECTOR: NO
+LATEST_DELEGATION_ALLOWED: NO
+EXACT_RELOAD_CONTENT_DIGEST_REQUIRED: YES
+SOURCE_URL_EXPLICITLY_RECHECKED: YES
+C4E_TRANSACTION_OWNER: SNAPSHOT_REPOSITORY_SAVE_ONLY
+C4E_CROSS_PROVIDER_TRANSACTION: NO
+C4D_CALL_COUNT: EXACTLY_ONE
+SNAPSHOT_SAVE_CALL_COUNT: EXACTLY_ONE
+EXACT_RELOAD_CALL_COUNT: EXACTLY_ONE
+C4D_REMAINS_READ_ONLY: YES
+SCHEMA_CHANGE_REQUIRED: NO
+C4F_IMPLEMENTED: NO
+IMPLEMENTATION_READY: YES_AFTER_INDEPENDENT_APPROVAL
+BLOCKERS: NONE
+LIVE_HTTP_PERFORMED: NO
+REAL_TRUSTED_CAPTURE_PERFORMED: NO
+```
