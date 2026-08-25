@@ -4323,10 +4323,13 @@ Track engines with the same target date. It owns no clock; the later historical
 application composition calls it, while c4f1 remains a pure input adapter. Existing
 live/default engine constructors may retain current-date behavior.
 
-The schema-v1 persisted request and its `track_reference_date` keep their exact existing
-TrackEngine-only meaning. They are not renamed or generalized, so old request documents
-do not silently change meaning. The future snapshot-driven composition uses the new
-factory instead of that legacy request path.
+The schema-v1 persisted request shape, required margin key and validation, and
+`track_reference_date` TrackEngine-only behavior stay unchanged. Existing valid files
+remain parseable and still populate legacy `PastRace.margin`. Prediction semantics are
+intentionally not compatible, however: AbilityEngine ignores that legacy value and uses
+the marginless 9:3:5 model globally, so the same request can produce different predictions
+under a different KeibaOS revision. The future snapshot-driven composition uses the new
+factory instead of the legacy request path.
 
 C4f0 stays one narrow phase. Future production scope is exactly prediction input
 contracts, AbilityEngine, prediction pipeline, and immutable simulation models. Focused
@@ -4339,3 +4342,27 @@ Only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` changed. No pytes
 required. No production, tests, HTTP, adapter, or real trusted capture was performed.
 C4f0 is ready for implementation only after independent approval; c4f1 remains blocked
 until c4f0 is formal.
+
+### Compatibility clarification
+
+The correction separates schema, parsing, and model semantics. Schema-v1 and parsing are
+compatible: the JSON shape remains unchanged, margin remains required and finite, legacy
+`PastRace.margin` remains populated, `track_reference_date` retains TrackEngine-only
+meaning, and no migration is added. Model semantics intentionally change: immutable
+prediction input drops margin, AbilityEngine never reads it, and both historical and
+live formal Ability evaluation use the same marginless 9:3:5 model. This prevents
+historical validation from measuring a different feature contract from deployed
+prediction.
+
+Constructor signatures and intentionally live/current date defaults remain available,
+but pre-c4f0 and post-c4f0 Ability scores are not promised equal. Determinism is scoped
+to the same code revision plus the same exact input/configuration. Although run context
+retains `target_commit_id`, c4f0 does not verify the running checkout against it;
+cross-revision prediction equality and runtime commit enforcement are out of scope.
+
+Future tests must preserve schema/parsing compatibility while proving that changing only
+legacy margin changes neither immutable formal input nor post-c4f0 Ability output. They
+must not assert unchanged legacy request meaning or pre/post model output equality. The
+production and direct-test file scopes remain exactly unchanged; related regression runs
+also cover Jockey, Track, persisted application/request assembly, simulation validation,
+and the full suite.

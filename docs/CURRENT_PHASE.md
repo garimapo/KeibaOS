@@ -72,8 +72,9 @@ alignment is:
   from `AbilityEngine`;
 - retain `scripts.models.PastRace.margin` unchanged for legacy mutable callers;
 - retain the schema-v1 persisted simulation request `margin` field and its existing
-  parsing/validation unchanged for backward compatibility. Its legacy value is accepted
-  at that boundary but is omitted by immutable conversion and has no prediction effect.
+  parsing/validation unchanged for schema and parsing compatibility. Its legacy value is
+  accepted at that boundary but is omitted by immutable conversion and has no prediction
+  effect after c4f0.
 
 The resulting immutable formal past-race field list is exactly:
 
@@ -161,7 +162,7 @@ OR nonblank race_class
 There is no margin branch. Formal `HistoricalPastRaceSnapshot` already requires a
 positive finish and a nonempty race class, so every formal past-race value passes the
 feature-availability portion of this check. The engine retains its deterministic
-legacy-compatible handling of zero/missing retained fields; it does not add a permissive
+handling of zero/missing retained fields; it does not add a permissive
 fallback for malformed types.
 
 ## Reference-Date Semantics
@@ -258,15 +259,73 @@ c4f0 unnecessarily.
 Freeze:
 
 ```text
-PERSISTED_REQUEST_CHANGE_REQUIRED: NO
+PERSISTED_REQUEST_SCHEMA_CHANGE: NO
+PERSISTED_REQUEST_SCHEMA_COMPATIBILITY: YES
+PERSISTED_REQUEST_PARSING_COMPATIBILITY: YES
+PREDICTION_SEMANTICS_COMPATIBILITY: NO_INTENTIONAL_MODEL_CONTRACT_CHANGE
 EXISTING_TRACK_REFERENCE_DATE_POLICY: RETAIN_EXACT_V1_TRACK_ENGINE_ONLY_SEMANTICS
-BACKWARD_COMPATIBILITY_POLICY: LEGACY_REQUEST_SHAPE_AND_MEANING_UNCHANGED
 ```
 
-The new historical factory is distinct from the persisted-request assembler. Existing
-persisted requests, their schema, parser, and application assembly remain unchanged.
-The future snapshot-driven application composition must use the historical factory and
-must not route through `track_reference_date`.
+Schema compatibility means schema version 1 and the JSON shape remain unchanged:
+`past_race.margin` stays required and keeps its finite-number validation,
+`track_reference_date` stays unchanged, and no request key or migration is added.
+Parsing compatibility means existing valid request files remain loadable and continue
+populating `scripts.models.PastRace.margin` at the legacy assembly boundary.
+
+Prediction semantics are intentionally not backward-compatible. AbilityEngine no longer
+reads that populated margin and uses the 9:3:5 formula globally. Consequently, the same
+schema-v1 request can produce a different prediction under c4f0 than under an older code
+revision. This is an explicit formal prediction-model contract change, not a silent
+fallback or a claim that legacy request meaning is unchanged.
+
+This semantic change is required because running historical prediction with a marginless
+model while live/persisted-request prediction remained margin-aware would make formal
+historical validation measure a different feature contract from the deployed model. C4f0
+therefore aligns both paths to the intersection of causally reproducible snapshot facts:
+
+```text
+LIVE_PREDICTION_ABILITY_SEMANTICS_CHANGED: YES_INTENTIONAL
+HISTORICAL_AND_LIVE_FORMAL_ABILITY_MODEL: SAME_MARGINLESS_9_3_5_MODEL
+```
+
+The new historical factory remains distinct from the persisted-request assembler. The
+future snapshot-driven application composition must use the historical factory and must
+not route through `track_reference_date`.
+
+## Code-Version Reproducibility
+
+The schema-v1 request retains `SimulationRunContext.target_commit_id`, but the existing
+execution chain does not independently prove that the running checkout equals that ID.
+C4f0 adds no runtime commit verification.
+
+Freeze:
+
+```text
+SAME_CODE_REVISION_PLUS_SAME_EXACT_INPUT_CONFIG: DETERMINISTIC
+CROSS_CODE_REVISION_PREDICTION_EQUALITY: NOT_GUARANTEED
+TARGET_COMMIT_ID_RUNTIME_ENFORCEMENT_IN_C4F0: NO
+TARGET_COMMIT_RUNTIME_VERIFICATION: OUT_OF_SCOPE_FOR_C4F0
+```
+
+Any future runtime commit check belongs to a separate hardening phase. Neither request
+schema compatibility nor `target_commit_id` implies prediction equality across KeibaOS
+revisions.
+
+## Constructor Compatibility
+
+`AbilityEngine()`, `JockeyEngine()`, `TrackEngine()`, `PipelineConfig()`, and
+`PredictionPipeline()` remain callable with their existing constructor signatures, and
+their explicit live/default current-date behavior may remain. This is constructor API
+compatibility only:
+
+```text
+CONSTRUCTOR_API_COMPATIBILITY: YES
+ABILITY_SCORE_SEMANTICS_COMPATIBILITY: NO
+```
+
+Ability scores may change because the model intentionally becomes marginless. Historical
+execution must use `build_historical_prediction_pipeline(...)` and never those implicit
+date defaults.
 
 ## Phase Cohesion
 
@@ -322,11 +381,20 @@ factory signature/types, identical target date on all three engines, same output
 different monkeypatched process dates, future-to-reference rejection, and no default
 factory use. Persisted-race tests preserve the legacy request margin schema/validation
 but prove the immutable result omits it and changing only legacy margin cannot change
-formal immutable prediction input.
+formal immutable prediction input or AbilityEngine output. They do not assert equal
+predictions across pre-c4f0 and post-c4f0 revisions.
 
-Existing focused Jockey and Track tests remain related regressions; their production and
-test files need no implementation edit. Implementation verification must run them and
-the full suite.
+The related regression command must include, without implementation edits:
+
+```text
+tests/test_jockey_engine.py
+tests/test_track_engine.py
+tests/test_persisted_simulation_application_inputs.py
+tests/test_persisted_simulation_request_document.py
+tests/test_simulation_validation.py
+```
+
+Implementation verification must also run the full suite.
 
 ## Required Implementation Test Contract
 
@@ -349,7 +417,13 @@ Future c4f0 tests must prove at minimum:
 - two different monkeypatched process dates produce equal historical evaluations;
 - a race later than the explicit reference remains excluded by Ability, Jockey, and
   Track according to their existing semantics;
-- ordinary default/live constructors remain available and unchanged;
+- ordinary default/live constructor APIs remain available, while Ability score semantics
+  are explicitly allowed and expected to change;
+- schema-v1 requests still require and validate margin and still populate legacy
+  `PastRace.margin`;
+- changing only legacy margin yields equal immutable inputs and equal post-c4f0 Ability
+  results;
+- no test claims equal predictions across pre-c4f0 and post-c4f0 revisions;
 - persisted request `track_reference_date` still configures TrackEngine only;
 - no snapshot/source/replay/repository/schema/migration/ValueEngine change occurs; and
 - c4f1 module and tests remain absent.
@@ -372,6 +446,7 @@ LEGACY_PAST_RACE_MARGIN_POLICY: RETAIN_FIELD_FOR_INPUT_COMPATIBILITY_BUT_IGNORE_
 IMMUTABLE_PAST_RACE_MARGIN_POLICY: REMOVE
 REFERENCE_DATE_OWNER: BUILD_HISTORICAL_PREDICTION_PIPELINE_FACTORY
 IMPLEMENTATION_READY: YES_AFTER_INDEPENDENT_APPROVAL
+BLOCKERS: NONE
 C4F1_IMPLEMENTED: NO
 C4F1_BLOCKED_UNTIL: C4F0_FORMALLY_COMPLETE
 ```
