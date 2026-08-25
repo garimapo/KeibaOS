@@ -4291,3 +4291,130 @@ Static public-surface, exact-call, no-latest, forbidden-dependency, no-broad-cat
 schema/migration, allowed-file scope, and `git diff --check` checks pass. C4d remained
 read-only, c4f was not implemented, and no HTTP, current/legacy fallback, schema,
 migration, prediction/simulation, or real trusted capture was introduced.
+
+## Phase 4C-2d3b1i6d1d5f1c4f0 Historical Prediction Contract Preparation
+
+Status: `DRAFT_FOR_REVIEW`.
+
+This PREPARE starts from formal base
+`48dde0f5a5d1cce0176b578ccfcc87dbd9fc1fac`; parent architecture commit
+`4f9ab065b13a2823e5a5d356a4adcd57cadfdd4f` was read only as a reference and is not a
+parent.
+
+The usage audit confirms that only AbilityEngine reads margin. The approved candidate
+removes margin from the structural `PastRaceInput`, immutable `PastRaceSnapshot`, and
+Ability scoring/eligibility, while retaining `scripts.models.PastRace.margin` and the
+existing persisted-request margin parser for legacy input compatibility. Immutable
+conversion deliberately omits the legacy-only value; no default, sentinel, reparse,
+legacy lookup, or historical-domain change is allowed.
+
+Ability scoring retains finish, popularity, and class in their exact old relative ratio.
+The former 0.45:0.15:0.25 retained weights normalize to 9:3:5, giving exact weights
+9/17, 3/17, and 5/17 with sum one. This preserves the 0..100 scale without inventing a
+feature. Eligibility becomes finish-positive OR popularity-positive OR class-nonblank,
+with no margin branch.
+
+The historical engine reference date is the exact date-only
+`snapshot.race.target_race_date`, not the UTC calendar projection of information cutoff.
+The full cutoff instant remains prediction time. A narrow
+`build_historical_prediction_pipeline(*, target_race_date, strategy_config)` factory in
+the existing prediction-pipeline module will explicitly construct Ability, Jockey, and
+Track engines with the same target date. It owns no clock; the later historical
+application composition calls it, while c4f1 remains a pure input adapter. Existing
+live/default engine constructors may retain current-date behavior.
+
+The schema-v1 persisted request shape, required margin key and validation, and
+`track_reference_date` TrackEngine-only behavior stay unchanged. Existing valid files
+remain parseable and still populate legacy `PastRace.margin`. Prediction semantics are
+intentionally not compatible, however: AbilityEngine ignores that legacy value and uses
+the marginless 9:3:5 model globally, so the same request can produce different predictions
+under a different KeibaOS revision. The future snapshot-driven composition uses the new
+factory instead of the legacy request path.
+
+C4f0 stays one narrow phase. Future production scope is exactly prediction input
+contracts, AbilityEngine, prediction pipeline, and immutable simulation models. Focused
+tests are AbilityEngine, prediction input contracts, prediction pipeline, and persisted
+simulation race inputs; existing Jockey and Track tests remain related regressions.
+Historical snapshot/source/replay/repository, persisted request/application, schema,
+migration, Pace, Jockey, Track, and Value production files remain unchanged.
+
+Only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` changed. No pytest was
+required. No production, tests, HTTP, adapter, or real trusted capture was performed.
+C4f0 is ready for implementation only after independent approval; c4f1 remains blocked
+until c4f0 is formal.
+
+### Compatibility clarification
+
+The correction separates schema, parsing, and model semantics. Schema-v1 and parsing are
+compatible: the JSON shape remains unchanged, margin remains required and finite, legacy
+`PastRace.margin` remains populated, `track_reference_date` retains TrackEngine-only
+meaning, and no migration is added. Model semantics intentionally change: immutable
+prediction input drops margin, AbilityEngine never reads it, and both historical and
+live formal Ability evaluation use the same marginless 9:3:5 model. This prevents
+historical validation from measuring a different feature contract from deployed
+prediction.
+
+Constructor signatures and intentionally live/current date defaults remain available,
+but pre-c4f0 and post-c4f0 Ability scores are not promised equal. Determinism is scoped
+to the same code revision plus the same exact input/configuration. Although run context
+retains `target_commit_id`, c4f0 does not verify the running checkout against it;
+cross-revision prediction equality and runtime commit enforcement are out of scope.
+
+Future tests must preserve schema/parsing compatibility while proving that changing only
+legacy margin changes neither immutable formal input nor post-c4f0 Ability output. They
+must not assert unchanged legacy request meaning or pre/post model output equality. The
+production and direct-test file scopes remain exactly unchanged; related regression runs
+also cover Jockey, Track, persisted application/request assembly, simulation validation,
+and the full suite.
+
+## Phase 4C-2d3b1i6d1d5f1c4f0 Implementation
+
+Status: `READY_FOR_REVIEW`
+
+Formal base: `48dde0f5a5d1cce0176b578ccfcc87dbd9fc1fac`
+
+Approved PREPARE tip: `b65b6d7c879db80757ac53a4d00c98d93aaa4655`
+
+Review branch:
+`review/4c-2d3b1i6d1d5f1c4f0-formal-historical-prediction-contract-alignment`
+
+The implementation removes `margin` from the formal structural `PastRaceInput` and
+immutable `PastRaceSnapshot`. The legacy mutable `scripts.models.PastRace.margin` and
+schema-v1 persisted request key remain unchanged and validated; conversion into
+`ImmutableRacePredictionInput` intentionally discards the value, so otherwise identical
+legacy inputs differing only by margin produce equal immutable inputs.
+
+`AbilityEngine` has no margin read, margin eligibility, margin scorer, or margin weight.
+Its exact retained components are finish, popularity, and class, normalized at 9:3:5
+over 17. Eligibility is exactly positive finish, positive popularity, or nonblank class;
+distance, date, and legacy margin alone cannot make a race eligible. Existing distance
+and recency outer weighting remains unchanged.
+
+The new `build_historical_prediction_pipeline(*, target_race_date, strategy_config)`
+boundary requires exact `date` and exact `StrategyConfig` before constructing any
+collaborator. It explicitly constructs normal Pace, Predictor, Value, BetGenerator, and
+RuleBasedBetStrategy collaborators and gives the identical official target race date to
+Ability, Jockey, and Track. It does not sample a current clock or use default
+date-sensitive factories.
+
+Schema-v1 persisted requests remain schema- and parsing-compatible: margin remains
+required and finite, legacy `PastRace.margin` remains populated, and
+`track_reference_date` remains TrackEngine-only. Prediction semantics intentionally
+change globally to the same marginless 9:3:5 Ability model for historical and live
+formal prediction. Cross-revision prediction equality is not guaranteed, and c4f0 adds
+no runtime `target_commit_id` enforcement.
+
+Verification:
+
+- focused: `44 passed, 339 subtests passed`;
+- related: `55 passed, 149 subtests passed`;
+- full suite: `2871 passed, 1921 subtests passed`;
+- `git diff --check`: pass;
+- changed-file scope: exact ten approved files;
+- Ability forbidden-margin search: no matches;
+- c4f1 module: absent;
+- schema/migration diff: empty; and
+- historical-factory AST ownership check: pass.
+
+No historical snapshot domain, schema, migration, ValueEngine, live HTTP, or real
+trusted capture change occurred. C4f1 was not implemented. Stop for independent review.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import fields, replace
 from datetime import date
 import inspect
 from typing import Mapping, Sequence, get_args, get_type_hints
@@ -26,7 +27,7 @@ from scripts.prediction.prediction_pipeline import (
 from scripts.prediction.predictor import Predictor
 from scripts.prediction.track_engine import RaceTrackConditions, TrackEngine
 from scripts.prediction.value_engine import ValueEngine
-from scripts.simulation.models import ImmutableRacePredictionInput
+from scripts.simulation.models import ImmutableRacePredictionInput, PastRaceSnapshot
 
 
 REFERENCE_DATE = date(2026, 8, 1)
@@ -111,6 +112,37 @@ class PredictionInputContractsTest(unittest.TestCase):
         self.assertEqual(track_hints["horse_past_races"], Mapping[int, Sequence[PastRaceInput]])
         self.assertEqual(value_hints["odds_by_horse"], Mapping[int, object])
 
+    def test_formal_and_immutable_past_race_fields_are_exactly_marginless(self) -> None:
+        expected = (
+            "horse_id",
+            "race_date",
+            "place",
+            "race_name",
+            "race_class",
+            "distance",
+            "track",
+            "weather",
+            "track_condition",
+            "finish",
+            "time",
+            "weight",
+            "weight_diff",
+            "jockey",
+            "popularity",
+            "odds",
+            "passing_order",
+            "fourth_corner_position",
+        )
+        protocol_properties = tuple(
+            name
+            for name, value in PastRaceInput.__dict__.items()
+            if isinstance(value, property)
+        )
+
+        self.assertEqual(protocol_properties, expected)
+        self.assertEqual(tuple(field.name for field in fields(PastRaceSnapshot)), expected)
+        self.assertIn("margin", get_type_hints(PastRace))
+
     def test_engine_past_race_annotations_do_not_reference_concrete_model(self) -> None:
         engines = (AbilityEngine, PaceEngine, JockeyEngine, TrackEngine)
         for engine in engines:
@@ -156,6 +188,27 @@ class PredictionInputContractsTest(unittest.TestCase):
         self.assertEqual(race_input.horse_past_races, before_horse_past_races)
         self.assertEqual(race_input.jockey_names_by_horse, before_jockey_names)
         self.assertEqual(race_input.odds_by_horse, before_odds)
+
+    def test_immutable_conversion_discards_legacy_margin(self) -> None:
+        first = self._race_input()
+        second = replace(
+            first,
+            horse_past_races={
+                horse_id: [replace(race, margin=99.0) for race in past_races]
+                for horse_id, past_races in first.horse_past_races.items()
+            },
+        )
+
+        first_immutable = ImmutableRacePredictionInput.from_race_prediction_input(first)
+        second_immutable = ImmutableRacePredictionInput.from_race_prediction_input(second)
+
+        self.assertEqual(first_immutable, second_immutable)
+        self.assertFalse(hasattr(first_immutable.horse_past_races[101][0], "margin"))
+        pipeline = self._pipeline()
+        self.assertEqual(
+            pipeline.run(first).ability_evaluations,
+            pipeline.run(second).ability_evaluations,
+        )
 
 
 if __name__ == "__main__":

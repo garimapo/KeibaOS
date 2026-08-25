@@ -2,23 +2,29 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
+import inspect
+from typing import get_type_hints
 import unittest
+from unittest.mock import DEFAULT, patch
 
-from scripts.models import Prediction
-from scripts.prediction.ability_engine import AbilityEvaluation
-from scripts.prediction.bet_generator import BetRecommendation
-from scripts.prediction.bet_strategy import BetPlan, StrategyConfig
-from scripts.prediction.jockey_engine import JockeyEvaluation
-from scripts.prediction.pace_engine import PaceEvaluation
+from scripts.models import PastRace, Prediction
+from scripts.prediction.ability_engine import AbilityEngine, AbilityEvaluation
+from scripts.prediction.bet_generator import BetGenerator, BetRecommendation
+from scripts.prediction.bet_strategy import BetPlan, RuleBasedBetStrategy, StrategyConfig
+from scripts.prediction.jockey_engine import JockeyEngine, JockeyEvaluation
+from scripts.prediction.pace_engine import PaceEngine, PaceEvaluation
 from scripts.prediction.prediction_pipeline import (
     PipelineConfig,
     PipelineExecutionError,
     PipelineStage,
     PredictionPipeline,
     RacePredictionInput,
+    build_historical_prediction_pipeline,
 )
-from scripts.prediction.track_engine import RaceTrackConditions, TrackEvaluation
-from scripts.prediction.value_engine import ValueEvaluation
+from scripts.prediction.predictor import Predictor
+from scripts.prediction.track_engine import RaceTrackConditions, TrackEngine, TrackEvaluation
+from scripts.prediction.value_engine import ValueEngine, ValueEvaluation
 
 
 class _RecordingEngines:
@@ -168,6 +174,145 @@ class PredictionPipelineTest(unittest.TestCase):
 
         self.assertEqual(context.exception.stage, PipelineStage.PACE)
         self.assertIsInstance(context.exception.__cause__, RuntimeError)
+
+    def test_historical_factory_has_exact_public_signature_and_components(self) -> None:
+        signature = inspect.signature(build_historical_prediction_pipeline)
+        self.assertEqual(tuple(signature.parameters), ("target_race_date", "strategy_config"))
+        self.assertTrue(
+            all(
+                parameter.kind is inspect.Parameter.KEYWORD_ONLY
+                for parameter in signature.parameters.values()
+            )
+        )
+        hints = get_type_hints(build_historical_prediction_pipeline)
+        self.assertEqual(
+            hints,
+            {
+                "target_race_date": date,
+                "strategy_config": StrategyConfig,
+                "return": PredictionPipeline,
+            },
+        )
+
+        target_race_date = date(2026, 8, 5)
+        strategy_config = StrategyConfig(allowed_bet_types=frozenset())
+        pipeline = build_historical_prediction_pipeline(
+            target_race_date=target_race_date,
+            strategy_config=strategy_config,
+        )
+
+        self.assertIs(type(pipeline), PredictionPipeline)
+        self.assertIs(type(pipeline.config), PipelineConfig)
+        self.assertIs(type(pipeline.config.ability_engine), AbilityEngine)
+        self.assertIs(type(pipeline.config.pace_engine), PaceEngine)
+        self.assertIs(type(pipeline.config.jockey_engine), JockeyEngine)
+        self.assertIs(type(pipeline.config.track_engine), TrackEngine)
+        self.assertIs(type(pipeline.config.predictor), Predictor)
+        self.assertIs(type(pipeline.config.value_engine), ValueEngine)
+        self.assertIs(type(pipeline.config.bet_generator), BetGenerator)
+        self.assertIs(type(pipeline.config.bet_strategy), RuleBasedBetStrategy)
+        self.assertIs(pipeline.config.strategy_config, strategy_config)
+        self.assertIs(pipeline.config.ability_engine.reference_date, target_race_date)
+        self.assertIs(pipeline.config.jockey_engine.reference_date, target_race_date)
+        self.assertIs(pipeline.config.track_engine.reference_date, target_race_date)
+
+    def test_historical_factory_validates_before_constructing_collaborators(self) -> None:
+        replacements = {
+            name: DEFAULT
+            for name in (
+                "AbilityEngine",
+                "PaceEngine",
+                "JockeyEngine",
+                "TrackEngine",
+                "Predictor",
+                "ValueEngine",
+                "BetGenerator",
+                "RuleBasedBetStrategy",
+            )
+        }
+        with patch.multiple(
+            "scripts.prediction.prediction_pipeline",
+            **replacements,
+        ) as constructors:
+            with self.assertRaisesRegex(TypeError, "target_race_date must be a date"):
+                build_historical_prediction_pipeline(
+                    target_race_date=datetime(2026, 8, 5),
+                    strategy_config=StrategyConfig(),
+                )
+            for constructor in constructors.values():
+                constructor.assert_not_called()
+
+            with self.assertRaisesRegex(TypeError, "strategy_config must be a StrategyConfig"):
+                build_historical_prediction_pipeline(
+                    target_race_date=date(2026, 8, 5),
+                    strategy_config=object(),  # type: ignore[arg-type]
+                )
+            for constructor in constructors.values():
+                constructor.assert_not_called()
+
+    def test_historical_factory_does_not_use_current_date_defaults(self) -> None:
+        class EarlyDate(date):
+            @classmethod
+            def today(cls) -> "EarlyDate":
+                return cls(2000, 1, 1)
+
+        class LateDate(date):
+            @classmethod
+            def today(cls) -> "LateDate":
+                return cls(2099, 12, 31)
+
+        race_input = RacePredictionInput(
+            horse_past_races={
+                1: [
+                    PastRace(
+                        horse_id=1,
+                        race_date="2026-08-01",
+                        place="東京",
+                        race_name="Test",
+                        race_class="G1",
+                        distance=1600,
+                        track="芝",
+                        weather="晴",
+                        track_condition="良",
+                        finish=1,
+                        margin=0.1,
+                        time="1:32.0",
+                        weight=480.0,
+                        weight_diff=0.0,
+                        jockey="騎手",
+                        popularity=1,
+                        odds=2.0,
+                    )
+                ]
+            },
+            jockey_names_by_horse={1: "騎手"},
+            track_conditions=RaceTrackConditions("東京", 1600, "芝", "良"),
+            odds_by_horse={1: 2.0},
+            race_horse_count=1,
+            race_id=10,
+            prediction_time="2026-08-05T12:00:00+09:00",
+        )
+        strategy_config = StrategyConfig(allowed_bet_types=frozenset())
+
+        def run_with(fake_date: type[date]):
+            with (
+                patch("scripts.prediction.ability_engine.date", fake_date),
+                patch("scripts.prediction.jockey_engine.date", fake_date),
+                patch("scripts.prediction.track_engine.date", fake_date),
+            ):
+                pipeline = build_historical_prediction_pipeline(
+                    target_race_date=date(2026, 8, 5),
+                    strategy_config=strategy_config,
+                )
+                return pipeline.run(race_input)
+
+        self.assertEqual(run_with(EarlyDate), run_with(LateDate))
+
+        source = inspect.getsource(build_historical_prediction_pipeline)
+        self.assertNotIn("date.today", source)
+        self.assertNotIn("datetime.now", source)
+        self.assertNotIn("PipelineConfig()", source)
+        self.assertNotIn("PredictionPipeline()", source)
 
 
 if __name__ == "__main__":

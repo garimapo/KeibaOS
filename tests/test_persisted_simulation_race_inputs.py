@@ -260,8 +260,8 @@ class PersistedSimulationRaceInputsTest(unittest.TestCase):
         snapshots = result[0].pipeline_input.horse_past_races[102]
         self.assertEqual(len(snapshots), 2)
         expected_pasts = (
-            {"horse_id": 102, "race_date": "2026-08-01", "place": "Tokyo", "race_name": "Test race 0", "race_class": "G3", "distance": 1600, "track": "turf", "weather": "sunny", "track_condition": "good", "finish": 1, "margin": 0.0, "time": "1:32.0", "weight": 480.0, "weight_diff": 0.0, "jockey": "Rider A", "popularity": 0, "odds": 2.5, "passing_order": "1-1-1-1", "fourth_corner_position": 0},
-            {"horse_id": 102, "race_date": "2026-07-31", "place": "Tokyo", "race_name": "Test race 1", "race_class": "G3", "distance": 1600, "track": "turf", "weather": "sunny", "track_condition": "good", "finish": 2, "margin": 0.5, "time": "1:32.0", "weight": 481.0, "weight_diff": -1.0, "jockey": "Rider A", "popularity": 1, "odds": 3.5, "passing_order": "2-1-1-1", "fourth_corner_position": 1},
+            {"horse_id": 102, "race_date": "2026-08-01", "place": "Tokyo", "race_name": "Test race 0", "race_class": "G3", "distance": 1600, "track": "turf", "weather": "sunny", "track_condition": "good", "finish": 1, "time": "1:32.0", "weight": 480.0, "weight_diff": 0.0, "jockey": "Rider A", "popularity": 0, "odds": 2.5, "passing_order": "1-1-1-1", "fourth_corner_position": 0},
+            {"horse_id": 102, "race_date": "2026-07-31", "place": "Tokyo", "race_name": "Test race 1", "race_class": "G3", "distance": 1600, "track": "turf", "weather": "sunny", "track_condition": "good", "finish": 2, "time": "1:32.0", "weight": 481.0, "weight_diff": -1.0, "jockey": "Rider A", "popularity": 1, "odds": 3.5, "passing_order": "2-1-1-1", "fourth_corner_position": 1},
         )
         self.assertEqual(
             [{field.name: getattr(snapshot, field.name) for field in fields(snapshot)} for snapshot in snapshots],
@@ -681,7 +681,8 @@ class PersistedSimulationRaceInputsTest(unittest.TestCase):
         past.update({"margin": -1, "weight_diff": -2, "weight": 0, "odds": 0, "popularity": 0, "fourth_corner_position": 0})
         document = _document(races=races)
         output = assemble_persisted_simulation_race_inputs(document=document, application_inputs=_application_inputs(document))[0].pipeline_input.horse_past_races[101][0]
-        self.assertEqual((output.margin, output.weight_diff, output.weight, output.odds, output.popularity, output.fourth_corner_position), (-1.0, -2.0, 0.0, 0.0, 0, 0))
+        self.assertFalse(hasattr(output, "margin"))
+        self.assertEqual((output.weight_diff, output.weight, output.odds, output.popularity, output.fourth_corner_position), (-2.0, 0.0, 0.0, 0, 0))
 
     def test_every_generic_audit_location_has_the_complete_stamp_matrix(self) -> None:
         def stamp_at(races: list[dict[str, object]], location: str) -> dict[str, object]:
@@ -792,6 +793,7 @@ class PersistedSimulationRaceInputsTest(unittest.TestCase):
                 assemble_persisted_simulation_race_inputs(document=document, application_inputs=_application_inputs(document))
         for label, mutate in (
             ("missing", lambda past: past.pop("place")),
+            ("missing_margin", lambda past: past.pop("margin")),
             ("extra", lambda past: past.__setitem__("extra", 1)),
         ):
             races = _valid_races(); mutate(races[0]["entries"][0]["past_races"][0])

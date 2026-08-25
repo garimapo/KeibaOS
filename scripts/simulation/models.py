@@ -162,7 +162,7 @@ class SettlementStatus(str, Enum):
 class PastRaceSnapshot:
     horse_id: int; race_date: str; place: str; race_name: str; race_class: str
     distance: int; track: str; weather: str; track_condition: str; finish: int
-    margin: float; time: str; weight: float; weight_diff: float; jockey: str
+    time: str; weight: float; weight_diff: float; jockey: str
     popularity: int; odds: float; passing_order: str; fourth_corner_position: int
 
     @classmethod

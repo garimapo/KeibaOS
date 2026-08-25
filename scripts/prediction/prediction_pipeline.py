@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
 from enum import Enum
 import logging
 from typing import Callable, Mapping, Sequence, TypeVar
@@ -174,3 +175,29 @@ class PredictionPipeline:
         except Exception as error:
             logger.exception("Prediction pipeline failed at stage '%s'", stage.value)
             raise PipelineExecutionError(stage) from error
+
+
+def build_historical_prediction_pipeline(
+    *,
+    target_race_date: date,
+    strategy_config: StrategyConfig,
+) -> PredictionPipeline:
+    """Build a prediction pipeline with one explicit historical race-calendar date."""
+
+    if type(target_race_date) is not date:
+        raise TypeError("target_race_date must be a date")
+    if type(strategy_config) is not StrategyConfig:
+        raise TypeError("strategy_config must be a StrategyConfig")
+
+    config = PipelineConfig(
+        ability_engine=AbilityEngine(reference_date=target_race_date),
+        pace_engine=PaceEngine(),
+        jockey_engine=JockeyEngine(reference_date=target_race_date),
+        track_engine=TrackEngine(reference_date=target_race_date),
+        predictor=Predictor(),
+        value_engine=ValueEngine(),
+        bet_generator=BetGenerator(),
+        bet_strategy=RuleBasedBetStrategy(),
+        strategy_config=strategy_config,
+    )
+    return PredictionPipeline(config=config)
