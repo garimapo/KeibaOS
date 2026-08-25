@@ -89,7 +89,17 @@ result source, payout source, simulator, or settlement collaborator.
 Require exact domain types for `snapshot`, `run_context`, `strategy_identity`, and
 `budget`. Require `snapshot_repository` to be a non-type object with callable
 `save_snapshot`. Invalid boundary input raises `ValueError` before adapter, pipeline
-factory, prediction, allocation, builder, or repository activity.
+factory, prediction, allocation, builder, or repository activity. Before any of those
+activities also require the exact strategy execution binding:
+
+```text
+strategy_identity.strategy_name == RuleBasedBetStrategy.__name__
+strategy_identity.strategy_name == "RuleBasedBetStrategy"
+```
+
+A nonmatching strategy name raises `ValueError`. The caller's exact
+`StrategyIdentity` remains the formal identity: do not rewrite its name, reconstruct
+it, substitute a strategy, or fall back.
 
 No new public execution result or public error hierarchy is needed. Return the exact
 `SimulationBetPlanSnapshot` produced and saved by the existing formal service. Existing
@@ -101,11 +111,18 @@ validation/conflict/integrity errors propagate unchanged.
 Before adapter or prediction work require:
 
 ```text
-run_context.dataset_id == snapshot.identity.dataset_id
+if run_context.dataset_id != snapshot.identity.dataset_id:
+    raise SimulationValidationError(
+        snapshot.internal_race_id,
+        "run_context.dataset_id",
+        "run_context.dataset_id does not match snapshot.identity.dataset_id",
+    )
 ```
 
-A mismatch raises `SimulationValidationError` for the snapshot's exact internal race.
-It is never converted to `NO_BET`.
+A mismatch raises exactly the shown `SimulationValidationError` for the snapshot's
+exact internal race and exact input identifier. It occurs before adapter, pipeline
+factory, prediction, allocation, builder, or repository activity and is never converted
+to `ValueError`, `NO_BET`, or a repository error.
 
 The adapter-produced audit dataset is necessarily the same snapshot dataset. The
 composition does not invent or reparse a dataset. `run_context.target_commit_id` remains
@@ -113,8 +130,29 @@ retained formal run metadata, but runtime checkout/commit verification is out of
 
 ```text
 RUN_CONTEXT_DATASET_MATCH: REQUIRED_BEFORE_ADAPTER_OR_PREDICTION
+DATASET_MISMATCH_ERROR: SimulationValidationError
+DATASET_MISMATCH_INPUT_IDENTIFIER: run_context.dataset_id
+DATASET_MISMATCH_RACE_ID: snapshot.internal_race_id
 TARGET_COMMIT_RUNTIME_VERIFICATION: OUT_OF_SCOPE
 ```
+
+## Strategy Execution Identity
+
+`build_historical_prediction_pipeline(...)` formally constructs exactly
+`RuleBasedBetStrategy()`, while `StrategyIdentity` permits other names. C4g0 therefore
+owns the explicit execution-to-persistence identity binding before any collaborator
+activity:
+
+```text
+HISTORICAL_SUPPORTED_STRATEGY_NAME: RuleBasedBetStrategy
+STRATEGY_NAME_BINDING: REQUIRED_BEFORE_ADAPTER_OR_PIPELINE
+STRATEGY_IDENTITY_EXECUTION_MATCH: EXACT_RULE_BASED_STRATEGY
+ARBITRARY_STRATEGY_IDENTITY_NAME: FORBIDDEN
+```
+
+The exact supported name is `RuleBasedBetStrategy.__name__`, namely
+`"RuleBasedBetStrategy"`. No fallback, rewriting, or reconstructed
+`StrategyIdentity` is allowed.
 
 ## Historical Pipeline Ownership
 
@@ -135,6 +173,19 @@ The exact `strategy_identity.strategy_config` object is passed unchanged. It is 
 copied, reconstructed, reparsed, or replaced by an equal configuration. The existing
 `PersistedSimulationBetPlanService` retains its strategy-config consistency check.
 
+Immediately after the one factory call, and before
+`PersistedSimulationBetPlanService.build_and_save(...)`, require defense in depth:
+
+```text
+type(prediction_pipeline) is PredictionPipeline
+type(prediction_pipeline.config) is PipelineConfig
+prediction_pipeline.config.strategy_config is strategy_identity.strategy_config
+type(prediction_pipeline.config.bet_strategy) is RuleBasedBetStrategy
+```
+
+Any failure raises `ValueError`. Do not rebuild, substitute, or call the factory a
+second time.
+
 Freeze:
 
 ```text
@@ -143,8 +194,10 @@ PIPELINE_PER_RACE: YES
 ONE_HISTORICAL_PIPELINE_ACROSS_DIFFERENT_RACE_DATES: FORBIDDEN
 DEFAULT_PIPELINE_FALLBACK: FORBIDDEN
 CURRENT_CLOCK_PIPELINE: FORBIDDEN
-PIPELINE_FACTORY_CALL_COUNT: EXACTLY_ONE_PER_RACE
+PIPELINE_FACTORY_CALL_COUNT: EXACTLY_ONE
 PIPELINE_RUN_CALL_COUNT_PER_RACE: EXACTLY_ONE
+PIPELINE_CONFIG_STRATEGY_CONFIG_IDENTITY: EXACT_CALLER_OBJECT
+PIPELINE_BET_STRATEGY_TYPE: EXACT_RULE_BASED_BET_STRATEGY
 ```
 
 No preflight, logging, or identity-discovery pipeline execution is permitted.
@@ -161,7 +214,15 @@ Create:
 scripts/simulation/exact_race_entry_selection_resolver.py
 ```
 
-with one module-local public frozen/slotted type:
+with the exact module-local public surface:
+
+```python
+__all__ = (
+    "ExactRaceEntrySelectionResolver",
+)
+```
+
+It contains one public frozen/slotted type and no other public symbol:
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -216,6 +277,25 @@ EXTERNAL_ID_MAPPING: NO
 
 Existing snapshot-repository foreign-key and integrity enforcement remains unchanged;
 it is not selection resolution and does not authorize a legacy identity lookup.
+
+C4g0 and the resolver perform no direct SQLite access, `RaceEntrySource` access,
+horses-table lookup, database identity lookup, name lookup, or external-ID lookup. The
+injected `SimulationBetPlanSnapshotRepository` remains the intentional persistence
+boundary. C4g0 calls only its `save_snapshot(...)` contract; a concrete repository may
+perform its own integrity or idempotence reads and writes internally. Such internal
+storage checks are not selection identity resolution and their results must never
+transform recommendation IDs.
+
+Freeze:
+
+```text
+COMPOSITION_DIRECT_DATABASE_READ: NO
+SELECTION_DATABASE_READ: NO
+HORSES_TABLE_SELECTION_LOOKUP: NO
+SNAPSHOT_REPOSITORY_IO: ALLOWED_ONLY_THROUGH_SAVE_SNAPSHOT_CONTRACT
+SNAPSHOT_REPOSITORY_USED_FOR_SELECTION_IDENTITY: NO
+REPOSITORY_READ_RESULT_USED_TO_TRANSFORM_RECOMMENDATION_IDS: NO
+```
 
 ## Existing Bet-Plan Service Reuse
 
@@ -296,7 +376,8 @@ snapshot.
 Prohibited:
 
 ```text
-DATABASE_IDENTITY_READ
+DIRECT_SQLITE_OR_DATABASE_IDENTITY_READ_BY_COMPOSITION
+SELECTION_DATABASE_READ
 CURRENT_RACE_OR_HORSE_STATE
 POST_CUTOFF_ODDS
 TARGET_RACE_RESULTS_OR_FINISH_ORDER
@@ -309,6 +390,19 @@ LIVE_OR_DEFAULT_FALLBACK
 No broad `Exception` or `BaseException` catch is allowed. Existing
 `PipelineExecutionError`, `SimulationValidationError`, and repository-owned errors
 propagate unchanged.
+
+Determinism is defined over every formal identity-bearing input, including the run
+context:
+
+```text
+DETERMINISM_INPUTS: SNAPSHOT_PLUS_RUN_CONTEXT_PLUS_STRATEGY_IDENTITY_PLUS_BUDGET_PLUS_CODE_REVISION
+RUN_ID_IS_OUTPUT_IDENTITY_INPUT: YES
+```
+
+The same exact snapshot, run context, strategy identity, budget, and code revision
+produce an equal `SimulationBetPlanSnapshot`, assuming the same successful repository
+contract/state. A different `run_context.run_id` may and normally will produce a
+different `SimulationBetPlanIdentity`.
 
 ## Phase Split
 
@@ -362,7 +456,8 @@ remain bit-for-bit unchanged.
 
 Future resolver tests must pin:
 
-- exact public module surface, frozen/slotted type, fields, and method signature;
+- exact `__all__ == ("ExactRaceEntrySelectionResolver",)`, no other public symbol,
+  frozen/slotted type, fields, and method signature;
 - exact constructor race ID and allowlist validation;
 - exact requested race match;
 - sequence validation, positive IDs, uniqueness, and allowlist membership;
@@ -377,14 +472,23 @@ Future execution tests must pin:
 
 - exact public API and exact input types;
 - all input validation and dataset match before adapter/pipeline/repository activity;
+- non-`RuleBasedBetStrategy` strategy identity name fails before adapter, historical
+  pipeline factory, or repository activity;
+- exact `"RuleBasedBetStrategy"` identity is accepted without identity rewriting;
 - adapter exactly once with the same snapshot;
 - historical pipeline factory exactly once;
 - exact target race date and exact strategy-config object identity;
+- returned pipeline has exact `PredictionPipeline` and `PipelineConfig` types, retains
+  the same strategy-config object, and has exact `RuleBasedBetStrategy` type;
 - pipeline run exactly once with the exact immutable pipeline input;
 - exact allowlist derived only from pipeline past-race mapping keys;
 - recommendation IDs remain exact race-entry IDs and order is preserved;
 - unknown selection and wrong race fail closed;
-- no SQLite selection lookup, horses-table lookup, names, or external IDs;
+- dataset mismatch has exact `SimulationValidationError`, snapshot internal race ID,
+  and `run_context.dataset_id` input identifier;
+- no direct SQLite, `RaceEntrySource`, horses-table, database identity, name, or
+  external-ID lookup in either new production module;
+- the injected snapshot repository remains allowed only as the persistence boundary;
 - existing fixed-stake allocator exactly once with exact formal policy and budget;
 - missing/unsupported allocation policy fails closed without prediction;
 - existing bet-plan builder exactly once;
@@ -393,7 +497,9 @@ Future execution tests must pin:
 - legitimate empty plan is persisted as zero-bet `NO_BET`;
 - `PipelineExecutionError`, `SimulationValidationError`, and repository errors propagate;
 - no current clock, result, payout, settlement, simulator, or fallback;
-- identical snapshot/config/budget and code revision are deterministic;
+- identical snapshot, run context, strategy identity, budget, and code revision are
+  deterministic under the same successful repository contract/state;
+- a different run ID produces a different plan identity;
 - process date does not affect output;
 - two different target race dates use distinct correctly dated pipelines in separate
   c4g0 invocations;
@@ -411,6 +517,10 @@ SELECTION_IDENTITY_READY: YES
 DATASET_BINDING_READY: YES
 SERVICE_REUSE_READY: YES
 ALLOCATION_READY: YES_FIXED_STAKE_ONLY
+STRATEGY_EXECUTION_IDENTITY_READY: YES_EXACT_RULE_BASED_STRATEGY
+PIPELINE_POSTCONSTRUCTION_PROOF_READY: YES
+RESOLVER_PUBLIC_SURFACE_READY: YES_EXACT
+REPOSITORY_BOUNDARY_WORDING_READY: YES
 FAILURE_POLICY_READY: YES
 IMPLEMENTATION_READY: YES_AFTER_INDEPENDENT_APPROVAL
 BLOCKERS: NONE

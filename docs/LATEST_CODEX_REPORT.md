@@ -4596,3 +4596,52 @@ migration should change. Implementation readiness is
 
 No pytest, live HTTP, or real trusted capture was performed for this docs-only PREPARE.
 Stop for independent architecture review.
+
+## Phase 4C-2d3b1i6d1d5f1c4g0 PREPARE Contract Correction
+
+Status: `DRAFT_FOR_REVIEW`
+
+Formal base: `8ee5440bd7a360c652c3b58f1a67b05c32b682c8`.
+
+Review branch:
+`review/4c-2d3b1i6d1d5f1c4g0-historical-prediction-bet-plan-execution-prepare`.
+
+The accepted single-race architecture and c4g0/c4g1/c4g2 split are unchanged. This
+docs-only correction closes the remaining execution-identity and boundary wording
+gaps.
+
+C4g0 now requires the caller's exact `StrategyIdentity.strategy_name` to equal
+`RuleBasedBetStrategy.__name__` (`"RuleBasedBetStrategy"`) before adapter, pipeline,
+prediction, allocation, builder, or repository activity. It neither rewrites the name
+nor reconstructs the identity. After the sole historical pipeline factory call, c4g0
+must prove exact `PredictionPipeline` and `PipelineConfig` types, exact strategy-config
+object identity, and exact `RuleBasedBetStrategy` type before invoking the unchanged
+persisted bet-plan service. Failure is `ValueError`; there is no second factory call or
+fallback.
+
+Dataset mismatch now has an exact failure contract: before adapter or pipeline work it
+raises `SimulationValidationError` with `snapshot.internal_race_id`, input identifier
+`run_context.dataset_id`, and the frozen mismatch message. The resolver module public
+surface is exactly `ExactRaceEntrySelectionResolver` through its one-element `__all__`;
+there is no package-root export.
+
+Determinism now correctly includes the exact `SimulationRunContext`. Equal snapshot,
+run context, strategy identity, budget, and code revision yield an equal saved plan
+under the same successful repository contract/state; `run_id` is an output identity
+input, so a different run ID may produce a different plan identity.
+
+The new composition and resolver own no direct SQLite, `RaceEntrySource`, horses-table,
+database identity, name, or external-ID read. The injected snapshot repository remains
+the allowed persistence boundary only through `save_snapshot(...)`; its internal
+integrity/idempotence I/O is not selection resolution and cannot transform
+recommendation IDs.
+
+The future test matrix directly pins strategy-name rejection order, exact accepted
+strategy and post-factory identity, exact dataset mismatch error fields, exact resolver
+public surface, corrected determinism inputs and run-ID distinction, absence of direct
+selection database access, and the allowed repository persistence boundary.
+
+Implementation readiness remains `YES_AFTER_INDEPENDENT_APPROVAL`; blockers remain
+`NONE`. C4f0, c4f1, production, tests, schemas, and migrations are unchanged. Pytest
+was not run for this docs-only correction. No HTTP or real trusted capture was
+performed. Stop for independent review.
