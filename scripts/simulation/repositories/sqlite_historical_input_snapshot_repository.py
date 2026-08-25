@@ -73,13 +73,56 @@ class SQLiteHistoricalInputSnapshotRepository:
             return None
 
         try:
-            return self._reconstruct_selected_snapshot(
-                row=row,
+            snapshot = self._reconstruct_snapshot(row=row)
+            self._require_latest_lookup_match(
+                snapshot=snapshot,
                 dataset_id=dataset,
                 race_id=requested_race_id,
                 information_cutoff=cutoff,
                 source_identity=source,
             )
+            return snapshot
+        except RepositoryDataIntegrityError:
+            raise
+        except (AttributeError, KeyError, TypeError, ValueError, InvalidOperation, sqlite3.Error) as exc:
+            raise RepositoryDataIntegrityError("stored historical snapshot violates repository invariants") from exc
+
+    def load_snapshot_by_identity(
+        self,
+        *,
+        identity: HistoricalInputSnapshotIdentity,
+    ) -> HistoricalInputSnapshot | None:
+        if type(identity) is not HistoricalInputSnapshotIdentity:
+            raise RepositoryValidationError("identity must be HistoricalInputSnapshotIdentity")
+        source = identity.source_identity
+        captured_at_text = self._datetime_text(identity.captured_at)
+
+        try:
+            rows = self._connection.execute(
+                """SELECT snapshot_id,dataset_id,organization,source_system,external_race_id,internal_race_id,
+                          source_url,captured_at_utc,information_cutoff_utc,content_sha256
+                   FROM historical_input_snapshots
+                   WHERE dataset_id=? AND organization=? AND source_system=?
+                     AND external_race_id=? AND captured_at_utc=?""",
+                (
+                    identity.dataset_id,
+                    source.organization,
+                    source.source_system,
+                    source.external_race_id,
+                    captured_at_text,
+                ),
+            ).fetchall()
+        except sqlite3.Error as exc:
+            raise RepositoryDataIntegrityError("could not read exact historical snapshot header") from exc
+        if not rows:
+            return None
+        if len(rows) != 1:
+            raise RepositoryDataIntegrityError("multiple historical snapshot headers match one identity")
+
+        try:
+            snapshot = self._reconstruct_snapshot(row=rows[0])
+            self._require_exact_lookup_match(snapshot=snapshot, identity=identity)
+            return snapshot
         except RepositoryDataIntegrityError:
             raise
         except (AttributeError, KeyError, TypeError, ValueError, InvalidOperation, sqlite3.Error) as exc:
@@ -244,14 +287,48 @@ class SQLiteHistoricalInputSnapshotRepository:
             raise RepositoryDataIntegrityError("stored content_sha256 is malformed")
         return value
 
-    def _reconstruct_selected_snapshot(
-        self,
+    @staticmethod
+    def _require_latest_lookup_match(
         *,
-        row: object,
+        snapshot: HistoricalInputSnapshot,
         dataset_id: str,
         race_id: int,
         information_cutoff: datetime,
         source_identity: HistoricalExternalRaceIdentity,
+    ) -> None:
+        source = snapshot.identity.source_identity
+        if (
+            snapshot.identity.dataset_id != dataset_id
+            or snapshot.internal_race_id != race_id
+            or source.organization != source_identity.organization
+            or source.source_system != source_identity.source_system
+            or source.external_race_id != source_identity.external_race_id
+            or snapshot.identity.captured_at > information_cutoff
+            or snapshot.information_cutoff > information_cutoff
+        ):
+            raise RepositoryDataIntegrityError("selected historical snapshot header does not match lookup")
+
+    @staticmethod
+    def _require_exact_lookup_match(
+        *,
+        snapshot: HistoricalInputSnapshot,
+        identity: HistoricalInputSnapshotIdentity,
+    ) -> None:
+        expected_source = identity.source_identity
+        stored_source = snapshot.identity.source_identity
+        if (
+            snapshot.identity.dataset_id != identity.dataset_id
+            or stored_source.organization != expected_source.organization
+            or stored_source.source_system != expected_source.source_system
+            or stored_source.external_race_id != expected_source.external_race_id
+            or snapshot.identity.captured_at != identity.captured_at
+        ):
+            raise RepositoryDataIntegrityError("exact historical snapshot header does not match lookup")
+
+    def _reconstruct_snapshot(
+        self,
+        *,
+        row: object,
     ) -> HistoricalInputSnapshot:
         try:
             (
@@ -279,17 +356,6 @@ class SQLiteHistoricalInputSnapshotRepository:
         stored_captured_at = self._stored_datetime(captured_at, "captured_at_utc")
         stored_information_cutoff = self._stored_datetime(stored_cutoff, "information_cutoff_utc")
         digest = self._stored_sha256(stored_digest)
-
-        if (
-            stored_dataset != dataset_id
-            or stored_race_id != race_id
-            or stored_organization != source_identity.organization
-            or stored_system != source_identity.source_system
-            or stored_external_race_id != source_identity.external_race_id
-            or stored_captured_at > information_cutoff
-            or stored_information_cutoff > information_cutoff
-        ):
-            raise RepositoryDataIntegrityError("selected historical snapshot header does not match lookup")
 
         self._validate_external_race_mapping(
             organization=stored_organization,

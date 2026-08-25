@@ -4250,3 +4250,44 @@ ordering proves storage time has no causal role. Direct c4c-result contradiction
 all seven production-checked provenance fields. Static correction scope, unchanged
 production blob, public-surface, forbidden-dependency, no-broad-catch, no-latest/no-write,
 and `git diff --check` checks passed. No live HTTP or real trusted capture was performed.
+
+## Phase 4C-2d3b1i6d1d5f1c4e JRA Historical Snapshot Persistence
+
+Implemented the exact c4e application boundary from a canonical durable JRA replay seed
+ID to one immutable persisted-snapshot reference. The module validates the seed ID, all
+six providers, and both persistence methods before any collaborator call. It loads the
+exact seed once, requires the returned seed ID to agree, calls c4d once with the same
+seed and five evidence-provider objects, saves the exact replay snapshot once, and
+exact-reloads it once before returning. The frozen/slotted result retains only seed ID,
+snapshot identity, and complete content digest.
+
+Only formal c4d validation/unavailable/unsupported errors are translated to matching
+c4e errors. Repository conflict, validation, integrity, and other provider-owned
+integrity exceptions propagate unchanged. C4e owns no transaction; the existing SQLite
+snapshot save remains the sole transaction boundary. Retry after a completed save is
+idempotent, including when an earlier orchestration attempt reached save but did not
+complete exact reload/reference return.
+
+The concrete snapshot repository now has
+`load_snapshot_by_identity(*, identity)`. It requires an exact
+`HistoricalInputSnapshotIdentity` and selects by equality on dataset ID, organization,
+source system, external race ID, and captured time only. Source URL, information cutoff,
+internal race ID, and digest are not selectors. The query is multiplicity-aware and has
+no latest/cutoff/order/limit/fallback semantics or latest-loader delegation. It shares
+only neutral full reconstruction with the unchanged latest loader and preserves all
+mapping, child, provenance/evidence, canonical scalar, domain, and digest integrity
+checks.
+
+Post-save reload explicitly rechecks every natural identity field, source URL, and
+complete digest. A restart regression proves exact snapshot A remains loadable after a
+later same-race snapshot B is saved, while the existing latest loader independently and
+correctly selects B under an eligible cutoff. Same-natural-identity/different-content
+save conflict remains immutable and propagates unchanged.
+
+Verification passed: c4e application **14 passed**; SQLite snapshot repository
+**25 passed**; related c4d, replay-seed/repository, snapshot-builder, and snapshot-domain
+tests **130 passed**; full pytest suite **2861 passed**, above the formal 2843 baseline.
+Static public-surface, exact-call, no-latest, forbidden-dependency, no-broad-catch,
+schema/migration, allowed-file scope, and `git diff --check` checks pass. C4d remained
+read-only, c4f was not implemented, and no HTTP, current/legacy fallback, schema,
+migration, prediction/simulation, or real trusted capture was introduced.

@@ -8,8 +8,10 @@ from decimal import Decimal
 import ast
 import inspect
 import sqlite3
+import tempfile
 from typing import get_type_hints
 import unittest
+from unittest.mock import patch
 
 import scripts.simulation.repositories as repositories
 from scripts.migrations.runner import apply_migrations
@@ -148,6 +150,7 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
         self.assertEqual(connection.execute("PRAGMA foreign_keys").fetchone()[0], 1)
         self.assertTrue(callable(repository.save_snapshot))
         self.assertTrue(callable(repository.load_latest_snapshot))
+        self.assertTrue(callable(repository.load_snapshot_by_identity))
         load_signature = inspect.signature(repository.load_latest_snapshot)
         self.assertEqual(
             tuple(load_signature.parameters),
@@ -160,6 +163,17 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
         self.assertIs(load_hints["information_cutoff"], datetime)
         self.assertIs(load_hints["source_identity"], HistoricalExternalRaceIdentity)
         self.assertEqual(load_hints["return"], HistoricalInputSnapshot | None)
+        exact_signature = inspect.signature(repository.load_snapshot_by_identity)
+        self.assertEqual(tuple(exact_signature.parameters), ("identity",))
+        self.assertIs(
+            exact_signature.parameters["identity"].kind,
+            inspect.Parameter.KEYWORD_ONLY,
+        )
+        exact_hints = get_type_hints(
+            SQLiteHistoricalInputSnapshotRepository.load_snapshot_by_identity
+        )
+        self.assertIs(exact_hints["identity"], HistoricalInputSnapshotIdentity)
+        self.assertEqual(exact_hints["return"], HistoricalInputSnapshot | None)
         self.assertFalse(hasattr(repositories, "SQLiteHistoricalInputSnapshotRepository"))
         source = inspect.getsource(inspect.getmodule(SQLiteHistoricalInputSnapshotRepository))
         tree = ast.parse(source)
@@ -483,6 +497,172 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
                 source_identity=object(),
             )
         self.assertFalse(connection.in_transaction)
+
+    def test_exact_load_returns_none_validates_type_and_round_trips(self) -> None:
+        connection, repository = self.repository()
+        saved = self.snapshot()
+        self.assertIsNone(repository.load_snapshot_by_identity(identity=saved.identity))
+        with self.assertRaises(RepositoryValidationError):
+            repository.load_snapshot_by_identity(identity=object())
+        repository.save_snapshot(snapshot=saved)
+        loaded = repository.load_snapshot_by_identity(identity=saved.identity)
+        self.assertIsNotNone(loaded)
+        self.assertEqual(loaded.content_sha256, saved.content_sha256)
+        self.assertEqual(loaded.identity.source_identity.source_url, saved.identity.source_identity.source_url)
+        self.assertEqual(loaded.race, saved.race)
+        self.assertEqual(loaded.entries, saved.entries)
+        self.assertEqual(loaded.past_races, saved.past_races)
+        self.assertEqual(loaded.provenance, tuple(sorted(saved.provenance, key=lambda item: item.audit_key)))
+        self.assertFalse(connection.in_transaction)
+
+    def test_exact_load_uses_five_equality_fields_without_latest_delegation(self) -> None:
+        connection, repository = self.repository()
+        saved = self.snapshot()
+        repository.save_snapshot(snapshot=saved)
+        identity_with_other_url = HistoricalInputSnapshotIdentity(
+            saved.identity.dataset_id,
+            replace(saved.identity.source_identity, source_url="https://example.test/not-a-selector"),
+            saved.identity.captured_at,
+        )
+        statements: list[str] = []
+        connection.set_trace_callback(statements.append)
+        with patch.object(
+            SQLiteHistoricalInputSnapshotRepository,
+            "load_latest_snapshot",
+            side_effect=AssertionError("latest loader must not be called"),
+        ):
+            loaded = repository.load_snapshot_by_identity(identity=identity_with_other_url)
+        connection.set_trace_callback(None)
+        self.assertIsNotNone(loaded)
+        self.assertEqual(loaded.identity.source_identity.source_url, saved.identity.source_identity.source_url)
+        header_queries = [
+            statement
+            for statement in statements
+            if "FROM historical_input_snapshots" in statement
+        ]
+        self.assertEqual(len(header_queries), 1)
+        where_clause = header_queries[0].split("WHERE", 1)[1]
+        for field in (
+            "dataset_id=",
+            "organization=",
+            "source_system=",
+            "external_race_id=",
+            "captured_at_utc=",
+        ):
+            self.assertIn(field, where_clause)
+        for forbidden in (
+            "source_url=",
+            "information_cutoff_utc=",
+            "internal_race_id=",
+            "content_sha256=",
+            "<",
+            ">",
+            "ORDER BY",
+            "LIMIT",
+        ):
+            self.assertNotIn(forbidden, where_clause)
+        source = inspect.getsource(
+            SQLiteHistoricalInputSnapshotRepository.load_snapshot_by_identity
+        )
+        self.assertNotIn("load_latest_snapshot", source)
+        self.assertIn("fetchall", source)
+
+    def test_exact_load_is_restart_stable_for_older_a_after_later_b(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            database_path = f"{directory}/snapshots.sqlite3"
+            connection = sqlite3.connect(database_path)
+            connection.execute("CREATE TABLE races(id INTEGER PRIMARY KEY)")
+            connection.execute("CREATE TABLE horses(id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL)")
+            connection.executemany("INSERT INTO races(id) VALUES(?)", ((1,), (2,)))
+            connection.executemany(
+                "INSERT INTO horses(id,race_id) VALUES(?,?)",
+                ((11, 1), (12, 1), (21, 2)),
+            )
+            connection.commit()
+            apply_migrations(connection)
+            repository = SQLiteHistoricalInputSnapshotRepository(connection=connection)
+            older = self.snapshot(captured_at=CAPTURED, source_url="https://example.test/older")
+            repository.save_snapshot(snapshot=older)
+            connection.close()
+
+            connection = sqlite3.connect(database_path)
+            repository = SQLiteHistoricalInputSnapshotRepository(connection=connection)
+            newer = self.snapshot(
+                captured_at=CAPTURED + timedelta(seconds=1),
+                source_url="https://example.test/newer",
+            )
+            repository.save_snapshot(snapshot=newer)
+            exact = repository.load_snapshot_by_identity(identity=older.identity)
+            latest = self.load(repository)
+            self.assertIsNotNone(exact)
+            self.assertIsNotNone(latest)
+            self.assertEqual(exact.content_sha256, older.content_sha256)
+            self.assertEqual(exact.identity.captured_at, older.identity.captured_at)
+            self.assertEqual(exact.identity.source_identity.source_url, "https://example.test/older")
+            self.assertEqual(latest.content_sha256, newer.content_sha256)
+            self.assertEqual(latest.identity.captured_at, newer.identity.captured_at)
+            connection.close()
+
+    def test_exact_load_selected_corruption_is_never_false_absence(self) -> None:
+        cases = (
+            ("header_source_url", "historical_input_snapshots", "source_url", "not the saved URL"),
+            ("header_digest", "historical_input_snapshots", "content_sha256", "0" * 64),
+            ("race_child", "historical_input_snapshot_races", "distance_m", 0),
+            ("entry_child", "historical_input_snapshot_entries", "win_odds_text", "2.50"),
+            ("provenance", "historical_input_snapshot_provenance", "source", ""),
+            (
+                "evidence",
+                "historical_input_snapshot_provenance_evidence",
+                "response_sha256",
+                "invalid",
+            ),
+        )
+        for name, table, column, value in cases:
+            with self.subTest(name=name):
+                connection, repository = self.repository()
+                saved = self.snapshot()
+                repository.save_snapshot(snapshot=saved)
+                snapshot_id = self.snapshot_id_for(connection, saved.identity.captured_at)
+                connection.execute("PRAGMA ignore_check_constraints=ON")
+                connection.execute(
+                    f"UPDATE {table} SET {column}=? WHERE snapshot_id=?",
+                    (value, snapshot_id),
+                )
+                connection.commit()
+                connection.execute("PRAGMA ignore_check_constraints=OFF")
+                with self.assertRaises(RepositoryDataIntegrityError):
+                    repository.load_snapshot_by_identity(identity=saved.identity)
+
+        for mapping_table in (
+            "historical_input_external_races",
+            "historical_input_external_entries",
+        ):
+            with self.subTest(mapping_table=mapping_table):
+                connection, repository = self.repository()
+                saved = self.snapshot()
+                repository.save_snapshot(snapshot=saved)
+                if mapping_table == "historical_input_external_entries":
+                    connection.execute("DROP TRIGGER trg_his_external_entry_referenced_delete")
+                connection.execute("PRAGMA foreign_keys=OFF")
+                connection.execute(f"DELETE FROM {mapping_table}")
+                connection.commit()
+                connection.execute("PRAGMA foreign_keys=ON")
+                with self.assertRaises(RepositoryDataIntegrityError):
+                    repository.load_snapshot_by_identity(identity=saved.identity)
+
+        connection, repository = self.repository()
+        saved = self.snapshot()
+        repository.save_snapshot(snapshot=saved)
+        snapshot_id = self.snapshot_id_for(connection, saved.identity.captured_at)
+        connection.execute("PRAGMA foreign_keys=OFF")
+        connection.execute(
+            "DELETE FROM historical_input_snapshot_races WHERE snapshot_id=?",
+            (snapshot_id,),
+        )
+        connection.commit()
+        connection.execute("PRAGMA foreign_keys=ON")
+        with self.assertRaises(RepositoryDataIntegrityError):
+            repository.load_snapshot_by_identity(identity=saved.identity)
 
     def test_load_validates_failing_timezone_and_accepts_non_utc_cutoff(self) -> None:
         class FailingTimezone(tzinfo):
