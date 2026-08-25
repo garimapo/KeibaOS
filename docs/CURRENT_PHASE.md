@@ -11,7 +11,7 @@ READY_FOR_REVIEW
 Formal base: `53d85e8a5228fa7b8bef47dab4e74f9d3d1ce115`.
 
 Review branch:
-`review/4c-2d3b1i6d1d5f1c4f1-historical-snapshot-simulation-adapter-prepare`.
+`review/4c-2d3b1i6d1d5f1c4f1-historical-snapshot-simulation-adapter`.
 
 C4f1 is the direct formal successor to completed c4f0. C4f0 aligned the prediction
 contract to the causally reproducible marginless model; c4f1 now performs only the pure

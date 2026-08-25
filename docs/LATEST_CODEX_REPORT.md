@@ -4532,3 +4532,13 @@ provider, HTTP, filesystem, current clock, legacy lookup, result/payout/settleme
 prediction execution, or historical pipeline construction. No live HTTP or real
 trusted capture was performed. Stop for independent review; do not begin the next
 historical prediction-execution composition phase.
+
+## Phase 4C-2d3b1i6d1d5f1c4f1 Review-Branch Metadata Correction
+
+Independent review found stale PREPARE branch metadata in `docs/CURRENT_PHASE.md`.
+`CURRENT_PHASE` now records the exact implementation review branch:
+`review/4c-2d3b1i6d1d5f1c4f1-historical-snapshot-simulation-adapter`.
+
+Production code and the dedicated test are unchanged, and no semantic or test contract
+changed. Pytest was not rerun because this correction is docs-only. C4f1 remains
+`READY_FOR_REVIEW`; formal integration is pending independent approval.
