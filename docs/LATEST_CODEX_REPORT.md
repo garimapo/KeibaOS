@@ -4291,3 +4291,51 @@ Static public-surface, exact-call, no-latest, forbidden-dependency, no-broad-cat
 schema/migration, allowed-file scope, and `git diff --check` checks pass. C4d remained
 read-only, c4f was not implemented, and no HTTP, current/legacy fallback, schema,
 migration, prediction/simulation, or real trusted capture was introduced.
+
+## Phase 4C-2d3b1i6d1d5f1c4f0 Historical Prediction Contract Preparation
+
+Status: `DRAFT_FOR_REVIEW`.
+
+This PREPARE starts from formal base
+`48dde0f5a5d1cce0176b578ccfcc87dbd9fc1fac`; parent architecture commit
+`4f9ab065b13a2823e5a5d356a4adcd57cadfdd4f` was read only as a reference and is not a
+parent.
+
+The usage audit confirms that only AbilityEngine reads margin. The approved candidate
+removes margin from the structural `PastRaceInput`, immutable `PastRaceSnapshot`, and
+Ability scoring/eligibility, while retaining `scripts.models.PastRace.margin` and the
+existing persisted-request margin parser for legacy input compatibility. Immutable
+conversion deliberately omits the legacy-only value; no default, sentinel, reparse,
+legacy lookup, or historical-domain change is allowed.
+
+Ability scoring retains finish, popularity, and class in their exact old relative ratio.
+The former 0.45:0.15:0.25 retained weights normalize to 9:3:5, giving exact weights
+9/17, 3/17, and 5/17 with sum one. This preserves the 0..100 scale without inventing a
+feature. Eligibility becomes finish-positive OR popularity-positive OR class-nonblank,
+with no margin branch.
+
+The historical engine reference date is the exact date-only
+`snapshot.race.target_race_date`, not the UTC calendar projection of information cutoff.
+The full cutoff instant remains prediction time. A narrow
+`build_historical_prediction_pipeline(*, target_race_date, strategy_config)` factory in
+the existing prediction-pipeline module will explicitly construct Ability, Jockey, and
+Track engines with the same target date. It owns no clock; the later historical
+application composition calls it, while c4f1 remains a pure input adapter. Existing
+live/default engine constructors may retain current-date behavior.
+
+The schema-v1 persisted request and its `track_reference_date` keep their exact existing
+TrackEngine-only meaning. They are not renamed or generalized, so old request documents
+do not silently change meaning. The future snapshot-driven composition uses the new
+factory instead of that legacy request path.
+
+C4f0 stays one narrow phase. Future production scope is exactly prediction input
+contracts, AbilityEngine, prediction pipeline, and immutable simulation models. Focused
+tests are AbilityEngine, prediction input contracts, prediction pipeline, and persisted
+simulation race inputs; existing Jockey and Track tests remain related regressions.
+Historical snapshot/source/replay/repository, persisted request/application, schema,
+migration, Pace, Jockey, Track, and Value production files remain unchanged.
+
+Only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` changed. No pytest was
+required. No production, tests, HTTP, adapter, or real trusted capture was performed.
+C4f0 is ready for implementation only after independent approval; c4f1 remains blocked
+until c4f0 is formal.
