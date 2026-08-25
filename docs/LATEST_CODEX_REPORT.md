@@ -4418,3 +4418,67 @@ Verification:
 
 No historical snapshot domain, schema, migration, ValueEngine, live HTTP, or real
 trusted capture change occurred. C4f1 was not implemented. Stop for independent review.
+
+## Phase 4C-2d3b1i6d1d5f1c4f1 Preparation
+
+Status: `DRAFT_FOR_REVIEW`
+
+Phase name: Historical input snapshot -> SimulationRaceInput adapter.
+
+Formal base: `53d85e8a5228fa7b8bef47dab4e74f9d3d1ce115`.
+
+Review branch:
+`review/4c-2d3b1i6d1d5f1c4f1-historical-snapshot-simulation-adapter-prepare`.
+
+C4f1 is verified as the direct formal successor to c4f0. The prepared boundary is one
+pure keyword-only function accepting an exact `HistoricalInputSnapshot` and returning
+one `SimulationRaceInput`. Its only public companion is one adapter-owned `ValueError`
+subclass for exact input and checked Decimal-conversion failures. Existing
+`SimulationValidationError` and destination-domain failures propagate unchanged.
+
+The exact internal `race_entry_id` is the prediction entity key for all three mappings
+and is also the semantic value of legacy-named `PastRaceSnapshot.horse_id`. Entries are
+ordered by contiguous `entry_order`; each entry's history is ordered by contiguous
+`past_race_index`. No horse number, external identity, name, database mapping, or tuple
+accident participates in identity or ordering.
+
+The adapter constructs `ImmutableRacePredictionInput`, `PastRaceSnapshot`, and
+`TrackConditionsSnapshot` directly. It never constructs legacy `PastRace` or mutable
+`RacePredictionInput`. Target odds, historical odds, weight, and signed weight difference
+use one checked exact-Decimal-to-float helper. Finite output and sign preservation are
+mandatory; nonzero-to-zero underflow and overflow/non-finite results fail closed. No
+rounding or string round trip is introduced. Snapshot Decimal values and
+`content_sha256` remain the audit truth.
+
+Prediction time is exactly the UTC-normalized information cutoff formatted with
+`isoformat(timespec="microseconds")`, including `+00:00`. It is not captured time,
+scheduled start, persistence time, execution time, or the current clock.
+
+Every provenance object becomes one audit entry with metadata copied exactly. Required
+evidence reduces conservatively and independently of order: observed time is the maximum
+required evidence observation; available time is `None` if any required evidence has
+unknown availability, otherwise the maximum known availability. Audit entries are
+emitted per canonical entry order as entry, odds, jockey, then indexed history or formal
+absence, with track last. The audit header source is the snapshot source-system value;
+individual provenance sources remain unchanged. Completeness is true only because the
+exact snapshot domain has already proved complete causal content.
+
+The returned object must pass unchanged `SimulationRaceInput` validation. The adapter
+has no repository, provider, SQLite, database, HTTP, filesystem, clock, random, legacy
+lookup, result/payout/settlement dependency, prediction execution, historical pipeline
+factory call, or latest selector. C4f0, snapshots, validation, schema, and migrations are
+unchanged.
+
+Future implementation scope is exactly:
+
+- `scripts/simulation/historical_input_snapshot_simulation_adapter.py`;
+- `tests/test_historical_input_snapshot_simulation_adapter.py`;
+- `docs/CURRENT_PHASE.md`; and
+- `docs/LATEST_CODEX_REPORT.md`.
+
+All field, identity, ordering, numeric, timestamp, audit, source, validation, and error
+semantics are frozen. Implementation readiness is
+`YES_AFTER_INDEPENDENT_APPROVAL`; blockers are `NONE`.
+
+Only the two approved docs changed. No production code, tests, pytest, HTTP, or real
+trusted capture was performed. Stop for independent review.
