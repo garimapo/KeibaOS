@@ -5056,3 +5056,119 @@ official result/payout acquisition remain unstarted.
 Verification: dedicated `24 passed, 28 subtests passed`; related `284 passed, 64
 subtests passed`; full suite `2964 passed, 2026 subtests passed`. No live HTTP or real
 trusted capture was performed. Stop for independent review.
+
+## Phase 4C-2d3b1i6d1d5f1c4h0 Preparation
+
+Status: `DRAFT_FOR_REVIEW`
+
+Formal base: `90203b01cf370469e15242325ee40888d99d0f58`.
+
+PREPARE branch:
+`review/4c-2d3b1i6d1d5f1c4h0-jra-target-result-prepare`.
+
+The completed c4g2b core can settle provider-neutral persisted official facts, but the
+phase hierarchy assigned no ID to real target-race result/payout acquisition. Optional
+c4g2c remains reserved for result/evidence audit persistence, so the smallest consistent
+next family is c4h. It is split into JRA result, JRA payout, NAR result, NAR payout, and
+later application/cutoff/final-completeness composition. The exact next phase is c4h0,
+JRA official target-race result normalization and persistence.
+
+Inspection found that both providers already have immutable official response capture,
+actual observation timestamps, append-only archive persistence, and live capture
+services. JRA supports exact accessS race identity and race-local external entry IDs;
+NAR supports exact RaceMarkTable URL identity and race-local horse-number entry IDs.
+Neither provider has a complete target-race result normalizer/persister or target-payout
+normalizer/persister. Existing JRA/NAR historical parsers normalize one horse's past-race
+facts only. Legacy sample/logging fetchers are not eligible evidence.
+
+The provider-neutral `PersistedRaceResult`, `PersistedRaceResultEntry`,
+`PayoutPublication`, `PayoutRecord`, and repository contracts are reused. No new domain,
+schema, or migration is proposed. Exact capture IDs remain raw-evidence provenance.
+Race-result persistence is frozen to terminal insert-once facts; provisional/partial
+evidence stays in the immutable capture archive and performs no result write, while
+differing later corrections fail closed and need a separately reviewed versioning
+phase. C4h0 must exact-load its capture by ID from the archive before normalization.
+Payout corrections remain multiple immutable publications.
+
+Identity is bound through the exact capture URL race identity and the exact historical
+snapshot crosswalk. Horse number is permitted only inside that proven target race and
+must resolve to the snapshot's race-scoped external entry ID and internal
+`race_entry_id`. Names, row positions, global horse numbers, cross-provider coincidence,
+and prediction output are forbidden.
+
+Result mapping preserves complete, partial, void, and explicit unsupported states.
+Scratch/exclusion maps to entry `VOID`; DQ/DNF/non-finish remains entry `UNSUPPORTED`
+under the current domain; dead heat retains equal finish positions. The supported payout
+types remain exactly single-win, quinella, wide, and trio. Place, bracket quinella,
+exacta, and trifecta are outside the current formal domain and are not coerced.
+
+Observation time is the exact capture observation. A current fetch is never backdated.
+Finalization uses an exact provider timestamp when trustworthy, otherwise the capture
+observation is the conservative first-proven-final time. Acquisition stores facts;
+cutoff choice and final-ROI completeness belong to the later application phase.
+
+Implementation readiness is `NO`. The repository lacks an approved trusted full JRA
+target accessS result capture/fixture that freezes finality, complete membership,
+scratch, DQ/DNF, cancellation, and dead-heat representations. Guessing that evidence
+could persist a provisional result as complete. No production or test changed, pytest
+was not rerun, and no live HTTP or trusted capture was performed. Stop for independent
+review.
+
+## Phase 4C-2d3b1i6d1d5f1c4h0 Trusted Evidence Acquisition
+
+Status: `DRAFT_FOR_REVIEW`
+
+Formal base: `90203b01cf370469e15242325ee40888d99d0f58`.
+
+Evidence branch:
+`review/4c-2d3b1i6d1d5f1c4h0-jra-target-result-evidence`.
+
+The approved baseline accessS URL was acquired through the unchanged formal
+`JRAOfficialLiveResponseCaptureService` and a dedicated isolated migrated SQLite
+archive outside the repository. The service used strict HTTPS, actual UTC clock
+samples, full raw response bytes, immutable capture construction, and archive-before-
+return ordering. Exact archive reload equalled the returned capture. No production
+database was read for evidence identity or modified.
+
+The trusted capture is
+`jra-capture-v1:2d8fbee2df4a201923a49a48e02de3f6837293e0166a1347e30ef3f0b0aad296`
+for canonical URL
+`https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde0106202504030420250913%2FDC`.
+It was observed at `2026-08-26T11:38:28.113891+00:00`; its 94,570 exact cp932 bytes
+have SHA-256
+`f5daa967f05ae1ee0cfcbe8d4c0e59aa8a6b3ceef126ce9d8689fe10ffa8ed0e`.
+The response is not backdated and supplies no historical availability claim before
+that observation.
+
+The URL parser and visible page agree on exact race
+`jra:race:2025:06:04:03:04`: 2025-09-13, fourth Nakayama meeting, third day, race 4.
+Exactly one formally headed result table contains 13 rows. Horse numbers 1 through 13
+and numeric finish positions 1 through 13 each occur exactly once. Every horse number
+deterministically yields the exact race-scoped external entry ID through
+`build_jra_external_entry_id`; names and row positions were not used as identity.
+
+The evidence is insufficient to authorize c4h0 persistence. The response contains no
+independently established positive terminal marker such as `確定` or `成立`, so the past
+date, populated result table, and payout area are not treated as proof of terminality.
+The formal repository also contains no exact matching `HistoricalInputSnapshot`
+crosswalk for this race, so mapping the 13 external entry IDs to exact internal
+`race_entry_id` values and proving complete snapshot coverage is impossible. Normal
+final is therefore captured structure but not yet supported. Dead heat,
+scratch/exclusion, DQ/DNF, cancelled/void, and provisional representations were not
+guessed or fabricated and remain fail closed.
+
+No raw or derived fixture was committed. The repository currently uses compact derived
+NAR parser fixtures rather than full official response archives, and this incomplete
+evidence contract does not justify freezing a derived JRA grammar. The unmodified
+original remains in the isolated archive, auditable by exact capture ID and SHA-256.
+The existing past-race parser remains unchanged; only its strict cp932, accessS identity,
+visible-header, result-table heading, and accessU-anchor contracts are candidates for
+narrow later reuse.
+
+The initial support envelope is empty: `COMPLETE`, `VOID`, `SCRATCH`, `DQ_DNF`, and
+`DEAD_HEAT` are all `FAIL_CLOSED_NOT_YET_SUPPORTED`. Implementation readiness remains
+`NO`, blocked specifically by positive terminal-finality evidence and an exact matching
+snapshot-to-internal-entry crosswalk. No production, Python test, fixture, result
+repository, schema, or migration changed. Pytest was not run. One authorized live
+official request and trusted archive capture were performed. Stop for independent
+evidence review; production implementation has not begun.
