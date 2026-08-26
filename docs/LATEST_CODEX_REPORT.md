@@ -5056,3 +5056,60 @@ official result/payout acquisition remain unstarted.
 Verification: dedicated `24 passed, 28 subtests passed`; related `284 passed, 64
 subtests passed`; full suite `2964 passed, 2026 subtests passed`. No live HTTP or real
 trusted capture was performed. Stop for independent review.
+
+## Phase 4C-2d3b1i6d1d5f1c4h0 Preparation
+
+Status: `DRAFT_FOR_REVIEW`
+
+Formal base: `90203b01cf370469e15242325ee40888d99d0f58`.
+
+PREPARE branch:
+`review/4c-2d3b1i6d1d5f1c4h0-jra-target-result-prepare`.
+
+The completed c4g2b core can settle provider-neutral persisted official facts, but the
+phase hierarchy assigned no ID to real target-race result/payout acquisition. Optional
+c4g2c remains reserved for result/evidence audit persistence, so the smallest consistent
+next family is c4h. It is split into JRA result, JRA payout, NAR result, NAR payout, and
+later application/cutoff/final-completeness composition. The exact next phase is c4h0,
+JRA official target-race result normalization and persistence.
+
+Inspection found that both providers already have immutable official response capture,
+actual observation timestamps, append-only archive persistence, and live capture
+services. JRA supports exact accessS race identity and race-local external entry IDs;
+NAR supports exact RaceMarkTable URL identity and race-local horse-number entry IDs.
+Neither provider has a complete target-race result normalizer/persister or target-payout
+normalizer/persister. Existing JRA/NAR historical parsers normalize one horse's past-race
+facts only. Legacy sample/logging fetchers are not eligible evidence.
+
+The provider-neutral `PersistedRaceResult`, `PersistedRaceResultEntry`,
+`PayoutPublication`, `PayoutRecord`, and repository contracts are reused. No new domain,
+schema, or migration is proposed. Exact capture IDs remain raw-evidence provenance.
+Race-result persistence is frozen to terminal insert-once facts; provisional/partial
+evidence stays in the immutable capture archive and performs no result write, while
+differing later corrections fail closed and need a separately reviewed versioning
+phase. C4h0 must exact-load its capture by ID from the archive before normalization.
+Payout corrections remain multiple immutable publications.
+
+Identity is bound through the exact capture URL race identity and the exact historical
+snapshot crosswalk. Horse number is permitted only inside that proven target race and
+must resolve to the snapshot's race-scoped external entry ID and internal
+`race_entry_id`. Names, row positions, global horse numbers, cross-provider coincidence,
+and prediction output are forbidden.
+
+Result mapping preserves complete, partial, void, and explicit unsupported states.
+Scratch/exclusion maps to entry `VOID`; DQ/DNF/non-finish remains entry `UNSUPPORTED`
+under the current domain; dead heat retains equal finish positions. The supported payout
+types remain exactly single-win, quinella, wide, and trio. Place, bracket quinella,
+exacta, and trifecta are outside the current formal domain and are not coerced.
+
+Observation time is the exact capture observation. A current fetch is never backdated.
+Finalization uses an exact provider timestamp when trustworthy, otherwise the capture
+observation is the conservative first-proven-final time. Acquisition stores facts;
+cutoff choice and final-ROI completeness belong to the later application phase.
+
+Implementation readiness is `NO`. The repository lacks an approved trusted full JRA
+target accessS result capture/fixture that freezes finality, complete membership,
+scratch, DQ/DNF, cancellation, and dead-heat representations. Guessing that evidence
+could persist a provisional result as complete. No production or test changed, pytest
+was not rerun, and no live HTTP or trusted capture was performed. Stop for independent
+review.
