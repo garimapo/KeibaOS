@@ -4697,3 +4697,28 @@ Verification:
   generic-service, and changed-file scope checks: pass.
 
 No live HTTP or real trusted capture was performed. Stop for independent review.
+
+## Phase 4C-2d3b1i6d1d5f1c4g0 Review Test Contract Correction
+
+Independent review found no production defect. The exact production blobs remain
+unchanged for `exact_race_entry_selection_resolver.py`
+(`63c6cb42d2bb6fce3087d9fedba599a0aa0eded5`) and
+`historical_prediction_bet_plan_execution.py`
+(`e356b6c7c0b164367870d83845a761c9d19ff700`).
+
+The dedicated c4g0 execution tests now directly pin the public repository/return type
+hints, insufficient-budget failure without `NO_BET`, exact `PipelineExecutionError`
+propagation, downstream `SimulationValidationError` propagation, exact repository error
+propagation, saved/returned snapshot object identity, resolver construction from the
+exact canonical pipeline key order, process-date independence, and separate correctly
+dated pipeline construction for two target races. The valid empty-plan path remains
+explicitly pinned as planning-level `NO_BET` only.
+
+`CURRENT_PHASE` terminology now reflects implementation/review state rather than the
+stale PREPARE-era headings. The frozen c4g0 architecture is unchanged, and c4g1/c4g2
+remain unstarted. No production file, schema, migration, HTTP, or real trusted capture
+was changed or performed.
+
+Verification: dedicated `26 passed, 32 subtests passed`; related `182 passed, 65
+subtests passed`; full suite `2912 passed, 1955 subtests passed`; and static scope plus
+production-blob checks pass. Stop for independent review.

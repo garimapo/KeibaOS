@@ -424,7 +424,7 @@ C4g0 does not modify or call `PersistedSimulationRunService`. C4g1 must not reus
 historical pipeline across different race dates. C4g2 alone may introduce post-race
 facts after independent review.
 
-## Future Implementation Scope
+## Implementation Scope
 
 Production:
 
@@ -452,9 +452,9 @@ No existing production file should change. In particular, c4f0, c4f1,
 snapshot domains/repositories, prediction engines, ValueEngine, schemas, and migrations
 remain bit-for-bit unchanged.
 
-## Future Test Matrix
+## Implemented Test Contract
 
-Future resolver tests must pin:
+Resolver tests directly pin:
 
 - exact `__all__ == ("ExactRaceEntrySelectionResolver",)`, no other public symbol,
   frozen/slotted type, fields, and method signature;
@@ -468,7 +468,7 @@ Future resolver tests must pin:
 - no clock, HTTP, filesystem, or broad catch; and
 - no package-root export.
 
-Future execution tests must pin:
+Execution tests directly pin:
 
 - exact public API and exact input types;
 - all input validation and dataset match before adapter/pipeline/repository activity;
@@ -522,8 +522,10 @@ PIPELINE_POSTCONSTRUCTION_PROOF_READY: YES
 RESOLVER_PUBLIC_SURFACE_READY: YES_EXACT
 REPOSITORY_BOUNDARY_WORDING_READY: YES
 FAILURE_POLICY_READY: YES
-IMPLEMENTATION_READY: YES_AFTER_INDEPENDENT_APPROVAL
-BLOCKERS: NONE
+IMPLEMENTATION_STATUS: READY_FOR_REVIEW
+PRODUCTION_IMPLEMENTATION: COMPLETE
+DEDICATED_TEST_CONTRACT: COMPLETE_AFTER_THIS_CORRECTION
+BLOCKERS: NONE_PENDING_INDEPENDENT_REVIEW
 ```
 
 ## Allowed Files

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import ast
-from datetime import UTC, datetime
+from dataclasses import replace
+from datetime import UTC, date, datetime
 import inspect
 from typing import get_type_hints
 import unittest
@@ -14,9 +15,18 @@ from scripts.prediction.bet_generator import BetGenerator, BetRecommendation
 from scripts.prediction.bet_strategy import BetPlan, RuleBasedBetStrategy, StrategyConfig
 from scripts.prediction.prediction_pipeline import (
     PipelineConfig,
+    PipelineExecutionError,
     PipelineResult,
+    PipelineStage,
     PredictionPipeline,
     build_historical_prediction_pipeline,
+)
+from scripts.simulation.bet_plan_snapshot import SimulationBetPlanSnapshot
+from scripts.simulation.bet_plan_snapshot_repository import (
+    SimulationBetPlanSnapshotRepository,
+)
+from scripts.simulation.exact_race_entry_selection_resolver import (
+    ExactRaceEntrySelectionResolver,
 )
 from scripts.simulation.historical_input_snapshot_simulation_adapter import (
     build_simulation_race_input_from_historical_snapshot,
@@ -31,6 +41,7 @@ from scripts.simulation.models import (
 from scripts.simulation.bet_plan_builder import SimulationBetPlanBuilder
 from scripts.simulation.fixed_stake_allocator import FixedStakeBetAllocator
 from scripts.simulation.persisted_bet_plan_service import PersistedSimulationBetPlanService
+from scripts.simulation.repositories.errors import RepositoryConflictError
 from scripts.simulation.stake_allocation import BetStakeBudget
 from scripts.simulation.validation import SimulationValidationError
 from tests.test_historical_input_snapshot_simulation_adapter import _snapshot
@@ -42,6 +53,16 @@ class RecordingSnapshotRepository:
 
     def save_snapshot(self, *, snapshot: object) -> None:
         self.saved.append(snapshot)
+
+
+class RaisingSnapshotRepository(RecordingSnapshotRepository):
+    def __init__(self, error: BaseException) -> None:
+        super().__init__()
+        self.error = error
+
+    def save_snapshot(self, *, snapshot: object) -> None:
+        super().save_snapshot(snapshot=snapshot)
+        raise self.error
 
 
 def _policy() -> AllocationPolicyConfig:
@@ -113,6 +134,11 @@ class HistoricalPredictionBetPlanExecutionTests(unittest.TestCase):
         self.assertIs(hints["run_context"], SimulationRunContext)
         self.assertIs(hints["strategy_identity"], StrategyIdentity)
         self.assertIs(hints["budget"], BetStakeBudget)
+        self.assertIs(
+            hints["snapshot_repository"],
+            SimulationBetPlanSnapshotRepository,
+        )
+        self.assertIs(hints["return"], SimulationBetPlanSnapshot)
 
     def test_invalid_boundary_inputs_fail_before_adapter_factory_or_repository(self) -> None:
         invalid = (
@@ -201,7 +227,8 @@ class HistoricalPredictionBetPlanExecutionTests(unittest.TestCase):
         )
         self.assertEqual(result.bets, ())
         self.assertEqual(result.allocated_amount, 0)
-        self.assertEqual(self.repository.saved, [result])
+        self.assertEqual(len(self.repository.saved), 1)
+        self.assertIs(self.repository.saved[0], result)
 
     def test_post_factory_checks_fail_without_second_factory_or_save(self) -> None:
         race_input = build_simulation_race_input_from_historical_snapshot(
@@ -276,8 +303,106 @@ class HistoricalPredictionBetPlanExecutionTests(unittest.TestCase):
         self.assertEqual(run_calls, [build_simulation_race_input_from_historical_snapshot(snapshot=self.snapshot).pipeline_input])
         self.assertEqual(len(result.bets), 1)
         self.assertEqual(result.bets[0].race_entry_ids, (101,))
-        self.assertEqual(self.repository.saved, [result])
+        self.assertEqual(len(self.repository.saved), 1)
+        self.assertIs(self.repository.saved[0], result)
         self.assertNotEqual(result.bets[0].race_entry_ids, (9,))
+
+    def test_insufficient_budget_does_not_become_an_empty_plan(self) -> None:
+        recommendation = BetRecommendation(
+            rank=0,
+            bet_type=BetGenerator.WIN,
+            horse_ids=(101,),
+            estimated_probability=0.4,
+            expected_value=1.2,
+            combination_score=None,
+            prediction_score=80.0,
+        )
+        pipeline_result = PipelineResult(
+            ability_evaluations={},
+            pace_evaluation=None,
+            jockey_evaluations={},
+            track_evaluations={},
+            predictions=(),
+            value_evaluations=(),
+            recommendations=(recommendation,),
+            bet_plan=BetPlan(
+                strategy_name="RuleBasedBetStrategy",
+                recommendations=(recommendation,),
+                candidate_count=1,
+            ),
+        )
+        run_calls: list[object] = []
+
+        def return_one_recommendation(
+            pipeline: PredictionPipeline,
+            pipeline_input: object,
+        ) -> PipelineResult:
+            run_calls.append(pipeline_input)
+            return pipeline_result
+
+        with patch.object(PredictionPipeline, "run", new=return_one_recommendation):
+            with self.assertRaises(ValueError):
+                self._call(budget=BetStakeBudget(total_amount=0))
+        self.assertEqual(len(run_calls), 1)
+        self.assertEqual(self.repository.saved, [])
+
+    def test_pipeline_execution_error_propagates_by_identity_without_retry(self) -> None:
+        error = PipelineExecutionError(PipelineStage.ABILITY)
+        run_calls: list[object] = []
+
+        def raise_exact_error(
+            pipeline: PredictionPipeline,
+            pipeline_input: object,
+        ) -> PipelineResult:
+            run_calls.append(pipeline_input)
+            raise error
+
+        with patch.object(PredictionPipeline, "run", new=raise_exact_error):
+            with self.assertRaises(PipelineExecutionError) as raised:
+                self._call()
+        self.assertIs(raised.exception, error)
+        self.assertEqual(len(run_calls), 1)
+        self.assertEqual(self.repository.saved, [])
+
+    def test_downstream_simulation_validation_error_propagates_by_identity(self) -> None:
+        error = SimulationValidationError(
+            self.snapshot.internal_race_id,
+            "downstream",
+            "downstream simulation validation failure",
+        )
+        run_calls: list[object] = []
+
+        def raise_downstream_error(
+            pipeline: PredictionPipeline,
+            pipeline_input: object,
+        ) -> PipelineResult:
+            run_calls.append(pipeline_input)
+            raise error
+
+        with patch.object(
+            execution_module,
+            "build_simulation_race_input_from_historical_snapshot",
+            wraps=build_simulation_race_input_from_historical_snapshot,
+        ) as adapter, patch.object(
+            execution_module,
+            "build_historical_prediction_pipeline",
+            wraps=build_historical_prediction_pipeline,
+        ) as factory, patch.object(PredictionPipeline, "run", new=raise_downstream_error):
+            with self.assertRaises(SimulationValidationError) as raised:
+                self._call()
+        self.assertIs(raised.exception, error)
+        self.assertEqual(adapter.call_count, 1)
+        self.assertEqual(factory.call_count, 1)
+        self.assertEqual(len(run_calls), 1)
+        self.assertEqual(self.repository.saved, [])
+
+    def test_repository_error_propagates_by_identity_after_exact_single_save(self) -> None:
+        error = RepositoryConflictError("repository conflict")
+        repository = RaisingSnapshotRepository(error)
+        with self.assertRaises(RepositoryConflictError) as raised:
+            self._call(snapshot_repository=repository)
+        self.assertIs(raised.exception, error)
+        self.assertEqual(len(repository.saved), 1)
 
     def test_existing_service_chain_calls_allocator_builder_service_and_save_once(self) -> None:
         allocation_policy_values: list[object] = []
@@ -336,7 +461,40 @@ class HistoricalPredictionBetPlanExecutionTests(unittest.TestCase):
         self.assertEqual(len(service_calls), 1)
         self.assertEqual(len(allocator_calls), 1)
         self.assertEqual(len(builder_calls), 1)
-        self.assertEqual(self.repository.saved, [result])
+        self.assertEqual(len(self.repository.saved), 1)
+        self.assertIs(self.repository.saved[0], result)
+
+    def test_resolver_allowlist_comes_only_from_exact_pipeline_key_order(self) -> None:
+        constructor_calls: list[tuple[int, tuple[int, ...]]] = []
+        original_resolver = ExactRaceEntrySelectionResolver
+
+        def construct_resolver(
+            *,
+            race_id: int,
+            allowed_race_entry_ids: tuple[int, ...],
+        ) -> ExactRaceEntrySelectionResolver:
+            constructor_calls.append((race_id, allowed_race_entry_ids))
+            return original_resolver(
+                race_id=race_id,
+                allowed_race_entry_ids=allowed_race_entry_ids,
+            )
+
+        expected_race_input = build_simulation_race_input_from_historical_snapshot(
+            snapshot=self.snapshot
+        )
+        expected_allowlist = tuple(
+            expected_race_input.pipeline_input.horse_past_races.keys()
+        )
+        with patch.object(
+            execution_module,
+            "ExactRaceEntrySelectionResolver",
+            side_effect=construct_resolver,
+        ):
+            self._call()
+        self.assertEqual(
+            constructor_calls,
+            [(expected_race_input.race_id, expected_allowlist)],
+        )
 
     def test_unknown_recommendation_identity_propagates_without_save(self) -> None:
         recommendation = BetRecommendation(
@@ -406,6 +564,64 @@ class HistoricalPredictionBetPlanExecutionTests(unittest.TestCase):
             snapshot_repository=RecordingSnapshotRepository(),
         )
         self.assertNotEqual(first.identity, changed_run.identity)
+
+    def test_process_date_defaults_do_not_change_historical_execution(self) -> None:
+        class EarlyDate(date):
+            @classmethod
+            def today(cls) -> "EarlyDate":
+                return cls(2000, 1, 1)
+
+        class LateDate(date):
+            @classmethod
+            def today(cls) -> "LateDate":
+                return cls(2099, 12, 31)
+
+        def execute_with(fake_date: type[date]) -> object:
+            with (
+                patch("scripts.prediction.ability_engine.date", fake_date),
+                patch("scripts.prediction.jockey_engine.date", fake_date),
+                patch("scripts.prediction.track_engine.date", fake_date),
+            ):
+                return self._call(snapshot_repository=RecordingSnapshotRepository())
+
+        self.assertEqual(execute_with(EarlyDate), execute_with(LateDate))
+
+    def test_two_target_race_dates_construct_distinct_historical_pipelines(self) -> None:
+        second_race = replace(
+            self.snapshot.race,
+            target_race_date=date(2026, 8, 6),
+        )
+        second_snapshot = replace(self.snapshot, race=second_race)
+        factory_calls: list[dict[str, object]] = []
+        constructed_pipelines: list[PredictionPipeline] = []
+
+        def construct_pipeline(**kwargs: object) -> PredictionPipeline:
+            factory_calls.append(kwargs)
+            pipeline = build_historical_prediction_pipeline(**kwargs)  # type: ignore[arg-type]
+            constructed_pipelines.append(pipeline)
+            return pipeline
+
+        with patch.object(
+            execution_module,
+            "build_historical_prediction_pipeline",
+            side_effect=construct_pipeline,
+        ):
+            self._call(snapshot_repository=RecordingSnapshotRepository())
+            self._call(
+                snapshot=second_snapshot,
+                snapshot_repository=RecordingSnapshotRepository(),
+            )
+        self.assertEqual(len(factory_calls), 2)
+        self.assertEqual(
+            factory_calls[0]["target_race_date"],
+            self.snapshot.race.target_race_date,
+        )
+        self.assertEqual(
+            factory_calls[1]["target_race_date"],
+            second_snapshot.race.target_race_date,
+        )
+        self.assertEqual(len(constructed_pipelines), 2)
+        self.assertIsNot(constructed_pipelines[0], constructed_pipelines[1])
 
     def test_static_scope_has_no_direct_database_current_or_settlement_ownership(self) -> None:
         source = inspect.getsource(execution_module)
