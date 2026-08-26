@@ -4819,3 +4819,76 @@ migrations remain unchanged; c4g2 remains unstarted.
 Verification: dedicated `13 passed, 20 subtests passed`; related `50 passed, 67 subtests
 passed`; full suite `2925 passed, 1975 subtests passed`. No live HTTP or real trusted
 capture was performed. Stop for independent review.
+
+## Phase 4C-2d3b1i6d1d5f1c4g2 Preparation
+
+Status: `DRAFT_FOR_REVIEW`
+
+Formal base: `586174db3fcfd1e124fbb45d01fdfda0342f2396`.
+
+Prepare branch:
+`review/4c-2d3b1i6d1d5f1c4g2-historical-settlement-prepare`.
+
+The PREPARE was recovered in a completely separate clean sibling clone after the
+original local clone was found stale and dirty. The original clone and all of its dirty
+or untracked paths were left untouched. The fresh branch was created directly from the
+remote formal commit.
+
+The c4g2 investigation found one blocking architectural fact: the existing generic
+`RepositoryBackedPersistedRaceSettlementSource` requests
+`get_latest_payout_publication(..., observed_at_lte=None,
+require_complete=False)`. That unbounded latest lookup is unsafe for reproducible
+historical settlement. C4g2 is therefore split into c4g2a, a new cutoff-aware persisted
+settlement source, and c4g2b, ordered historical settlement plus unchanged
+`Simulator` summary composition. A c4g2c/later phase is needed only if per-race result
+persistence or audit output is independently required.
+
+C4g2a uses an explicit timezone-aware settlement cutoff per internal race ID. It loads
+the exact persisted c4g1 plan first, preserves the empty-plan `NO_BET` short circuit,
+treats race results observed after the cutoff as unavailable, and requests the latest
+eligible payout at or before the cutoff with `require_complete=False`. A latest eligible
+incomplete publication is omitted and becomes `UNSETTLED`; an older complete
+publication is not substituted. This keeps incomplete evidence from becoming a loss.
+Unbounded latest is forbidden, and caller-specified payout IDs are not required because
+the race-result side has no corresponding revision identity. Eligible repository state
+at or before the cutoff remains an explicit determinism input.
+
+C4g2b mirrors c4g1's exact snapshot tuple and canonical
+`(scheduled_start_at, internal_race_id)` order. It preflights exact run, strategy,
+dataset, cutoff-key coverage, duplicate IDs, and repository boundaries, then applies
+the pure c4f1 adapter once per snapshot before post-race I/O. It constructs the existing
+exact bet source, the c4g2a source, the unchanged persisted executor, and the unchanged
+`Simulator`, and returns `SimulationSummary` only. It never calls c4g0/c4g1, prediction,
+allocation, or bet generation and never mutates a saved plan.
+
+The existing executor status logic and summary metrics are retained unchanged. Only
+settled races contribute investment, payout, profit, ROI, and hit-rate denominators;
+`NO_BET` and non-settled statuses do not become financial losses. Maximum drawdown
+remains ordered by `(settled_at, race_id)`, and payout matching remains exact bet type
+plus canonical internal race-entry IDs. Missing plan fails closed; an exact present
+empty plan alone produces `SettlementStatus.NO_BET` and performs no official-fact reads.
+
+C4g2a/b are read-only and own no transaction. A settlement failure propagates, returns
+no partial summary, and prevents later race execution. Stable replay requires the same
+exact snapshots, run/strategy identity, plans, per-race cutoffs, code revision, and
+eligible official repository state at or before the cutoffs. Facts observed strictly
+after a cutoff cannot affect replay; changed/backfilled eligible state at or before a
+cutoff is outside that equality guarantee.
+
+The persisted settlement domain is provider-neutral and the existing result/payout
+repositories require no schema or migration change. However the repository has no
+formally complete target-race official result-plus-payout acquisition and persistence
+composition for either JRA or NAR. A separate official capture/conversion/persistence
+phase is required before real end-to-end historical settlement. It is not hidden inside
+c4g2a/b and no live acquisition was performed.
+
+Future implementation scope is one new c4g2a source and dedicated test, followed by one
+new c4g2b composition and dedicated test. Existing c4f1, c4g0, c4g1, simulator,
+persisted executor, exact bet source, generic settlement source, protocols, SQLite
+repositories, schemas, and migrations remain unchanged.
+
+Implementation readiness is `YES_AFTER_INDEPENDENT_APPROVAL_FOR_C4G2A`. There is no
+implementation blocker for the provider-neutral cutoff-aware source. Real-data
+end-to-end execution remains blocked on the separate official result/payout acquisition
+phase. Pytest was not run. No live HTTP or trusted capture was performed. Stop for
+independent architecture review.
