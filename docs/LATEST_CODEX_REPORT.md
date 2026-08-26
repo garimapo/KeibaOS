@@ -4722,3 +4722,100 @@ was changed or performed.
 Verification: dedicated `26 passed, 32 subtests passed`; related `182 passed, 65
 subtests passed`; full suite `2912 passed, 1955 subtests passed`; and static scope plus
 production-blob checks pass. Stop for independent review.
+
+## Phase 4C-2d3b1i6d1d5f1c4g1 Preparation
+
+Status: `DRAFT_FOR_REVIEW`
+
+Formal base: `45b361e5b6c979c4c85a5c37043d30605aa2d47b`.
+
+Prepare branch:
+`review/4c-2d3b1i6d1d5f1c4g1-historical-multi-race-planning-prepare`.
+
+Confirmed the phase hierarchy: formally complete c4g0 owns one exact historical
+prediction bet plan, c4g1 next owns ordered multi-race planning, and c4g2 remains the
+later settlement/simulation phase. The existing `PersistedSimulationRunService` is not
+reused because it combines planning with `Simulator` settlement execution.
+
+The prepared c4g1 API accepts an exact tuple of exact `HistoricalInputSnapshot` values,
+one exact shared `SimulationRunContext`, one exact shared RuleBased
+`StrategyIdentity`, an exact race-ID-keyed budget mapping, and one shared structural
+snapshot repository. It validates and defensively freezes every static batch fact
+before the first c4g0 call, orders snapshots by `(scheduled_start_at,
+internal_race_id)`, and delegates once per race to the unchanged
+`execute_and_persist_historical_bet_plan`. Successful output is an ordered tuple of the
+exact c4g0 return objects; no wrapper is introduced. An empty batch with empty budgets
+is valid and returns `()` after shared-boundary validation.
+
+Duplicate internal race IDs are forbidden. Budget keys must exactly equal the batch
+race IDs, and each exact caller-owned budget object is preserved. Dataset mismatches
+are preflighted for the whole batch and report the first mismatch in canonical order
+through c4g0's exact `SimulationValidationError` shape. The exact shared run context,
+strategy identity, and repository objects pass unchanged to every race.
+
+Batch-atomic persistence is explicitly not promised. C4g1 owns no transaction and no
+direct save; c4g0 and its existing service own one race save. On a mid-batch failure an
+already-durable successful prefix is possible, the exact failure propagates, no partial
+tuple is returned, later races are not executed, and no retry, rollback, or deletion is
+attempted. Generic repository idempotence is not assumed; the SQLite equal-snapshot
+retry behavior remains an implementation detail.
+
+The future implementation scope is one new batch composition module, one focused test,
+and the two phase docs. No c4g0, c4f0, c4f1, persisted run service, repository protocol,
+SQLite repository, schema, or migration change is required. C4g1 performs no snapshot
+loading/latest selection, simulation, settlement, result/payout read, HTTP, current
+clock, random, or direct database access.
+
+Implementation readiness is `YES_AFTER_INDEPENDENT_APPROVAL`; blockers are `NONE`.
+Pytest was not rerun for this docs-only PREPARE. No HTTP or real trusted capture was
+performed. Stop for independent architecture review.
+
+## Phase 4C-2d3b1i6d1d5f1c4g1 Determinism Contract Correction
+
+Independent review approved the c4g1 architecture. This docs-only correction narrows
+only the determinism statement: equal ordered results require the same exact formal
+inputs, code revision, and an equivalent successful repository start state and behavior.
+Generic repository idempotence remains not required.
+
+Process restart now means only that c4g1 retains no process-local state and has no
+clock/random/environment dependency. A restart after durable repository state changed is
+not guaranteed to succeed identically, and retry after a durable-prefix failure remains
+outside c4g1's generic guarantee. SQLite equal-snapshot retry behavior is still only an
+implementation detail. No production, test, schema, migration, HTTP, or trusted capture
+change occurred.
+
+## Phase 4C-2d3b1i6d1d5f1c4g1 Implementation
+
+Status: `READY_FOR_REVIEW`
+
+Formal base: `45b361e5b6c979c4c85a5c37043d30605aa2d47b`.
+
+Review branch:
+`review/4c-2d3b1i6d1d5f1c4g1-historical-multi-race-planning`.
+
+Implemented the single c4g1 batch composition API. It accepts only an exact immutable
+snapshot tuple, one shared exact run context and RuleBased strategy identity, a
+defensively frozen race-ID budget mapping, and one structural snapshot repository. It
+completes all static validation before any c4g0 call, including duplicate race rejection,
+exact budget coverage, and deterministic canonical-order dataset preflight.
+
+Each canonical `(scheduled_start_at, internal_race_id)` snapshot delegates exactly once
+to unchanged c4g0 with the exact snapshot, shared context/strategy/repository, and exact
+frozen budget object. C4g1 performs no direct save, pipeline/adapter/allocator/resolver
+construction, database access, snapshot loading, result/payout read, settlement, or
+simulation. A legitimate empty-bets c4g0 result remains in the complete returned tuple.
+
+There is no batch transaction. A failure propagates unchanged, returns no partial tuple,
+does not execute later races, and may leave a successful durable prefix from delegated
+c4g0 calls. C4g1 does not retry, roll back, delete, compensate, load prior snapshots, or
+assume generic repository idempotence. Determinism requires equivalent successful
+repository start state and behavior; restart only guarantees no process-local,
+clock/random/environment dependency, not replay across changed durable repository state.
+
+Only the new batch module, its dedicated test, and these two phase docs changed. C4g0,
+c4f0, c4f1, generic services, repository protocols, SQLite repository, schema, and
+migrations remain unchanged; c4g2 remains unstarted.
+
+Verification: dedicated `13 passed, 20 subtests passed`; related `50 passed, 67 subtests
+passed`; full suite `2925 passed, 1975 subtests passed`. No live HTTP or real trusted
+capture was performed. Stop for independent review.
