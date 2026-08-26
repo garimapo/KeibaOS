@@ -4892,3 +4892,33 @@ implementation blocker for the provider-neutral cutoff-aware source. Real-data
 end-to-end execution remains blocked on the separate official result/payout acquisition
 phase. Pytest was not run. No live HTTP or trusted capture was performed. Stop for
 independent architecture review.
+
+## Phase 4C-2d3b1i6d1d5f1c4g2 Bet-Source Responsibility Correction
+
+Independent review approved the c4g2a/c4g2b split and settlement-cutoff architecture.
+This docs-only correction narrows ownership without changing that architecture.
+
+C4g2a remains generic over the existing structural `SimulationBetSource`. It validates
+only an exact tuple of `SimulationBet` values, exact race and strategy association, and
+unique `(bet_type, race_entry_ids)` identities. It does not infer run ID,
+strategy-config hash, information-cutoff snapshot identity, persistence provenance, or
+missing persisted-plan behavior. An empty returned tuple short-circuits official
+result/payout reads but does not by itself prove a persisted c4g1 `NO_BET` plan.
+
+C4g2b alone constructs the exact `PersistedSimulationBetSource` from the exact run
+context and exact `SimulationBetPlanSnapshotSource`, then injects that object into
+c4g2a. The existing persisted bet source owns the five-field
+`SimulationBetPlanIdentity` load, missing-snapshot failure, and proof that a present
+persisted empty plan is the legitimate historical `NO_BET` case.
+
+The payout cutoff is now described only as a temporal selection policy. Exact eligible
+repository state at or before the cutoff is a determinism precondition, not an
+immutable settlement-evidence identity. Post-cutoff repository changes have no effect;
+an at-or-before-cutoff backfill or change is a changed replay input. C4g2a/b do not
+persist selected publication IDs or complete run-level settlement evidence; optional
+c4g2c/application audit persistence may own that later without becoming a c4g2a
+dependency.
+
+No production, test, c4g0, c4g1, simulator, executor, repository protocol, SQLite
+repository, schema, or migration changed. Pytest was not rerun. No live HTTP or trusted
+capture was performed. Stop for independent review.

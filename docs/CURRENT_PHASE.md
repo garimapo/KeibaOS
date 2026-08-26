@@ -67,7 +67,7 @@ calling `Simulator`. Historical planning is already complete and must not be reo
 
 The following existing components are reused unchanged:
 
-- `PersistedSimulationBetSource` reconstructs the exact
+- in c4g2b, `PersistedSimulationBetSource` reconstructs the exact
   `SimulationBetPlanIdentity` from run, race, strategy, config hash, and prediction
   information cutoff, then exact-loads the immutable saved plan.
 - `PersistedRaceSimulationExecutor` owns `NO_BET`, missing-result, partial, `VOID`,
@@ -114,10 +114,47 @@ is a positive non-`bool` integer and every value is a timezone-aware `datetime`.
 source has no current-clock fallback, default cutoff, global cutoff, SQLite dependency,
 transaction ownership, write method, or exact-publication-ID inference.
 
-For each load, it first loads and validates the exact persisted bet plan through the
-injected `SimulationBetSource`. Missing plan errors propagate and are not converted to
-`NO_BET`. A present plan with `bets == ()` returns an empty settlement bundle without
-calling the race-result or payout repositories.
+For each load, c4g2a calls the injected structural `SimulationBetSource` and validates
+only the returned bet tuple. The return value must have exact type `tuple`; every item
+must be a `SimulationBet`; every `bet.race_id` must equal `race_input.race_id`; every
+`bet.strategy_id` must equal `strategy_identity.strategy_id`; and every
+`(bet.bet_type, bet.race_entry_ids)` identity must be unique. Invalid output raises the
+historical source's frozen `SimulationValidationError`. Source-owned exceptions
+propagate unchanged where the existing source boundary does not own a translation.
+
+C4g2a does not infer or prove run ID, strategy-config hash, information-cutoff snapshot
+identity, repository provenance, or missing persisted-plan semantics. It neither
+reconstructs `SimulationBetPlanIdentity` nor queries a bet-plan repository. Its
+constructor remains generic over `SimulationBetSource`; it must not require
+`PersistedSimulationBetSource`, `SimulationRunContext`, or
+`SimulationBetPlanSnapshotSource`.
+
+The c4g2a bet-output validation error contract mirrors the existing generic source:
+
+```text
+input_identifier:
+simulation_bet_source
+
+non-tuple reason:
+bet source must return a tuple of SimulationBet values
+
+invalid-item reason:
+bet source must return only SimulationBet values
+
+race mismatch reason:
+bet source bets must match race_input.race_id
+
+strategy mismatch reason:
+bet source bets must match strategy_identity.strategy_id
+
+duplicate identity reason:
+bet source bets must have unique bet identities
+```
+
+If the injected bet source returns exact `()`, c4g2a returns an empty
+`PersistedRaceSettlementData` and performs no race-result or payout read. This is a
+post-race-I/O short circuit only. C4g2a alone does not prove that the empty tuple came
+from a persisted c4g1 `NO_BET` plan.
 
 For a nonempty plan it reads the race result once. A result whose `observed_at` is later
 than that race's settlement cutoff is treated as unavailable at the cutoff and is not
@@ -144,14 +181,18 @@ the repository's latest eligible state. This preserves the distinction between a
 absent record in a complete publication, which the existing evaluator may treat as a
 loss, and absence from incomplete evidence, which may not be treated as a loss.
 
-The historical replay identity policy is latest eligible publication at the explicit
-per-race cutoff, not unbounded latest and not a caller-supplied publication ID. Exact
-any repository-supplied publication ID remains retained in the loaded
-`PayoutPublication` value for audit but is not a selector. Adding
-an exact payout ID input alone would not solve result replay identity because the
-insert-only race-result repository has no corresponding revision ID. Stable replay
-therefore includes the eligible repository state at or before the cutoff as a formal
-input.
+The payout temporal selection policy is latest eligible publication at or before the
+explicit per-race cutoff. It is neither unbounded latest nor a caller-supplied
+publication ID. The exact eligible repository state at or before the cutoff is a
+determinism precondition, not an immutable standalone replay identity. A repository
+change observed strictly after the cutoff has no effect; an inserted, backfilled, or
+changed fact eligible at or before the cutoff is a changed replay input.
+
+C4g2a does not persist an immutable record of which repository-supplied
+`PayoutPublication.publication_id` was selected. Any returned publication retains its
+repository-supplied ID, but c4g2a uses neither that ID nor a synthetic digest as a
+selector. Complete run-level settlement-evidence audit persistence belongs to a later
+c4g2c/application phase if required.
 
 No existing protocol, repository implementation, schema, or migration changes are
 required for c4g2a. `RaceResultRepository.get_race_result()` is sufficient because the
@@ -249,19 +290,34 @@ canonical snapshot. All pure adapter calls complete before post-race repository 
 The reconstructed input is used only for race identity, prediction cutoff in exact plan
 identity, and the executor/Simulator boundary. No prediction pipeline is built or run.
 
-C4g2b then constructs one exact `PersistedSimulationBetSource`, one c4g2a historical
-source, one unchanged `PersistedRaceSimulationExecutor`, and one unchanged `Simulator`,
-all sharing the caller's exact run context, strategy identity, repositories, and frozen
-cutoff values as applicable. It calls `Simulator.run(...)` exactly once with the
-canonically ordered race-input tuple and returns that exact `SimulationSummary`.
+C4g2b, not c4g2a, owns the exact persisted-plan binding. It constructs exactly:
+
+```python
+bet_source = PersistedSimulationBetSource(
+    run_context=run_context,
+    snapshot_source=bet_plan_snapshot_source,
+)
+```
+
+The exact constructed `PersistedSimulationBetSource` object is injected into the c4g2a
+historical source. C4g2b does not accept an arbitrary external `SimulationBetSource`.
+The exact run-context and snapshot-source objects are preserved, and the existing bet
+source alone constructs and loads the five-field `SimulationBetPlanIdentity`.
+
+C4g2b then constructs one unchanged `PersistedRaceSimulationExecutor` and one unchanged
+`Simulator`, all sharing the caller's exact run context, strategy identity,
+repositories, and frozen cutoff values as applicable. It calls `Simulator.run(...)`
+exactly once with the canonically ordered race-input tuple and returns that exact
+`SimulationSummary`.
 
 ## Bet Plan and Settlement Policies
 
-The exact saved c4g1 plan is selected by the existing five-field
-`SimulationBetPlanIdentity`. There is no latest-plan lookup, fallback plan, another
-run/strategy/cutoff substitution, or bet regeneration. Missing plan fails closed. A
-present exact plan with empty bets is the only `NO_BET` case and performs no official
-result or payout read.
+C4g2b's exact `PersistedSimulationBetSource` selects the saved c4g1 plan by the existing
+five-field `SimulationBetPlanIdentity`. There is no latest-plan lookup, fallback plan,
+another run/strategy/cutoff substitution, or bet regeneration. Missing persisted
+snapshot fails closed and is not `NO_BET`. A present exact persisted snapshot with
+empty bets is the legitimate historical `NO_BET` case; the resulting c4g2a empty-tuple
+short circuit performs no official result or payout read.
 
 Payout matching remains exactly `bet_type` plus canonical internal
 `race_entry_ids`. No horse name, horse number fallback, external ID, prediction ID,
@@ -269,7 +325,7 @@ legacy lookup, or numeric-coincidence remapping is allowed.
 
 The unchanged settlement status policy is:
 
-- empty exact plan -> `NO_BET`;
+- present exact persisted empty plan -> `NO_BET`;
 - missing or after-cutoff race result -> `UNSETTLED`;
 - partial race result -> `UNSETTLED`;
 - official void race result -> `VOID`;
@@ -304,6 +360,13 @@ or audit output is not required to establish the summary composition and would r
 a distinct c4g2c/later architecture decision. C4g2a/b must not modify `Simulator` or
 execute each race twice merely to expose results.
 
+C4g2c is optional for the current summary computation. Separately, c4g2a/b do not own
+full run-level settlement-evidence audit persistence. If replay independent of later
+eligible-state mutation is required, a later c4g2c/application phase may freeze the
+selected payout publication IDs, result identity or digest, per-race
+`SimulationResult`, and equivalent audit evidence without making c4g2a depend on that
+future phase.
+
 ## Failure, Writes, and Determinism
 
 C4g2a/b perform reads only. They do not persist results, payouts, settlement results, or
@@ -315,15 +378,17 @@ and there is no settlement mutation to roll back. Existing c4g1 bet plans remain
 immutable and untouched.
 
 For the same exact historical snapshots, run context, strategy identity, exact persisted
-bet plans, per-race settlement cutoffs, eligible official repository state at or before
-those cutoffs, code revision, and equivalent successful repository behavior, c4g2
+bet plans, per-race settlement cutoffs, exact eligible official repository state at or
+before those cutoffs, code revision, and equivalent successful repository behavior, c4g2
 produces an equal `SimulationSummary`. Caller snapshot order, process date, process
 restart, publications observed after cutoff, current time, random state, network state,
 and process-local state do not affect the result.
 
 The guarantee does not cover a newly inserted/backfilled or otherwise changed eligible
 fact whose `observed_at` is at or before the cutoff. Such eligible repository state is
-an explicit replay input. Publications added strictly after the cutoff are invisible.
+an explicit changed replay input. Publications added strictly after the cutoff are
+invisible. C4g2a/b provide deterministic computation under this precondition but no
+immutable settlement-evidence identity across repository mutation.
 
 ## Official Acquisition and Provider Scope
 
@@ -350,6 +415,30 @@ data end-to-end historical settlement application.
 ```text
 PHASE_SPLIT:
 C4G2A_THEN_C4G2B
+
+C4G2A_BET_SOURCE_TYPE:
+SIMULATION_BET_SOURCE
+
+C4G2A_EXACT_PERSISTED_PLAN_GUARANTEE:
+NO
+
+C4G2A_BET_TUPLE_VALIDATION:
+EXACT_TUPLE_OF_SIMULATION_BET_MATCHING_RACE_AND_STRATEGY_WITH_UNIQUE_BET_IDENTITIES
+
+C4G2B_EXACT_PLAN_SOURCE:
+PERSISTED_SIMULATION_BET_SOURCE
+
+C4G2B_BET_PLAN_IDENTITY_POLICY:
+EXACT_FIVE_FIELD_SIMULATION_BET_PLAN_IDENTITY_LOAD
+
+C4G2B_MISSING_PLAN_POLICY:
+FAIL_CLOSED_NOT_NO_BET
+
+C4G2A_EMPTY_BET_SOURCE_RESULT:
+SHORT_CIRCUITS_POST_RACE_IO_WITHOUT_PROVING_PERSISTED_PLAN_ORIGIN
+
+C4G2B_EXACT_EMPTY_PLAN_POLICY:
+EXACT_PRESENT_PERSISTED_EMPTY_PLAN_IS_LEGITIMATE_HISTORICAL_NO_BET
 
 PUBLIC_C4G2_INPUT:
 EXACT_SNAPSHOT_TUPLE_PLUS_RUN_CONTEXT_PLUS_STRATEGY_IDENTITY_PLUS_PER_RACE_SETTLEMENT_CUTOFFS_PLUS_EXACT_BET_PLAN_SOURCE_PLUS_RESULT_AND_PAYOUT_REPOSITORIES
@@ -379,7 +468,7 @@ PERSISTED_RACE_EXECUTOR_REUSED:
 YES_UNCHANGED
 
 PERSISTED_BET_SOURCE_REUSED:
-YES_UNCHANGED
+YES_UNCHANGED_IN_C4G2B
 
 REPOSITORY_BACKED_SETTLEMENT_SOURCE_REUSED_UNCHANGED:
 NO_FOR_HISTORICAL_REPLAY
@@ -402,23 +491,32 @@ NO
 RACE_RESULT_AFTER_SETTLEMENT_CUTOFF_POLICY:
 TREAT_AS_UNAVAILABLE_AND_DO_NOT_PLACE_IN_SETTLEMENT_BUNDLE
 
-PAYOUT_SELECTION_POLICY:
-LATEST_ELIGIBLE_OBSERVED_AT_LTE_EXACT_PER_RACE_CUTOFF
+PAYOUT_TEMPORAL_SELECTION_POLICY:
+LATEST_ELIGIBLE_PUBLICATION_AT_OR_BEFORE_EXACT_SETTLEMENT_CUTOFF
 
 PAYOUT_COMPLETENESS_POLICY:
 REQUIRE_COMPLETE_FALSE_THEN_OMIT_LATEST_ELIGIBLE_INCOMPLETE_PUBLICATION
 
-PAYOUT_REPLAY_IDENTITY_POLICY:
-EXPLICIT_CUTOFF_PLUS_ELIGIBLE_REPOSITORY_STATE_NOT_CALLER_PUBLICATION_ID
+SETTLEMENT_DETERMINISM_REPOSITORY_PRECONDITION:
+EXACT_ELIGIBLE_REPOSITORY_STATE_AT_OR_BEFORE_CUTOFF
+
+POST_CUTOFF_REPOSITORY_CHANGE_EFFECT:
+NONE
+
+AT_OR_BEFORE_CUTOFF_BACKFILL_OR_CHANGE:
+CHANGED_REPLAY_INPUT
+
+IMMUTABLE_SETTLEMENT_EVIDENCE_IDENTITY_IN_C4G2A:
+NO
 
 UNBOUNDED_LATEST_PAYOUT:
 FORBIDDEN
 
 BET_PLAN_REPLAY_POLICY:
-EXACT_FIVE_FIELD_SIMULATION_BET_PLAN_IDENTITY_LOAD
+C4G2B_OWNS_EXACT_FIVE_FIELD_SIMULATION_BET_PLAN_IDENTITY_LOAD
 
 MISSING_PLAN_POLICY:
-FAIL_CLOSED_NOT_NO_BET
+FAIL_CLOSED_NOT_NO_BET_IN_C4G2B
 
 NO_BET_RACE_RESULT_READ:
 NO
@@ -513,6 +611,12 @@ NOT_EXECUTED
 SETTLEMENT_DETERMINISM_CONTRACT:
 SAME_EXACT_INPUTS_CUTOFFS_AND_ELIGIBLE_REPOSITORY_STATE_PRODUCE_EQUAL_SUMMARY_POST_CUTOFF_FACTS_IRRELEVANT
 
+FULL_RUN_SETTLEMENT_EVIDENCE_AUDIT_PERSISTENCE:
+NOT_OWNED_BY_C4G2A_OR_C4G2B
+
+C4G2C_OPTIONAL_FOR_CURRENT_SUMMARY_COMPUTATION:
+YES
+
 NEXT_IMPLEMENTATION_PHASE:
 4C-2d3b1i6d1d5f1c4g2a_CUTOFF_AWARE_HISTORICAL_PERSISTED_SETTLEMENT_SOURCE
 ```
@@ -546,9 +650,15 @@ unchanged.
 C4g2a tests must pin:
 
 - exact public surface and structural `PersistedRaceSettlementSource` compatibility;
+- structural `SimulationBetSource` constructor compatibility without requiring
+  `PersistedSimulationBetSource`;
 - aware per-race cutoffs, defensive mapping freeze, and missing-key failure;
-- exact persisted plan identity and missing-plan propagation;
-- empty exact plan -> no result or payout repository call;
+- exact tuple return required from the bet source;
+- invalid bet item, race-ID mismatch, strategy-ID mismatch, and duplicate bet identity
+  rejected through the frozen historical-source `SimulationValidationError` policy;
+- bet-source exceptions propagate unchanged where appropriate;
+- empty returned tuple -> no result or payout repository call, without claiming
+  persisted-plan origin;
 - race result before/at cutoff eligible and after cutoff absent;
 - bounded payout call with the exact cutoff and `require_complete=False`;
 - payout before/at cutoff eligible and after cutoff invisible;
@@ -562,6 +672,10 @@ C4g2a tests must pin:
 - generic settlement source, repositories, protocols, schemas, and migrations remain
   unchanged.
 
+C4g2a tests must not claim run-ID, strategy-config-hash, information-cutoff snapshot
+identity, repository provenance, or missing persisted-snapshot behavior from an
+arbitrary recording `SimulationBetSource`.
+
 C4g2b tests must pin:
 
 - exact public API/type hints and no package-root export;
@@ -570,9 +684,13 @@ C4g2b tests must pin:
 - all static validation and all c4f1 conversions before post-race I/O;
 - exact dataset and RuleBased strategy binding;
 - c4f1 exactly once per race and no prediction/c4g0/c4g1 call;
-- exact construction/reuse of `PersistedSimulationBetSource`, c4g2a source,
+- exact `PersistedSimulationBetSource` construction with the exact run-context and
+  exact `bet_plan_snapshot_source` objects, followed by exact reuse in the c4g2a source;
+- exact construction/reuse of the c4g2a source,
   `PersistedRaceSimulationExecutor`, and `Simulator`;
-- exact plan load and legitimate empty plan -> `NO_BET` without official reads;
+- exact five-field `SimulationBetPlanIdentity` load;
+- missing persisted snapshot fails closed and is not `NO_BET`;
+- exact persisted empty plan -> `NO_BET` without official reads;
 - win, complete-publication loss, refund/void, missing payout, partial result, official
   void, unsupported, and corruption paths;
 - exact investment, payout, profit, ROI, hit counts/rates, counts by status,
