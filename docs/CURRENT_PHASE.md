@@ -6,17 +6,19 @@
 
 ## Phase
 
-`4C-2d3b1i6d1d5f1c4g2a` — Cutoff-aware historical persisted settlement source.
+`4C-2d3b1i6d1d5f1c4g2b` — Ordered historical settlement and `SimulationSummary`
+composition.
 
-Formal base: `586174db3fcfd1e124fbb45d01fdfda0342f2396`.
+Formal base: `cac248a76ea88c977a38eca80484c235653c6489`.
 
 Implementation review branch:
-`review/4c-2d3b1i6d1d5f1c4g2a-historical-persisted-settlement-source`.
+`review/4c-2d3b1i6d1d5f1c4g2b-historical-settlement-simulation`.
 
-C4g0 and c4g1 are formally complete. C4g0 owns one race's historical prediction and
+C4g0, c4g1, and c4g2a are formally complete. C4g0 owns one race's historical prediction and
 immutable bet-plan persistence. C4g1 owns complete preflight, canonical multi-race
-ordering, and exactly one c4g0 call per race. C4g2 begins only after those purchase
-decisions are fixed and persisted.
+ordering, and exactly one c4g0 call per race. C4g2a owns cutoff-aware selection of
+persisted official settlement facts. C4g2b composes those completed boundaries only
+after purchase decisions are fixed and persisted.
 
 ## Phase Split
 
@@ -33,9 +35,9 @@ The exact hierarchy is:
   requires per-race `SimulationResult` persistence or audit output. It is not required
   for c4g2a or c4g2b.
 
-The next implementation phase is c4g2a. Combining source selection and batch summary
-composition would mix temporal repository policy with application orchestration and
-would make the unbounded-latest defect harder to pin independently.
+The next implementation phase is c4g2b. C4g2a has formally isolated the temporal
+repository policy, so c4g2b may remain one read-only orchestration module with no
+existing-production modification.
 
 ## Purpose and Hard Separation
 
@@ -231,11 +233,11 @@ by their separate snapshot information cutoff.
 
 ## C4g2b Public Composition
 
-Prepared implementation module:
+Implemented module:
 
 `scripts/simulation/historical_settlement_simulation.py`
 
-Prepared exact module-local public surface:
+Exact module-local public surface:
 
 ```python
 __all__ = (
@@ -243,7 +245,7 @@ __all__ = (
 )
 ```
 
-Prepared exact keyword-only boundary:
+Exact keyword-only boundary:
 
 ```python
 def execute_historical_settlement_simulation(
@@ -263,22 +265,41 @@ The exact snapshot tuple mirrors c4g1. Empty snapshots with an empty cutoff mapp
 valid after shared-boundary validation and return the existing empty
 `SimulationSummary`. No new result dataclass is introduced.
 
-The composition validates all statically provable facts before the first bet-plan,
-race-result, or payout read:
+The composition uses this exact deterministic validation order before any adapter or
+repository activity:
 
-1. exact tuple and exact `HistoricalInputSnapshot` items;
-2. exact `SimulationRunContext`;
-3. exact `StrategyIdentity`;
-4. settlement-cutoff Mapping boundary, one defensive copy, positive exact race-ID keys,
-   and aware datetime values;
-5. structural `load_snapshot`, `get_race_result`, and
-   `get_latest_payout_publication` collaborators;
-6. exact `RuleBasedBetStrategy.__name__` strategy binding;
-7. canonical snapshot sort;
-8. duplicate internal race-ID rejection;
-9. exact cutoff-key coverage of batch race IDs; and
-10. every snapshot dataset match, with the first mismatch selected in canonical order
-    using c4g0/c4g1's exact `SimulationValidationError` shape.
+1. require `type(snapshots) is tuple`;
+2. validate every item with `type(snapshot) is HistoricalInputSnapshot`;
+3. require `type(run_context) is SimulationRunContext`;
+4. require `type(strategy_identity) is StrategyIdentity`;
+5. require the cutoff input to be a `Mapping` and not a type object;
+6. freeze the caller cutoff mapping exactly once with `cutoffs = dict(...)`;
+7. validate every frozen key as a positive exact non-`bool` `int` and every value as a
+   timezone-aware `datetime`, retaining the exact datetime objects;
+8. reject a type object or missing/noncallable `bet_plan_snapshot_source.load_snapshot`;
+9. reject a type object or missing/noncallable
+   `race_result_repository.get_race_result`;
+10. reject a type object or missing/noncallable
+    `payout_repository.get_latest_payout_publication`;
+11. require `strategy_identity.strategy_name == RuleBasedBetStrategy.__name__`;
+12. construct canonical snapshot order;
+13. reject duplicate internal race IDs in canonical order;
+14. require exact equality between frozen cutoff keys and canonical snapshot race IDs;
+15. validate every dataset match in canonical order.
+
+The first dataset mismatch raises exactly:
+
+```python
+SimulationValidationError(
+    snapshot.internal_race_id,
+    "run_context.dataset_id",
+    "run_context.dataset_id does not match snapshot.identity.dataset_id",
+)
+```
+
+All 15 steps complete before the first adapter call, bet-plan load, race-result read, or
+payout read. A static error in a later canonical race therefore cannot permit earlier
+settlement I/O.
 
 Canonical order is ascending:
 
@@ -294,6 +315,15 @@ After preflight, c4g2b calls
 canonical snapshot. All pure adapter calls complete before post-race repository I/O.
 The reconstructed input is used only for race identity, prediction cutoff in exact plan
 identity, and the executor/Simulator boundary. No prediction pipeline is built or run.
+
+No duplicate adapter-return validation is added. C4f1 is a fixed formal function, not
+an injected collaborator, and its exact contract constructs a validated
+`SimulationRaceInput` directly from the snapshot with the exact internal race ID,
+information cutoff, and target race date. Rechecking those fields in c4g2b would
+duplicate c4f1 ownership. Existing `SimulationRaceInput` construction and
+`Simulator.run` validation remain unchanged. Adapter exceptions propagate unchanged,
+and the complete tuple of adapter results is built before composition objects can read
+settlement state.
 
 C4g2b, not c4g2a, owns the exact persisted-plan binding. It constructs exactly:
 
@@ -314,6 +344,35 @@ C4g2b then constructs one unchanged `PersistedRaceSimulationExecutor` and one un
 repositories, and frozen cutoff values as applicable. It calls `Simulator.run(...)`
 exactly once with the canonically ordered race-input tuple and returns that exact
 `SimulationSummary`.
+
+Construction is exactly one object at each boundary:
+
+```python
+settlement_source = HistoricalPersistedRaceSettlementSource(
+    bet_source=bet_source,
+    race_result_repository=race_result_repository,
+    payout_repository=payout_repository,
+    settlement_cutoffs_by_race_id=cutoffs,
+)
+executor = PersistedRaceSimulationExecutor(
+    strategy_identity=strategy_identity,
+    settlement_source=settlement_source,
+)
+simulator = Simulator(
+    strategy_identity=strategy_identity,
+    race_executor=executor,
+)
+summary = simulator.run(race_inputs=race_inputs)
+```
+
+C4g2b owns one caller-mapping freeze; c4g2a independently copies that already-frozen
+mapping under its own constructor contract. These are separate defensive boundaries.
+
+For an empty exact snapshot tuple, the cutoff mapping must also be empty. Shared
+validation still occurs, all three composition objects are constructed, and
+`Simulator.run(race_inputs=())` is called exactly once. Its existing empty-summary
+builder is the sole owner of the returned empty `SimulationSummary`; c4g2b does not
+construct one manually. No plan, result, or payout source is read.
 
 ## Bet Plan and Settlement Policies
 
@@ -364,6 +423,14 @@ inside `Simulator` but are not exposed by its current API. Per-race result persi
 or audit output is not required to establish the summary composition and would require
 a distinct c4g2c/later architecture decision. C4g2a/b must not modify `Simulator` or
 execute each race twice merely to expose results.
+
+The result is explicitly an `AS_OF_SETTLEMENT_CUTOFF_SUMMARY`. If an intended race is
+still `UNSETTLED` at its supplied cutoff, that race's planned stake is excluded from
+settled investment and therefore from the ROI denominator. Such a partially settled
+summary is not a guaranteed final historical ROI. A final historical ROI requires a
+later application/acquisition layer to provide cutoffs and repository state under which
+every intended race has reached its appropriate final formal status. This wording does
+not change `Simulator` arithmetic.
 
 C4g2c is optional for the current summary computation. Separately, c4g2a/b do not own
 full run-level settlement-evidence audit persistence. If replay independent of later
@@ -623,24 +690,168 @@ C4G2C_OPTIONAL_FOR_CURRENT_SUMMARY_COMPUTATION:
 YES
 
 NEXT_IMPLEMENTATION_PHASE:
-4C-2d3b1i6d1d5f1c4g2a_CUTOFF_AWARE_HISTORICAL_PERSISTED_SETTLEMENT_SOURCE
+4C-2d3b1i6d1d5f1c4g2b_ORDERED_HISTORICAL_SETTLEMENT_SIMULATION_SUMMARY_COMPOSITION
+
+PUBLIC_C4G2B_API:
+EXECUTE_HISTORICAL_SETTLEMENT_SIMULATION_EXACT_KEYWORD_ONLY_BOUNDARY
+
+PUBLIC_C4G2B_RESULT:
+SIMULATION_SUMMARY
+
+SNAPSHOT_COLLECTION_TYPE:
+EXACT_TUPLE_OF_EXACT_HISTORICAL_INPUT_SNAPSHOT
+
+VALIDATION_ORDER:
+EXACT_FIFTEEN_STEP_STATIC_ORDER
+
+ALL_STATIC_PREFLIGHT_BEFORE_ADAPTER:
+YES
+
+ALL_STATIC_PREFLIGHT_BEFORE_POST_RACE_IO:
+YES
+
+DUPLICATE_RACE_POLICY:
+FORBIDDEN_BEFORE_ADAPTER_OR_IO
+
+CUTOFF_MAPPING_FREEZE:
+EXACTLY_ONE_C4G2B_CALLER_MAPPING_COPY
+
+CUTOFF_KEY_POLICY:
+POSITIVE_EXACT_NON_BOOL_INT
+
+CUTOFF_VALUE_POLICY:
+TIMEZONE_AWARE_DATETIME_EXACT_OBJECT_PRESERVED
+
+CUTOFF_KEY_COVERAGE:
+EXACT_CANONICAL_BATCH_RACE_ID_SET
+
+DATASET_MISMATCH_ERROR:
+EXACT_C4G0_C4G1_SIMULATION_VALIDATION_ERROR
+
+DATASET_MISMATCH_ORDER:
+FIRST_MISMATCH_IN_CANONICAL_RACE_ORDER
+
+C4F1_ADAPTER_REUSED:
+YES_UNCHANGED
+
+ADAPTER_CALL_COUNT_PER_RACE:
+EXACTLY_ONE
+
+ADAPTER_ORDER:
+EXACT_CANONICAL_RACE_ORDER
+
+ALL_ADAPTERS_BEFORE_SETTLEMENT_IO:
+YES
+
+ADAPTER_RETURN_DEFENSE:
+NO_DUPLICATE_CHECK_C4F1_FORMAL_RETURN_CONTRACT_AND_EXISTING_DOMAIN_VALIDATION
+
+EXACT_PLAN_SOURCE:
+PERSISTED_SIMULATION_BET_SOURCE
+
+PERSISTED_BET_SOURCE_CONSTRUCTION_COUNT:
+EXACTLY_ONE
+
+BET_PLAN_REPLAY_POLICY:
+EXACT_FIVE_FIELD_SIMULATION_BET_PLAN_IDENTITY_LOAD
+
+MISSING_PLAN_POLICY:
+FAIL_CLOSED_NOT_NO_BET
+
+HISTORICAL_SETTLEMENT_SOURCE:
+HISTORICAL_PERSISTED_RACE_SETTLEMENT_SOURCE
+
+HISTORICAL_SETTLEMENT_SOURCE_CONSTRUCTION_COUNT:
+EXACTLY_ONE
+
+EXECUTOR_CONSTRUCTION_COUNT:
+EXACTLY_ONE
+
+PERSISTED_RACE_EXECUTOR_REUSED:
+YES_UNCHANGED
+
+SIMULATOR_CONSTRUCTION_COUNT:
+EXACTLY_ONE
+
+SIMULATOR_REUSED:
+YES_UNCHANGED
+
+SIMULATOR_RUN_COUNT:
+EXACTLY_ONE
+
+PUBLIC_RESULT_OBJECT:
+EXACT_SIMULATOR_RUN_RESULT
+
+EMPTY_BATCH_POLICY:
+VALID_ONLY_WITH_EMPTY_CUTOFF_MAPPING_AND_RETURNS_EXISTING_EMPTY_SIMULATION_SUMMARY
+
+EMPTY_BATCH_SIMULATOR_RUN:
+EXACTLY_ONE
+
+NO_BET_PLAN_LOAD:
+YES_EXACT_PERSISTED_PLAN
+
+NO_BET_SUMMARY_RACE_INCLUDED:
+YES
+
+SUMMARY_SEMANTICS_REUSED:
+YES_UNCHANGED
+
+ROI_DENOMINATOR:
+SETTLED_INVESTMENT_ONLY
+
+MAXIMUM_DRAWDOWN_ORDER:
+SETTLED_AT_THEN_RACE_ID
+
+C4G2B_WRITES:
+NO
+
+PARTIAL_SUMMARY_RETURN:
+NO
+
+LATER_RACES_AFTER_FAILURE:
+NOT_EXECUTED
+
+AUTOMATIC_RETRY:
+NO
+
+AUTOMATIC_ROLLBACK:
+NO
+
+PREDICTION_EXECUTION:
+NO
+
+PERSISTED_SIMULATION_RUN_SERVICE_USED:
+NO
+
+REAL_END_TO_END_OFFICIAL_ACQUISITION:
+NOT_OWNED_BY_C4G2B
+
+PER_RACE_RESULT_PUBLIC_OUTPUT:
+NO
+
+C4G2C_REQUIRED_FOR_CURRENT_SUMMARY:
+NO
+
+AS_OF_SETTLEMENT_CUTOFF_SUMMARY:
+YES_NOT_GUARANTEED_FINAL_WHILE_INTENDED_RACES_REMAIN_UNSETTLED
 ```
 
 ## Implementation Scope
 
-C4g2a production implemented:
+Formally complete c4g2a prerequisite, unchanged:
 
 - `scripts/simulation/historical_persisted_race_settlement_source.py` (new)
 
-C4g2a dedicated test implemented:
+Formally complete c4g2a dedicated test, unchanged:
 
 - `tests/test_historical_persisted_race_settlement_source.py` (new)
 
-C4g2b future production:
+C4g2b production implemented:
 
 - `scripts/simulation/historical_settlement_simulation.py` (new)
 
-C4g2b future dedicated test:
+C4g2b dedicated test implemented:
 
 - `tests/test_historical_settlement_simulation.py` (new)
 
@@ -650,7 +861,7 @@ production and one new test file. Existing `simulator.py`, `persisted_executor.p
 models, protocols, SQLite repositories, schemas, migrations, and package roots remain
 unchanged.
 
-## Implemented C4g2a Test Contract
+## Formally Complete C4g2a Test Contract
 
 C4g2a tests pin:
 
@@ -681,30 +892,59 @@ C4g2a tests do not claim run-ID, strategy-config-hash, information-cutoff snapsh
 identity, repository provenance, or missing persisted-snapshot behavior from an
 arbitrary recording `SimulationBetSource`.
 
-## Future C4g2b Test Contract
+## Implemented C4g2b Test Contract
 
-C4g2b tests must pin:
+C4g2b tests pin:
 
 - exact public API/type hints and no package-root export;
-- exact tuple boundary, empty-batch behavior, canonical ordering, race-ID tie-break,
-  duplicate rejection, cutoff-key exact coverage, and defensive cutoff freeze;
-- all static validation and all c4f1 conversions before post-race I/O;
-- exact dataset and RuleBased strategy binding;
-- c4f1 exactly once per race and no prediction/c4g0/c4g1 call;
+- exact tuple boundary, list and tuple-subclass rejection, and rejection of any invalid
+  later snapshot item before adapter or I/O;
+- exact run-context and strategy-identity types;
+- cutoff Mapping/type-object boundary, one caller-mapping copy, positive exact non-`bool`
+  keys, aware values, exact datetime-object retention, and independence from later
+  caller mapping mutation;
+- structural non-type-object `load_snapshot`, `get_race_result`, and
+  `get_latest_payout_publication` boundaries;
+- non-RuleBased strategy rejection before adapter or I/O;
+- canonical scheduled-start/race-ID ordering, race-ID tie-break, tuple permutation
+  independence, and duplicate rejection before adapter or I/O;
+- missing, extra, and mixed cutoff-key mismatch before adapter or I/O;
+- all datasets checked before adapter or I/O, deterministic first canonical mismatch,
+  and exact c4g0/c4g1 `SimulationValidationError` fields;
+- c4f1 exactly once per canonical snapshot with the exact snapshot object;
+- every adapter call completes before any plan/result/payout read, a later adapter
+  failure leaves all settlement repositories unread, and adapter errors propagate;
+- no extra adapter-return validation beyond the formal c4f1/domain contracts;
+- no prediction, c4g0, or c4g1 execution;
 - exact `PersistedSimulationBetSource` construction with the exact run-context and
   exact `bet_plan_snapshot_source` objects, followed by exact reuse in the c4g2a source;
-- exact construction/reuse of the c4g2a source,
-  `PersistedRaceSimulationExecutor`, and `Simulator`;
+- exactly one c4g2a source with the exact bet source, exact repositories, and exact
+  frozen cutoff objects, with no direct result/payout query in c4g2b;
+- exactly one unchanged `PersistedRaceSimulationExecutor` with the exact strategy and
+  c4g2a source;
+- exactly one unchanged `Simulator` with the exact strategy/executor, one `run` call,
+  the exact canonical race-input tuple, and exact returned summary identity;
 - exact five-field `SimulationBetPlanIdentity` load;
-- missing persisted snapshot fails closed and is not `NO_BET`;
-- exact persisted empty plan -> `NO_BET` without official reads;
+- missing or wrong-identity persisted snapshot fails closed with no substitution and is
+  not `NO_BET`;
+- valid empty batch plus empty cutoffs still constructs the composition and calls
+  `Simulator.run(())` exactly once, performs no official or plan read, and uses no
+  manual summary construction;
+- exact persisted empty plan is loaded, becomes `NO_BET`, performs no official reads,
+  and remains included in summary race/no-bet counts;
 - win, complete-publication loss, refund/void, missing payout, partial result, official
   void, unsupported, and corruption paths;
+- result after cutoff and incomplete latest payout each integrate to `UNSETTLED` through
+  c4g2a/executor ownership, while at-cutoff facts remain eligible;
 - exact investment, payout, profit, ROI, hit counts/rates, counts by status,
-  by-bet-type values, and existing maximum-drawdown order;
-- exact exception propagation, no partial summary, and no later race after failure;
-- same frozen inputs/cutoffs/eligible repository state -> equal summary;
-- later-after-cutoff publications are irrelevant;
+  by-bet-type values, zero-investment `None` ROI, and existing settled-at/race-ID
+  maximum-drawdown order;
+- exact R3 exception propagation, no partial summary, no R4 execution, no retry,
+  rollback, compensation, or write;
+- same frozen inputs/cutoffs/eligible repository state -> equal summary across snapshot
+  permutations, cutoff-map insertion orders, process dates, and process restarts;
+- later-after-cutoff publications are irrelevant and changed at-or-before-cutoff state
+  is explicitly a changed replay input;
 - no result/payout fact reaches prediction or mutates a bet plan;
 - no writes, current clock, random, HTTP, live acquisition, latest snapshot selection,
   `PersistedSimulationRunService`, or broad fallback; and
@@ -717,13 +957,13 @@ This implementation changes exactly:
 
 - `docs/CURRENT_PHASE.md`
 - `docs/LATEST_CODEX_REPORT.md`
-- `scripts/simulation/historical_persisted_race_settlement_source.py`
-- `tests/test_historical_persisted_race_settlement_source.py`
+- `scripts/simulation/historical_settlement_simulation.py`
+- `tests/test_historical_settlement_simulation.py`
 
-Dedicated verification passed `15 tests, 23 subtests`; the related persisted settlement,
-bet-source, executor, and simulator contracts passed `205 tests, 61 subtests`; and the
-full suite passed `2940 tests, 1998 subtests`. No live HTTP or trusted capture was
-performed.
+Dedicated verification passed `24 tests, 28 subtests`; the related c4f1, persisted-plan,
+c4g2a, executor, simulator, summary, NO_BET, and validation contracts passed `284 tests,
+64 subtests`; and the full suite passed `2964 tests, 2026 subtests`. No live HTTP or
+trusted capture was performed.
 
 ```text
 IMPLEMENTATION_STATUS:
@@ -737,8 +977,8 @@ COMPLETE
 
 BLOCKERS:
 NONE_PENDING_INDEPENDENT_REVIEW
-REAL_END_TO_END_RESULT_PAYOUT_ACQUISITION_REMAINS_A_SEPARATE_REQUIRED_PHASE
+REAL_END_TO_END_OFFICIAL_RESULT_PAYOUT_ACQUISITION_REMAINS_A_SEPARATE_REQUIRED_PHASE
 ```
 
-Formal integration is not complete. C4g2b remains unstarted. Stop after pushing the
-implementation review branch for independent review.
+Formal integration is not complete. C4g2c and official result/payout acquisition remain
+unstarted. Stop after pushing the implementation review branch for independent review.
