@@ -4542,3 +4542,183 @@ Independent review found stale PREPARE branch metadata in `docs/CURRENT_PHASE.md
 Production code and the dedicated test are unchanged, and no semantic or test contract
 changed. Pytest was not rerun because this correction is docs-only. C4f1 remains
 `READY_FOR_REVIEW`; formal integration is pending independent approval.
+
+## Phase 4C-2d3b1i6d1d5f1c4g0 Preparation
+
+Status: `DRAFT_FOR_REVIEW`
+
+Phase name: Single-race historical prediction bet-plan persistence composition.
+
+Formal base: `8ee5440bd7a360c652c3b58f1a67b05c32b682c8`.
+
+Review branch:
+`review/4c-2d3b1i6d1d5f1c4g0-historical-prediction-bet-plan-execution-prepare`.
+
+The next parent slot is c4g, but its responsibilities require a formal split. C4g0 is
+the immediately implementable one-race primitive, c4g1 later owns ordered multi-race
+planning with one date-specific pipeline per race, and c4g2 later owns post-race
+settlement, simulator execution, and summary. One historical pipeline shared across
+different target race dates is forbidden.
+
+C4g0 accepts one exact `HistoricalInputSnapshot`, exact run context, exact strategy
+identity, exact budget, and a structural bet-plan snapshot repository. It first requires
+the run-context dataset to match the snapshot dataset, invokes the c4f1 adapter once,
+and constructs one historical pipeline with the exact target race date and exact
+`strategy_identity.strategy_config` object. It owns no persisted-snapshot load or latest
+selection.
+
+Prediction recommendation IDs are already exact internal race-entry IDs. The prepared
+`ExactRaceEntrySelectionResolver` binds one exact race ID and the exact allowlist from
+`race_input.pipeline_input.horse_past_races.keys()`. It validates race, positive unique
+requested IDs, and allowlist membership, then returns the requested tuple in unchanged
+order. It performs no database, horses-table, name, external-ID, or numeric-coincidence
+mapping.
+
+The existing `PersistedSimulationBetPlanService` and `SimulationBetPlanBuilder` are
+reused unchanged. One c4g0 invocation calls the adapter once, historical pipeline factory
+once, pipeline run once through the service, existing fixed-stake allocator once,
+builder once, and repository save once. The allocator is constructed only from the exact
+formal strategy allocation policy; missing or unsupported policy fails closed before
+prediction. A legitimate empty formal plan is persisted as a zero-bet snapshot and is
+the only `NO_BET` path.
+
+The public result is the exact saved `SimulationBetPlanSnapshot`. `PipelineResult` and
+prediction values are not exposed or persisted in c4g0. Existing pipeline, validation,
+allocator, and repository exceptions propagate unchanged. There is no result or payout
+read, settlement, simulator run, current clock, live/default fallback, legacy identity
+lookup, or broad exception catch.
+
+Prepared implementation scope is exactly two new production modules, two new focused
+tests, and the two phase docs. No existing production component, c4f0/c4f1 file,
+simulation validation, snapshot domain/repository, prediction engine, schema, or
+migration should change. Implementation readiness is
+`YES_AFTER_INDEPENDENT_APPROVAL`; blockers are `NONE`.
+
+No pytest, live HTTP, or real trusted capture was performed for this docs-only PREPARE.
+Stop for independent architecture review.
+
+## Phase 4C-2d3b1i6d1d5f1c4g0 PREPARE Contract Correction
+
+Status: `DRAFT_FOR_REVIEW`
+
+Formal base: `8ee5440bd7a360c652c3b58f1a67b05c32b682c8`.
+
+Review branch:
+`review/4c-2d3b1i6d1d5f1c4g0-historical-prediction-bet-plan-execution-prepare`.
+
+The accepted single-race architecture and c4g0/c4g1/c4g2 split are unchanged. This
+docs-only correction closes the remaining execution-identity and boundary wording
+gaps.
+
+C4g0 now requires the caller's exact `StrategyIdentity.strategy_name` to equal
+`RuleBasedBetStrategy.__name__` (`"RuleBasedBetStrategy"`) before adapter, pipeline,
+prediction, allocation, builder, or repository activity. It neither rewrites the name
+nor reconstructs the identity. After the sole historical pipeline factory call, c4g0
+must prove exact `PredictionPipeline` and `PipelineConfig` types, exact strategy-config
+object identity, and exact `RuleBasedBetStrategy` type before invoking the unchanged
+persisted bet-plan service. Failure is `ValueError`; there is no second factory call or
+fallback.
+
+Dataset mismatch now has an exact failure contract: before adapter or pipeline work it
+raises `SimulationValidationError` with `snapshot.internal_race_id`, input identifier
+`run_context.dataset_id`, and the frozen mismatch message. The resolver module public
+surface is exactly `ExactRaceEntrySelectionResolver` through its one-element `__all__`;
+there is no package-root export.
+
+Determinism now correctly includes the exact `SimulationRunContext`. Equal snapshot,
+run context, strategy identity, budget, and code revision yield an equal saved plan
+under the same successful repository contract/state; `run_id` is an output identity
+input, so a different run ID may produce a different plan identity.
+
+The new composition and resolver own no direct SQLite, `RaceEntrySource`, horses-table,
+database identity, name, or external-ID read. The injected snapshot repository remains
+the allowed persistence boundary only through `save_snapshot(...)`; its internal
+integrity/idempotence I/O is not selection resolution and cannot transform
+recommendation IDs.
+
+The future test matrix directly pins strategy-name rejection order, exact accepted
+strategy and post-factory identity, exact dataset mismatch error fields, exact resolver
+public surface, corrected determinism inputs and run-ID distinction, absence of direct
+selection database access, and the allowed repository persistence boundary.
+
+Implementation readiness remains `YES_AFTER_INDEPENDENT_APPROVAL`; blockers remain
+`NONE`. C4f0, c4f1, production, tests, schemas, and migrations are unchanged. Pytest
+was not run for this docs-only correction. No HTTP or real trusted capture was
+performed. Stop for independent review.
+
+## Phase 4C-2d3b1i6d1d5f1c4g0 Implementation
+
+Status: `READY_FOR_REVIEW`
+
+Formal base: `8ee5440bd7a360c652c3b58f1a67b05c32b682c8`.
+
+Review branch:
+`review/4c-2d3b1i6d1d5f1c4g0-historical-prediction-bet-plan-execution`.
+
+Implemented the exact single-race historical prediction-to-persisted-bet-plan
+composition. It accepts only one exact `HistoricalInputSnapshot`, exact
+`SimulationRunContext`, exact `StrategyIdentity`, exact `BetStakeBudget`, and a
+structural snapshot repository with `save_snapshot`. Boundary validation, exact
+`RuleBasedBetStrategy` name binding, and exact dataset matching all occur before the
+adapter, historical pipeline factory, or repository activity. Dataset mismatch raises
+the frozen `SimulationValidationError` with the snapshot internal race ID and
+`run_context.dataset_id` input identifier.
+
+`ExactRaceEntrySelectionResolver` is a frozen/slotted module-local type with the exact
+one-symbol public surface. It accepts only positive internal race-entry IDs, binds one
+race ID and allowlist, and returns requested recommendation IDs unchanged in supplied
+order. It performs no database, `RaceEntrySource`, horses-table, name, external-ID, or
+legacy identity lookup.
+
+The composition invokes c4f1 exactly once, creates one date-specific historical
+pipeline exactly once using the exact caller-owned strategy-config object, then proves
+the exact pipeline, config, strategy-config object identity, and `RuleBasedBetStrategy`
+type before reuse of the unchanged `PersistedSimulationBetPlanService`. That service
+continues to own the single pipeline run, allocation, plan building, validation, and
+single snapshot save. The fixed-stake allocator receives only the exact strategy
+allocation-policy object. A persisted empty-bets snapshot is the only planning-level
+`NO_BET` outcome; input, strategy, validation, budget, selection, pipeline, and
+repository failures propagate and never become an empty plan.
+
+The two new modules own no direct SQLite/database read, race-entry source, horses table,
+repository load, result/payout/settlement, simulator, HTTP, filesystem, clock, random,
+or broad exception handling. Snapshot-repository I/O remains allowed only through the
+existing `save_snapshot(...)` persistence contract; repository-internal idempotence and
+integrity work never participates in recommendation identity transformation. C4f0,
+c4f1, generic services, schemas, and migrations are unchanged. C4g1 and c4g2 were not
+started.
+
+Verification:
+
+- dedicated: `19 passed, 32 subtests passed`;
+- related: `182 passed, 65 subtests passed`;
+- full suite: `2905 passed, 1955 subtests passed`; and
+- static public-surface, forbidden-dependency, broad-catch, package-root, unchanged
+  generic-service, and changed-file scope checks: pass.
+
+No live HTTP or real trusted capture was performed. Stop for independent review.
+
+## Phase 4C-2d3b1i6d1d5f1c4g0 Review Test Contract Correction
+
+Independent review found no production defect. The exact production blobs remain
+unchanged for `exact_race_entry_selection_resolver.py`
+(`63c6cb42d2bb6fce3087d9fedba599a0aa0eded5`) and
+`historical_prediction_bet_plan_execution.py`
+(`e356b6c7c0b164367870d83845a761c9d19ff700`).
+
+The dedicated c4g0 execution tests now directly pin the public repository/return type
+hints, insufficient-budget failure without `NO_BET`, exact `PipelineExecutionError`
+propagation, downstream `SimulationValidationError` propagation, exact repository error
+propagation, saved/returned snapshot object identity, resolver construction from the
+exact canonical pipeline key order, process-date independence, and separate correctly
+dated pipeline construction for two target races. The valid empty-plan path remains
+explicitly pinned as planning-level `NO_BET` only.
+
+`CURRENT_PHASE` terminology now reflects implementation/review state rather than the
+stale PREPARE-era headings. The frozen c4g0 architecture is unchanged, and c4g1/c4g2
+remain unstarted. No production file, schema, migration, HTTP, or real trusted capture
+was changed or performed.
+
+Verification: dedicated `26 passed, 32 subtests passed`; related `182 passed, 65
+subtests passed`; full suite `2912 passed, 1955 subtests passed`; and static scope plus
+production-blob checks pass. Stop for independent review.
