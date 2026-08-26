@@ -4769,3 +4769,17 @@ clock, random, or direct database access.
 Implementation readiness is `YES_AFTER_INDEPENDENT_APPROVAL`; blockers are `NONE`.
 Pytest was not rerun for this docs-only PREPARE. No HTTP or real trusted capture was
 performed. Stop for independent architecture review.
+
+## Phase 4C-2d3b1i6d1d5f1c4g1 Determinism Contract Correction
+
+Independent review approved the c4g1 architecture. This docs-only correction narrows
+only the determinism statement: equal ordered results require the same exact formal
+inputs, code revision, and an equivalent successful repository start state and behavior.
+Generic repository idempotence remains not required.
+
+Process restart now means only that c4g1 retains no process-local state and has no
+clock/random/environment dependency. A restart after durable repository state changed is
+not guaranteed to succeed identically, and retry after a durable-prefix failure remains
+outside c4g1's generic guarantee. SQLite equal-snapshot retry behavior is still only an
+implementation detail. No production, test, schema, migration, HTTP, or trusted capture
+change occurred.

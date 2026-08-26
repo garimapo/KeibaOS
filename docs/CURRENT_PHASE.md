@@ -247,14 +247,35 @@ in the returned tuple and is not skipped or filtered. C4g1 does not create or in
 ## Determinism
 
 For the same exact snapshot tuple contents, `SimulationRunContext`,
-`StrategyIdentity`, frozen race-keyed budgets, code revision, and successful repository
-behavior, c4g1 produces equal canonically ordered result values independent of caller
-snapshot order, budget mapping insertion order, process date, process restart, and
-later external state. Different `run_context.run_id` remains an output identity input
-and may produce different plan identities.
+`StrategyIdentity`, frozen race-keyed budgets, code revision, and an equivalent
+successful repository start state and behavior, c4g1 produces equal canonically ordered
+`SimulationBetPlanSnapshot` values independent of caller snapshot tuple permutation,
+budget mapping insertion order, and process date. Different `run_context.run_id`
+remains an output identity input and may produce different plan identities.
 
-There is no clock, random source, database selection, latest selection, or environment
-lookup in c4g1.
+A process restart itself introduces no process-local, clock, random, or environment
+dependency. It does not guarantee successful replay when prior execution changed durable
+repository state: the generic repository contract does not require equal-snapshot
+idempotence. Later external-state independence is therefore not a global guarantee, and
+retry after a durable-prefix failure is outside c4g1's generic contract. The current
+SQLite equal-snapshot retry behavior remains an implementation detail.
+
+```text
+DETERMINISM_REPOSITORY_PRECONDITION:
+EQUIVALENT_START_STATE_AND_SUCCESSFUL_BEHAVIOR
+
+PROCESS_RESTART_SEMANTICS:
+NO_PROCESS_LOCAL_STATE_DEPENDENCY
+
+PROCESS_RESTART_WITH_CHANGED_DURABLE_REPOSITORY_STATE:
+NOT_GUARANTEED
+
+LATER_EXTERNAL_STATE_INDEPENDENCE:
+NO_GLOBAL_GUARANTEE
+
+RETRY_AFTER_DURABLE_PREFIX:
+NOT_GUARANTEED_BY_C4G1
+```
 
 ## Excluded Ownership
 
@@ -323,7 +344,11 @@ The implementation review must pin:
 - exact mid-batch error propagation, no partial return, no later race, no rollback or
   retry, and a possible already-persisted successful prefix;
 - deterministic equality across snapshot permutation, budget mapping insertion order,
-  process date, and restart, plus run-ID identity distinction;
+  and process date for equivalent fresh/recording repository start state and successful
+  behavior, plus run-ID identity distinction;
+- no process-local state retained between invocations and no clock/random dependency;
+- no generic guarantee of retry after a durable-prefix failure or after a changed durable
+  repository state; and
 - defensive budget mapping freeze against caller mutation; and
 - static exclusion of simulator, persisted run service, settlement/result/payout,
   SQLite, HTTP, current clock, random, broad catches, package-root changes, and direct
