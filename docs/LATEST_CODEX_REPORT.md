@@ -4722,3 +4722,50 @@ was changed or performed.
 Verification: dedicated `26 passed, 32 subtests passed`; related `182 passed, 65
 subtests passed`; full suite `2912 passed, 1955 subtests passed`; and static scope plus
 production-blob checks pass. Stop for independent review.
+
+## Phase 4C-2d3b1i6d1d5f1c4g1 Preparation
+
+Status: `DRAFT_FOR_REVIEW`
+
+Formal base: `45b361e5b6c979c4c85a5c37043d30605aa2d47b`.
+
+Prepare branch:
+`review/4c-2d3b1i6d1d5f1c4g1-historical-multi-race-planning-prepare`.
+
+Confirmed the phase hierarchy: formally complete c4g0 owns one exact historical
+prediction bet plan, c4g1 next owns ordered multi-race planning, and c4g2 remains the
+later settlement/simulation phase. The existing `PersistedSimulationRunService` is not
+reused because it combines planning with `Simulator` settlement execution.
+
+The prepared c4g1 API accepts an exact tuple of exact `HistoricalInputSnapshot` values,
+one exact shared `SimulationRunContext`, one exact shared RuleBased
+`StrategyIdentity`, an exact race-ID-keyed budget mapping, and one shared structural
+snapshot repository. It validates and defensively freezes every static batch fact
+before the first c4g0 call, orders snapshots by `(scheduled_start_at,
+internal_race_id)`, and delegates once per race to the unchanged
+`execute_and_persist_historical_bet_plan`. Successful output is an ordered tuple of the
+exact c4g0 return objects; no wrapper is introduced. An empty batch with empty budgets
+is valid and returns `()` after shared-boundary validation.
+
+Duplicate internal race IDs are forbidden. Budget keys must exactly equal the batch
+race IDs, and each exact caller-owned budget object is preserved. Dataset mismatches
+are preflighted for the whole batch and report the first mismatch in canonical order
+through c4g0's exact `SimulationValidationError` shape. The exact shared run context,
+strategy identity, and repository objects pass unchanged to every race.
+
+Batch-atomic persistence is explicitly not promised. C4g1 owns no transaction and no
+direct save; c4g0 and its existing service own one race save. On a mid-batch failure an
+already-durable successful prefix is possible, the exact failure propagates, no partial
+tuple is returned, later races are not executed, and no retry, rollback, or deletion is
+attempted. Generic repository idempotence is not assumed; the SQLite equal-snapshot
+retry behavior remains an implementation detail.
+
+The future implementation scope is one new batch composition module, one focused test,
+and the two phase docs. No c4g0, c4f0, c4f1, persisted run service, repository protocol,
+SQLite repository, schema, or migration change is required. C4g1 performs no snapshot
+loading/latest selection, simulation, settlement, result/payout read, HTTP, current
+clock, random, or direct database access.
+
+Implementation readiness is `YES_AFTER_INDEPENDENT_APPROVAL`; blockers are `NONE`.
+Pytest was not rerun for this docs-only PREPARE. No HTTP or real trusted capture was
+performed. Stop for independent architecture review.
