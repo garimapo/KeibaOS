@@ -4958,3 +4958,57 @@ Verification: dedicated `15 passed, 23 subtests passed`; related `205 passed, 61
 subtests passed` using the repository's focused settlement/executor/simulator filenames;
 full suite `2940 passed, 1998 subtests passed`. No live HTTP or real trusted capture was
 performed. Stop for independent review.
+
+## Phase 4C-2d3b1i6d1d5f1c4g2b Preparation
+
+Status: `DRAFT_FOR_REVIEW`
+
+Formal base: `cac248a76ea88c977a38eca80484c235653c6489`.
+
+Prepare branch:
+`review/4c-2d3b1i6d1d5f1c4g2b-historical-settlement-simulation-prepare`.
+
+Prepared one pure, read-only c4g2b composition API returning the exact
+`SimulationSummary` from unchanged `Simulator.run`. Its public boundary is an exact
+historical snapshot tuple, exact run context and RuleBased strategy identity, one
+defensively frozen aware cutoff per internal race ID, and structural persisted-plan,
+race-result, and payout read boundaries. It adds no result wrapper, package-root export,
+or public error type.
+
+The complete 15-step static preflight is frozen before any c4f1 adapter call or
+repository read. It validates exact boundary types, copies the cutoff mapping once,
+validates all cutoff values and collaborators, binds the supported strategy, establishes
+canonical `(scheduled_start_at, internal_race_id)` order, rejects duplicate races,
+requires exact cutoff-key coverage, and selects the first dataset mismatch in canonical
+order using the existing exact `SimulationValidationError` contract.
+
+After preflight, every c4f1 conversion completes once in canonical order before any
+settlement I/O. No duplicate adapter-return checks are added because c4f1 is a fixed
+formal function that directly constructs the validated `SimulationRaceInput`; adapter
+errors propagate unchanged. C4g2b then constructs exactly one
+`PersistedSimulationBetSource`, one formal c4g2a source, one unchanged persisted race
+executor, and one unchanged `Simulator`, and calls `Simulator.run` exactly once with the
+complete canonical race-input tuple.
+
+The exact persisted bet source retains the existing five-field plan identity and
+missing-plan failure. A present persisted empty plan alone produces `NO_BET` and causes
+no result/payout reads. The valid empty batch still flows through one `Simulator.run(())`
+so the existing simulator remains the sole empty-summary builder. Existing settlement,
+ROI, hit-rate, by-bet-type, and settled-at/race-ID drawdown semantics are unchanged.
+
+C4g2b writes nothing and owns no transaction. Settlement errors propagate without a
+partial summary, retry, rollback, compensation, or later-race execution. Determinism
+requires the same exact plan and eligible at-or-before-cutoff repository state;
+post-cutoff facts are irrelevant, while eligible backfill/change is a changed replay
+input. No immutable evidence identity is claimed.
+
+Future implementation scope is exactly one new
+`scripts/simulation/historical_settlement_simulation.py`, one new dedicated test, and
+these two docs. C4f1, c4g0, c4g1, c4g2a, the persisted bet source and executor,
+`Simulator`, repositories, protocols, schema, and migrations remain unchanged. Real
+official result/payout acquisition remains a separate required phase, and c4g2c is not
+required for the current summary.
+
+Implementation readiness is `YES_AFTER_INDEPENDENT_APPROVAL`; there is no blocker for
+the provider-neutral c4g2b composition. Pytest was not rerun. No live HTTP or trusted
+capture was performed. Stop for independent review.
