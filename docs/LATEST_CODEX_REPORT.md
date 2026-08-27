@@ -5462,3 +5462,62 @@ its dedicated test, and these two documents. No live HTTP, trusted recapture, da
 write, repository protocol, SQLite, schema, migration, existing production change, or
 c4h2 work occurred. Formal integration remains unstarted; stop for independent
 re-review.
+
+## Phase 4C-2d3b1i6d1d5f1c4h2 PREPARE — NAR Target-Race Result Persistence
+
+Status: `DRAFT_FOR_REVIEW`.
+
+This docs-only PREPARE inspected the formal NAR immutable capture domain/archive, URL
+canonicalizer, RaceMarkTable historical parser, historical snapshot identities,
+provider-neutral result domain/repository, SQLite result behavior, and the directly
+related NAR/result/settlement tests. C4h0 and c4h1 remain frozen and were not
+redesigned.
+
+The formal capture/archive boundary is reusable: an exact
+`NAROfficialResponseCaptureArchive.load_capture(capture_id=...)` returns one immutable
+strict-UTF-8 capture with a canonical RaceMarkTable URL, content digest, capture ID,
+and ordered requested/observed/stored timestamps. The capture service archives a
+complete live response before returning, but was inspected only and not invoked.
+Provider-neutral `PersistedRaceResult`, `PersistedRaceResultEntry`,
+`RaceResultStatus`, `RaceResultEntryStatus`, and the insert-only
+`RaceResultRepository`/SQLite implementation also suffice for a later narrow final
+write; no protocol, SQLite, schema, or migration change is proposed.
+
+The exact NAR identity path is frozen from the current formal source grammar:
+canonical RaceMarkTable `k_raceDate`, `k_babaCode`, and `k_raceNo` form
+`nar:YYYYMMDD:<babaCode>:<raceNo>`, while a race-local official horse number forms
+`...:entry:<horseNo>`. It must agree exactly with the snapshot source and external
+entry identities; names, lineage/profile IDs, row order, global horse numbers,
+prediction selections, and cross-provider numeric matches are forbidden.
+
+No reviewable immutable trusted NAR target-result capture exists in the formal
+repository or known local evidence references. Existing NAR HTML fixtures and supplied
+responses are synthetic parser inputs, not trusted target-result evidence. They do not
+prove a whole-target-result table, direct horse-number grammar, complete row coverage,
+finish-position grammar, or a positive terminal/finality predicate. Therefore
+`NAR_TARGET_RESULT_EXISTING_EVIDENCE_STATUS` is
+`NO_REVIEWABLE_TRUSTED_TARGET_RESULT_EVIDENCE`, and
+`NAR_TARGET_RESULT_IMPLEMENTATION_EVIDENCE_STATUS` is
+`INSUFFICIENT_REQUIRES_SEPARATE_TRUSTED_EVIDENCE_PHASE`.
+
+The proposed, blocked future boundary is one new module-local
+`normalize_and_persist_nar_target_race_result` function. It would load one exact
+RaceMarkTable capture once, validate capture/snapshot/visible identity and complete
+race-local crosswalk, parse all and only an evidence-frozen normal-final result table,
+construct one `PersistedRaceResult`, then save it once. It has module-local
+Validation/Unavailable/Unsupported errors; collaborator exceptions propagate
+unchanged. It does not own HTTP, capture writes, payout parsing, prediction, planning,
+settlement, cutoff choice, or summary construction.
+
+The next required work is
+`4C-2d3b1i6d1d5f1c4h2a_NAR_TRUSTED_TARGET_RESULT_EVIDENCE_ACQUISITION_AND_GRAMMAR_FREEZE`,
+not c4h2 implementation. It must acquire or reload one immutable ordinary terminal
+RaceMarkTable target-race capture through the formal capture boundary and freeze exact
+selectors, visible identity, horse-number and finish grammars, positive finality, and
+normal row/snapshot coverage. It may not infer special states or backdate a live
+response.
+
+Only `docs/CURRENT_PHASE.md` and this append-only report changed. No pytest, live HTTP,
+trusted capture, database write, production/test Python, repository, SQLite, schema,
+migration, c4h3, or formal integration occurred. Stop for independent
+architecture/evidence review.

@@ -1,388 +1,359 @@
 # Current Phase
 
-Status: `READY_FOR_REVIEW`
+Status: `DRAFT_FOR_REVIEW`
 
 ## Identity and scope
 
-- Phase: `4C-2d3b1i6d1d5f1c4h1`
-- Subphase: trusted evidence acquisition and payout grammar freeze only
-- Exact formal base: `2834fc9eca4571c0044b9491bd25149fa9473e18`
-- Approved PREPARE commit: `04ee126d039f16bd745e2b41106a2dd44b8300e9`
-- Review branch: `review/4c-2d3b1i6d1d5f1c4h1-jra-target-payout-evidence`
+- Phase: `4C-2d3b1i6d1d5f1c4h2`
+- Name: `NAR official target-race result normalization and persistence PREPARE`
+- Exact formal base: `1e7550412481441a8e18f187092bdd46dd6db6e8`
+- Formal branch: `feature/ver0.8-simulator`
+- Review branch: `review/4c-2d3b1i6d1d5f1c4h2-nar-target-result-prepare`
+- C4h0 formal commit: `2834fc9eca4571c0044b9491bd25149fa9473e18`
+- C4h1 formal commit: `1e7550412481441a8e18f187092bdd46dd6db6e8`
 
-This is evidence work only. It authorizes no production, Python test, repository,
-SQLite, schema, migration, package-export, settlement, prediction, or c4h2 change.
+This is a design and evidence PREPARE only. It changes no production Python, Python
+tests, capture archive, repository, SQLite implementation, schema, migration,
+package-root export, database, or fixture. It performs no live HTTP and creates no
+trusted capture. C4h3 and C4h4 are unstarted.
 
-## Sufficiency decision
+`C4H2_PURPOSE`:
+freeze the smallest fail-closed NAR target-race result persistence contract from
+existing formal evidence, or explicitly stop at the exact missing trusted evidence.
 
-`JRA_TARGET_PAYOUT_IMPLEMENTATION_EVIDENCE_STATUS`:
-`SUFFICIENT_FOR_NARROW_IMPLEMENTATION`
+C4h2 owns only NAR official target-race **result** normalization and persistence. NAR
+payout normalization belongs to c4h3. Official acquisition/application composition,
+settlement-cutoff choice, and final-completeness checks belong to c4h4. Prediction,
+historical snapshots, bet plans, allocation, settlement arithmetic, and
+`SimulationSummary` are outside this phase.
 
-The exact approved capture demonstrates structurally disjoint normal-final winning
-payout items for every current formal type: `単勝`, `馬連`, `ワイド`, and `3連複`.
-It also demonstrates three separate normal-winning `ワイド` combinations, with each
-selection and amount paired under one exact row.
+## Existing formal boundaries reused unchanged
 
-Refund, void, dead heat, empty/no-winner, correction, special payout, and every other
-exceptional representation are not proven. They remain unsupported and fail closed.
-Evidence sufficiency is limited to the normal-winning grammar frozen below.
+The following existing contracts are sufficient as future collaborators and are not
+redesigned by c4h2:
 
-## Exact source capture
+- `NAROfficialResponseCapture`, `NAROfficialResponseCaptureArchive`, and
+  `NAROfficialPageKind.RACE_MARK_TABLE` provide immutable, strict-UTF-8 official
+  evidence. A capture ID is content-addressed from canonical URL, observation time,
+  page kind, digest, and schema version.
+- `canonicalize_nar_official_capture_url(response_url)` validates the closed official
+  RaceMarkTable URL boundary: HTTPS `www.keiba.go.jp`, exact path
+  `/KeibaWeb/TodayRaceInfo/RaceMarkTable`, and exact `k_babaCode`, `k_raceDate`, and
+  `k_raceNo` query keys. It returns the page kind and canonical URL.
+- `NAROfficialLiveResponseCaptureService` is the sole existing live capture path. It
+  samples `requested_at`, reads one complete identity-encoded HTTPS entity, samples
+  `observed_at`, samples `stored_at`, archives the immutable capture before returning,
+  and never backdates. C4h2 must not call it.
+- `HistoricalInputSnapshot` requires each entry's
+  `HistoricalExternalEntryIdentity.external_race_identity` to equal its snapshot
+  `HistoricalSourceIdentity`; entries have unique internal `race_entry_id`, horse
+  number, and external entry identity.
+- `PersistedRaceResult`, `PersistedRaceResultEntry`, `RaceResultStatus`,
+  `RaceResultEntryStatus`, and `RaceResultRepository` are the existing
+  provider-neutral output contract. `RaceResultStatus.COMPLETE` requires aware
+  `finalized_at`; entries have unique internal IDs.
+- `SQLiteRaceResultRepository` is insert-only per internal race. An equal retry is
+  idempotent; a differing later result raises `RepositoryConflictError`. No result
+  publication versioning is introduced here.
 
-- `SOURCE_CAPTURE_ID`:
-  `jra-capture-v1:2d8fbee2df4a201923a49a48e02de3f6837293e0166a1347e30ef3f0b0aad296`
-- `SOURCE_CAPTURE_URL`:
-  `https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde0106202504030420250913%2FDC`
-- `SOURCE_CAPTURE_SHA256`:
-  `f5daa967f05ae1ee0cfcbe8d4c0e59aa8a6b3ceef126ce9d8689fe10ffa8ed0e`
-- `SOURCE_CAPTURE_LENGTH`: `94570` bytes
-- `SOURCE_CAPTURE_REQUESTED_AT`: `2026-08-26T11:38:27.557867+00:00`
-- `SOURCE_CAPTURE_OBSERVED_AT`: `2026-08-26T11:38:28.113891+00:00`
-- `SOURCE_CAPTURE_STORED_AT`: `2026-08-26T11:38:28.113897+00:00`
-- `SOURCE_CAPTURE_PAGE_KIND`: `JRAOfficialPageKind.RACE_RESULT`
-- `SOURCE_CAPTURE_CHARSET`: exact `cp932`
-- `SOURCE_CAPTURE_HTTP_STATUS`: exact integer `200`
-- `SOURCE_CAPTURE_CONTENT_TYPE`: `text/html`
+`RACE_RESULT_REPOSITORY_PROTOCOL_CHANGE_REQUIRED`: `NO_FOR_NARROW_INITIAL_WRITE`
 
-The capture was loaded once by exact ID through
-`SQLiteJRAOfficialResponseCaptureRepository.load_capture` over a read-only SQLite URI.
-The archive SHA-256 was
-`2F26F22DD1A21268690B7122B753CFD1A035A176BD544CBC52FEBD7D3B94DB73`
-before and after loading. Capture ID, URL, response digest, length, timestamps, page
-kind, charset, status, content type, and raw bytes matched the approved record. No
-replacement or fresh race capture was used.
+`SQLITE_RACE_RESULT_REPOSITORY_CHANGE_REQUIRED`: `NO_FOR_NARROW_INITIAL_WRITE`
 
-## Payout container
+`SCHEMA_CHANGE_REQUIRED`: `NO`
 
-`PAYOUT_AREA_SELECTOR`: `#race_result .refund_area`
+`MIGRATION_REQUIRED`: `NO`
 
-- Exactly one match: `div.refund_area.mt30`.
-- Direct children in evidence order: `div.block_header`,
-  `div.refund_unit.mt15`, `div.caution.narrow.mt15`.
-- Heading path: `:scope > .block_header > .content > h2`.
-- Exact normalized heading: `払戻金`.
+A later official correction that differs from an already persisted result is outside
+the insert-only c4h2 envelope and fails closed through the existing repository. It
+requires its own evidence/versioning design rather than overwrite behavior.
 
-`PAYOUT_UNIT_SELECTOR`: `#race_result .refund_area > .refund_unit`
+## NAR race and entry identity contract
 
-- Exactly one match: `div.refund_unit.mt15`.
-- Direct child groups in evidence order: `div.left`, `div.center`, `div.right`.
-- Every group has a direct `ul`; bet-type items are direct `li` children.
-
-Position and item order are evidence only, never identity.
-
-## Common normal-winning grammar
+`RACE_IDENTITY_POLICY`:
 
 ```text
-li.<type-class>
-└── dl
-    ├── dt                         exact normalized bet-type label
-    └── dd
-        └── div.line               one direct child per winning combination
-            ├── div.num            selection
-            ├── div.yen            direct amount text + direct span.unit
-            └── div.pop            popularity only; never identity
+exact archived RaceMarkTable canonical URL
+  k_raceDate + k_babaCode + k_raceNo
+-> existing formal NAR external race ID grammar
+   nar:YYYYMMDD:<canonical babaCode>:<canonical raceNo>
+-> exact snapshot.identity.source_identity
 ```
 
-The requested item is identified by both its evidenced structural class and exact
-normalized `dt` whole value. Class alone is not semantics. Every direct
-`dd > div.line` in that item is applicable and must be parsed. Unknown, extra,
-missing, duplicate, mixed, or unclassified applicable structure fails closed.
+The capture canonicalizer is the public URL authority. The current NAR historical
+input normalizer is the formal source of the external-ID construction grammar; it
+constructs exactly the string above. There is no separate public NAR external-race-ID
+builder to reuse today. A future c4h2 module may derive that exact string locally only
+after the canonical URL has been accepted, without changing the existing historical
+normalizer.
 
-- `SELECTION_SELECTOR`: requested item
-  `> dl > dd > div.line > div.num`, exactly one per line.
-- `AMOUNT_SELECTOR`: same line `> div.yen`, exactly one per line.
-- `SELECTION_AMOUNT_ASSOCIATION`: `SAME_EXACT_DIRECT_DIV_LINE_PARENT`.
-- `SELECTION_TOKEN_GRAMMAR`: existing c4h0/formal JRA canonical positive ASCII
-  decimal horse number; evidenced tokens are `3`, `6`, and `7`. Signs, leading
-  zeroes, whitespace, non-ASCII digits, empty, and nondecimal tokens are not normal.
-- `SELECTION_SEPARATOR_GRAMMAR`: exact ASCII `-`, no whitespace. `単勝` has none.
-  Formal arity is one for `単勝`, two for `馬連` and `ワイド`, three for `3連複`.
-- `AMOUNT_GRAMMAR`: direct text
-  `[1-9][0-9]{0,2}(?:,[0-9]{3})*` plus exactly one direct `span.unit` with whole
-  value `円`. Commas are removed only after full validation. Zero, sign, decimal,
-  malformed grouping, missing/different unit, duplicate text, and unpaired values fail.
-
-## Exact supported-type evidence
-
-### 単勝
-
-- `BET_TYPE_LABEL_EXACT`: `単勝`
-- `BET_TYPE_ITEM_SELECTOR`:
-  `#race_result .refund_area > .refund_unit > .left > ul > li.win`
-- Label: `:scope > dl > dt`; rows: `:scope > dl > dd > div.line`
-- `SELECTION_EXAMPLE_EXACT`: `7`
-- `SELECTION_TOKEN_GRAMMAR`: one canonical decimal token
-- `SELECTION_SEPARATOR_GRAMMAR`: none
-- `AMOUNT_EXAMPLE_EXACT`: direct `160`, direct unit `円`
-- `AMOUNT_GRAMMAR`: common positive yen grammar
-- `SELECTION_AMOUNT_ASSOCIATION`: same exact direct `div.line`
-- `WINNING_COMBINATION_COUNT_IN_EVIDENCE`: `1`
-- `ITEM_COMPLETENESS_EVIDENCE`: exactly one fully classified direct line.
-
-### 馬連
-
-- `BET_TYPE_LABEL_EXACT`: `馬連`
-- `BET_TYPE_ITEM_SELECTOR`:
-  `#race_result .refund_area > .refund_unit > .right > ul > li.umaren`
-- Label: `:scope > dl > dt`; rows: `:scope > dl > dd > div.line`
-- `SELECTION_EXAMPLE_EXACT`: `3-7`
-- `SELECTION_TOKEN_GRAMMAR`: two canonical decimal tokens
-- `SELECTION_SEPARATOR_GRAMMAR`: one exact ASCII hyphen
-- `AMOUNT_EXAMPLE_EXACT`: direct `1,030`, direct unit `円`
-- `AMOUNT_GRAMMAR`: common positive yen grammar
-- `SELECTION_AMOUNT_ASSOCIATION`: same exact direct `div.line`
-- `WINNING_COMBINATION_COUNT_IN_EVIDENCE`: `1`
-- `ITEM_COMPLETENESS_EVIDENCE`: exactly one fully classified direct line.
-
-### ワイド
-
-- `BET_TYPE_LABEL_EXACT`: `ワイド`
-- `BET_TYPE_ITEM_SELECTOR`:
-  `#race_result .refund_area > .refund_unit > .center > ul > li.wide`
-- Label: `:scope > dl > dt`; rows: `:scope > dl > dd > div.line`
-- `SELECTION_EXAMPLE_EXACT`: `3-7`, `6-7`, `3-6`
-- `SELECTION_TOKEN_GRAMMAR`: two canonical decimal tokens per line
-- `SELECTION_SEPARATOR_GRAMMAR`: one exact ASCII hyphen per line
-- `AMOUNT_EXAMPLE_EXACT`: respectively `420 円`, `300 円`, `1,370 円`
-- `AMOUNT_GRAMMAR`: common positive yen grammar
-- `SELECTION_AMOUNT_ASSOCIATION`: each pair shares its exact direct `div.line`
-- `WINNING_COMBINATION_COUNT_IN_EVIDENCE`: `3`
-- `ITEM_COMPLETENESS_EVIDENCE`: exactly three fully classified direct line
-  siblings; none may be collapsed, omitted, or inferred from adjacency.
-
-### 3連複
-
-- `BET_TYPE_LABEL_EXACT`: `3連複`
-- `BET_TYPE_ITEM_SELECTOR`:
-  `#race_result .refund_area > .refund_unit > .right > ul > li.trio`
-- Label: `:scope > dl > dt`; rows: `:scope > dl > dd > div.line`
-- `SELECTION_EXAMPLE_EXACT`: `3-6-7`
-- `SELECTION_TOKEN_GRAMMAR`: three canonical decimal tokens
-- `SELECTION_SEPARATOR_GRAMMAR`: two exact ASCII hyphens
-- `AMOUNT_EXAMPLE_EXACT`: direct `2,280`, direct unit `円`
-- `AMOUNT_GRAMMAR`: common positive yen grammar
-- `SELECTION_AMOUNT_ASSOCIATION`: same exact direct `div.line`
-- `WINNING_COMBINATION_COUNT_IN_EVIDENCE`: `1`
-- `ITEM_COMPLETENESS_EVIDENCE`: exactly one fully classified direct line.
-
-## Unsupported displayed items
-
-Evidence order:
+`SNAPSHOT_CROSSWALK_POLICY`:
 
 ```text
-left:   単勝 (li.win), 複勝 (li.place)
-center: 枠連 (li.wakuren), ワイド (li.wide)
-right:  馬連 (li.umaren), 馬単 (li.umatan),
-        3連複 (li.trio), 3連単 (li.tierce)
-```
-
-`UNSUPPORTED_DISPLAYED_ITEM_BOUNDARY_POLICY`:
-`STRUCTURALLY_DISJOINT_SIBLING_LI_ITEMS_MAY_BE_IGNORED_ONLY_AFTER_EXACT_REQUESTED_ITEM_AND_LABEL_VALIDATION`
-
-Each unsupported type has a separate sibling `li`, class, `dl > dt` label, and
-`dl > dd` rows. No line is shared with a supported type. A requested type is complete
-only after exactly one class-and-label matched item is found and all its direct lines
-are classified. Order is not identity. Duplicate requested labels/classes, cross-item
-lines, mixed labels, or unknown requested-item children fail closed.
-
-## Payout-per-100 evidence
-
-The race capture contains no `100円` text and is not used alone to infer denomination.
-
-`PAYOUT_PER_100_EVIDENCE`:
-
-- Official URL: `https://www.jra.go.jp/keiba/rules/kakutei.html`
-- Title: `レースの確定：競馬のルール`
-- Retrieval/observation: `2026-08-27T03:19:17.5934489Z`
-- Exact statement:
-  `払戻は100円の馬券を購入した場合に払戻される金額で表示されます。`
-- Frozen meaning: an official displayed payout is the amount returned for a 100-yen
-  ticket and maps to `payout_per_100` after race-page amount validation.
-
-This current official documentation observation establishes denomination semantics
-only. It supplies or changes no historical race fact, is not backdated, and does not
-alter the capture observation time.
-
-## Narrow support envelope
-
-- `NORMAL_WINNING_GRAMMAR_STATUS`:
-  `SUPPORTED_BY_EXACT_CAPTURE_FOR_ALL_FOUR_FORMAL_TYPES`
-- `MULTIPLE_WINNER_GRAMMAR_STATUS`:
-  `SUPPORTED_FOR_NORMAL_DIRECT_LINE_SIBLINGS_AS_EVIDENCED_BY_THREE_WIDE_COMBINATIONS`
-- `REFUND_GRAMMAR_STATUS`: `FAIL_CLOSED_NOT_EVIDENCED`
-- `VOID_GRAMMAR_STATUS`: `FAIL_CLOSED_NOT_EVIDENCED`
-- `DEAD_HEAT_GRAMMAR_STATUS`: `FAIL_CLOSED_NOT_EVIDENCED`
-- `EMPTY_WINNER_GRAMMAR_STATUS`: `FAIL_CLOSED_NOT_EVIDENCED`
-- `CORRECTION_GRAMMAR_STATUS`: `FAIL_CLOSED_NOT_EVIDENCED`
-- `UNKNOWN_REPRESENTATION_POLICY`:
-  `FAIL_CLOSED_ZERO_PAYOUT_PUBLICATION_WRITES`
-
-The initial parser may accept only the exact normal-winning structure. Any alternative
-must raise the frozen module-local unsupported, unavailable, or validation error before
-save. It must not reinterpret an exception as normal win, loss, empty, refund, or void.
-
-## Identity and temporal freeze
-
-The capture remains the formally approved c4h0 target race. C4h1 reuses canonical
-accessS identity and visible date, venue, meeting number, meeting day, and whole-value
-race-number agreement without redefining or modifying c4h0.
-
-```text
-exact capture JRA race identity
-+ official horse-number token
--> build_jra_external_entry_id(...)
--> exact HistoricalInputSnapshot external entry identity
+exact accepted NAR external race ID
++ exact official canonical horseNum
+-> nar:YYYYMMDD:<babaCode>:<raceNo>:entry:<horseNum>
+-> exact snapshot entry.external_entry_identity.external_entry_id
 -> exact internal race_entry_id
 ```
 
-Horse/jockey name, display or row order, global horse-number lookup, prediction
-selection, and cross-provider numeric coincidence are forbidden.
+This is race-local only. Horse name, jockey name, HorseMarkInfo lineage/profile ID,
+display order, table row index, prediction selection, global horse-number lookup,
+cross-provider numeric coincidence, and fallback to another race are forbidden.
+Missing, duplicate, wrong-race, incoherent, or ambiguous mappings are validation
+failure before any result write.
 
-Future `observed_at` is exact `capture.observed_at`. For this positively terminal
-normal capture, absent a provider finalization timestamp, `finalized_at` is also exact
-`capture.observed_at` as the conservative first time this capture proves finality.
-Neither timestamp is backdated.
+`VISIBLE_RACE_IDENTITY_POLICY`:
+the eventual parser must require the same exact capture URL identity and proven visible
+RaceMarkTable date, active course/place, and whole race-number representation. Existing
+historical parsing validates its own `h4` date/race number and active course coherence,
+but no target-result capture yet proves the complete target parser selector/grammar.
+No unproven selector is frozen as accepted.
 
-## Fixture decision
+## Existing evidence assessment
 
-- `DERIVED_FIXTURE_POLICY`: `NO_FIXTURE`
-- `RAW_CAPTURE_COMMITTED`: `NO`
-- `DERIVED_FIXTURE_COMMITTED`: `NO`
-- `AUDIT_LINK`: the original raw bytes remain in the isolated archive under the exact
-  ID, URL, digest, observed time, and length above. This document records selectors,
-  node relationships, values, and extraction results. No official bytes were copied,
-  transcoded, reserialized, reconstructed, or hand-edited into Git.
+`NAR_TARGET_RESULT_EXISTING_EVIDENCE_STATUS`:
+`NO_REVIEWABLE_TRUSTED_TARGET_RESULT_EVIDENCE`
 
-## Preserved future API
+The repository has synthetic/minimized NAR parser fixtures, including
+`tests/fixtures/nar/race_mark_table_past_race_result.html`, and tests construct
+supplied responses. They are useful parser regressions only; they do not carry an
+immutable archived capture ID, trusted observation record, response digest/length,
+or approved target-race provenance. They are not trusted target-result evidence.
+
+The documented local isolated evidence archive is JRA-only. No formally reviewable NAR
+capture ID, canonical RaceMarkTable URL, response SHA-256, response length, charset,
+requested/observed/stored timestamps, page-kind record, or archive provenance exists
+for a NAR target-race result in the formal repository or known local evidence
+references. No fresh response was acquired during this PREPARE.
+
+Consequently, the following target-result facts are **not** evidenced and must not be
+implemented from the existing synthetic fixtures:
+
+- the exact whole-result container/table selector and header set;
+- direct official horse-number selector and complete token grammar for every result
+  row;
+- target-wide result-row selector and exact row membership;
+- direct finish-position selector/grammar and whether positions are contiguous or may
+  be tied;
+- a positive terminal/finality predicate for a RaceMarkTable target result;
+- normal-race exact row-to-snapshot mutual coverage;
+- scratch/non-starter, DQ/DNF/exclusion, dead-heat, void/cancelled, provisional, and
+  other official representation grammars.
+
+The existing `nar_historical_past_race_source.py` is not a whole-target-result parser.
+It locates one historical row through a HorseMarkInfo lineage anchor, reads historical
+row fields, and explicitly rejects cancellation markers. Its RaceMarkTable table and
+`td.a` finish handling cannot prove a target-wide horse-number crosswalk, coverage, or
+terminality. No existing NAR helper may be widened or refactored for c4h2 merely for
+reuse.
+
+`NAR_TARGET_RESULT_IMPLEMENTATION_EVIDENCE_STATUS`:
+`INSUFFICIENT_REQUIRES_SEPARATE_TRUSTED_EVIDENCE_PHASE`
+
+## Proposed future public boundary — blocked pending evidence
+
+Proposed module:
+
+```text
+scripts/simulation/nar_target_race_result_persistence.py
+```
+
+Proposed module-local public surface:
 
 ```python
-def normalize_and_persist_jra_target_race_payout(
+__all__ = (
+    "NARTargetRaceResultPersistenceError",
+    "NARTargetRaceResultPersistenceValidationError",
+    "NARTargetRaceResultPersistenceUnavailableError",
+    "NARTargetRaceResultPersistenceUnsupportedError",
+    "normalize_and_persist_nar_target_race_result",
+)
+
+def normalize_and_persist_nar_target_race_result(
     *,
     capture_id: str,
-    capture_archive: JRAOfficialResponseCaptureArchive,
+    capture_archive: NAROfficialResponseCaptureArchive,
     snapshot: HistoricalInputSnapshot,
-    bet_type: str,
-    payout_repository: PayoutRepository,
-) -> PayoutPublication:
+    race_result_repository: RaceResultRepository,
+) -> PersistedRaceResult:
     ...
 ```
 
-- One requested supported type per call.
-- One exact archive load; no latest, fallback, or live race-page lookup.
-- Complete identity, crosswalk, finality, row, selection, amount, denomination,
-  completeness, and domain validation before write.
-- Exactly one `save_payout_publication` on success.
-- No incomplete publication or partial success.
-- Repository exceptions propagate unchanged.
-- No package-root export.
-- No protocol, SQLite, schema, migration, c4h0, c4g2a, or c4g2b change.
+`PROPOSED_PUBLIC_API`: the keyword-only function above, with no package-root export.
 
-## Readiness and next phase
+`PUBLIC_ERROR_SURFACE`:
+
+- `NARTargetRaceResultPersistenceValidationError`: malformed, contradictory, wrong
+  type, incoherent identity/crosswalk, duplicate row/entry, or unclassified structure.
+- `NARTargetRaceResultPersistenceUnavailableError`: exact capture is absent or the
+  evidence does not positively prove the required complete terminal normal result.
+- `NARTargetRaceResultPersistenceUnsupportedError`: a positively recognized official
+  representation outside the evidence-approved envelope.
+
+The exact hierarchy is module-local and must inherit a small common
+`NARTargetRaceResultPersistenceError(ValueError)`, following c4h0 only as an
+architectural analogue. Archive and result-repository exceptions propagate unchanged;
+there is no broad `Exception` or `BaseException` catch.
+
+## Future read, validation, and write policy
+
+`CAPTURE_ID_POLICY`: caller supplies one non-empty exact capture ID.
+
+`CAPTURE_LOAD_POLICY`: exactly one
+`capture_archive.load_capture(capture_id=capture_id)` per public call. No latest
+selection, URL search, nearby-capture fallback, retry, HTTP, capture creation, or
+capture write. The returned object must be exact `NAROfficialResponseCapture`, retain
+the requested ID, and have exact `NAROfficialPageKind.RACE_MARK_TABLE`.
+
+`RESULT_CONTAINER_POLICY`: no accepted selector is frozen until a trusted normal
+target capture proves one exact container/table/header grammar. Existing historical
+single-row selectors are not authorization for target-wide parsing.
+
+`RESULT_ROW_POLICY`: each applicable official target result row must be discovered by
+the evidence-frozen direct grammar, classified exactly once, and parsed before write.
+No row order has identity semantics. Unknown, additional, malformed, duplicate, or
+unclassified applicable rows fail closed.
+
+`HORSE_NUMBER_POLICY`: only the trusted-capture-proven exact direct row value may be
+accepted, using canonical positive ASCII decimal grammar and the race-local crosswalk
+above. The exact selector remains an evidence blocker.
+
+`FINISH_POSITION_POLICY`: only a capture-proven normal finish representation may map
+to positive `finish_position` and `RaceResultEntryStatus.CONFIRMED`. The current
+evidence proves neither normal target-wide position grammar nor tie handling.
+
+`RESULT_COMPLETENESS_POLICY`: `RaceResultStatus.COMPLETE` may be created only after
+all of the following are positively proven by the **same exact capture**:
+
+1. capture, canonical URL, snapshot source identity, and visible identity agree;
+2. the provider page is positively terminal/final under an evidence-frozen predicate;
+3. every applicable target result row has been parsed and classified;
+4. every official horse number resolves exactly through the race-local snapshot
+   crosswalk; horse numbers and mapped `race_entry_id` values are unique;
+5. every confirmed finish position obeys the evidence-frozen normal grammar; and
+6. no applicable row, identity, status, or result evidence is malformed, unknown,
+   duplicated, contradictory, or silently omitted.
+
+`SNAPSHOT_RESULT_COVERAGE_POLICY`: for the narrow normal-final envelope, require exact
+mutual coverage after the crosswalk:
+
+```text
+set(mapped official result race_entry_ids) == set(snapshot.entries race_entry_id)
+```
+
+This remains a proposed requirement, not an implemented rule, until a trusted normal
+capture proves whether RaceMarkTable normal result rows cover exactly the target
+snapshot entry universe. If the provider includes non-starter rows, that requires
+separate evidence and must not be guessed.
+
+`NORMAL_FINAL_POLICY`: `NOT_YET_PROVEN`.
+
+`SCRATCH_POLICY`: `FAIL_CLOSED_NOT_EVIDENCED`.
+
+`DQ_DNF_POLICY`: `FAIL_CLOSED_NOT_EVIDENCED`.
+
+`DEAD_HEAT_POLICY`: `FAIL_CLOSED_NOT_EVIDENCED`.
+
+`VOID_POLICY`: `FAIL_CLOSED_NOT_EVIDENCED`.
+
+`PROVISIONAL_POLICY`: `NO_WRITE_UNTIL_POSITIVELY_PROVEN_TERMINAL`.
+
+`UNKNOWN_ROW_POLICY`: `FAIL_CLOSED_ZERO_RESULT_WRITES`.
+
+`OBSERVED_AT_POLICY`: exact immutable `capture.observed_at`; never race date,
+scheduled start, insertion time, current clock, file mtime, or guessed publication
+time.
+
+`FINALIZED_AT_POLICY`: an exact provider-attested final timestamp only if the same
+trusted capture proves its meaning. Otherwise, after a capture positively proves a
+terminal result, use exact `capture.observed_at` as conservative first-proven-final
+time. Never backdate.
+
+`SOURCE_POLICY`: `PersistedRaceResult.source == exact capture.capture_id`. The existing
+result domain has no `source_url` field; capture ID remains immutable provenance.
+
+`RESULT_SAVE_POLICY`: construct exactly one `PersistedRaceResult` only after complete
+validation; then call `race_result_repository.save_race_result(result)` exactly once
+and return the constructed exact result. No partial-row write, no retry, no rollback
+or compensation owned by c4h2.
+
+`REPOSITORY_EXCEPTION_POLICY`: propagate the exact repository exception unchanged;
+never translate it into a partial result, unavailable result, retry, or empty result.
+
+`PARTIAL_SUCCESS_POLICY`: `FORBIDDEN`.
+
+## Evidence phase required before implementation
 
 `IMPLEMENTATION_BLOCKERS`:
-`NONE_FOR_THE_FROZEN_NORMAL_FINAL_WINNING_ONLY_ENVELOPE`
 
-Rare states remain out of scope, not blockers, because only the frozen normal form may
-be recognized. A matching real historical snapshot and persisted plan remain necessary
-for later real end-to-end replay but do not block this parser boundary.
+```text
+No approved immutable trusted NAR RaceMarkTable target-race capture establishes the
+whole-race normal-final table, positive terminality, row-to-horseNum grammar,
+finish-position grammar, or exact result-row/snapshot coverage.
+```
 
 `RECOMMENDED_NEXT_PHASE`:
-`4C-2d3b1i6d1d5f1c4h1_NARROW_NORMAL_WINNING_IMPLEMENTATION`
+`4C-2d3b1i6d1d5f1c4h2a_NAR_TRUSTED_TARGET_RESULT_EVIDENCE_ACQUISITION_AND_GRAMMAR_FREEZE`
 
-Proposed next allowed files:
+That evidence-only phase must first locate or acquire through the existing formal NAR
+live capture service one ordinary completed RaceMarkTable capture and archive it before
+returning. It must freeze immutable capture ID, canonical URL, digest, length, strict
+UTF-8 metadata, requested/observed/stored timestamps, page kind, visible identity,
+whole table/row/horse-number/finish grammar, finality proof, and row-to-snapshot
+coverage. It may support only states positively demonstrated; all others remain fail
+closed. It must not backdate a live response or treat a synthetic fixture as trusted
+evidence.
+
+`NEXT_PHASE_ALLOWED_FILES`:
 
 ```text
-scripts/simulation/jra_target_race_payout_persistence.py
-tests/test_jra_target_race_payout_persistence.py
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+tests/fixtures/nar/ only if an independently approved evidence policy authorizes an
+immutable provenance manifest or derived fixture; no existing fixture rewrite
+```
+
+`EXISTING_PRODUCTION_CHANGE_EXPECTED`:
+`NEW_C4H2_MODULE_ONLY_AFTER_EVIDENCE_APPROVAL`; existing NAR historical parsers,
+capture/archive modules, repository protocol, SQLite repository, schema, migrations,
+c4h0, c4h1, c4g2a, and c4g2b remain frozen.
+
+`REAL_END_TO_END_READY_AFTER_C4H2`: `NO`. Even after a result boundary, c4h3 NAR
+payout evidence/normalization and c4h4 acquisition/application composition, cutoff
+choice, and final-completeness checks remain required.
+
+## Required future test matrix
+
+The later c4h2 implementation tests must use only approved trusted evidence or a
+clearly labelled synthetic grammar fixture derived from it. They must pin:
+
+- module public surface, exact keyword-only signature/type hints, no package export,
+  and no HTTP/direct SQLite/current-clock ownership;
+- exact single capture-ID load, wrong type/ID/page-kind rejection, and unchanged
+  archive exceptions;
+- exact URL/source/visible identity agreement and no name/order/global-horse-number
+  crosswalk;
+- complete normal table parsing, exact row/horse/finish grammar, unique identities,
+  exact mutual snapshot coverage, and zero result saves for every invalid case;
+- positive terminality, exact capture timestamps/source, one result save only after
+  complete validation, and unchanged repository exception propagation;
+- no partial collection return or result write; unsupported special/unknown forms
+  fail closed before save;
+- result domain/repository round-trip plus c4g2a bounded result reading and c4g2b
+  summary consumption without changing their contracts; and
+- static proof of no prediction, bet planning, payout parsing, settlement arithmetic,
+  database ownership, HTTP, fallback lookup, broad catch, or c4h3/c4h4 work.
+
+## PREPARE scope and stop
+
+Allowed changed files for this phase:
+
+```text
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-It must not add rare states, alter existing production/repositories/schema, start
-c4h2, perform HTTP, or create a capture.
-
-## Implementation review outcome
-
-The evidence-frozen boundary is implemented in:
-
-```text
-scripts/simulation/jra_target_race_payout_persistence.py
-```
-
-Its sole public operation is:
-
-```python
-normalize_and_persist_jra_target_race_payout(
-    *,
-    capture_id: str,
-    capture_archive: JRAOfficialResponseCaptureArchive,
-    snapshot: HistoricalInputSnapshot,
-    bet_type: str,
-    payout_repository: PayoutRepository,
-) -> PayoutPublication
-```
-
-The module has exactly the frozen module-local error surface and no package-root export.
-It loads one exact archived `RACE_RESULT` capture once, validates exact JRA
-capture/snapshot and visible race identity, validates the race-local external-entry
-crosswalk, and accepts only the frozen normal-winning payout area, unit layout,
-class-and-label matched requested item, direct lines, selections, amounts, and
-selection-to-amount pairing.
-
-One call normalizes exactly one formal supported type. It constructs one complete
-`PayoutPublication` with exact capture timestamps, source, and URL only after every
-requested-item line and canonical internal selection has validated. It then calls
-`PayoutRepository.save_payout_publication` exactly once and returns that exact result.
-Missing capture or missing normal-winning evidence is unavailable; malformed or
-contradictory content is validation failure; recognized exceptional markers are
-unsupported. No incomplete publication, fallback, retry, compensation, or partial
-requested-type save exists.
-
-The dedicated test suite covers all four normal types, the three distinct Wide records,
-public surface, archive and repository behavior, exact source/timestamps, identity and
-crosswalk failures, visible header/race-number failures, container/item structure,
-selection and amount grammar, duplicate canonical selections, partial Wide failure,
-exceptional/empty cases, and static ownership. It uses synthetic HTML only and makes no
-claim that a fixture is trusted official evidence.
-
-## Correction review outcome — exact normal-winning grammar
-
-The requested item now accepts only the exact evidence-frozen direct-line counts:
-`単勝=1`, `馬連=1`, `ワイド=3`, and `3連複=1`. Any smaller or larger count is a
-validation failure before `PayoutRepository.save_payout_publication`; it is not
-interpreted as dead heat or any other unsupported provider state.
-
-The requested-type path also rejects unclassified direct content before save: its
-`li` must contain only one direct `dl`; that `dl` must contain only direct `dt` then
-`dd`; the `dd` must contain only the evidence-frozen direct `div.line` children; and
-each line must contain only direct `div.num`, `div.yen`, and `div.pop` children. Any
-additional direct element or non-whitespace direct text fails closed. Unsupported
-sibling bet-type items remain isolated and are not parsed.
-
-Verification:
-
-```text
-dedicated: 13 passed, 61 subtests passed
-related:   91 passed, 114 subtests passed
-full:      2988 passed, 2111 subtests passed
-```
-
-Only the new production module, new dedicated test, and these two documents changed.
-No live HTTP, trusted recapture, direct database access, repository protocol, SQLite,
-schema, migration, c4h0, c4g2a, c4g2b, or c4h2 change occurred. Formal integration is
-not complete; stop for independent implementation review.
-
-## Implementation scope and stop
-
-Changed files:
-
-```text
-scripts/simulation/jra_target_race_payout_persistence.py
-tests/test_jra_target_race_payout_persistence.py
-docs/CURRENT_PHASE.md
-docs/LATEST_CODEX_REPORT.md
-```
-
-No fixture was committed. No existing production or test code, race-page live HTTP, new
-capture, database write, schema/migration, or c4h2 work occurred. Stop after publishing
-this implementation branch for independent review.
+No pytest, live HTTP, trusted capture, database write, production implementation,
+Python test change, schema/migration, or c4h3 work is authorized. Stop after the
+docs-only review branch is published for independent architecture/evidence review.
