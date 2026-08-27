@@ -5324,3 +5324,40 @@ Verification: dedicated `11 passed, 24 subtests passed`; required related `141 p
 254 subtests passed`; full suite `2975 passed, 2050 subtests passed`; static scope and
 Git diff checks pass. Stop for independent re-review; formal integration remains
 unstarted.
+
+## Phase 4C-2d3b1i6d1d5f1c4h1 PREPARE — JRA Target Payout Persistence
+
+Status: `DRAFT_FOR_REVIEW`
+
+The exact formal repository was inspected at
+`2834fc9eca4571c0044b9491bd25149fa9473e18`. Formal c4h0 remains frozen. This activity
+changed documentation only and performed no pytest, live HTTP, trusted capture, or
+database write.
+
+The provider-neutral payout domain and repository are sufficient unchanged. They
+support exactly `単勝`, `馬連`, `ワイド`, and `3連複`, one bet type per immutable
+publication, canonical race-entry selections, positive winning payout per 100 yen,
+equal-write idempotence, conflicts, multiple observations, and c4g2a bounded selection.
+
+Implementation evidence is not sufficient. Approved c4h0 material proves one exact
+accessS race, one payout area headed `払戻金`, one payout unit, eight displayed items,
+twelve positive yen values, and a positive finality predicate. It provides no reviewable
+raw or provenance-bound derived fixture freezing exact item, label, selection,
+separator, multi-row, amount-association, per-100, refund, void, dead-heat, empty, or
+supported-versus-unsupported-item grammar. Those semantics cannot be reconstructed
+from the documented amount list.
+
+Therefore `JRA_TARGET_PAYOUT_IMPLEMENTATION_EVIDENCE_STATUS` is
+`INSUFFICIENT_REQUIRES_SEPARATE_TRUSTED_EVIDENCE_PHASE`. The smallest next step is an
+evidence-only stage within c4h1 using the existing capture path and isolated archive to
+freeze provenance-bound normal-winning grammar for all four supported types. Unproven
+rare states remain fail closed. No production parser is authorized.
+
+The proposed later API accepts one exact capture ID, exact snapshot, exact supported
+bet type, formal archive, and existing payout repository. It loads once, uses only the
+race-local external-entry crosswalk, validates the entire requested type before writing,
+saves one complete immutable publication, and returns the repository result. It writes
+no incomplete or partial publication. Capture observation remains the honest temporal
+evidence. Existing c4h0, capture/identity modules, repositories, SQLite, c4g2a, c4g2b,
+schemas, migrations, and package root remain unchanged. C4h2 is unstarted. Stop for
+independent architecture/evidence review.

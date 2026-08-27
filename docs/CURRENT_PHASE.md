@@ -1,254 +1,65 @@
 # Current Phase
 
-## Status
+Status: `DRAFT_FOR_REVIEW`
 
-`READY_FOR_REVIEW`
+## Identity
 
-## Phase
+- Phase: `4C-2d3b1i6d1d5f1c4h1`
+- Name: JRA official target-race payout normalization and persistence
+- Task: PREPARE only; architecture and evidence sufficiency review
+- Formal branch: `feature/ver0.8-simulator`
+- Exact formal base: `2834fc9eca4571c0044b9491bd25149fa9473e18`
+- Review branch: `review/4c-2d3b1i6d1d5f1c4h1-jra-target-payout-prepare`
+- Formal prerequisite: c4h0 is complete at the exact formal base and remains frozen.
 
-`4C-2d3b1i6d1d5f1c4h0` — JRA official target-race result normalization and
-persistence.
+## Purpose and boundary
 
-Formal base: `90203b01cf370469e15242325ee40888d99d0f58`.
-
-Evidence correction review branch:
-`review/4c-2d3b1i6d1d5f1c4h0-jra-target-result-evidence-correction`.
-
-## Hierarchy Decision
-
-The existing hierarchy ends its required historical planning and settlement core at
-`4C-2d3b1i6d1d5f1c4g2b`. `4C-2d3b1i6d1d5f1c4g2c` is reserved only for optional
-per-race `SimulationResult` or settlement-evidence audit persistence. It is not the
-official-data acquisition phase.
-
-The design does not already assign an ID to official target-race result/payout
-acquisition. The smallest consistent extension is therefore a new sibling `c4h`
-family. The family is split by provider and fact type so no implementation phase must
-simultaneously invent two provider parsers, two completeness policies, and an
-application runner:
-
-- `4C-2d3b1i6d1d5f1c4h0` — JRA official target-race result normalization and
-  persistence.
-- `4C-2d3b1i6d1d5f1c4h1` — JRA official target-race payout normalization and
-  persistence.
-- `4C-2d3b1i6d1d5f1c4h2` — NAR official target-race result normalization and
-  persistence.
-- `4C-2d3b1i6d1d5f1c4h3` — NAR official target-race payout normalization and
-  persistence.
-- `4C-2d3b1i6d1d5f1c4h4` — official settlement acquisition/application composition,
-  cutoff choice, and final-completeness checks.
-
-JRA result normalization is first because the formally complete historical replay path
-is currently JRA-first and already has exact accessS race identity, immutable response
-capture, live capture transport, archive persistence, and internal historical snapshot
-crosswalks. The missing boundary is full target-race result interpretation and
-persistence. Payout parsing remains a separate phase even if the same accessS response
-contains both fact families.
-
-## Purpose and Hard Separation
-
-The complete future direction is:
+`C4H1_PURPOSE`:
+`NORMALIZE_ONE_SUPPORTED_JRA_TARGET_RACE_PAYOUT_TYPE_FROM_ONE_EXACT_ARCHIVED_ACCESS_S_CAPTURE_AND_PERSIST_ONE_PROVIDER_NEUTRAL_PUBLICATION`
 
 ```text
-approved official response capture
-+ exact HistoricalInputSnapshot race/entry crosswalk
--> provider-specific fail-closed parser and normalizer
--> provider-neutral PersistedRaceResult / PayoutPublication
--> existing RaceResultRepository / PayoutRepository
--> caller-selected settlement cutoff
--> existing c4g2a + c4g2b
--> AS_OF_SETTLEMENT_CUTOFF SimulationSummary
+exact archived JRA accessS capture
++ exact HistoricalInputSnapshot race-local crosswalk
++ one exact supported bet type
+-> fail-closed provider-specific payout parsing and normalization
+-> one PayoutPublication / PayoutRecord tuple
+-> existing PayoutRepository
 ```
 
-The acquisition family owns no prediction, historical snapshot mutation, bet
-generation, allocation, plan mutation, settlement calculation, or summary calculation.
-It does not call c4g0, c4g1, c4g2a, or c4g2b. Official result and payout facts never flow
-back into `HistoricalInputSnapshot`, `SimulationRaceInput.pipeline_input`, prediction,
-strategy, allocation, or a persisted bet plan.
+C4h1 does not execute prediction, generate or allocate bets, mutate a snapshot or
+persisted bet plan, calculate settlement, choose a settlement cutoff, or produce a
+`SimulationSummary`. It owns no live HTTP or direct database work. No result or payout
+fact may flow into prediction inputs.
 
-## Existing Acquisition State
+## Evidence decision
 
-### JRA
+`JRA_TARGET_PAYOUT_IMPLEMENTATION_EVIDENCE_STATUS`:
+`INSUFFICIENT_REQUIRES_SEPARATE_TRUSTED_EVIDENCE_PHASE`
 
-The existing JRA boundary already provides:
+The approved formal c4h0 evidence proves one exact accessS capture and target-race
+identity, exactly one `#race_result .refund_area`, heading `払戻金`, one `.refund_unit`,
+eight displayed bet-type items, twelve positive `.yen` values, and a positive payout
+publication structure suitable for c4h0's terminal-result predicate.
 
-- exact accessS race-result URL parsing through `parse_jra_result_url_identity`;
-- race-local external entry IDs through `build_jra_external_entry_id`;
-- `JRAOfficialPageKind.RACE_RESULT`;
-- immutable strict-cp932 `JRAOfficialResponseCapture` values with canonical URL,
-  response bytes, digest, capture ID, requested/observed/stored times, and HTTP facts;
-- append-only capture archive and SQLite implementation;
-- trusted live HTTPS capture that archives before returning; and
-- exact reconstruction of a supplied response from archived evidence.
+It does not freeze the runtime grammar needed to construct payout objects. No approved
+raw or provenance-bound derived JRA payout fixture in the formal repository proves:
 
-Existing JRA historical source code parses one selected horse's past-race facts from an
-accessS result page. It is not a complete target-race result parser, does not classify
-the whole race, and does not produce or persist target-race payouts.
+- the exact item/section selector and bet-type label grammar;
+- the association between one displayed selection and one displayed amount;
+- horse-number token and separator grammar;
+- multiple-winning-row grouping and ordering;
+- displayed amount semantics as payout per 100 yen;
+- empty, refund, void, dead-heat, or correction representations; or
+- safe exclusion of unsupported displayed types while proving one requested type
+  complete.
 
-Current status:
+The twelve documented amounts cannot establish those relationships. No selector,
+status, or row grammar may be inferred from plausible HTML. Production implementation
+is not authorized by this PREPARE.
 
-```text
-JRA_TARGET_RESULT_ACQUISITION_STATUS:
-CAPTURE_AND_ARCHIVE_READY_FULL_TARGET_RESULT_NORMALIZATION_AND_PERSISTENCE_MISSING
+## Formal payout domain
 
-JRA_TARGET_PAYOUT_ACQUISITION_STATUS:
-ACCESS_S_CAPTURE_READY_TARGET_PAYOUT_PARSER_COMPLETENESS_AND_PERSISTENCE_MISSING
-```
-
-### NAR
-
-The existing NAR boundary already provides:
-
-- exact canonical RaceMarkTable URL identity from `k_raceDate`, `k_babaCode`, and
-  `k_raceNo`;
-- immutable strict-UTF-8 `NAROfficialResponseCapture` values with response digest,
-  capture ID, and exact observation times;
-- append-only capture archive and SQLite implementation; and
-- trusted live HTTPS capture that archives before returning.
-
-Existing NAR historical code parses one selected horse's past-race facts from a
-HorseMarkInfo/RaceMarkTable pair. It is not a complete target-race result parser. The
-repository contains no formal NAR target-payout section parser or completeness rule.
-
-Current status:
-
-```text
-NAR_TARGET_RESULT_ACQUISITION_STATUS:
-RACE_MARK_TABLE_CAPTURE_READY_FULL_TARGET_RESULT_NORMALIZATION_AND_PERSISTENCE_MISSING
-
-NAR_TARGET_PAYOUT_ACQUISITION_STATUS:
-RACE_MARK_TABLE_CAPTURE_FAMILY_READY_TARGET_PAYOUT_EVIDENCE_CONTRACT_AND_PERSISTENCE_MISSING
-```
-
-Legacy `JRAFetcher` is hard-coded sample data. Legacy `NARProvider` returns decoded text,
-writes ad-hoc files under `logs/`, and uses unstable `hash(url)` filenames. Neither is
-an approved settlement evidence boundary. New settlement work must use the formal
-immutable capture services and archives instead.
-
-## Provider-Neutral Persistence Contract
-
-Reuse unchanged:
-
-- `PersistedRaceResult`;
-- `PersistedRaceResultEntry`;
-- `PayoutPublication`;
-- `PayoutRecord`;
-- `RaceResultRepository`; and
-- `PayoutRepository`.
-
-No second settlement-domain model is introduced. The v008 schema and existing SQLite
-repositories already persist these values and enforce exact race-entry foreign-key
-membership. The capture ID is the normalization provenance value in `source`; payout
-publications also retain the canonical `source_url`. Raw capture bytes remain in the
-existing immutable capture archive and are saved before any normalization or domain
-write.
-
-The `RaceResultRepository` protocol is reused without adding idempotence or versioning
-promises. The current SQLite implementation is sufficient only for a final-result
-insert-once policy: an equal repeat succeeds and a differing result conflicts. It is not
-sufficient for provisional-to-final replacement or as-of correction replay. C4h0 must
-persist only an officially terminal result with its actual evidence observation time.
-A positively recognized provisional/partial page remains safely archived but produces
-no `RaceResultRepository` write, so c4g2a continues to see the result as unavailable and
-returns `UNSETTLED`. A differing later correction fails closed and requires a separately
-reviewed result-versioning phase; it must not overwrite or repair the stored result.
-
-The `PayoutRepository` protocol is reused unchanged. Its current SQLite implementation
-is sufficient for corrections because it stores multiple immutable publications ordered
-by `observed_at` and publication ID. A later correction becomes another publication and
-never mutates an earlier one.
-
-## Exact Provider-to-Internal Identity
-
-Every normalization call is bound to one exact `HistoricalInputSnapshot`. The capture's
-provider race identity must equal the snapshot's exact
-`(organization, source_system, external_race_id)` before any row is normalized or any
-domain write occurs.
-
-JRA mapping is:
-
-```text
-accessS canonical URL
--> parse_jra_result_url_identity(...).external_race_id
--> exact snapshot source external_race_id
--> snapshot.internal_race_id
-
-result/payout horse number inside that exact accessS race
--> build_jra_external_entry_id(exact race identity, horse_no)
--> exact matching snapshot.entries[].external_entry_identity.external_entry_id
--> exact snapshot.entries[].race_entry_id
-```
-
-NAR mapping is:
-
-```text
-RaceMarkTable canonical URL k_raceDate/k_babaCode/k_raceNo
--> nar:{YYYYMMDD}:{babaCode}:{raceNo}
--> exact snapshot source external_race_id
--> snapshot.internal_race_id
-
-result/payout horseNum inside that exact RaceMarkTable race
--> {exact external_race_id}:entry:{horseNum}
--> exact matching snapshot.entries[].external_entry_identity.external_entry_id
--> exact snapshot.entries[].race_entry_id
-```
-
-Horse number is therefore permitted only after the exact provider and target-race
-identity are proven and only through the snapshot's complete race-local crosswalk.
-Horse names, jockey names, global horse-number queries, cross-provider numeric
-coincidence, prediction selections, row position, and display order are forbidden.
-Missing, duplicate, wrong-race, or contradictory mappings fail closed before
-persistence.
-
-## Evidence-Backed Result Support Envelope
-
-The trusted acquisition below positively demonstrates the ordinary numeric row grammar
-of one accessS result table. The same exact response also contains actually published
-official payout amounts. JRA's official finality rule states that payout announcement
-follows race-result finalization, so the publication is a positive race-level terminal
-fact even though the accessS body does not contain a literal `確定` token.
-
-The initial c4h0 support envelope is therefore narrow and exact:
-
-```text
-COMPLETE:
-SUPPORTED_BY_APPROVED_EVIDENCE_NORMAL_FINAL_ONLY
-
-VOID:
-FAIL_CLOSED_NOT_YET_SUPPORTED
-
-SCRATCH:
-FAIL_CLOSED_NOT_YET_SUPPORTED
-
-DQ_DNF:
-FAIL_CLOSED_NOT_YET_SUPPORTED
-
-DEAD_HEAT:
-FAIL_CLOSED_NOT_YET_SUPPORTED
-
-PROVISIONAL:
-NO_WRITE_UNLESS_POSITIVELY_TERMINAL
-```
-
-The one normal capture must not be generalized into scratch/exclusion, DQ/DNF,
-dead-heat, cancelled/void, or provisional selectors. Those states require their own
-approved trusted evidence. Unknown, malformed, ambiguous, nonterminal, or unsupported
-content produces no `RaceResultRepository` write.
-
-The future write rule remains:
-
-```text
-ONLY_POSITIVELY_PROVEN_TERMINAL_RESULT_MAY_BE_PERSISTED
-```
-
-For a caller-supplied exact matching `HistoricalInputSnapshot`, the captured normal
-numeric finish positions map to `RaceResultEntryStatus.CONFIRMED` only after the complete
-race-local external-entry crosswalk succeeds. No mapping for scratch/exclusion, DQ/DNF,
-dead heat, or void is frozen by this evidence task.
-
-## Payout Semantics
-
-The currently supported settlement/persistence bet types are exactly:
+`SUPPORTED_BET_TYPES`:
 
 ```text
 単勝
@@ -257,587 +68,323 @@ The currently supported settlement/persistence bet types are exactly:
 3連複
 ```
 
-`複勝`, `枠連`, `馬単`, and `3連単` are currently outside the formal `BET_TYPES` domain.
-In particular, ordered `馬単`/`3連単` cannot be represented by the current sorted
-selection identity, and frame-based `枠連` is not a race-entry selection. C4h must not
-silently coerce or discard these types, and widening the domain belongs to a separately
-approved phase.
+These are exactly the existing formal `BET_TYPES`.
 
-For supported types, every official winning combination maps to one canonical sorted
-tuple of exact internal `race_entry_id` values and its exact integer
-`payout_per_100`. Multiple winners and dead-heat payouts remain distinct records.
-Selection-specific refunds map to exact affected canonical selections. A provider-wide
-refund/all-refund may be expanded only when the exact official rule and complete exact
-race universe deterministically identify every affected supported selection; otherwise
-the publication remains incomplete or the parser fails closed. Explicit void and
-unsupported records use the existing formal payout statuses. Zero winning payout,
-unknown text, missing selection identity, and malformed values fail closed.
+`UNSUPPORTED_BET_TYPES_POLICY`:
+`複勝`, `枠連`, `馬単`, and `3連単` remain outside the formal domain. They must not be
+coerced or partially mapped. They may be ignored only after approved evidence proves
+exact disjoint item boundaries and complete coverage for the requested supported type.
 
-A positively identified but not-yet-final supported bet-type table may be persisted as
-`is_complete=False`, with only safely parsed records and `finalized_at=None`. Missing
-evidence alone does not create a publication. Unknown structure or ambiguous omissions
-are parser failures, not losses. A publication may be `is_complete=True` only when the
-same exact captured official response proves all of the following for that bet type:
+Existing `PayoutPublication`, `PayoutRecord`, `PayoutStatus`, `PayoutRepository`,
+selection normalization, and SQLite behavior are reused unchanged. A publication is for
+one exact supported bet type. Winning selections are canonical internal
+`race_entry_id` tuples. A `WINNING` record has a strictly positive integer
+`payout_per_100`. Duplicate canonical selection identities are forbidden.
 
-- exact target race identity;
-- explicit final/complete official state;
-- exactly one recognized supported bet-type section;
-- every published winning/refund/void row parsed without omission;
-- every selection resolved through the exact race-local crosswalk;
-- no unknown status, duplicate identity, malformed amount, or unclassified row; and
-- positive evidence for an empty/no-winning-row state where the provider permits it.
+## Proposed post-evidence public surface
 
-These rules apply to both JRA and NAR. Provider-specific final markers, section
-selectors, row grammars, and empty/refund representations must be frozen from approved
-trusted response evidence before their parser implementation. An incomplete latest
-publication is intentionally preserved as incomplete so c4g2a yields `UNSETTLED`; an
-older complete publication is not substituted.
-
-## Temporal Evidence
-
-`observed_at` is exactly the immutable capture's aware observation time sampled after
-the complete HTTP response bytes were received and before parsing. It is never the race
-date, scheduled start, displayed page date, database insertion time, file mtime, or a
-caller-invented historical time.
-
-`finalized_at` is an exact provider-attested finalization/publication timestamp only
-when the same captured record formally supplies one. When the provider supplies no
-trustworthy exact final timestamp but the capture positively proves a final state, the
-conservative first-proven-final value is the exact capture `observed_at`; it is not
-backdated. Partial result or payout evidence has `finalized_at=None`.
-
-For a trusted historical archive, replay time comes from the capture's already-attested
-historical `observed_at`. A live response fetched now is observed now and can support
-only a settlement cutoff at or after that observation. It cannot establish that the
-fact was available at an earlier historical cutoff.
+Proposed module:
 
 ```text
-BACKDATED_LIVE_RESPONSE:
-FORBIDDEN
+scripts/simulation/jra_target_race_payout_persistence.py
 ```
 
-Acquisition stores facts and evidence. It does not choose c4g2a settlement cutoffs.
-Cutoff choice and the check that all intended races have reached final formal statuses
-belong to c4h4's application boundary. A summary with unresolved races remains an
-as-of-cutoff summary and must not be labelled final ROI.
+`PUBLIC_API`:
 
-## Source Capture and Correction Policy
+```python
+def normalize_and_persist_jra_target_race_payout(
+    *,
+    capture_id: str,
+    capture_archive: JRAOfficialResponseCaptureArchive,
+    snapshot: HistoricalInputSnapshot,
+    bet_type: str,
+    payout_repository: PayoutRepository,
+) -> PayoutPublication:
+    ...
+```
 
-The required order is:
+Module-local `__all__`:
+
+```python
+(
+    "JRATargetRacePayoutPersistenceError",
+    "JRATargetRacePayoutPersistenceValidationError",
+    "JRATargetRacePayoutPersistenceUnavailableError",
+    "JRATargetRacePayoutPersistenceUnsupportedError",
+    "normalize_and_persist_jra_target_race_payout",
+)
+```
+
+No package-root export.
+
+`PUBLIC_ERROR_SURFACE`:
+
+- `JRATargetRacePayoutPersistenceError(ValueError)` is the module-local base.
+- `JRATargetRacePayoutPersistenceValidationError` covers contradictory or malformed
+  capture, snapshot, crosswalk, selection, amount, or collaborator return data.
+- `JRATargetRacePayoutPersistenceUnavailableError` covers absence of the exact capture
+  or positively proven complete/final payout evidence.
+- `JRATargetRacePayoutPersistenceUnsupportedError` covers a positively recognized but
+  not evidence-approved official representation.
+- Archive and repository exceptions propagate unchanged. No broad translation, retry,
+  or fallback is permitted.
+
+Exact messages and the provider-state classification matrix must be frozen after the
+evidence phase. The hierarchy and ownership above are frozen.
+
+## Call and write policy
+
+`PAYOUT_SAVE_POLICY`:
+`ONE_REQUESTED_SUPPORTED_BET_TYPE_PER_CALL_ONE_SAVE_AFTER_COMPLETE_VALIDATION`
+
+One call parses every applicable row for one exact requested supported type from one
+exact capture, constructs one complete `PayoutPublication`, invokes
+`save_payout_publication` exactly once, and returns the exact repository result. This
+matches the existing one-bet-type publication boundary and introduces no batch
+transaction. A caller may invoke it separately for other types.
+
+`PARTIAL_SUCCESS_POLICY`:
+`NONE_WITHIN_ONE_PUBLIC_CALL`. If any applicable row fails validation, zero rows and
+zero publications are saved. Cross-call atomicity is not owned by c4h1.
+
+All capture, page, race, visible header, snapshot, crosswalk, finality, item, row,
+selection, amount, completeness, and publication validation finishes before the sole
+save.
+
+## Capture and provenance
+
+`CAPTURE_LOAD_POLICY`:
+`EXACTLY_ONE_ARCHIVE_LOAD_BY_EXACT_CAPTURE_ID`
+
+`CAPTURE_ID_POLICY`:
+The caller supplies one nonempty exact capture ID. The archive must structurally provide
+callable `load_capture`, called only as
+`load_capture(capture_id=exact_capture_id)` exactly once. No latest, fallback, URL
+lookup, capture creation, or live acquisition is permitted.
+
+The loaded value must be an exact `JRAOfficialResponseCapture`, with the requested
+`capture_id` and `JRAOfficialPageKind.RACE_RESULT`.
+
+`SOURCE_POLICY`:
+The publication `source` is the exact capture ID.
+
+`SOURCE_URL_POLICY`:
+The publication `source_url` is the capture's exact canonical source URL. No caller URL
+or reconstructed alternative is accepted. Response bytes use the already-formal strict
+JRA charset contract with no lossy replacement or guessed charset.
+
+## Race identity and crosswalk
+
+`RACE_IDENTITY_POLICY`:
+The formal result-URL identity parser must resolve the exact canonical accessS URL and
+agree with the exact JRA external race identity in the exact
+`HistoricalInputSnapshot`. Date-only or numeric-coincidence identity is forbidden.
+
+`VISIBLE_RACE_IDENTITY_POLICY`:
+Visible date, venue, meeting number, meeting day, and whole-value race number must agree
+with the accessS identity and snapshot under the frozen formal c4h0 concepts. C4h1 does
+not mutate c4h0 or widen accepted representations.
+
+`SNAPSHOT_CROSSWALK_POLICY`:
 
 ```text
-HTTP response bytes
--> validate and immutably archive exact capture
--> parse/normalize the archived capture
--> save provider-neutral domain values
+exact accessS race identity
++ exact official horse number
+-> build_jra_external_entry_id(...)
+-> exact snapshot external_entry_identity.external_entry_id
+-> exact snapshot race_entry_id
 ```
 
-No HTTP-to-domain direct write is allowed. Parser or repository failure leaves the raw
-capture archived. The domain value's `source` binds the exact capture ID so the raw
-response can be audited. No raw response is reconstructed from normalized rows.
+The mapping must be coherent, race-local, and unique in both directions. Missing,
+duplicate, wrong-race, or contradictory mappings fail closed. Horse or jockey name,
+display position, row order, global horse-number lookup, prediction selection, and
+cross-provider numeric coincidence are never identity sources.
 
-JRA and NAR use their existing capture layers unchanged. Current live capture records
-actual observation time. A supplied trusted historical capture must already satisfy the
-same archive and timing contract; filename, source URL alone, copied HTML, and claimed
-race date are insufficient attestation.
+## Provider grammar policy pending evidence
 
-## No Silent Fallback
+`PAYOUT_SECTION_POLICY`:
+Exactly one payout area with approved normalized heading and one payout unit must exist.
+That proves only the container/finality boundary today; child item and row grammar still
+requires approved evidence.
+
+`BET_TYPE_SECTION_POLICY`:
+The requested supported label must identify exactly one whole item under evidence-frozen
+grammar. Missing, duplicate, ambiguous, nested, mixed, or substring-only labels fail
+closed. Current evidence cannot safely name selectors or ignore unsupported items.
+
+`SELECTION_GRAMMAR_POLICY`:
+Every selection token, separator, row boundary, and multi-row grouping must be grounded
+in approved evidence for that bet type. Official horse numbers resolve only through the
+exact race-local crosswalk. Existing domain code owns arity and canonicalization. No
+name, order, or inferred grouping fallback. Exact JRA grammar is blocked.
+
+`PAYOUT_AMOUNT_POLICY`:
+Only an evidence-frozen whole-value yen grammar may yield a base-10 integer. A winning
+amount must be positive. Missing, zero, negative, fractional, duplicate, malformed,
+overflowing, ambiguously grouped, or unpaired values fail closed. Selectors and format
+remain blocked.
+
+`PAYOUT_PER_100_POLICY`:
+A displayed amount may populate `payout_per_100` only when approved evidence proves it
+is explicitly a payout for a 100-yen stake. Documented `.yen` values alone do not prove
+that interpretation.
+
+`MULTIPLE_WINNER_POLICY`:
+Every applicable official winning combination becomes one record. Evidence must prove
+selection/amount grouping. Multiple combinations are not collapsed, and duplicate
+canonical selections fail. No multiple-winner grammar is approved yet.
+
+`REFUND_POLICY`: `FAIL_CLOSED_NOT_YET_EVIDENCE_FROZEN`
+
+`VOID_POLICY`: `FAIL_CLOSED_NOT_YET_EVIDENCE_FROZEN`
+
+`DEAD_HEAT_POLICY`: `FAIL_CLOSED_NOT_YET_EVIDENCE_FROZEN`
+
+`EMPTY_WINNER_POLICY`: `FAIL_CLOSED_NOT_YET_EVIDENCE_FROZEN`
+
+No status is inferred from zero, absence, empty layout, or adjacent text. Absence never
+means complete loss, empty payout, or a complete publication.
+
+`UNKNOWN_ROW_POLICY`:
+Any unclassified applicable item or row causes zero saves. Unknown content is never
+skipped to obtain completeness.
+
+## Finality, time, and completeness
+
+`FINALITY_POLICY`:
+The same exact capture must positively prove a terminal official payout publication and
+the complete requested-type grammar. Past race date, HTTP success, payout heading, or
+positive yen text alone cannot prove that requested type complete. The c4h0 finality
+predicate is necessary context but insufficient for payout normalization.
+
+`OBSERVED_AT_POLICY`:
+Exact aware `capture.observed_at`; never race date, scheduled start, displayed date, or
+an inferred publication time.
+
+`FINALIZED_AT_POLICY`:
+When the same approved capture provides no provider-attested finalization timestamp, a
+positively proven complete/final requested-type publication uses exact
+`capture.observed_at` as the conservative first time this capture proves finality. This
+does not claim provider finalization at that instant. A provider timestamp is usable
+only under a separately approved parsing rule.
+
+`PUBLICATION_COMPLETENESS_POLICY`:
+`is_complete=True` requires the same exact capture to prove:
+
+1. exact capture ID, page kind, canonical URL, and target-race identity;
+2. exact visible race identity and coherent snapshot crosswalk;
+3. positive terminal/final official payout evidence;
+4. exactly one unambiguous requested supported-type item;
+5. every applicable row classified and parsed under approved grammar;
+6. every selection resolved through the race-local crosswalk;
+7. every amount paired and validated under approved per-100 semantics;
+8. no malformed, unknown, duplicate, contradictory, or unclassified applicable row;
+9. no duplicate canonical selection; and
+10. a `finalized_at` permitted by the frozen temporal rule.
+
+Missing evidence never means loss, empty payout, complete payout, or `NO_BET`.
+
+`INCOMPLETE_PUBLICATION_POLICY`:
+`NO_INCOMPLETE_WRITE_IN_INITIAL_C4H1`. The domain can represent an incomplete
+publication, but approved evidence does not define a safely recognizable partial JRA
+payout state. Ambiguous, absent, nonterminal, or partially parsed evidence causes no
+save. C4h1 must not invent `is_complete=False` semantics.
+
+## Repository and correction policy
+
+`PAYOUT_REPOSITORY_PROTOCOL_CHANGE_REQUIRED`: `NO`
+
+`SQLITE_PAYOUT_REPOSITORY_CHANGE_REQUIRED`: `NO`
+
+`SCHEMA_CHANGE_REQUIRED`: `NO`
+
+`MIGRATION_REQUIRED`: `NO`
+
+The immutable publication model is sufficient. Equal retries and conflicts remain
+existing repository behavior. A later capture observation or source may create a new
+immutable publication under that contract. C4h1 never overwrites an older publication
+or invents correction/version semantics.
+
+`REPOSITORY_EXCEPTION_POLICY`:
+Save exceptions propagate unchanged. No retry, rollback, compensation, conflict
+reinterpretation, or conversion to incomplete data.
+
+## Existing-core freeze and future implementation
+
+C4h0 result persistence remains unchanged. C4h1 may reproduce only narrowly necessary
+private validation concepts in its own module after evidence approval. No broad shared
+parser extraction is justified now.
+
+`EXISTING_PRODUCTION_CHANGE_EXPECTED`:
+After evidence approval, exactly one new production module is expected. Existing JRA
+capture/identity/result modules, snapshot domain, payout domain and repositories,
+SQLite, c4g2a, c4g2b, schema, migrations, and package root remain unchanged.
+
+Provisional implementation files, not yet authorized:
 
 ```text
-NO_RESULT_FOUND:
-NOT_COMPLETE
-
-NO_PAYOUT_FOUND:
-NOT_COMPLETE
-
-PARSER_UNKNOWN_STATE:
-FAIL_CLOSED
-
-MISSING_ID_CROSSWALK:
-FAIL_CLOSED
-
-PARTIAL_PUBLICATION:
-NOT_COMPLETE
-
-UNSUPPORTED:
-ONLY_EXPLICIT_FORMAL_CLASSIFICATION
+scripts/simulation/jra_target_race_payout_persistence.py
+tests/test_jra_target_race_payout_persistence.py
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
 ```
 
-Missing or incomplete acquisition is never converted into a loss, complete result,
-void result, empty payout, or `NO_BET`.
+Future tests must pin the exact public API; exact capture load once; no fallback or live
+lookup; full pre-save identity/finality/grammar validation; exact race-local crosswalk;
+all evidence-approved label/selection/amount/per-100/multiple-row cases; failure of all
+unknown, missing, malformed, duplicate, or ambiguous content before save; one exact
+complete save and return; repository exception propagation; immutable correction
+behavior; c4g2a bounded selection/c4g2b integration; and static absence of prediction,
+settlement arithmetic, HTTP, direct database, clock, random, name identity, broad
+exception catches, and writes outside `PayoutRepository`.
 
-## Trusted Evidence Acquisition Findings
+## End-to-end status and next phase
 
-The approved lexical accessS candidate was acquired on 2026-08-26 through the existing
-`build_jra_official_live_response_capture_service` composition and an isolated migrated
-SQLite `JRAOfficialResponseCaptureArchive`. The production service canonicalized the
-URL, sampled actual UTC request/observation/storage times, received all raw bytes, built
-the immutable capture, archived it, and only then returned it. Exact archive reload
-equalled the returned capture.
+`REAL_END_TO_END_READY_AFTER_C4H1`:
+`NO_NOT_BY_C4H1_ALONE`. A real replay also needs the exact historical snapshot and plan,
+approved result/payout evidence with honest observation times, and application-owned
+settlement cutoffs. C4h1 does not choose cutoffs or certify final ROI.
+
+`IMPLEMENTATION_BLOCKERS`:
+No approved provenance-bound evidence freezes exact JRA item/row/selection/amount,
+per-100, and completeness grammar for the four supported bet types. Multiple winners,
+empty/refund/void/dead-heat representations also remain unproven.
+
+`RECOMMENDED_NEXT_PHASE`:
+`4C-2d3b1i6d1d5f1c4h1_TRUSTED_EVIDENCE_ACQUISITION_AND_PAYOUT_GRAMMAR_FREEZE_ONLY`
+
+This is evidence work within c4h1, not c4h2. It must use the existing formal live
+capture path and isolated archive, preserve raw bytes and honest times, and freeze only
+positively demonstrated representations. At minimum it must provide reviewable
+provenance-bound normal-winning structure for all four supported types: item labels,
+selection/amount association, multiple rows where present, and explicit per-100
+meaning. Unevidenced rare states remain fail closed.
+
+`NEXT_PHASE_ALLOWED_FILES`:
 
 ```text
-SCENARIO:
-NORMAL_FINAL_CANDIDATE
-
-CAPTURE_ID:
-jra-capture-v1:2d8fbee2df4a201923a49a48e02de3f6837293e0166a1347e30ef3f0b0aad296
-
-CANONICAL_URL:
-https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde0106202504030420250913%2FDC
-
-EXTERNAL_RACE_ID:
-jra:race:2025:06:04:03:04
-
-REQUESTED_AT:
-2026-08-26T11:38:27.557867+00:00
-
-OBSERVED_AT:
-2026-08-26T11:38:28.113891+00:00
-
-STORED_AT:
-2026-08-26T11:38:28.113897+00:00
-
-RESPONSE_SHA256:
-f5daa967f05ae1ee0cfcbe8d4c0e59aa8a6b3ceef126ce9d8689fe10ffa8ed0e
-
-RESPONSE_BYTES:
-94570
-
-CHARSET:
-cp932
-
-HTTP_STATUS:
-200
-
-CONTENT_TYPE:
-text/html
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+new immutable evidence fixture and matching metadata manifest files only under tests/fixtures/jra/
 ```
 
-The original capture was reloaded by exact capture ID from the isolated archive without
-recapture. Its capture ID, canonical URL, external race identity, observation time,
-SHA-256, and 94,570-byte length all match the approved evidence record exactly.
+No Python, database, repository, schema, or migration change is allowed in the evidence
+stage. A fixture is optional and requires an explicit raw-versus-derived decision and an
+audit link to the isolated original capture.
 
-The canonical URL and `parse_jra_result_url_identity` agree on the exact race identity.
-The visible header independently identifies 2025-09-13, fourth Nakayama meeting, third
-day, race 4, and the Seishu Jump Stakes. Exactly one `#race_result` table has the formal
-result headings. It contains 13 rows with horse numbers 1 through 13 exactly once and
-numeric finish positions 1 through 13 exactly once. For every row,
-`build_jra_external_entry_id` deterministically yields
-`jra:race:2025:06:04:03:04:entry:{horse_no}` without names or row-position identity.
+## This PREPARE scope and stop condition
 
-Independent correction review supplied an official provider-semantic route to
-terminality. The JRA rule page
-`https://www.jra.go.jp/keiba/rules/kakutei.html`, observed at
-`2026-08-26T13:20:07.9999114+00:00`, states semantically that payout amounts are
-announced after race-result finalization and confirmed finishing order. This is contract
-evidence only and creates no runtime dependency on the documentation page.
-
-The same exact archived accessS response contains exactly one
-`#race_result .refund_area`, whose `#race_result .refund_area .block_header` heading is
-`払戻金`. Its single `.refund_unit` contains eight bet-type `li` elements and twelve
-populated `.yen` values, including `160 円`, `110 円`, `250 円`, `170 円`, `1,160 円`,
-`420 円`, `300 円`, `1,370 円`, `1,030 円`, `1,380 円`, `2,280 円`, and `7,260 円`.
-These are actual published official payout amounts rather than a navigation link,
-empty template, placeholder, or estimate. Together with the official JRA rule, that
-same-race publication proves normal-final terminality:
+Allowed files:
 
 ```text
-JRA_FINALITY_PUBLICATION_RULE:
-PAYOUT_AMOUNTS_ARE_ANNOUNCED_AFTER_RACE_RESULT_FINALIZATION
-
-NORMAL_FINAL_POSITIVE_TERMINALITY:
-PROVEN_BY_PROVIDER_POST_FINAL_PAYOUT_PUBLICATION
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
 ```
 
-C4h0 may use this formally identified payout publication only as a positive race-level
-finality fact. It must not normalize payout rows or persist `PayoutPublication`; that
-remains c4h1. The terminality predicate does not depend on which payout types c4h1
-supports. Absence of this positive predicate remains no result write, and no trusted
-provisional capture was fabricated.
-
-Neither formal repository material nor the clean formal database contains a real exact
-matching `HistoricalInputSnapshot` for this race. That prevents a real end-to-end claim,
-but it does not block implementing the generic c4h0 boundary: production receives the
-exact snapshot from its caller and must validate the complete race-local crosswalk
-before saving. A future test may construct an exact snapshot domain value solely to pin
-that validation and must not describe it as historically observed evidence.
-
-Special-state evidence is frozen as follows:
-
-```text
-NORMAL_FINAL:
-EVIDENCE_STATUS=PROVEN_BY_EXACT_RESULT_TABLE_AND_PROVIDER_POST_FINAL_PAYOUT_PUBLICATION
-SUPPORTED_IN_INITIAL_C4H0=YES_NORMAL_FINAL_ONLY
-
-DEAD_HEAT:
-EVIDENCE_STATUS=NOT_PROVEN
-SUPPORTED_IN_INITIAL_C4H0=NO_FAIL_CLOSED
-
-SCRATCH_OR_EXCLUSION:
-EVIDENCE_STATUS=NOT_PROVEN
-SUPPORTED_IN_INITIAL_C4H0=NO_FAIL_CLOSED
-
-DQ_OR_DNF:
-EVIDENCE_STATUS=NOT_PROVEN
-SUPPORTED_IN_INITIAL_C4H0=NO_FAIL_CLOSED
-
-CANCELLED_OR_VOID:
-EVIDENCE_STATUS=NOT_PROVEN
-SUPPORTED_IN_INITIAL_C4H0=NO_FAIL_CLOSED
-```
-
-No full official response was committed. Existing repository fixtures are small derived
-NAR parser fixtures and provide no convention for committing a 94,570-byte official JRA
-page. Because this capture does not yet satisfy the minimum c4h0 parser contract,
-creating a derived fixture would also prematurely freeze an unsupported grammar. The
-unaltered original remains in the dedicated isolated archive at
-`C:\Users\garim\Desktop\KeibaAI-c4h0-evidence-archive\jra-target-result-evidence.sqlite3`,
-bound by its capture ID and response SHA-256. There is no derived fixture and therefore
-no capture-to-fixture audit link to claim.
-
-The existing past-race parser remains useful only for these already-formal contracts:
-strict cp932 decoding, accessS URL identity, visible date/venue/meeting/day/race checks,
-unique `#race_result` table discovery by normalized headings, and strict accessU horse
-anchor validation. C4h0 may reuse those narrow contracts later, but this evidence phase
-does not change or copy the parser and does not infer whole-race terminal semantics from
-its selected-horse behavior.
-
-## Recommended Implementation Scope and Blocker
-
-Candidate c4h0 implementation scope after the blocker is resolved:
-
-- new `scripts/simulation/jra_target_race_result_persistence.py`;
-- new `tests/test_jra_target_race_result_persistence.py`;
-- one approved trusted JRA accessS target-result fixture/capture if review authorizes it;
-- `docs/CURRENT_PHASE.md`; and
-- `docs/LATEST_CODEX_REPORT.md`.
-
-C4h0 consumes an exact `capture_id`, structural `JRAOfficialResponseCaptureArchive`,
-exact `HistoricalInputSnapshot`, and structural `RaceResultRepository`. It exact-loads
-the already archived `JRAOfficialResponseCapture` before parsing, validates complete
-identity and terminal result semantics before the first domain write, constructs one
-exact `PersistedRaceResult` with `source=capture.capture_id`, saves it exactly once, and
-returns the exact normalized value. A missing capture or nonterminal result performs no
-result write. It owns no HTTP, payout parsing, cutoff choice, settlement, or prediction.
-
-The generic c4h0 implementation contract is ready for independent approval with an
-initial `NORMAL_FINAL_ONLY` scope. Exact accessS identity, whole numeric table grammar,
-positive provider-semantic terminality, capture provenance, and runtime snapshot-
-crosswalk validation are frozen. Rare states remain explicitly outside the support
-envelope and fail closed.
-
-The real end-to-end data path remains blocked because no causally valid real matching
-historical snapshot is available for this baseline race. That is a data-readiness
-blocker, not a reason to weaken or postpone the generic validation boundary:
-
-```text
-APPROVED_TRUSTED_JRA_TARGET_RESULT_EVIDENCE_CONTRACT:
-NORMAL_FINAL_COMPLETE_PROVEN
-
-POSITIVE_TERMINAL_FINALITY_CONDITION:
-PROVEN_BY_PROVIDER_POST_FINAL_PAYOUT_PUBLICATION
-
-C4H0_REAL_MATCHING_SNAPSHOT_REQUIRED_AT_RUNTIME:
-YES
-
-C4H0_REAL_MATCHING_SNAPSHOT_REQUIRED_TO_IMPLEMENT_GENERIC_BOUNDARY:
-NO
-
-REAL_END_TO_END_MATCHING_HISTORICAL_SNAPSHOT_AVAILABLE:
-NO
-```
-
-The runtime boundary must require exact JRA organization/source system, exact external
-race identity, unique result horse numbers, exact
-`build_jra_external_entry_id(race_identity, horse_no)` resolution to exactly one
-snapshot entry, and exact mutual coverage with no missing or extra entries. Horse name,
-jockey, row order, global horse number, and cross-provider fallback remain forbidden.
-
-## Future Test Contract
-
-### Identity
-
-- accessS identity must exactly equal the snapshot's JRA external race identity;
-- every horse number must resolve through the exact race-scoped external entry ID;
-- duplicate, missing, wrong-race, or contradictory entry mappings fail before save;
-- horse name, jockey name, row order, cross-race horse number, cross-provider number,
-  and prediction selections are never identity sources.
-
-### Temporal and Capture
-
-- only exact archived captures are accepted;
-- capture ID/digest/URL/observed-at identity is retained through `source`;
-- aware observed time is preserved exactly;
-- a current live response is never backdated;
-- a trusted historical capture retains its attested observation time;
-- finalization uses exact provider time or conservative exact observed time;
-- parser/persistence failure cannot delete or rewrite the capture.
-
-### Result
-
-- exact archived baseline accessS evidence, exact 13-row normal result, provider-post-
-  final payout-publication predicate, and full exact supplied snapshot-entry coverage;
-- deterministic result horse-number to exact internal `race_entry_id` mapping;
-- exact `observed_at`, `source == capture.capture_id`, and exactly one save;
-- absence of the positive terminal contract performs no insert-only result-repository
-  write;
-- ordinary numeric rows use exact horse-number crosswalk identity and deterministic
-  finish positions;
-- wrong snapshot race, missing snapshot entry, extra result horse number, duplicate
-  horse number/external entry ID, unresolved external entry ID, and malformed numeric
-  finish all fail before save;
-- explicit void/cancelled, scratch/exclusion, DQ/DNF/non-finish, dead heat, and
-  provisional representations remain fail-closed until each has approved evidence;
-- missing finish and contradictory status fail closed;
-- malformed/ambiguous page fails closed;
-- unknown official state is never inferred as complete, void, or loss.
-
-### Payout Family
-
-- all four supported bet types;
-- four unsupported provider bet types are rejected/not silently coerced;
-- exact selection identity and payout-per-100;
-- multiple winners/dead heat;
-- selection refund and all-refund rules;
-- complete and known incomplete publications;
-- malformed/missing/unknown rows fail closed;
-- correction creates a later immutable publication;
-- incomplete latest does not fall back to older complete.
-
-### Persistence
-
-- exact domain round trip;
-- equal result write succeeds and differing result conflicts;
-- payout publication ordering by observation time and ID;
-- capture saved before domain persistence;
-- no direct database access outside existing repositories;
-- no repair, overwrite, or transaction widening.
-
-### End to End
-
-- approved trusted official capture;
-- provider-specific parse and exact crosswalk normalization;
-- existing repository persistence;
-- c4g2a bounded read at/after exact observation;
-- c4g2b summary without mocked settlement facts;
-- before-observation cutoff remains unsettled;
-- final-ROI label only after application completeness check.
-
-### Static Scope
-
-- no prediction dependency, c4g0/c4g1/c4g2a/c4g2b change, bet generation, allocation,
-  latest-plan fallback, name identity, backdated response, current-time substitution,
-  broad silent fallback, schema change, or migration;
-- no legacy `JRAFetcher`, legacy `NARProvider`, ad-hoc logs, or unstable `hash(url)`
-  evidence;
-- no c4g2c audit persistence.
-
-## Evidence Freeze Summary
-
-```text
-LIVE_OFFICIAL_HTTP_PERFORMED:
-YES_ORIGINAL_APPROVED_ACCESS_S_CAPTURE_PLUS_OFFICIAL_FINALITY_RULE_OBSERVATION
-
-CAPTURE_SERVICE_USED:
-JRAOfficialLiveResponseCaptureService_VIA_FORMAL_PRODUCTION_BUILDER
-
-ARCHIVE_BEFORE_RETURN_CONFIRMED:
-YES_BY_FORMAL_SERVICE_ORDER_AND_EXACT_ARCHIVE_ROUND_TRIP
-
-BACKDATED_LIVE_RESPONSE:
-FORBIDDEN_NOT_PERFORMED
-
-POSITIVE_FINALITY_EVIDENCE:
-PROVEN_BY_PROVIDER_POST_FINAL_PAYOUT_PUBLICATION
-
-JRA_FINALITY_RULE_URL:
-https://www.jra.go.jp/keiba/rules/kakutei.html
-
-JRA_FINALITY_RULE_OBSERVED_AT:
-2026-08-26T13:20:07.9999114+00:00
-
-JRA_FINALITY_RULE_SEMANTIC:
-PAYOUT_AMOUNTS_ARE_ANNOUNCED_AFTER_RACE_RESULT_FINALIZATION
-
-JRA_FINALITY_RULE_SUPPORTS_PAYOUT_AS_POST_FINAL_FACT:
-YES
-
-CAPTURE_HAS_OFFICIAL_PAYOUT_SECTION:
-YES_EXACTLY_ONE_REFUND_AREA_WITH_HEADING_PAYBACK_AMOUNTS
-
-CAPTURE_HAS_PUBLISHED_PAYOUT_AMOUNTS:
-YES_EIGHT_BET_TYPE_ITEMS_TWELVE_POPULATED_YEN_VALUES
-
-PAYOUT_SECTION_TERMINALITY_SELECTOR:
-#race_result .refund_area WITH .block_header=払戻金 AND .refund_unit li .yen
-
-WHOLE_RESULT_TABLE_EVIDENCE:
-PROVEN_ONE_FORMALLY_HEADED_TABLE_13_UNIQUE_HORSE_NUMBERS_13_NUMERIC_POSITIONS
-
-SNAPSHOT_ENTRY_COVERAGE_PROVEN:
-GENERIC_EXACT_RUNTIME_VALIDATION_CONTRACT_PROVEN_REAL_BASELINE_SNAPSHOT_UNAVAILABLE
-
-ROW_TO_INTERNAL_ENTRY_MAPPING:
-REQUIRED_RUNTIME_RESOLUTION_THROUGH_EXACT_CALLER_SNAPSHOT_NO_FALLBACK
-
-C4H0_REAL_MATCHING_SNAPSHOT_REQUIRED_AT_RUNTIME:
-YES
-
-C4H0_REAL_MATCHING_SNAPSHOT_REQUIRED_TO_IMPLEMENT_GENERIC_BOUNDARY:
-NO
-
-REAL_END_TO_END_MATCHING_HISTORICAL_SNAPSHOT_AVAILABLE:
-NO
-
-RESULT_OBSERVED_AT_POLICY:
-EXACT_CAPTURE_OBSERVED_AT_NO_BACKDATING
-
-RESULT_FINALIZED_AT_POLICY:
-CAPTURE_OBSERVED_AT_AS_CONSERVATIVE_FIRST_PROVEN_FINAL_TIME_NO_PROVIDER_FINALIZATION_TIMESTAMP_FOUND
-
-RAW_CAPTURE_COMMITTED:
-NO
-
-DERIVED_FIXTURE_COMMITTED:
-NO
-
-AUDIT_LINK_BETWEEN_CAPTURE_AND_FIXTURE:
-NOT_APPLICABLE_ORIGINAL_CAPTURE_RETAINED_IN_ISOLATED_ARCHIVE_BY_CAPTURE_ID_AND_SHA256
-
-PAST_RACE_PARSER_REUSABLE_CONTRACT:
-STRICT_CP932_ACCESS_S_IDENTITY_VISIBLE_HEADER_UNIQUE_RESULT_TABLE_HEADINGS_ACCESS_U_ANCHORS
-
-PAST_RACE_PARSER_CHANGE_REQUIRED:
-NO
-
-RACE_RESULT_REPOSITORY_CHANGE_REQUIRED:
-NO
-
-SCHEMA_CHANGE_REQUIRED:
-NO
-
-MIGRATION_REQUIRED:
-NO
-```
-
-## Frozen Scope
-
-This evidence review changes only:
-
-- `docs/CURRENT_PHASE.md`
-- `docs/LATEST_CODEX_REPORT.md`
-
-No production, Python test, tracked fixture, schema, migration, or production database
-change is made. The original authorized live accessS request remains archived outside
-the repository; correction review reloaded those exact bytes without recapture and
-observed the official JRA finality documentation only as contract evidence. C4f1, c4g0,
-c4g1, c4g2a, c4g2b, the persisted bet source and executor, `Simulator`, repositories,
-capture archive implementations, and provider-neutral models remain unchanged.
-
-```text
-EXACT_NEXT_PHASE_ID:
-4C-2d3b1i6d1d5f1c4h0
-
-EXACT_NEXT_PHASE_NAME:
-JRA_OFFICIAL_TARGET_RACE_RESULT_NORMALIZATION_AND_PERSISTENCE
-
-NEXT_IMPLEMENTATION_PHASE:
-4C-2d3b1i6d1d5f1c4h0_NORMAL_FINAL_ONLY_AFTER_CORRECTION_APPROVAL
-
-C4H0_IMPLEMENTATION_READY:
-YES
-
-C4H0_IMPLEMENTATION_SCOPE:
-NORMAL_FINAL_ONLY
-
-REAL_END_TO_END_READY:
-NO
-
-BLOCKERS:
-C4H0_IMPLEMENTATION_NONE;
-REAL_END_TO_END_CAUSALLY_VALID_MATCHING_HISTORICAL_SNAPSHOT_NOT_AVAILABLE
-```
-
-Stop for independent evidence review. Do not implement c4h0, c4h1, NAR acquisition,
-c4g2c, or an application runner.
-
-## Implementation Record
-
-Status: `READY_FOR_REVIEW`
-
-The c4h0 normal-final-only boundary is implemented in
-`scripts/simulation/jra_target_race_result_persistence.py`. Its sole public operation
-loads one exact immutable archived JRA accessS result capture, validates all evidence
-and crosswalk requirements, then saves exactly one provider-neutral
-`PersistedRaceResult`.
-
-```text
-IMPLEMENTED_SUPPORT:
-NORMAL_FINAL_COMPLETE_ONLY
-
-POSITIVE_FINALITY:
-PROVIDER_POST_FINAL_PAYOUT_PUBLICATION_PRESENCE_ONLY
-
-PAYOUT_NORMALIZATION:
-NO
-
-SPECIAL_RESULT_STATES:
-FAIL_CLOSED
-
-OBSERVED_AT:
-EXACT_CAPTURE_OBSERVED_AT
-
-FINALIZED_AT:
-EXACT_CAPTURE_OBSERVED_AT_AS_CONSERVATIVE_FIRST_PROVEN_FINAL
-
-ENTRY_IDENTITY:
-EXACT_RACE_SCOPED_EXTERNAL_ENTRY_ID_TO_SNAPSHOT_RACE_ENTRY_ID
-
-REAL_END_TO_END_READY:
-NO_MATCHING_REAL_HISTORICAL_SNAPSHOT_YET
-```
-
-The boundary performs one exact archive load, never performs HTTP or capture writes,
-requires the capture URL and visible JRA header to agree with the caller's exact JRA
-snapshot, requires one formally headed normal result table and the positive finality
-predicate, and verifies complete mutual coverage through
-`build_jra_external_entry_id`. It maps numeric normal finishes only to
-`RaceResultStatus.COMPLETE` and `RaceResultEntryStatus.CONFIRMED`; unsupported or
-ambiguous special forms perform no result save. It does not parse or persist payout
-data, choose a settlement cutoff, run prediction, mutate a plan, or calculate a
-summary.
-
-Only this module, its dedicated test, and these phase documents changed. Existing
-capture, identity, historical parser, repositories, SQLite implementation, schemas,
-migrations, and c4g2a/c4g2b remain unchanged. C4h1 is unstarted. Verification: the
-dedicated suite passed `10 passed, 15 subtests passed`; the required related suite
-passed `141 passed, 254 subtests passed`; the full suite passed `2974 passed, 2041
-subtests passed`. No live HTTP or trusted capture was performed during implementation.
-Stop for independent review.
-
-## Visible Race-Number Validation Correction
-
-Status: `READY_FOR_REVIEW`
-
-Independent review found that substring matching could accept an expected race token
-inside malformed visible text. The corrected boundary requires the complete normalized
-visible value to match exactly `1R` through `12R`; it no longer uses search semantics.
-
-```text
-VISIBLE_RACE_NUMBER_POLICY:
-EXACT_WHOLE_VALUE_1R_TO_12R
-
-SUBSTRING_RACE_NUMBER_ACCEPTANCE:
-FORBIDDEN
-```
-
-Malformed, prefixed, suffixed, concatenated, zero-padded, empty, and out-of-range
-values fail before `RaceResultRepository.save_race_result`. All other c4h0 contracts
-remain unchanged: one exact capture-ID load, normal-final-only support, exact snapshot
-crosswalk, positive payout-publication finality predicate, no HTTP or capture write,
-capture observation timestamps, and one save only after complete validation. C4h1 is
-unstarted.
-
-Verification after correction: dedicated `11 passed, 24 subtests passed`; required
-related `141 passed, 254 subtests passed`; full suite `2975 passed, 2050 subtests
-passed`. Static scope and Git diff checks pass. Stop for independent re-review.
+Every other path is forbidden. Required verification is exact formal remote head,
+exactly these two changed docs, `git diff --check`, one review commit ahead and zero
+behind the formal base, clean final status, and unchanged formal remote. No pytest,
+live HTTP, trusted capture, or database write is authorized.
+
+Stop after pushing the PREPARE review branch for independent architecture/evidence
+review. Do not implement c4h1 and do not start c4h2.
