@@ -154,6 +154,7 @@ def _html(
     refund_heading: str = "払戻金",
     refund_amount: str = "160 円",
     table_count: int = 1,
+    race_alt: str = "4R",
 ) -> bytes:
     values = places if places is not None else tuple(str(item) for item in range(1, len(horse_numbers) + 1))
     gaps = margins if margins is not None else tuple("" for _ in horse_numbers)
@@ -172,7 +173,7 @@ def _html(
     return (
         "<html><body><div id='race_result'><div class='race_header'>"
         "<div class='cell date'>2025年9月13日（土曜） 4回中山3日</div>"
-        "<div class='race_number'><img alt='4R'></div></div>"
+        f"<div class='race_number'><img alt='{race_alt}'></div></div>"
         f"{tables}{payout}</div></body></html>"
     ).encode("cp932")
 
@@ -325,6 +326,20 @@ class JRATargetRaceResultPersistenceTest(unittest.TestCase):
                     )
                 self.assertEqual(repository.saved, [])
 
+    def test_visible_race_number_requires_exact_complete_approved_value(self) -> None:
+        for value in ("14R", "X4R", "4Rfoo", "foo4R", "4R5R", "4R 5R", "04R", "R", ""):
+            with self.subTest(value=value):
+                capture = _capture(body=_html(race_alt=value))
+                repository = _RaceResultRepository()
+                with self.assertRaises(JRATargetRaceResultPersistenceValidationError):
+                    normalize_and_persist_jra_target_race_result(
+                        capture_id=capture.capture_id,
+                        capture_archive=_Archive(capture),
+                        snapshot=_snapshot(),
+                        race_result_repository=repository,
+                    )
+                self.assertEqual(repository.saved, [])
+
     def test_structural_and_positive_finality_failures_do_not_persist(self) -> None:
         bodies = (
             _html(refund=False),
@@ -387,6 +402,8 @@ class JRATargetRaceResultPersistenceTest(unittest.TestCase):
         self.assertNotIn("PayoutRecord", source)
         self.assertNotIn("PayoutRepository", source)
         self.assertNotIn("datetime.now", source)
+        self.assertNotIn("_RACE_NUMBER.search", source)
+        self.assertIn("_RACE_NUMBER.fullmatch", source)
         self.assertNotIn("except Exception", source)
         self.assertNotIn("except BaseException", source)
 

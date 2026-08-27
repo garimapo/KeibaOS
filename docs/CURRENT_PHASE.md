@@ -814,3 +814,30 @@ dedicated suite passed `10 passed, 15 subtests passed`; the required related sui
 passed `141 passed, 254 subtests passed`; the full suite passed `2974 passed, 2041
 subtests passed`. No live HTTP or trusted capture was performed during implementation.
 Stop for independent review.
+
+## Visible Race-Number Validation Correction
+
+Status: `READY_FOR_REVIEW`
+
+Independent review found that substring matching could accept an expected race token
+inside malformed visible text. The corrected boundary requires the complete normalized
+visible value to match exactly `1R` through `12R`; it no longer uses search semantics.
+
+```text
+VISIBLE_RACE_NUMBER_POLICY:
+EXACT_WHOLE_VALUE_1R_TO_12R
+
+SUBSTRING_RACE_NUMBER_ACCEPTANCE:
+FORBIDDEN
+```
+
+Malformed, prefixed, suffixed, concatenated, zero-padded, empty, and out-of-range
+values fail before `RaceResultRepository.save_race_result`. All other c4h0 contracts
+remain unchanged: one exact capture-ID load, normal-final-only support, exact snapshot
+crosswalk, positive payout-publication finality predicate, no HTTP or capture write,
+capture observation timestamps, and one save only after complete validation. C4h1 is
+unstarted.
+
+Verification after correction: dedicated `11 passed, 24 subtests passed`; required
+related `141 passed, 254 subtests passed`; full suite `2975 passed, 2050 subtests
+passed`. Static scope and Git diff checks pass. Stop for independent re-review.

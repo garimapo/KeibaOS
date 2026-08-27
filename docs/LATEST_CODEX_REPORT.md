@@ -5299,3 +5299,28 @@ Verification: dedicated `10 passed, 15 subtests passed`; required related
 `141 passed, 254 subtests passed`; full suite `2974 passed, 2041 subtests passed`.
 No live HTTP or trusted capture was performed during implementation. Stop for
 independent review.
+
+## Phase 4C-2d3b1i6d1d5f1c4h0 Visible Race-Number Correction
+
+Status: `READY_FOR_REVIEW`
+
+Independent review found the visible JRA race-number parser used substring matching.
+The production boundary now uses exact whole-value matching against the already-frozen
+`1R` through `12R` grammar. No alternative JRA representation was added.
+
+The dedicated suite directly rejects `14R`, `X4R`, `4Rfoo`, `foo4R`, `4R5R`,
+`4R 5R`, `04R`, `R`, and the empty value. Every failure occurs before any result save.
+The static contract also pins the absence of `_RACE_NUMBER.search` and the presence of
+`_RACE_NUMBER.fullmatch`.
+
+All other c4h0 behavior is unchanged: exact capture-ID loading once, no latest or
+fallback capture lookup, no HTTP or capture write, normal-final-only support, exact
+race-local snapshot crosswalk, no name identity, positive payout-publication finality,
+capture-observation timestamps, one result save only after complete validation, and
+unchanged repository exception propagation. Existing production dependencies,
+repositories, SQLite, schema, and migrations were not changed. C4h1 was not started.
+
+Verification: dedicated `11 passed, 24 subtests passed`; required related `141 passed,
+254 subtests passed`; full suite `2975 passed, 2050 subtests passed`; static scope and
+Git diff checks pass. Stop for independent re-review; formal integration remains
+unstarted.

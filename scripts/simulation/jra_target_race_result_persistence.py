@@ -176,7 +176,7 @@ def _validate_visible_header(
         raise _validation("official JRA visible race identity disagrees")
     race_node = _one(header.select(".race_number img[alt]"), "official JRA race number")
     race_text = race_node.get("alt")
-    race_match = _RACE_NUMBER.search(_display(race_text, "official JRA race number"))
+    race_match = _RACE_NUMBER.fullmatch(_display(race_text, "official JRA race number"))
     if race_match is None or int(race_match.group("race")) != int(race_identity.race_number):
         raise _validation("official JRA race number disagrees")
 
