@@ -5439,3 +5439,26 @@ dedicated test, and the two phase documents changed. No HTTP, trusted recapture,
 database write, repository protocol, SQLite, schema, migration, existing production
 change, or c4h2 work occurred. Stop for independent implementation review; formal
 integration remains unstarted.
+
+## Phase 4C-2d3b1i6d1d5f1c4h1 Correction — Exact Normal-Winning Grammar
+
+Status remains `READY_FOR_REVIEW`. Independent review found that the first review
+accepted an arbitrary non-empty number of requested payout lines and could ignore
+unclassified direct content. The requested normal form is now bounded exactly by the
+approved evidence: `単勝=1`, `馬連=1`, `ワイド=3`, and `3連複=1` direct
+`div.line` children. Any count mismatch is a validation failure before save; it does
+not infer dead heat or another unsupported state.
+
+The requested `li`, `dl`, `dd`, and each `div.line` now reject extra direct elements
+and non-whitespace direct text. This check is limited to the requested supported type;
+unrelated unsupported payout items remain structurally isolated and unparsed. New
+dedicated regressions pin zero saves for every count mismatch and for each required
+unclassified-content shape, while the four evidence-frozen normal forms remain valid.
+
+Verification passed: dedicated `13 passed, 61 subtests passed`; related
+`91 passed, 114 subtests passed`; full suite `2988 passed, 2111 subtests passed`.
+Static ownership and Git diff checks pass. The correction changes only the c4h1 module,
+its dedicated test, and these two documents. No live HTTP, trusted recapture, database
+write, repository protocol, SQLite, schema, migration, existing production change, or
+c4h2 work occurred. Formal integration remains unstarted; stop for independent
+re-review.

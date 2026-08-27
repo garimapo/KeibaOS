@@ -517,7 +517,7 @@ class JRATargetRacePayoutPersistenceTest(unittest.TestCase):
         for body, expected in (
             (corrupted_wide, JRATargetRacePayoutPersistenceValidationError),
             (exceptional, JRATargetRacePayoutPersistenceUnsupportedError),
-            (empty, JRATargetRacePayoutPersistenceUnavailableError),
+            (empty, JRATargetRacePayoutPersistenceValidationError),
         ):
             with self.subTest(expected=expected):
                 capture = _capture(body=body)
@@ -528,6 +528,86 @@ class JRATargetRacePayoutPersistenceTest(unittest.TestCase):
                         capture_archive=_Archive(capture),
                         snapshot=_snapshot(),
                         bet_type="ワイド" if body is corrupted_wide else "単勝",
+                        payout_repository=repository,
+                )
+                self.assertEqual(repository.saved, [])
+
+    def test_evidence_frozen_line_counts_and_direct_content_fail_closed_before_save(self) -> None:
+        valid_win = _item("win", "単勝", (("7", "160"),))
+        direct_content_cases = (
+            (
+                "requested item extra direct element",
+                "単勝",
+                _html(item_markup={"win": valid_win.replace("</dl></li>", "</dl><div class='extra'></div></li>")}),
+                _snapshot(),
+            ),
+            (
+                "requested item direct text",
+                "単勝",
+                _html(item_markup={"win": valid_win.replace("</dl></li>", "</dl>unexpected</li>")}),
+                _snapshot(),
+            ),
+            (
+                "requested rows direct text",
+                "単勝",
+                _html(item_markup={"win": valid_win.replace("<dd>", "<dd>unexpected")}),
+                _snapshot(),
+            ),
+            (
+                "requested line direct text",
+                "単勝",
+                _html(item_markup={"win": valid_win.replace("<div class='yen'>", "unexpected<div class='yen'>")}),
+                _snapshot(),
+            ),
+            (
+                "requested line extra direct element",
+                "単勝",
+                _html(item_markup={"win": valid_win.replace("<div class='pop'>", "<div class='extra'></div><div class='pop'>")}),
+                _snapshot(),
+            ),
+        )
+        line_count_cases = (
+            (
+                "single win two lines",
+                "単勝",
+                _html(item_values={"win": (("7", "160"), ("3", "250"))}),
+                _snapshot(),
+            ),
+            (
+                "umaren two lines",
+                "馬連",
+                _html(item_values={"umaren": (("3-7", "1,030"), ("6-7", "1,200"))}),
+                _snapshot(),
+            ),
+            (
+                "wide two lines",
+                "ワイド",
+                _html(item_values={"wide": (("3-7", "420"), ("6-7", "300"))}),
+                _snapshot(),
+            ),
+            (
+                "wide four lines",
+                "ワイド",
+                _html(item_values={"wide": (("3-7", "420"), ("6-7", "300"), ("3-6", "1,370"), ("7-8", "800"))}),
+                _snapshot(horse_numbers=(3, 6, 7, 8)),
+            ),
+            (
+                "trio two lines",
+                "3連複",
+                _html(item_values={"trio": (("3-6-7", "2,280"), ("3-6-8", "2,500"))}),
+                _snapshot(horse_numbers=(3, 6, 7, 8)),
+            ),
+        )
+        for name, bet_type, body, snapshot in (*line_count_cases, *direct_content_cases):
+            with self.subTest(name=name):
+                capture = _capture(body=body)
+                repository = _PayoutRepository()
+                with self.assertRaises(JRATargetRacePayoutPersistenceValidationError):
+                    normalize_and_persist_jra_target_race_payout(
+                        capture_id=capture.capture_id,
+                        capture_archive=_Archive(capture),
+                        snapshot=snapshot,
+                        bet_type=bet_type,
                         payout_repository=repository,
                     )
                 self.assertEqual(repository.saved, [])

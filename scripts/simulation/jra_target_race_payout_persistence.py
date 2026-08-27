@@ -87,6 +87,7 @@ _REQUESTED_ITEMS = {
     "3連複": ("right", "trio"),
 }
 _ARITIES = {"単勝": 1, "馬連": 2, "ワイド": 2, "3連複": 3}
+_NORMAL_LINE_COUNTS = {"単勝": 1, "馬連": 1, "ワイド": 3, "3連複": 1}
 
 
 def _validation(message: str) -> JRATargetRacePayoutPersistenceValidationError:
@@ -110,6 +111,15 @@ def _one(values: object, name: str) -> _Tag:
 
 def _direct_tags(node: _Tag) -> tuple[_Tag, ...]:
     return tuple(value for value in node.children if isinstance(value, _Tag))
+
+
+def _require_no_direct_text(node: _Tag, name: str) -> None:
+    if any(
+        _normalize("NFC", str(value)).strip()
+        for value in node.children
+        if not isinstance(value, _Tag)
+    ):
+        raise _validation(f"{name} has unclassified direct text")
 
 
 def _one_direct(node: _Tag, *, tag_name: str, class_name: str, name: str) -> _Tag:
@@ -294,14 +304,23 @@ def _requested_item(unit: _Tag, bet_type: str) -> _Tag:
     return item
 
 
-def _requested_lines(item: _Tag) -> tuple[_Tag, ...]:
-    definition = _one_direct(item, tag_name="dl", class_name="", name="official JRA requested payout definition")
+def _requested_lines(item: _Tag, bet_type: str) -> tuple[_Tag, ...]:
+    _require_no_direct_text(item, "official JRA requested payout item")
+    item_children = _direct_tags(item)
+    if len(item_children) != 1 or item_children[0].name != "dl" or tuple(item_children[0].get("class", ())) != ():
+        raise _validation("official JRA requested payout item structure is invalid")
+    definition = item_children[0]
+    _require_no_direct_text(definition, "official JRA requested payout definition")
     children = _direct_tags(definition)
     if len(children) != 2 or tuple(child.name for child in children) != ("dt", "dd"):
         raise _validation("official JRA requested payout definition is invalid")
-    lines = _direct_tags(children[1])
-    if not lines:
-        raise _unavailable("official JRA normal winning payout is unavailable")
+    if _display(children[0].get_text(" ", strip=True), "official JRA requested payout label") != bet_type:
+        raise _validation("official JRA requested payout label disagrees")
+    payout_rows = children[1]
+    _require_no_direct_text(payout_rows, "official JRA requested payout rows")
+    lines = _direct_tags(payout_rows)
+    if len(lines) != _NORMAL_LINE_COUNTS[bet_type]:
+        raise _validation("official JRA normal winning payout line count is invalid")
     if any(line.name != "div" or tuple(line.get("class", ())) != ("line",) for line in lines):
         raise _validation("official JRA payout line structure is invalid")
     return lines
@@ -312,6 +331,7 @@ def _exceptional(value: str) -> bool:
 
 
 def _selection_numbers(line: _Tag, bet_type: str) -> tuple[int, ...]:
+    _require_no_direct_text(line, "official JRA payout line")
     children = _direct_tags(line)
     if (
         len(children) != 3
@@ -405,7 +425,7 @@ def normalize_and_persist_jra_target_race_payout(
 
     records: list[PayoutRecord] = []
     selections: set[tuple[int, ...]] = set()
-    for line in _requested_lines(item):
+    for line in _requested_lines(item, bet_type):
         horse_numbers = _selection_numbers(line, bet_type)
         race_entry_ids: list[int] = []
         for horse_no in horse_numbers:

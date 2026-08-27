@@ -345,12 +345,26 @@ selection and amount grammar, duplicate canonical selections, partial Wide failu
 exceptional/empty cases, and static ownership. It uses synthetic HTML only and makes no
 claim that a fixture is trusted official evidence.
 
+## Correction review outcome — exact normal-winning grammar
+
+The requested item now accepts only the exact evidence-frozen direct-line counts:
+`単勝=1`, `馬連=1`, `ワイド=3`, and `3連複=1`. Any smaller or larger count is a
+validation failure before `PayoutRepository.save_payout_publication`; it is not
+interpreted as dead heat or any other unsupported provider state.
+
+The requested-type path also rejects unclassified direct content before save: its
+`li` must contain only one direct `dl`; that `dl` must contain only direct `dt` then
+`dd`; the `dd` must contain only the evidence-frozen direct `div.line` children; and
+each line must contain only direct `div.num`, `div.yen`, and `div.pop` children. Any
+additional direct element or non-whitespace direct text fails closed. Unsupported
+sibling bet-type items remain isolated and are not parsed.
+
 Verification:
 
 ```text
-dedicated: 12 passed, 51 subtests passed
+dedicated: 13 passed, 61 subtests passed
 related:   91 passed, 114 subtests passed
-full:      2987 passed, 2101 subtests passed
+full:      2988 passed, 2111 subtests passed
 ```
 
 Only the new production module, new dedicated test, and these two documents changed.
