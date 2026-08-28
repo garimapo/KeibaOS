@@ -5572,3 +5572,58 @@ passed`; related `153 passed, 245 subtests passed`; full suite `3001 passed, 217
 subtests passed`. Static ownership and Git diff checks pass. No live HTTP, trusted
 capture, repository protocol, SQLite, schema, migration, existing-production, or c4h3
 change occurred. Formal integration remains unstarted; stop for independent re-review.
+
+## Phase 4C-2d3b1i6d1d5f1c4h3 PREPARE — NAR Target-Race Payout Persistence
+
+Status: `DRAFT_FOR_REVIEW`.
+
+The formal repository and the existing c4h2a isolated archive were inspected without
+production/test changes or live HTTP. The exact trusted NAR capture
+`nar-capture-v1:d6692261a54c1038a5ffd804ae79edda9ca543cb5d78f37c41ffaeefe281013b`
+was reloaded once by exact ID through the formal archive over a read-only connection.
+Its canonical URL, 96,614 raw UTF-8 bytes, SHA-256
+`3b909b6c9509713150199c3bb3821051181671e10c906f5c315aa4a4c4dbf2db`,
+observation time `2026-08-27T15:41:31.026438+00:00`, page kind, and capture identity
+match the approved evidence exactly. The archive was not modified and no capture was
+created.
+
+The capture contains one exact `section.newRefundTable` headed `払戻金`, with one
+direct `div.twoRefundTable` and two direct tables. Their exact row groups prove normal
+winning grammar for every formal type: `単勝` label `単勝`, selection `8`, amount
+`720円`; `馬連` label `馬連複`, selection `8-10`, amount `730円`; `ワイド` label
+`ワイド`, three independent rows `8-10 -> 300円`, `8-11 -> 410円`, and
+`10-11 -> 350円`; and `3連複` label `三連複`, selection `8-10-11`, amount
+`1,230円`. Group title `rowspan` values provide exact boundaries. Unsupported displayed
+types are separate sibling groups. Normal selections use positive ASCII horse numbers
+and ASCII hyphens; amounts use positive canonical comma-grouped integers with exact
+`円` suffix.
+
+Accordingly, `NAR_TARGET_PAYOUT_EXISTING_EVIDENCE_STATUS` is
+`EXISTING_TRUSTED_CAPTURE_SUFFICIENT_CANDIDATE`: the race capture proves the required
+normal DOM grammar and race-local selection structure. The proposed later boundary is
+one module-local `normalize_and_persist_nar_target_race_payout` call per requested
+supported type, one exact capture load, full validation, one complete immutable
+`PayoutPublication`, and one repository save returning the repository's exact value.
+The existing payout domain/protocol/SQLite implementation is sufficient unchanged.
+
+Implementation remains blocked on denomination. The response says that special
+no-winner payouts are `70円` or `80円` per `100円`, but it does not say ordinary winning
+amounts are displayed per 100-yen ticket. No approved official NAR documentation in
+the formal repository supplies that semantic, and JRA/common-knowledge/domain naming
+cannot substitute for provider evidence. Thus `PAYOUT_PER_100_EVIDENCE_STATUS` is
+`INSUFFICIENT_REQUIRES_OFFICIAL_DOCUMENTATION_EVIDENCE`, and
+`NAR_TARGET_PAYOUT_IMPLEMENTATION_EVIDENCE_STATUS` is
+`INSUFFICIENT_REQUIRES_SEPARATE_TRUSTED_EVIDENCE_PHASE`.
+
+The smallest next phase is c4h3a documentation evidence: obtain or locate one official
+NAR rules/help statement establishing ordinary winning payout denomination, with exact
+URL, observation time, statement, and response provenance. It must not recapture the
+race, backdate evidence, or use third-party/JRA material. Refund, void, dead heat,
+no-winner/special payout, correction, and unknown representations remain fail closed.
+
+Only `docs/CURRENT_PHASE.md` and this append-only report changed. No pytest was run
+because production and tests are unchanged. No live HTTP, new capture, archive write,
+database write, repository/SQLite/schema/migration change, package export, or c4h4 work
+occurred. `core.autocrlf=true` remains unchanged; exact future formal materialization
+must account for raw Git-object bytes. Stop for independent architecture/evidence
+review.
