@@ -5661,3 +5661,17 @@ pass. Only the new c4h4a module, its dedicated tests, and the two phase document
 changed. No HTTP, trusted capture, capture creation, database write, repository
 protocol, SQLite, schema, migration, package export, existing production module, or
 c4h4b work occurred. Stop for independent implementation review.
+
+## Phase 4C-2d3b1i6d1d5f1c4h4a Correction — Public Plan-Source Type
+
+Status remains `READY_FOR_REVIEW`. Independent review found that the public
+`bet_plan_snapshot_source` annotation was `object` rather than the frozen
+`SimulationBetPlanSnapshotSource` protocol. The annotation is now exact; runtime
+duck-typed callable validation, dataset binding, plan loading, capture preflight/cache,
+cutoff rules, provider order, and exception behavior are unchanged.
+
+The dedicated public-surface test now requires every frozen argument and return type
+hint exactly, in addition to parameter order, keyword-only behavior, `__all__`,
+package-root non-export, and error hierarchy. Rerun results are recorded in the review
+commit. No HTTP, new capture, repository/schema/migration, or C4h4b work occurred.
+Stop for independent re-review.

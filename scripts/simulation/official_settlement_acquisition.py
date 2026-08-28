@@ -222,7 +222,7 @@ def acquire_and_persist_official_settlement_facts(
     run_context: SimulationRunContext,
     strategy_identity: StrategyIdentity,
     settlement_information_cutoff: datetime,
-    bet_plan_snapshot_source: object,
+    bet_plan_snapshot_source: SimulationBetPlanSnapshotSource,
     result_capture_id: str,
     payout_capture_ids_by_bet_type: Mapping[str, str],
     capture_archive: JRAOfficialResponseCaptureArchive | NAROfficialResponseCaptureArchive,

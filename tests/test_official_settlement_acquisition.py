@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+from collections.abc import Mapping
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 import inspect
@@ -27,9 +28,15 @@ from scripts.simulation.historical_input_snapshots import (
     HistoricalSourceIdentity,
 )
 from scripts.simulation.jra_official_identity import build_jra_external_entry_id, parse_jra_result_url_identity
-from scripts.simulation.jra_official_response_capture import JRAOfficialResponseCapture
+from scripts.simulation.jra_official_response_capture import (
+    JRAOfficialResponseCapture,
+    JRAOfficialResponseCaptureArchive,
+)
 from scripts.simulation.models import SimulationBet, SimulationRunContext, StrategyIdentity, build_strategy_identity
-from scripts.simulation.nar_official_response_capture import NAROfficialResponseCapture
+from scripts.simulation.nar_official_response_capture import (
+    NAROfficialResponseCapture,
+    NAROfficialResponseCaptureArchive,
+)
 from scripts.simulation.persisted_settlement import PersistedRaceSettlementData
 from scripts.simulation.repositories.interfaces import (
     PayoutPublication,
@@ -235,8 +242,19 @@ class OfficialSettlementAcquisitionTests(unittest.TestCase):
         self.assertEqual(tuple(signature.parameters), ("snapshot", "run_context", "strategy_identity", "settlement_information_cutoff", "bet_plan_snapshot_source", "result_capture_id", "payout_capture_ids_by_bet_type", "capture_archive", "race_result_repository", "payout_repository"))
         self.assertTrue(all(item.kind is inspect.Parameter.KEYWORD_ONLY for item in signature.parameters.values()))
         hints = get_type_hints(module.acquire_and_persist_official_settlement_facts)
-        self.assertIs(hints["snapshot"], HistoricalInputSnapshot)
-        self.assertIs(hints["return"], PersistedRaceSettlementData)
+        self.assertEqual(hints, {
+            "snapshot": HistoricalInputSnapshot,
+            "run_context": SimulationRunContext,
+            "strategy_identity": StrategyIdentity,
+            "settlement_information_cutoff": datetime,
+            "bet_plan_snapshot_source": SimulationBetPlanSnapshotSource,
+            "result_capture_id": str,
+            "payout_capture_ids_by_bet_type": Mapping[str, str],
+            "capture_archive": JRAOfficialResponseCaptureArchive | NAROfficialResponseCaptureArchive,
+            "race_result_repository": RaceResultRepository,
+            "payout_repository": PayoutRepository,
+            "return": PersistedRaceSettlementData,
+        })
         self.assertTrue(issubclass(module.OfficialSettlementAcquisitionValidationError, module.OfficialSettlementAcquisitionError))
 
     def test_jra_and_nar_success_use_plan_order_cached_exact_captures_and_exact_objects(self) -> None:

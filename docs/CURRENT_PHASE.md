@@ -101,3 +101,13 @@ Before review: run dedicated and directly relevant adapter, plan-source, capture
 provider-normalizer, repository/domain, c4g2a, and c4g2b tests; then full suite,
 `git diff --check`, static scope check, and clean status. Stop for independent review;
 do not integrate or begin C4h4b.
+
+## Review correction — public plan-source annotation
+
+Independent review required the public annotation of
+`bet_plan_snapshot_source` to be the exact existing
+`SimulationBetPlanSnapshotSource` protocol rather than `object`. Runtime duck-typed
+callable validation is unchanged. The dedicated public-surface test now pins every
+public argument hint and the return hint, alongside exact parameter order, keyword-only
+behavior, module `__all__`, package-root non-export, and error hierarchy. No
+acquisition behavior changed.
