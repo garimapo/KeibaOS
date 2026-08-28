@@ -5700,3 +5700,57 @@ static ownership. It also uses the existing C4g2b test harness to prove that mis
 result/payout, incomplete payout, unsupported result, and after-cutoff evidence cannot
 escape as a final summary. No HTTP, new capture, repository/schema/migration, or C4h4c
 activity occurred. Stop for independent implementation review.
+
+## Phase 4C-2d3b1i6d1d5f1c4i0 — Exact Archived Historical Replay Application PREPARE
+
+Status: `DRAFT_FOR_REVIEW`.
+
+`C4I` is explicitly assigned after formal C4H completion to own the missing
+deterministic no-network application path. Inspection confirmed that the legacy
+schema-v1 persisted request embeds race inputs and its existing SQLite composition
+assumes settlement facts are already present. It therefore remains unchanged. C4I
+uses a distinct `HistoricalReplayRequestDocument` schema-v1 and a later separate
+historical replay CLI.
+
+The new manifest binds the main database, provider archive paths, run/strategy/pipeline
+configuration, budgets, and per-race exact natural snapshot identity, expected
+internal race ID, one settlement cutoff, result capture ID, and payout evidence
+catalog. Natural identity is the sole snapshot lookup key through
+`load_snapshot_by_identity`; internal race ID is a mandatory cross-check and coverage
+key. All snapshots are loaded and canonicalized before one complete C4g1 batch call.
+No C4h4a call may begin until that batch has succeeded.
+
+Required payout types come only from each frozen plan. The pre-planning manifest
+catalog may contain unused supported-type captures, but only the exact required subset
+is loaded and passed to C4h4a; missing required evidence fails closed. An empty plan
+still invokes C4h4a with its exact result capture and an empty payout mapping. One
+explicit aware cutoff per race is passed unchanged to both acquisition and final
+settlement.
+
+The application selects JRA or NAR only from the loaded snapshot source identity. It
+owns one writable migrated main SQLite connection and only the read-only provider
+archive connections needed by the batch. Capture archives must already be migrated;
+replay neither writes nor migrates them. It closes owned connections in reverse order
+and uses no `ATTACH` or cross-database transaction. Existing immutable writes may
+leave a durable auditable prefix on failure; the application stops, returns no final
+summary, performs no compensation or hidden retry, and propagates collaborator errors.
+Only one successful C4h4b call can yield the exact user-facing final summary.
+
+Portable acceptance will use independently approved, minimized,
+provenance-bound derived JRA and NAR official structural fixtures loaded through real
+capture domains/archives and production normalizers. A mixed-provider two-race replay
+will prove both provider paths, planning-before-acquisition, exact cutoff visibility,
+real persisted-plan consumption, final accounting, deterministic rerun from equivalent
+fresh states, and the required fail-closed cases without network or manual settlement
+fact insertion.
+
+The approved implementation proposal is split into C4i1 request document/loader, C4i2
+SQLite application composition, C4i3a portable fixture evidence freeze, and C4i3b
+separate CLI plus mixed-provider end-to-end closure. The next recommended phase is
+`4C-2d3b1i6d1d5f1c4i1_HISTORICAL_REPLAY_REQUEST_DOCUMENT_AND_LOADER`, limited to a new
+request-document module, its dedicated test, and the two phase docs. There is no narrow
+C4i1 blocker after architecture approval. Run-result audit persistence remains
+`OPTIONAL_POST_VER0_8`; C4g2c is not introduced.
+
+No production, test, schema, migration, database, HTTP, or capture activity occurred.
+No pytest was required. Stop for independent architecture review.
