@@ -5572,3 +5572,52 @@ passed`; related `153 passed, 245 subtests passed`; full suite `3001 passed, 217
 subtests passed`. Static ownership and Git diff checks pass. No live HTTP, trusted
 capture, repository protocol, SQLite, schema, migration, existing-production, or c4h3
 change occurred. Formal integration remains unstarted; stop for independent re-review.
+
+## Phase 4C-2d3b1i6d1d5f1c4h3 — NAR Target-Race Payout Persistence
+
+Status: `READY_FOR_REVIEW`.
+
+Added the module-local keyword-only
+`normalize_and_persist_nar_target_race_payout` boundary and its Validation,
+Unavailable, and Unsupported error hierarchy. The public function validates all
+arguments before I/O, loads one exact archived `NAROfficialResponseCapture` by exact
+capture ID, requires RaceMarkTable page kind and strict UTF-8, and performs no latest
+lookup, fallback, retry, HTTP, documentation access, capture write, clock, or random
+operation.
+
+The canonical URL, exact snapshot NAR identity, visible date/place/race header, and
+c4h2 positive result-finality structure must agree in the same capture. The new code
+does not call or modify c4h2 and writes no result. Snapshot selection identity is
+strictly race-local: exact `nar:...:entry:<horseNum>` external identity maps to one
+unique internal race-entry ID; name, jockey, lineage, display order, global number,
+prediction, and cross-provider fallbacks are absent.
+
+The payout parser requires one exact `newRefundTable`, exact heading and two-table
+container, then exhaustively classifies every direct row using positive canonical
+`rowspan` group boundaries. Known provider groups are closed and table-specific.
+Formal mappings are only `単勝 <- 単勝`, `馬連 <- 馬連複`, `ワイド <- ワイド`,
+and `3連複 <- 三連複`; unsupported sibling groups are structurally isolated and
+never normalized. Exact normal row counts are `1/1/3/1` respectively.
+
+Requested selections and amounts use exact evidence-frozen direct cells and whole
+text. Selections require canonical ASCII horse-number tokens with exact hyphens and
+formal arity; amounts require a positive canonical comma-grouped integer plus exact
+`円`. The approved official NAR 100-yen denomination evidence authorizes mapping the
+validated integer directly to `payout_per_100`. Formal `normalize_selection` owns
+unordered internal identity, and duplicate canonical selections fail before save.
+
+Only after complete validation is one complete `PayoutPublication` constructed with
+exact snapshot race/type, capture observation for both timestamps, capture ID and URL
+provenance, and exhaustive `PayoutStatus.WINNING` entries. The repository is called
+exactly once and its exact returned publication is returned. Invalid, unavailable,
+unsupported, or partial Wide evidence writes nothing; collaborator exceptions
+propagate unchanged. Refund, void, dead heat, no winner, special payout, correction,
+and unknown representations remain fail closed.
+
+Verification passed: dedicated `16 passed, 87 subtests passed`; related `144 passed,
+256 subtests passed` across the exact NAR capture/archive, c4h2 result, snapshot,
+payout repository/domain, c4h1 payout, c4g2a, and c4g2b files; full suite `3017 passed,
+2264 subtests passed`. Static ownership and Git diff checks pass. Only the new c4h3
+module, its dedicated tests, and these two docs changed. No existing production,
+repository protocol, SQLite, schema, migration, live/documentation HTTP, target-race
+capture, or c4h4 work occurred. Stop for independent implementation review.
