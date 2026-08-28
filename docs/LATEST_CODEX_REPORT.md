@@ -5572,3 +5572,77 @@ passed`; related `153 passed, 245 subtests passed`; full suite `3001 passed, 217
 subtests passed`. Static ownership and Git diff checks pass. No live HTTP, trusted
 capture, repository protocol, SQLite, schema, migration, existing-production, or c4h3
 change occurred. Formal integration remains unstarted; stop for independent re-review.
+
+## Phase 4C-2d3b1i6d1d5f1c4h3a Documentation Evidence Recovery — Blocked
+
+Status: `BLOCKED_FAIL_CLOSED_DOCUMENTATION_CHARSET_RECOVERY`.
+
+The single newly authorized current HTTPS observation of
+`https://www.keiba.go.jp/beginner/step6.html` reached that exact URL without a
+redirect and returned HTTP 200 with raw `Content-Type: text/html`, no
+`Content-Encoding`, 12,771 response bytes, and SHA-256
+`f5270936608bc77df5942af7bdc0f70ccc0838ee710fa789b22080c751ff15f2`.
+The request began at `2026-08-28T04:08:58.517294+00:00` and the complete response was
+observed at `2026-08-28T04:08:58.632307+00:00`. No BOM was present.
+
+The raw-byte metadata inspection failed before extracting an effective charset: its
+attribute scanner attempted strict ASCII decoding of a non-ASCII value in an
+unrelated `meta` attribute and raised `UnicodeDecodeError` at byte `0xe5`. The
+response body was not persisted, so the charset declarations cannot now be
+re-inspected without another HTTP request. The one-request authorization is exhausted;
+no retry, alternate source, heuristic decoding, semantic assertion, or denomination
+claim was made. The exact payout statement was not verified.
+
+No target-race HTTP request or capture occurred. No production code, test code,
+schema, migration, database, or c4h4 work changed. No evidence commit or push was
+created. Stop for independent review and renewed authority if another observation is
+desired.
+
+## Phase 4C-2d3b1i6d1d5f1c4h3a Documentation Evidence Recovery V2 — Success
+
+Status: `DRAFT_FOR_REVIEW` with
+`NAR_TARGET_PAYOUT_IMPLEMENTATION_EVIDENCE_STATUS` set to
+`SUFFICIENT_FOR_NARROW_IMPLEMENTATION` for the expressly narrow
+`NORMAL_FINAL_WINNING_ONLY` envelope.
+
+The third and final authorized current documentation observation requested
+`https://www.keiba.go.jp/beginner/step6.html` at
+`2026-08-28T04:13:27.115899+00:00` and completed at
+`2026-08-28T04:13:27.189489+00:00`. It returned HTTP 200 from the same exact URL with
+zero redirects, raw `Content-Type: text/html`, no `Content-Encoding`, 12,771 bytes,
+and SHA-256
+`f5270936608bc77df5942af7bdc0f70ccc0838ee710fa789b22080c751ff15f2`.
+
+Before charset inspection or decoding, the raw entity was saved to
+`C:\Users\garim\Desktop\KeibaAI-c4h3a-documentation-evidence\response.bin`; metadata
+was saved beside it as `metadata.json`. Rereading `response.bin` produced the same
+length, digest, and bytes as the in-memory HTTP body. Neither file is inside Git or
+committed. Every subsequent check read that saved body, and no additional HTTP request
+was made.
+
+The HTTP header declared no charset and the body had no BOM. A corrected byte-only
+scanner ignored unrelated non-ASCII attribute values, extracted exactly
+`<meta charset="UTF-8">`, and resolved UTF-8 unambiguously. Strict full-document
+UTF-8 decoding passed. The exact title is
+`結果を確認する｜Let'地方競馬｜地方競馬情報サイト`; the visible page contains
+`結果を確認する`, and `article#content1` contains the heading
+`１．レース結果・払戻金が知りたい！` and the exact ordinary-payout statement:
+
+```text
+払戻金は購入金額１００円に対する配当金額を表示します。
+```
+
+This official generic documentation establishes only that an ordinary displayed NAR
+payout is the return for a 100-yen purchase. Accordingly, a fully validated ordinary
+displayed integer yen amount maps directly to `PayoutRecord.payout_per_100`. Target
+race identity, selection, actual amounts, structure, finality, observation time, and
+source remain owned solely by the already-approved immutable RaceMarkTable capture.
+
+Combined evidence now supports only normal final winning payouts for formal types
+`単勝`, `馬連`, `ワイド`, and `3連複`. Refund, void, dead heat, no winner,
+correction, special payout, and unknown representations remain fail closed. The
+proposed c4h3 module/API, exact-ID single capture load, race-local crosswalk, normal
+row counts `1/1/3/1`, validation-before-single-save rule, immutable publication
+timestamps/source, and repository exception propagation remain unchanged. No
+production, test, fixture, database, repository protocol, SQLite, schema, migration,
+or c4h4 work occurred. Stop for independent evidence review before implementation.
