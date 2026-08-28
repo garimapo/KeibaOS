@@ -5675,3 +5675,28 @@ hint exactly, in addition to parameter order, keyword-only behavior, `__all__`,
 package-root non-export, and error hierarchy. Rerun results are recorded in the review
 commit. No HTTP, new capture, repository/schema/migration, or C4h4b work occurred.
 Stop for independent re-review.
+
+## Phase 4C-2d3b1i6d1d5f1c4h4b — Final Historical Settlement Completeness
+
+Status: `READY_FOR_REVIEW`.
+
+Added the thin module-local
+`execute_final_historical_settlement_simulation` wrapper. It delegates exactly once to
+the unchanged `execute_historical_settlement_simulation(...)`, passing the original
+snapshots, run context, strategy identity, cutoff mapping, plan source, and repository
+objects through unchanged. C4h4b performs no validation, data loading, persistence,
+capture activity, settlement arithmetic, metric calculation, or summary reconstruction.
+
+After C4g2b returns, the wrapper accepts only a summary for which
+`settled_race_count + no_bet_race_count == race_count` and all unsettled, void, error,
+and unsupported counts are zero. `SETTLED` and `NO_BET` are final; every other state or
+a count mismatch raises the sole C4h4b-owned
+`FinalHistoricalSettlementNotReadyError`. Final-ready calls return the exact same
+delegate `SimulationSummary` object; delegate exceptions propagate unchanged.
+
+Dedicated coverage includes public type hints, exact delegation/identity, all final and
+blocking state combinations, count mismatch, no mutation, exception propagation, and
+static ownership. It also uses the existing C4g2b test harness to prove that missing
+result/payout, incomplete payout, unsupported result, and after-cutoff evidence cannot
+escape as a final summary. No HTTP, new capture, repository/schema/migration, or C4h4c
+activity occurred. Stop for independent implementation review.
