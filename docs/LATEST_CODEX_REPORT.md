@@ -5676,3 +5676,36 @@ transaction wrapper, new settlement DTO, metric, package-root export, live opera
 or third c4h4 subphase is proposed. The next implementation review unit is c4h4a with
 one new module, one dedicated test, and these two docs. Stop for independent
 architecture review.
+
+## Phase 4C-2d3b1i6d1d5f1c4h4 PREPARE Correction — Dataset Identity Binding
+
+Status remains `DRAFT_FOR_REVIEW`.
+
+Independent architecture review identified one missing replay-identity invariant in
+the proposed c4h4a boundary. Because the existing persisted bet-plan natural identity
+contains run, race, strategy/config, and information-cutoff values but not dataset ID,
+c4h4a now explicitly requires
+`snapshot.identity.dataset_id == run_context.dataset_id` before any plan-source or
+official-evidence I/O. A mismatch produces zero plan loads, archive loads, provider
+calls, result saves, and payout saves; dataset identity is never inferred from another
+field.
+
+After that binding passes, c4h4a reuses the formal snapshot-to-race-input adapter and
+`PersistedSimulationBetSource` with the exact run context, plan source, and strategy.
+The immutable persisted plan is loaded exactly once through the existing identity path
+before required payout types are frozen. No custom `SimulationBetPlanIdentity`
+construction, prediction rerun, or bet regeneration is proposed.
+
+The result correction policy is also stated separately from payout publication
+versioning. `RaceResultRepository` remains insert-only per race: equal rewrites are
+repository-idempotent, differing results or corrections conflict, and a sole result
+observed after the cutoff is unavailable with no older-version search. Only append-only
+`PayoutPublication` values use the existing latest-eligible ordering by
+`observed_at DESC, publication_id DESC`; correction-before/after-cutoff tests therefore
+apply only to payouts.
+
+The approved two-subphase architecture, exact capture-ID policy, cutoff semantics,
+required-bet-type policy, write order, durable-partial-state rule, no-skip behavior,
+repository/schema decisions, and proposed public APIs are otherwise unchanged. This
+correction changes only the two docs and starts no c4h4a implementation. Stop for
+independent architecture re-review.

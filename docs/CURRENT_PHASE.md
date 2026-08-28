@@ -54,6 +54,31 @@ Required payout types are derived from the exact persisted bet plan before any r
 or payout capture is loaded. Official-data availability must never decide which bet
 types are required.
 
+### DATASET_BINDING_POLICY
+
+`SNAPSHOT_DATASET_ID_MUST_EXACTLY_EQUAL_RUN_CONTEXT_DATASET_ID`
+
+Before plan-source or official-evidence I/O, c4h4a requires:
+
+```text
+snapshot.identity.dataset_id == run_context.dataset_id
+```
+
+The existing persisted bet-plan natural identity does not include `dataset_id`, so
+same-race, same-cutoff, and same-strategy values cannot substitute for this explicit
+binding. A mismatch fails before snapshot-to-race-input adaptation, before
+`SimulationBetPlanSnapshotSource.load_snapshot`, before any capture archive load,
+before any provider normalizer call, and before any result or payout repository write.
+It produces zero plan-source loads, archive loads, result saves, and payout saves.
+
+Dataset identity is never inferred from race ID, provider, capture URL, place,
+strategy, or database contents. After the binding passes, c4h4a adapts the exact
+`HistoricalInputSnapshot` through the existing historical snapshot-to-
+`SimulationRaceInput` boundary and uses `PersistedSimulationBetSource` with the exact
+run context, plan source, and strategy identity. It loads the persisted plan exactly
+once and does not duplicate `SimulationBetPlanIdentity` construction, rerun prediction,
+or regenerate bets.
+
 ## SETTLEMENT_INFORMATION_CUTOFF_POLICY
 
 `settlement_information_cutoff` is a separate, exact timezone-aware post-race evidence
@@ -133,6 +158,14 @@ repository is insert-only per race; equal writes are idempotent and any differin
 result, including a different correction/source, conflicts. C4h4 adds no result
 versioning.
 
+`RESULT_MULTIPLE_VERSION_POLICY`: `NOT_SUPPORTED_BY_CURRENT_REPOSITORY`
+
+`RESULT_EQUAL_REWRITE` remains repository-owned idempotence.
+`RESULT_DIFFERING_REWRITE_OR_CORRECTION` remains a repository conflict that propagates.
+If the single persisted result was observed after a replay cutoff, the bounded source
+treats it as unavailable. C4h4 does not look for an older result version because the
+current model stores none and exposes no latest-result/correction selection contract.
+
 An exact persisted empty plan is final `NO_BET` and requires no settlement fact read in
 the final-completeness path, preserving the existing c4g2a/c4g2b behavior. The
 acquisition subphase may still persist the explicitly supplied final result, but it
@@ -147,6 +180,9 @@ payout, or fallback to an older complete publication. No unrequired payout type 
 needed for readiness.
 
 ### MULTIPLE_PUBLICATION_SELECTION_POLICY
+
+This policy applies only to versioned, append-only `PayoutPublication` values. It does
+not apply to `PersistedRaceResult`.
 
 The existing formal rule remains:
 
@@ -167,11 +203,24 @@ fail closed.
 
 ### ACQUISITION_WRITE_ORDER_POLICY
 
-After public arguments, persisted-plan requirements, provider dispatch, exact capture
-IDs, capture types, and all cutoff checks pass, c4h4a invokes the formal result
-normalizer first, then one payout normalizer per required type in frozen
-first-occurrence order. Each provider function retains its own complete validation and
-single-write contract.
+The exact pre-I/O order is:
+
+```text
+public argument validation
+exact snapshot/run-context dataset binding
+existing snapshot-to-race-input adaptation and identity validation
+one existing PersistedSimulationBetSource plan load and validation
+required bet-type freeze
+provider dispatch
+capture-ID mapping coverage
+distinct exact-capture preload
+settlement-cutoff validation for every capture
+provider result/payout persistence calls
+```
+
+Only after the complete preflight passes does c4h4a invoke the formal result normalizer,
+then one payout normalizer per required type in frozen first-occurrence order. Each
+provider function retains its own complete validation and single-write contract.
 
 ### PARTIAL_ACQUISITION_POLICY
 
@@ -287,11 +336,13 @@ The module-local `__all__` exposes the function plus
 `OfficialSettlementAcquisitionUnsupportedError`. Provider persistence errors and all
 archive/repository exceptions propagate unchanged.
 
-The function adapts the immutable snapshot only to establish the exact persisted-plan
-identity, loads that plan once, derives required types, preloads all distinct exact
-captures before writes, dispatches to c4h0/c4h1 or c4h2/c4h3, and returns existing
-`PersistedRaceSettlementData` containing the exact frozen bets and successful formal
-result/publications. It introduces no new aggregate DTO.
+The function validates exact public types and the snapshot/run-context dataset binding
+before I/O, then adapts the immutable snapshot through the existing race-input boundary
+and reuses `PersistedSimulationBetSource` to load the exact plan once. It derives
+required types, preloads all distinct exact captures before writes, dispatches to
+c4h0/c4h1 or c4h2/c4h3, and returns existing `PersistedRaceSettlementData` containing
+the exact frozen bets and successful formal result/publications. It introduces no
+near-copy of `SimulationBetPlanIdentity` and no new aggregate DTO.
 
 ### PUBLIC_API_PROPOSAL — c4h4b
 
@@ -344,6 +395,15 @@ partial/as-of summary is represented as guaranteed final ROI.
 C4h4a must pin:
 
 - exact module-local public surface and keyword-only signature;
+- exact matching snapshot/run-context dataset IDs proceed through the identity
+  boundary;
+- mismatched dataset IDs fail before plan-source load, archive load, provider call,
+  result save, and payout save, including otherwise equal race ID, information cutoff,
+  and strategy values;
+- required payout types cannot come from a mismatched-dataset plan;
+- the exact persisted plan is loaded once through existing
+  `PersistedSimulationBetSource` semantics, with no custom near-copy of
+  `SimulationBetPlanIdentity` construction;
 - exact JRA and NAR dispatch from source identity;
 - one result plus every unique frozen-plan payout type in deterministic order;
 - required types fixed before official reads and unaffected by payout availability;
@@ -356,6 +416,9 @@ C4h4a must pin:
 - result-first and payout first-occurrence write order;
 - partial durable writes never reported as a completed acquisition return;
 - equal retry remains repository-idempotent and conflicts propagate unchanged;
+- an equal result rewrite remains idempotent, while any differing result/correction
+  remains a propagated repository conflict;
+- neither c4h4a nor c4h4b performs latest-result or result-correction selection;
 - missing/invalid/unsupported capture and provider errors fail closed;
 - no unsupported bet-type, missing mapping, or extra mapping skip;
 - no package-root export, schema, SQLite, settlement arithmetic, or result/payout model
@@ -367,15 +430,15 @@ C4h4b must pin:
 - all-settled plus no-bet batches accepted;
 - missing result, missing required payout, incomplete latest publication, unsupported
   facts, conflict-derived failure, and after-cutoff evidence rejected with no summary;
-- later correction after cutoff invisible and later correction at/before cutoff chosen
-  by the formal ordering rule;
+- payout correction after cutoff invisible and payout correction at/before cutoff
+  chosen by the formal payout-publication ordering rule;
 - no silent race or unsupported type skip;
 - no prediction snapshot or planned-bet mutation;
 - no settlement arithmetic, raw parser, repository write, HTTP, or current-clock logic.
 
 ## Implementation readiness and next step
 
-`IMPLEMENTATION_BLOCKERS`: `NONE_FOR_C4H4A_AFTER_INDEPENDENT_ARCHITECTURE_APPROVAL`
+`IMPLEMENTATION_BLOCKERS`: `NONE_AFTER_INDEPENDENT_RE_REVIEW`
 
 `RECOMMENDED_NEXT_PHASE`:
 `4C-2d3b1i6d1d5f1c4h4a_EXACT_CAPTURE_SETTLEMENT_ACQUISITION_COMPOSITION`
