@@ -5621,3 +5621,57 @@ payout repository/domain, c4h1 payout, c4g2a, and c4g2b files; full suite `3017 
 module, its dedicated tests, and these two docs changed. No existing production,
 repository protocol, SQLite, schema, migration, live/documentation HTTP, target-race
 capture, or c4h4 work occurred. Stop for independent implementation review.
+
+## Phase 4C-2d3b1i6d1d5f1c4h4a — Exact-Capture Official Settlement Acquisition
+
+Status: `READY_FOR_REVIEW`.
+
+Added the narrow module-local
+`acquire_and_persist_official_settlement_facts` composition boundary and its dedicated
+tests. The boundary accepts only exact archived capture IDs and an exact historical
+snapshot/run context/strategy combination. It first validates public arguments and
+requires the snapshot dataset ID to equal the run-context dataset ID before any plan
+source, archive, provider, or repository interaction.
+
+After the binding, it reuses the existing historical snapshot adapter and exactly one
+`PersistedSimulationBetSource` load; it does not reconstruct bet-plan identity,
+predict, regenerate bets, or mutate snapshot/plan values. Required payout types are
+the unique frozen-plan types in first-occurrence order, and the supplied payout mapping
+must cover exactly that set. An empty plan requires an empty mapping, still performs
+the supplied result path, and performs no payout path.
+
+Provider dispatch uses only the exact source organization/system: JRA invokes the
+formal c4h0/c4h1 normalizers and NAR invokes c4h2/c4h3. Before either provider can
+write, every distinct result/payout capture ID is loaded once in first-use order,
+validated as the exact provider capture/page kind, and checked with actual
+`observed_at <= settlement_information_cutoff`. The private read-only cached archive
+view prevents provider normalizers from creating a second underlying archive read.
+
+After complete preflight, the result normalizer runs once and payout normalizers run in
+the frozen plan order. There is no retry, fallback, transaction, compensation, bounded
+repository read, or settlement calculation. A later provider failure can leave earlier
+provider-owned immutable facts durable and auditable, but returns no successful
+acquisition value and stops later payout calls. Repository exceptions and repository
+idempotence/conflict behavior remain unchanged. Successful calls return existing
+`PersistedRaceSettlementData` with the exact frozen bets and provider-returned facts.
+
+Verification passed: dedicated `12 passed`; related `271 passed, 380 subtests passed`;
+full suite `3029 passed, 2264 subtests passed`. Static ownership and Git diff checks
+pass. Only the new c4h4a module, its dedicated tests, and the two phase documents
+changed. No HTTP, trusted capture, capture creation, database write, repository
+protocol, SQLite, schema, migration, package export, existing production module, or
+c4h4b work occurred. Stop for independent implementation review.
+
+## Phase 4C-2d3b1i6d1d5f1c4h4a Correction — Public Plan-Source Type
+
+Status remains `READY_FOR_REVIEW`. Independent review found that the public
+`bet_plan_snapshot_source` annotation was `object` rather than the frozen
+`SimulationBetPlanSnapshotSource` protocol. The annotation is now exact; runtime
+duck-typed callable validation, dataset binding, plan loading, capture preflight/cache,
+cutoff rules, provider order, and exception behavior are unchanged.
+
+The dedicated public-surface test now requires every frozen argument and return type
+hint exactly, in addition to parameter order, keyword-only behavior, `__all__`,
+package-root non-export, and error hierarchy. Rerun results are recorded in the review
+commit. No HTTP, new capture, repository/schema/migration, or C4h4b work occurred.
+Stop for independent re-review.
