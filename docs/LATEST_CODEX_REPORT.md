@@ -5462,3 +5462,113 @@ its dedicated test, and these two documents. No live HTTP, trusted recapture, da
 write, repository protocol, SQLite, schema, migration, existing production change, or
 c4h2 work occurred. Formal integration remains unstarted; stop for independent
 re-review.
+
+## Phase 4C-2d3b1i6d1d5f1c4h2 PREPARE — NAR Target Race Result Persistence
+
+Status: `DRAFT_FOR_REVIEW`.
+
+The docs-only PREPARE kept c4h0 and c4h1 frozen and established that c4h2 owns only
+NAR target-race result normalization and persistence. It reuses the immutable NAR
+capture/archive boundary, canonical RaceMarkTable URL identity, historical snapshot
+external-entry identities, and provider-neutral persisted-result repository without a
+protocol, SQLite, schema, or migration change. NAR payout work is c4h3, and later
+application/cutoff composition remains outside c4h2.
+
+The required identity path was frozen as canonical RaceMarkTable URL
+`k_raceDate/k_babaCode/k_raceNo` to `nar:YYYYMMDD:<babaCode>:<raceNo>`, then the exact
+race-local official horse number to `...:entry:<horseNo>`, exact snapshot external
+entry identity, and internal race-entry ID. Names, lineage/profile IDs, row order,
+global horse-number lookup, prediction values, and cross-provider matching are
+forbidden. Because no trusted target-result capture was initially available, c4h2a
+evidence acquisition was required before production implementation.
+
+## Phase 4C-2d3b1i6d1d5f1c4h2a Evidence — NAR Target Race Result
+
+Status: `DRAFT_FOR_REVIEW`.
+
+The formal capture service acquired and archived exactly one approved official NAR
+RaceMarkTable capture, then an exact-ID archive reload verified it. The immutable
+capture is
+`nar-capture-v1:d6692261a54c1038a5ffd804ae79edda9ca543cb5d78f37c41ffaeefe281013b`,
+with canonical URL
+`https://www.keiba.go.jp/KeibaWeb/TodayRaceInfo/RaceMarkTable?k_babaCode=31&k_raceDate=2026%2F05%2F03&k_raceNo=1`,
+SHA-256 `3b909b6c9509713150199c3bb3821051181671e10c906f5c315aa4a4c4dbf2db`,
+96,614 strict-UTF-8 bytes, and observed time `2026-08-27T15:41:31.026438+00:00`.
+The isolated archive remains outside Git. No raw or derived fixture was committed.
+
+The capture proves the visible date/course/race identity, one exact `a` through `p`
+whole-result header, 11 exhaustive direct `tr.tBorder` rows, canonical direct horse
+numbers, and unique contiguous finish positions `1..11`. It also supplies a narrow
+positive finality predicate: one populated `優勝馬情報` section together with the
+official attention statement that its information is at `レース結果確定時点`.
+Scratch/exclusion, DQ/DNF, dead heat, void/cancellation, provisional, and unknown
+states were not evidenced and remain fail closed. The resulting implementation
+envelope is `COMPLETE_NORMAL_FINAL_ONLY`.
+
+## Phase 4C-2d3b1i6d1d5f1c4h2 Implementation — NAR Target Race Result Persistence
+
+Status: `READY_FOR_REVIEW`
+
+Implemented the narrow, evidence-frozen NAR target-race result boundary in
+`scripts/simulation/nar_target_race_result_persistence.py` with one dedicated test
+file. The public module surface is limited to the approved keyword-only
+`normalize_and_persist_nar_target_race_result` function and four module-local errors;
+there is no package-root export.
+
+Each call accepts an exact archived `NAROfficialResponseCapture` ID, loads it exactly
+once, requires the returned type/ID/page kind to match, strictly decodes its UTF-8
+body, and derives the canonical race identity from the exact `RaceMarkTable` URL. The
+visible date, active course, place, and whole-value race number must agree with that
+URL and the exact `HistoricalInputSnapshot` before result parsing starts.
+
+The result table is fail closed to the approved normal-final grammar: one exact direct
+table/tbody, the ordered sixteen `a` through `p` headers with their evidenced labels
+and direct child structure, and direct `tr.tBorder` rows using the evidenced class
+forms. Official horse numbers and finish positions are canonical positive ASCII
+decimals; the finish set must be exactly `1..N`. Duplicate, missing, tied,
+non-contiguous, special, partial, void, or unknown representations cannot become a
+complete result. Positive finality additionally requires the exact populated
+`winHorseTable`, `優勝馬情報`, winner-information shape, and the approved attention
+statement about result-confirmed winner information.
+
+Every official horse number is resolved only through the exact canonical NAR
+race-local external entry ID and matching snapshot external entry identity. Horse and
+jockey names, display order, global horse-number lookup, prediction output, and
+cross-provider numeric matching are never used. Snapshot and official result entry
+sets must match exactly. Only then is one `PersistedRaceResult` constructed with
+`RaceResultStatus.COMPLETE`, confirmed entries, exact capture observation for both
+timestamps, and capture-ID source provenance. One repository save occurs only after
+complete validation; validation failures write zero results and collaborator exceptions
+propagate unchanged.
+
+Verification passed: dedicated `12 passed, 61 subtests passed`; related `153 passed,
+245 subtests passed`; full suite `3000 passed, 2172 subtests passed`. Static ownership
+and Git diff checks pass. Only the new c4h2 module, its dedicated test, and the two
+phase documents changed. No live HTTP, trusted capture reload or recapture, database
+write, existing production change, repository protocol, SQLite, schema, migration, or
+c4h3 work occurred. Formal integration remains unstarted; stop for independent review.
+
+## Phase 4C-2d3b1i6d1d5f1c4h2 Correction — Exceptional Row Rejection
+
+Status remains `READY_FOR_REVIEW`. Independent review found that a structurally normal
+row with numeric horse and finish cells could still carry a known exceptional-state
+marker in another field and enter the normal COMPLETE path. The row boundary now
+normalizes each applicable row's whole display text and rejects the existing formal
+NAR marker vocabulary `取消`, `除外`, `中止`, `失格`, and `降着` as unsupported before
+entry construction or repository save.
+
+This is rejection only. It does not infer which horse was affected, interpret the
+reason or settlement effect, replace positions, or add scratch, DQ, DNF, demotion,
+dead-heat, or void support. The support envelope remains
+`NORMAL_COMPLETE_FINAL_ONLY`; numeric finish grammar, contiguous `1..N`, exact
+snapshot coverage, finality, identity, timestamps, and repository behavior are
+unchanged.
+
+Dedicated regressions place each marker outside `td.a` while retaining an otherwise
+valid numeric finish. Every case raises
+`NARTargetRaceResultPersistenceUnsupportedError`, loads the exact archive capture
+once, and saves zero results. Verification passed: dedicated `13 passed, 66 subtests
+passed`; related `153 passed, 245 subtests passed`; full suite `3001 passed, 2177
+subtests passed`. Static ownership and Git diff checks pass. No live HTTP, trusted
+capture, repository protocol, SQLite, schema, migration, existing-production, or c4h3
+change occurred. Formal integration remains unstarted; stop for independent re-review.
