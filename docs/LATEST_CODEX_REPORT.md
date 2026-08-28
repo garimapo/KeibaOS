@@ -5621,3 +5621,58 @@ payout repository/domain, c4h1 payout, c4g2a, and c4g2b files; full suite `3017 
 module, its dedicated tests, and these two docs changed. No existing production,
 repository protocol, SQLite, schema, migration, live/documentation HTTP, target-race
 capture, or c4h4 work occurred. Stop for independent implementation review.
+
+## Phase 4C-2d3b1i6d1d5f1c4h4 PREPARE — Official Settlement Composition
+
+Status: `DRAFT_FOR_REVIEW`.
+
+The exact formal repository was inspected at
+`0efea458551ddc8b45fc105bf921334d0c18665e`. Formal c4h0 through c4h3 remain frozen.
+This activity changed documentation only and performed no pytest, live HTTP, trusted
+capture, database write, production change, or c4h4 implementation.
+
+The existing archives establish exact-ID loading as the only common JRA/NAR capture
+boundary. NAR has no generic latest-at-cutoff capture selector, and the shared archive
+protocols do not expose one. Initial c4h4 therefore accepts application-selected exact
+capture IDs and validates every distinct immutable capture's actual `observed_at`
+against an explicit aware `settlement_information_cutoff` before any repository write.
+It performs no current-page discovery, latest fallback, or backdating.
+
+Prediction time and settlement time are frozen as separate causal domains.
+`HistoricalInputSnapshot.information_cutoff` and the exact persisted plan remain
+immutable pre-race inputs. Required payout types are the unique types in that frozen
+plan, established before official evidence I/O; payout availability cannot alter the
+required set, prediction, EV, strategy, allocation, or planned bets.
+
+Provider dispatch uses only exact snapshot organization/source-system identity. The
+application calls the formal c4h0/c4h1 JRA boundaries or c4h2/c4h3 NAR boundaries and
+duplicates no raw parser. Result and payout capture IDs may coincide or differ. A
+private preloaded exact-ID archive proxy is proposed so each distinct underlying
+capture is loaded once, cutoff-checked before writes, and then supplied unchanged to
+the formal normalizers.
+
+The existing bounded settlement source already provides the correct fact-selection
+semantics. Race results are single insert-only facts screened by `observed_at`.
+Payouts use the latest `(observed_at DESC, publication_id DESC)` publication at or
+before the cutoff with `require_complete=False`; if that latest eligible publication
+is incomplete, there is no older-complete fallback. A later correction after the
+cutoff is invisible, while one at or before the cutoff is selected. Final readiness
+requires a complete result and complete publication for every bet type actually
+purchased. An exact empty persisted plan remains final `NO_BET` without official
+reads.
+
+C4h4 is split into two reviewable subphases. C4h4a composes exact capture preflight,
+frozen-plan type derivation, provider dispatch, and immutable persistence for one race,
+returning existing `PersistedRaceSettlementData`. Separate repository transactions may
+leave auditable partial acquisition state; this is allowed but never settlement-ready,
+and exact retries remain repository-idempotent while conflicts propagate. C4h4b wraps
+the unchanged c4g2b historical settlement composition and returns its exact
+`SimulationSummary` only when every race is `SETTLED` or `NO_BET`; any unsettled,
+unsupported, void, or error count raises a dedicated not-ready error and exposes no
+partial summary as final ROI.
+
+No repository protocol, SQLite repository, schema, migration, result versioning,
+transaction wrapper, new settlement DTO, metric, package-root export, live operation,
+or third c4h4 subphase is proposed. The next implementation review unit is c4h4a with
+one new module, one dedicated test, and these two docs. Stop for independent
+architecture review.

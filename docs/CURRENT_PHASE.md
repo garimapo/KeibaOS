@@ -1,229 +1,393 @@
 # Current Phase
 
-Status: `READY_FOR_REVIEW`
+Status: `DRAFT_FOR_REVIEW`
 
 ## Identity and scope
 
-- Phase: `4C-2d3b1i6d1d5f1c4h3`
-- Name: `NAR official target-race payout normalization and persistence`
-- Exact formal base: `e2bc465d71044b7ca91c80f17fac1ee7895a80fe`
+- Phase: `4C-2d3b1i6d1d5f1c4h4`
+- Name: `Official settlement acquisition/application composition and final completeness`
+- Exact formal base: `0efea458551ddc8b45fc105bf921334d0c18665e`
 - Formal branch: `feature/ver0.8-simulator`
-- Review branch: `review/4c-2d3b1i6d1d5f1c4h3-nar-target-payout`
-- Approved PREPARE commit: `a3a9bf2362c997ac284b1723c3efc03e93060b76`
-- Approved evidence commit: `033be021f26749f0fe2cdf80894ad2365884276c`
-- Approved evidence tree: `3375dbf3285a5f4131c95d88265502e63ecf7313`
-- Git setting: `core.autocrlf=true`; no Git configuration or attributes changed.
+- PREPARE review branch:
+  `review/4c-2d3b1i6d1d5f1c4h4-settlement-acquisition-prepare`
+- Git setting: `core.autocrlf=true`; no Git configuration or attributes change is
+  authorized.
 
-Allowed and changed files are exactly:
+This PREPARE changes only:
 
 ```text
-scripts/simulation/nar_target_race_payout_persistence.py
-tests/test_nar_target_race_payout_persistence.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-No existing production module, package-root export, repository protocol, SQLite
-repository, schema, migration, database, or c4h0/c4h1/c4h2 behavior changed. C4h4 is
-unstarted.
+No production code, Python test, repository protocol, SQLite implementation, schema,
+migration, database, capture, or HTTP activity is authorized. Formal c4h0 through
+c4h3 remain frozen. C4h4 joins their existing public boundaries; it does not reopen
+provider grammar or settlement arithmetic.
 
-## Approved evidence and supported envelope
+## C4H4_PURPOSE
 
-`SUPPORTED_ENVELOPE`: `NORMAL_FINAL_WINNING_ONLY`
+C4h4 connects exact archived official evidence to the four formal provider-specific
+normalizers, provider-neutral result/payout repositories, cutoff-aware historical
+reads, and the existing historical settlement composition. It owns application
+coordination and the distinction between an acquisition attempt and a final-complete
+settlement run. It owns no prediction, value, bet-generation, allocation, raw parser,
+ticket evaluation, payout arithmetic, or summary aggregation behavior.
 
-`SUPPORTED_BET_TYPES`:
+## C4H4_INITIAL_OPERATING_MODE
+
+`HISTORICAL_REPLAY_ONLY`
+
+The initial boundary consumes already archived exact capture IDs. It performs no live
+discovery or acquisition. Current/live operation and capture discovery remain a later
+operational concern and may not present a current observation as historical evidence.
+
+## PREDICTION_INFORMATION_BOUNDARY
+
+`HistoricalInputSnapshot.information_cutoff` remains the pre-race prediction boundary.
+The snapshot and its exact persisted bet-plan identity are immutable inputs. Result
+captures, payout captures, finish positions, payout values, repository contents, and
+settlement readiness may not mutate or select prediction inputs, EV, strategy,
+allocation, or planned bets.
+
+Required payout types are derived from the exact persisted bet plan before any result
+or payout capture is loaded. Official-data availability must never decide which bet
+types are required.
+
+## SETTLEMENT_INFORMATION_CUTOFF_POLICY
+
+`settlement_information_cutoff` is a separate, exact timezone-aware post-race evidence
+boundary. It is not `HistoricalInputSnapshot.information_cutoff`, is never supplied by
+the current clock, and need not equal prediction time.
+
+Historical evidence eligibility is exactly:
 
 ```text
-単勝
-馬連
-ワイド
-3連複
+capture.observed_at <= settlement_information_cutoff
+persisted_result.observed_at <= settlement_information_cutoff
+payout_publication.observed_at <= settlement_information_cutoff
 ```
 
-Every persisted entry is `PayoutStatus.WINNING`. Refund, void, dead heat, no winner,
-`特払い`, correction, unknown, malformed, and ambiguous representations fail closed.
-No exceptional-state normalization was introduced.
+Equality is eligible; one microsecond after the cutoff is not. `requested_at`,
+`stored_at`, and `finalized_at` are not selection timestamps. Domain finalization still
+must be present for complete facts, and the existing domain guarantees it is not later
+than `observed_at`. No value is backdated.
 
-The target-race grammar remains tied to immutable capture
-`nar-capture-v1:d6692261a54c1038a5ffd804ae79edda9ca543cb5d78f37c41ffaeefe281013b`
-with response SHA-256
-`3b909b6c9509713150199c3bb3821051181671e10c906f5c315aa4a4c4dbf2db`.
-Generic NAR documentation evidence commit
-`033be021f26749f0fe2cdf80894ad2365884276c` freezes the official statement that
-ordinary displayed payout amounts are returns for a 100-yen purchase. Therefore an
-exact validated displayed integer yen amount becomes `PayoutRecord.payout_per_100`.
-Documentation supplies denomination semantics only and is never read at runtime.
+## Evidence selection and provider dispatch
 
-## Public boundary
+### PROVIDER_DISPATCH_POLICY
+
+Provider ownership comes only from the snapshot's exact source identity:
+
+```text
+organization=JRA, source_system=jra_official -> c4h0 result + c4h1 payout
+organization=NAR, source_system=nar_official -> c4h2 result + c4h3 payout
+```
+
+Any other or contradictory source identity fails before capture or repository I/O.
+Dispatch never uses horse names, place, URL substrings, numeric coincidence, or
+database provenance guesses. C4h4 calls the formal provider functions and duplicates
+no HTML parser.
+
+### RESULT_CAPTURE_SELECTION_POLICY
+
+The application supplies one exact `result_capture_id` per race. C4h4 performs no
+latest, nearest, URL, or current-page selection. Before any repository write it loads
+every distinct supplied capture ID exactly once from the selected provider archive,
+validates exact returned ID/type/page kind, and rejects an observation after the
+settlement cutoff.
+
+### PAYOUT_CAPTURE_SELECTION_POLICY
+
+The application supplies an exact capture-ID mapping whose keys exactly equal the
+required bet types derived from the frozen persisted plan. Each type has one explicit
+capture ID. Result and payout IDs, and payout IDs across types, may be equal or
+different; C4h4 does not impose false JRA/NAR symmetry. Reused IDs are loaded once in
+the preflight. Missing, extra, unsupported, or after-cutoff mappings fail before any
+write.
+
+The formal archives do not expose one common bounded capture-selection contract:
+their shared boundary is exact-ID load, and NAR supplies no generic latest-at-cutoff
+lookup. Therefore automatic archive selection is outside initial c4h4. The implementation
+uses a private read-only exact-ID cache/proxy so the provider normalizers consume the
+already preflighted immutable captures without a second underlying archive read.
+
+## Required facts and bounded repository reads
+
+### REQUIRED_BET_TYPES_POLICY
+
+`ONLY_SETTLEMENT_REQUIRED_TYPES_REQUIRED`
+
+Required types are the unique `SimulationBet.bet_type` values from the exact persisted
+plan, in first-occurrence order. They are established before official evidence I/O.
+All-formal-type acquisition is unnecessary and could turn an unpurchased unsupported
+type into a false blocker. A malformed or unsupported persisted plan fails through the
+existing plan/domain boundary; it is never skipped.
+
+### RESULT_COMPLETENESS_POLICY
+
+For a race with purchased bets, settlement-ready result evidence is exactly one
+`PersistedRaceResult` for the internal race with `RaceResultStatus.COMPLETE`, non-null
+`finalized_at`, and `observed_at` at or before the settlement cutoff. The current
+repository is insert-only per race; equal writes are idempotent and any differing
+result, including a different correction/source, conflicts. C4h4 adds no result
+versioning.
+
+An exact persisted empty plan is final `NO_BET` and requires no settlement fact read in
+the final-completeness path, preserving the existing c4g2a/c4g2b behavior. The
+acquisition subphase may still persist the explicitly supplied final result, but it
+requires no payout capture mapping for that empty plan.
+
+### PAYOUT_COMPLETENESS_POLICY
+
+For every required purchased bet type, the latest eligible publication selected by the
+existing repository/source rule must exist and have `is_complete=True` and non-null
+`finalized_at`. Missing or incomplete latest eligible evidence is not a loss, empty
+payout, or fallback to an older complete publication. No unrequired payout type is
+needed for readiness.
+
+### MULTIPLE_PUBLICATION_SELECTION_POLICY
+
+The existing formal rule remains:
+
+```text
+race_id + bet_type
+observed_at <= settlement cutoff
+ORDER BY observed_at DESC, publication_id DESC
+require_complete=False
+```
+
+The latest eligible publication is authoritative for the as-of replay. If it is
+incomplete, settlement is not ready; no older-complete fallback occurs. A correction
+after the cutoff is invisible. A correction at or before the cutoff is selected by the
+same ordering rule. Repository-returned wrong-race, wrong-type, or post-cutoff values
+fail closed.
+
+## Acquisition, partial state, and repeated runs
+
+### ACQUISITION_WRITE_ORDER_POLICY
+
+After public arguments, persisted-plan requirements, provider dispatch, exact capture
+IDs, capture types, and all cutoff checks pass, c4h4a invokes the formal result
+normalizer first, then one payout normalizer per required type in frozen
+first-occurrence order. Each provider function retains its own complete validation and
+single-write contract.
+
+### PARTIAL_ACQUISITION_POLICY
+
+`DURABLE_AUDITABLE_PARTIAL_STATE_ALLOWED_BUT_NEVER_SETTLEMENT_READY`
+
+The repositories own separate transactions and explicitly reject being wrapped in an
+active caller transaction. No application-level transaction is added. A later provider
+validation or repository failure may therefore leave an earlier exact result or payout
+publication durably persisted. This state is immutable/auditable and safe because
+final readiness requires the complete bounded fact set. It never becomes zero payout,
+a losing ticket, or a silently omitted race.
+
+### IDEMPOTENCE_POLICY
+
+No hidden retry occurs. Repeating the same snapshot, plan identity, cutoff, exact
+capture set, and repository state follows the same deterministic order. Equal result
+and payout writes retain repository-owned idempotence; differing immutable result or
+publication identities/content retain repository-owned conflict behavior. Archive,
+provider-normalizer, and repository exceptions propagate unchanged.
+
+### REPOSITORY_EXCEPTION_POLICY
+
+Collaborator exceptions propagate with exact identity and without retry,
+compensation, fallback, or conversion to readiness. C4h4 errors cover only its own
+argument, provider-dispatch, capture-set/cutoff, and final-readiness boundaries.
+
+## Settlement readiness and handoff
+
+### SETTLEMENT_READINESS_POLICY
+
+`ACQUISITION_ATTEMPT_COMPLETED` and `SETTLEMENT_READY` are distinct.
+
+For every race, an exact empty persisted plan is ready as `NO_BET`. Every nonempty plan
+is ready only when the bounded source supplies the complete result and a complete
+publication for every required type. The final batch is complete only when:
+
+```text
+settled_race_count + no_bet_race_count == race_count
+unsettled_race_count == 0
+void_race_count == 0
+error_race_count == 0
+unsupported_race_count == 0
+```
+
+The initial provider envelope is normal-final-winning only, so void/unsupported states
+are not final-complete c4h4 outcomes. A not-ready batch raises the dedicated final
+readiness error and returns no partial `SimulationSummary` as final ROI.
+
+### NO_SKIP_POLICY
+
+Missing, unsupported, partial, conflicting, or after-cutoff evidence never removes a
+race from the canonical batch and never turns into loss, zero payout, or `NO_BET`.
+The existing as-of composition may internally classify it as `UNSETTLED` or
+`UNSUPPORTED`; the final-completeness wrapper rejects that summary rather than exposing
+it as final ROI.
+
+### SETTLEMENT_ENGINE_HANDOFF_POLICY
+
+C4h4a persists facts and invokes no settlement engine. C4h4b calls the existing
+`execute_historical_settlement_simulation(...)` exactly once and does not duplicate
+bet matching, stake multiplication, payout/profit arithmetic, aggregation, or drawdown.
+It returns that exact `SimulationSummary` only after the final-completeness predicate
+passes; otherwise it raises and returns no summary.
+
+## Public API proposals and phase split
+
+### C4H4_SUBPHASE_DECISION
+
+`TWO_SUBPHASES`
+
+One phase would combine exact capture preflight, provider dispatch, multiple immutable
+writes, bounded reads, readiness, and settlement execution. The smallest reviewable
+split is:
+
+1. `4C-2d3b1i6d1d5f1c4h4a`: exact-ID official settlement acquisition/persistence
+   composition for one historical race.
+2. `4C-2d3b1i6d1d5f1c4h4b`: final-complete historical settlement application wrapper
+   over the unchanged c4g2b composition.
+
+No c4h4c is currently required.
+
+### PUBLIC_API_PROPOSAL — c4h4a
 
 Module:
 
 ```text
-scripts/simulation/nar_target_race_payout_persistence.py
+scripts/simulation/official_settlement_acquisition.py
 ```
 
-Module-local surface, with no package-root export:
+Module-local API with no package-root export:
 
 ```python
-__all__ = (
-    "NARTargetRacePayoutPersistenceError",
-    "NARTargetRacePayoutPersistenceValidationError",
-    "NARTargetRacePayoutPersistenceUnavailableError",
-    "NARTargetRacePayoutPersistenceUnsupportedError",
-    "normalize_and_persist_nar_target_race_payout",
-)
-
-def normalize_and_persist_nar_target_race_payout(
+def acquire_and_persist_official_settlement_facts(
     *,
-    capture_id: str,
-    capture_archive: NAROfficialResponseCaptureArchive,
     snapshot: HistoricalInputSnapshot,
-    bet_type: str,
+    run_context: SimulationRunContext,
+    strategy_identity: StrategyIdentity,
+    settlement_information_cutoff: datetime,
+    bet_plan_snapshot_source: SimulationBetPlanSnapshotSource,
+    result_capture_id: str,
+    payout_capture_ids_by_bet_type: Mapping[str, str],
+    capture_archive: JRAOfficialResponseCaptureArchive | NAROfficialResponseCaptureArchive,
+    race_result_repository: RaceResultRepository,
     payout_repository: PayoutRepository,
-) -> PayoutPublication:
+) -> PersistedRaceSettlementData:
     ...
 ```
 
-`NARTargetRacePayoutPersistenceError(ValueError)` is the module-local base.
-Validation covers malformed or contradictory evidence/identity/crosswalk data;
-Unavailable covers an absent exact capture or absent positive complete-final evidence;
-Unsupported covers positively recognized representations outside the normal-winning
-envelope. Archive and repository exceptions propagate unchanged. There is no broad
-exception catch.
+The module-local `__all__` exposes the function plus
+`OfficialSettlementAcquisitionError`,
+`OfficialSettlementAcquisitionValidationError`,
+`OfficialSettlementAcquisitionUnavailableError`, and
+`OfficialSettlementAcquisitionUnsupportedError`. Provider persistence errors and all
+archive/repository exceptions propagate unchanged.
 
-All public arguments are validated before archive I/O. `capture_id` and `snapshot`
-require exact types; the bet type must belong to formal `BET_TYPES`; archive and
-repository objects must be non-type objects with their required callable method.
+The function adapts the immutable snapshot only to establish the exact persisted-plan
+identity, loads that plan once, derives required types, preloads all distinct exact
+captures before writes, dispatches to c4h0/c4h1 or c4h2/c4h3, and returns existing
+`PersistedRaceSettlementData` containing the exact frozen bets and successful formal
+result/publications. It introduces no new aggregate DTO.
 
-## Capture, identity, and finality
+### PUBLIC_API_PROPOSAL — c4h4b
 
-`CAPTURE_LOAD_COUNT`: `EXACTLY_ONE_BY_EXACT_ID`
-
-The function calls only
-`capture_archive.load_capture(capture_id=capture_id)`. It requires exact
-`NAROfficialResponseCapture`, the requested ID, and `RACE_MARK_TABLE` page kind, then
-strictly decodes exact response bytes as UTF-8. There is no latest/URL/fallback lookup,
-retry, HTTP, documentation access, capture creation/write, current clock, or random
-input.
-
-The canonical RaceMarkTable URL derives the exact
-`nar:YYYYMMDD:<babaCode>:<raceNo>` identity. Snapshot organization `NAR`, source
-system `nar_official`, source race ID, target date, visible date/place, active course,
-and whole-value race number must agree before payout normalization.
-
-The same capture must also satisfy c4h2's frozen positive result-finality evidence:
-one populated `winHorseTable`, exact `優勝馬情報` heading and winner structure, and
-exactly one complete approved result-finalization statement. The c4h2 persistence
-function is not called, and c4h3 neither constructs nor writes a race result.
-
-## Exhaustive payout grammar
-
-The parser requires exactly one:
+Module:
 
 ```text
-article.raceResult > div.innerWrapper > section.newRefundTable
+scripts/simulation/final_historical_settlement_simulation.py
 ```
 
-Its direct children must be exactly `h4` and `div.twoRefundTable`; the heading has one
-direct `span.smallTitle` with normalized whole value `払戻金`. The wrapper has exactly
-two direct attribute-free tables, each with one direct `tbody` and only direct `tr`
-rows.
+Module-local API with no package-root export:
 
-Every table row belongs to exactly one explicit group. A start row has direct cells
-`td.title[rowspan]`, the table's selection cell, `td.refundMoney`, and `td.c`.
-Continuation rows have exactly selection, refund, and popularity cells. `rowspan` is a
-canonical positive ASCII decimal and defines the exhaustive group boundary. Missing,
-extra, overlapping, out-of-range, duplicate, unknown, or unclassified rows/groups fail
-closed.
+```python
+def execute_final_historical_settlement_simulation(
+    *,
+    snapshots: tuple[HistoricalInputSnapshot, ...],
+    run_context: SimulationRunContext,
+    strategy_identity: StrategyIdentity,
+    settlement_cutoffs_by_race_id: Mapping[int, datetime],
+    bet_plan_snapshot_source: SimulationBetPlanSnapshotSource,
+    race_result_repository: RaceResultRepository,
+    payout_repository: PayoutRepository,
+) -> SimulationSummary:
+    ...
+```
 
-First-table labels are exactly `単勝`, `複勝`, `枠連複`, and `馬連複`, using direct
-selection `td.a`. Second-table labels are exactly `馬連単`, `ワイド`, `三連複`, and
-`三連単`, using direct selection `td.d`. Formal mappings are only:
+It reuses c4g2b's exact public arguments and return type, invokes c4g2b once, validates
+the final counts above, and either returns the exact summary or raises module-local
+`FinalHistoricalSettlementNotReadyError`. It adds no second settlement source, DTO,
+metric, or repository query policy.
+
+### RETURN_VALUE_POLICY
+
+C4h4a reuses `PersistedRaceSettlementData`; c4h4b returns the exact existing
+`SimulationSummary`. No acquisition result is represented as final readiness, and no
+partial/as-of summary is represented as guaranteed final ROI.
+
+## Persistence and operational decisions
+
+- `REPOSITORY_PROTOCOL_CHANGE_REQUIRED`: `NO`
+- `SQLITE_REPOSITORY_CHANGE_REQUIRED`: `NO`
+- `SCHEMA_CHANGE_REQUIRED`: `NO`
+- `MIGRATION_REQUIRED`: `NO`
+- `LIVE_HTTP_POLICY`: `FORBIDDEN_IN_INITIAL_C4H4`
+- `HISTORICAL_REPLAY_POLICY`: exact archived captures and persisted publications are
+  eligible only by actual `observed_at` at or before the explicit cutoff; a current
+  capture is not usable for an earlier historical cutoff.
+
+## Required future tests
+
+C4h4a must pin:
+
+- exact module-local public surface and keyword-only signature;
+- exact JRA and NAR dispatch from source identity;
+- one result plus every unique frozen-plan payout type in deterministic order;
+- required types fixed before official reads and unaffected by payout availability;
+- exact capture-ID mapping coverage and one underlying load per distinct ID;
+- shared and distinct result/payout capture IDs;
+- observation exactly at cutoff accepted and one microsecond after rejected before any
+  repository write;
+- no current-clock fallback, live HTTP, latest capture lookup, or raw HTML parser;
+- no snapshot, persisted-plan, prediction, value, allocation, or strategy mutation;
+- result-first and payout first-occurrence write order;
+- partial durable writes never reported as a completed acquisition return;
+- equal retry remains repository-idempotent and conflicts propagate unchanged;
+- missing/invalid/unsupported capture and provider errors fail closed;
+- no unsupported bet-type, missing mapping, or extra mapping skip;
+- no package-root export, schema, SQLite, settlement arithmetic, or result/payout model
+  duplication.
+
+C4h4b must pin:
+
+- exact delegation to c4g2b and exact summary return identity;
+- all-settled plus no-bet batches accepted;
+- missing result, missing required payout, incomplete latest publication, unsupported
+  facts, conflict-derived failure, and after-cutoff evidence rejected with no summary;
+- later correction after cutoff invisible and later correction at/before cutoff chosen
+  by the formal ordering rule;
+- no silent race or unsupported type skip;
+- no prediction snapshot or planned-bet mutation;
+- no settlement arithmetic, raw parser, repository write, HTTP, or current-clock logic.
+
+## Implementation readiness and next step
+
+`IMPLEMENTATION_BLOCKERS`: `NONE_FOR_C4H4A_AFTER_INDEPENDENT_ARCHITECTURE_APPROVAL`
+
+`RECOMMENDED_NEXT_PHASE`:
+`4C-2d3b1i6d1d5f1c4h4a_EXACT_CAPTURE_SETTLEMENT_ACQUISITION_COMPOSITION`
+
+`NEXT_PHASE_ALLOWED_FILES`:
 
 ```text
-単勝   <- 単勝
-馬連   <- 馬連複
-ワイド <- ワイド
-3連複  <- 三連複
+scripts/simulation/official_settlement_acquisition.py
+tests/test_official_settlement_acquisition.py
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
 ```
 
-The four unsupported sibling groups are structurally classified but never normalized
-or allowed to leak selections/amounts into a supported publication.
-
-One formal type is requested per call. Exact initial normal group sizes are
-`単勝=1`, `馬連=1`, `ワイド=3`, and `3連複=1`; any other size fails closed without
-inferring an exceptional state.
-
-Selections are whole direct text using positive canonical ASCII horse numbers and
-exact ASCII `-`, with arity 1/2/2/3. Whitespace, signs, leading zeroes, decimals,
-full-width digits, empty or duplicate tokens, wrong separators/classes, and extra text
-are rejected. Amounts are whole direct `td.refundMoney` text matching exactly:
-
-```text
-[1-9][0-9]{0,2}(?:,[0-9]{3})*円
-```
-
-The complete amount is validated before removing commas/suffix and converting to a
-positive integer. Selection and amount always come from the same direct row;
-popularity `td.c` is neither identity nor payout value.
-
-## Race-local crosswalk, publication, and save
-
-Each horse number resolves only through:
-
-```text
-exact NAR race identity + horse number
--> exact nar:...:entry:<horseNum>
--> exact snapshot external_entry_id
--> exact internal race_entry_id
-```
-
-Snapshot external and internal identities must be coherent and unique. Horse/jockey
-name, lineage, row position, display order, global horse number, prediction selection,
-and cross-provider numeric coincidence are forbidden. After each number resolves,
-formal `normalize_selection` owns unordered pair/triple canonicalization. Duplicate
-canonical payout selections fail before save.
-
-After all capture, identity, finality, table, group, requested-row, selection, amount,
-crosswalk, and duplicate checks pass, exactly one `PayoutPublication` is built with:
-
-```text
-race_id = snapshot.internal_race_id
-bet_type = exact requested formal type
-observed_at = capture.observed_at
-finalized_at = capture.observed_at
-is_complete = True
-source = capture.capture_id
-source_url = capture.canonical_source_url
-entries = every exhaustive requested normal-winning row
-```
-
-`PAYOUT_SAVE_COUNT`: `EXACTLY_ONE_AFTER_COMPLETE_VALIDATION`
-
-The function calls `payout_repository.save_payout_publication(publication)` once and
-returns that method's exact result, preserving repository-assigned publication ID and
-object identity. No incomplete or partial publication, retry, compensation, second
-save, direct database transaction, settlement arithmetic, prediction, or bet mutation
-occurs.
-
-## Verification and stop condition
-
-- Dedicated:
-  `16 passed, 87 subtests passed`
-- Related exact files:
-  `tests/test_nar_official_response_capture.py`,
-  `tests/test_sqlite_nar_official_response_capture_repository.py`,
-  `tests/test_nar_target_race_result_persistence.py`,
-  `tests/test_historical_input_snapshots.py`,
-  `tests/test_simulation_repositories.py`,
-  `tests/test_jra_target_race_payout_persistence.py`,
-  `tests/test_historical_persisted_race_settlement_source.py`, and
-  `tests/test_historical_settlement_simulation.py`
-- Related result: `144 passed, 256 subtests passed`
-- Full suite: `3017 passed, 2264 subtests passed`
-- Static ownership/scope check: `PASS`
-- Git diff check: `PASS`
-- Live HTTP/documentation HTTP/target recapture during implementation: `NO`
-
-Stop for independent implementation review. Do not integrate formally and do not
-start c4h4.
+C4h4b remains unstarted until c4h4a is formally complete. Stop for independent
+architecture review.
