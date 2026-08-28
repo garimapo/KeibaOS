@@ -89,6 +89,13 @@ _FINALITY_STATEMENT = (
     "※2026年4月以降、優勝馬の情報はレース終了翌日までに表示されます。"
     "また、優勝馬の情報はレース結果確定時点の情報となります。"
 )
+_KNOWN_EXCEPTIONAL_ROW_MARKERS_FOR_FAIL_CLOSED_REJECTION_ONLY = (
+    "取消",
+    "除外",
+    "中止",
+    "失格",
+    "降着",
+)
 
 
 def _validation(message: str) -> NARTargetRaceResultPersistenceValidationError:
@@ -273,6 +280,9 @@ def _result_rows(soup: _BeautifulSoup) -> tuple[tuple[int, int], ...]:
         classes = tuple(cell.get("class") for cell in cells)
         if any(not _valid_field_classes(item, field) for item, field in zip(classes, _FIELD_CLASSES, strict=True)):
             raise _validation("official NAR result row field classes are invalid")
+        row_text = _display(row.get_text(" ", strip=True), "official NAR result row")
+        if any(marker in row_text for marker in _KNOWN_EXCEPTIONAL_ROW_MARKERS_FOR_FAIL_CLOSED_REJECTION_ONLY):
+            raise _unsupported("official NAR exceptional result row is unsupported")
         horse_no = _positive_direct_token(cells[2], "official NAR horse number")
         finish_position = _positive_direct_token(cells[0], "official NAR finish position")
         values.append((horse_no, finish_position))

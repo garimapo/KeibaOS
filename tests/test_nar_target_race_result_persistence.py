@@ -369,6 +369,19 @@ class NARTargetRaceResultPersistenceTests(unittest.TestCase):
         self._assert_no_save(_html(finishes=(1, 1, 3)))
         self._assert_no_save(_html(finishes=(1, 2, 4)))
 
+    def test_known_exceptional_row_markers_fail_closed_outside_finish_cell(self) -> None:
+        for marker in ("取消", "除外", "中止", "失格", "降着"):
+            with self.subTest(marker=marker):
+                body = _html().replace(
+                    b"<td class='l'></td>",
+                    f"<td class='l'>{marker}</td>".encode("utf-8"),
+                    1,
+                )
+                self._assert_no_save(
+                    body,
+                    error=NARTargetRaceResultPersistenceUnsupportedError,
+                )
+
     def test_crosswalk_and_snapshot_coverage_fail_closed(self) -> None:
         self._assert_no_save(_html(horse_numbers=(1, 2, 4)), snapshot=_snapshot(horse_numbers=(1, 2, 3)))
         self._assert_no_save(_html(horse_numbers=(1, 2)), snapshot=_snapshot(horse_numbers=(1, 2, 3)))
@@ -420,6 +433,8 @@ class NARTargetRaceResultPersistenceTests(unittest.TestCase):
         self.assertNotIn("except BaseException", source)
         self.assertNotIn("load_capture_for", source)
         self.assertNotIn("save_capture", source)
+        self.assertNotIn("nar_historical_past_race_source", source)
+        self.assertNotIn("_CANCELLATIONS", source)
         self.assertNotIn("HorseMarkInfo", source)
         self.assertNotIn("Prediction", source)
         self.assertNotIn("Payout", source)

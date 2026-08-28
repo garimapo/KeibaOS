@@ -100,6 +100,16 @@ complete contiguous finish set `1..N`; duplicate, nonnumeric, non-contiguous, ti
 dead-heat, scratched, excluded, DQ, DNF, void, partial, or unknown representations
 are not normalized as COMPLETE and fail closed.
 
+`KNOWN_EXCEPTIONAL_ROW_MARKER_POLICY`: `FAIL_CLOSED_REJECTION_ONLY`
+
+Every applicable result row is also scanned as one normalized whole display value for
+the existing formal NAR marker vocabulary `取消`, `除外`, `中止`, `失格`, and `降着`.
+Any occurrence raises `NARTargetRaceResultPersistenceUnsupportedError` before result
+construction or repository save, even when `td.a` otherwise contains a valid numeric
+finish. The marker vocabulary does not authorize exceptional-state normalization:
+it supplies no scratch, exclusion, DNF, DQ, demotion, replacement-position, void, or
+settlement semantics.
+
 Positive finality requires the exact evidence-frozen populated `winHorseTable` shape,
 `優勝馬情報` heading, required winner-information structures, and exactly one official
 attention statement saying winner information reflects result confirmation. Missing
@@ -131,9 +141,9 @@ validation failure writes zero results.
 
 ## Verification
 
-- Dedicated: `12 passed, 61 subtests passed`
+- Dedicated: `13 passed, 66 subtests passed`
 - Related: `153 passed, 245 subtests passed`
-- Full suite: `3000 passed, 2172 subtests passed`
+- Full suite: `3001 passed, 2177 subtests passed`
 - Static ownership/scope checks: passed.
 - `git diff --check`: passed.
 

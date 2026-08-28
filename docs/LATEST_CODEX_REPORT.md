@@ -5547,3 +5547,28 @@ and Git diff checks pass. Only the new c4h2 module, its dedicated test, and the 
 phase documents changed. No live HTTP, trusted capture reload or recapture, database
 write, existing production change, repository protocol, SQLite, schema, migration, or
 c4h3 work occurred. Formal integration remains unstarted; stop for independent review.
+
+## Phase 4C-2d3b1i6d1d5f1c4h2 Correction — Exceptional Row Rejection
+
+Status remains `READY_FOR_REVIEW`. Independent review found that a structurally normal
+row with numeric horse and finish cells could still carry a known exceptional-state
+marker in another field and enter the normal COMPLETE path. The row boundary now
+normalizes each applicable row's whole display text and rejects the existing formal
+NAR marker vocabulary `取消`, `除外`, `中止`, `失格`, and `降着` as unsupported before
+entry construction or repository save.
+
+This is rejection only. It does not infer which horse was affected, interpret the
+reason or settlement effect, replace positions, or add scratch, DQ, DNF, demotion,
+dead-heat, or void support. The support envelope remains
+`NORMAL_COMPLETE_FINAL_ONLY`; numeric finish grammar, contiguous `1..N`, exact
+snapshot coverage, finality, identity, timestamps, and repository behavior are
+unchanged.
+
+Dedicated regressions place each marker outside `td.a` while retaining an otherwise
+valid numeric finish. Every case raises
+`NARTargetRaceResultPersistenceUnsupportedError`, loads the exact archive capture
+once, and saves zero results. Verification passed: dedicated `13 passed, 66 subtests
+passed`; related `153 passed, 245 subtests passed`; full suite `3001 passed, 2177
+subtests passed`. Static ownership and Git diff checks pass. No live HTTP, trusted
+capture, repository protocol, SQLite, schema, migration, existing-production, or c4h3
+change occurred. Formal integration remains unstarted; stop for independent re-review.
