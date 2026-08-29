@@ -5939,3 +5939,66 @@ Independent review found no C4i2 production blocker and implementation code rema
 unchanged. `CURRENT_PHASE.md` review-branch metadata now identifies the implementation
 review branch rather than the earlier PREPARE branch. Formal integration remains pending
 independent re-verification.
+
+## Phase 4C-2d3b1i6d1d5f1c4i3a — Portable Official Fixture Evidence and Provenance PREPARE
+
+Status: `DRAFT_FOR_REVIEW`.
+
+Prepared the evidence/provenance contract from formal C4i2 commit
+`7cec11686e7ac02d98782834200debe24bb9d15b`. The isolated JRA and NAR archives were
+opened read-only, and each capture was exact-loaded through its formal repository.
+Formal reconstruction and direct body hashing independently verified the capture IDs,
+URLs, page kinds, byte lengths, charsets, timestamps, HTTP metadata, and response
+digests. No HTTP, recapture, archive mutation, capture save, project database activity,
+or fixture creation occurred.
+
+The verified JRA source is
+`jra-capture-v1:2d8fbee2df4a201923a49a48e02de3f6837293e0166a1347e30ef3f0b0aad296`,
+URL
+`https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde0106202504030420250913%2FDC`,
+race `jra:race:2025:06:04:03:04`, SHA-256
+`f5daa967f05ae1ee0cfcbe8d4c0e59aa8a6b3ceef126ce9d8689fe10ffa8ed0e`,
+94,570 cp932 bytes, observed at `2026-08-26T11:38:28.113891+00:00`.
+The verified NAR source is
+`nar-capture-v1:d6692261a54c1038a5ffd804ae79edda9ca543cb5d78f37c41ffaeefe281013b`,
+URL
+`https://www.keiba.go.jp/KeibaWeb/TodayRaceInfo/RaceMarkTable?k_babaCode=31&k_raceDate=2026%2F05%2F03&k_raceNo=1`,
+race `nar:20260503:31:1`, SHA-256
+`3b909b6c9509713150199c3bb3821051181671e10c906f5c315aa4a4c4dbf2db`,
+96,614 UTF-8 bytes, observed at `2026-08-27T15:41:31.026438+00:00`.
+
+The selected future evidence model is `EXACT_SOURCE_BYTES`. Exact response SHA, byte
+length, encoding, mixed/source line endings, formal capture identity, and original
+timestamps are retained. A reduced derivative is rejected for this fixture set because
+it would currently have to rewrite source identity markup or remove source comments to
+fit the formal parsers, concealing rather than testing real compatibility. The future
+raw HTML paths, combined strict provenance JSON, combined strict expected-facts JSON,
+and direct integrity/normalizer test are frozen. Exact-path `.gitattributes -text`
+entries are required because both source bodies contain no NUL byte and the Windows
+repository uses `core.autocrlf=true`.
+
+Offline source-fact inspection froze complete result orders and all four supported
+normal payout publications. JRA order is
+`7,3,6,12,5,2,13,4,9,10,8,11,1`, with `単勝 7=160`,
+`馬連 3-7=1030`, three `ワイド` values `3-7=420`, `6-7=300`,
+`3-6=1370`, and `3連複 3-6-7=2280`. NAR order is
+`8,10,11,4,1,5,7,9,3,6,2`, with `単勝 8=720`, `馬連 8-10=730`,
+three `ワイド` values `8-10=300`, `8-11=410`, `10-11=350`, and
+`3連複 8-10-11=1230`.
+
+Two implementation blockers were found fail closed. Both public JRA result/payout
+boundaries reject the exact official `img[alt]` value `4レース` because their frozen
+grammar accepts only synthetic `4R`. The public NAR result boundary accepts the exact
+source, but the NAR payout boundary rejects official HTML `Comment` nodes under
+`div.twoRefundTable` as unclassified direct text. Removing comments only for offline
+analysis confirms the NAR payout facts, but is explicitly not reported as public
+normalizer success. No fixture may be rewritten to mask either mismatch.
+
+The recommended next phase is a separately reviewed narrow exact-source parser
+compatibility correction before C4i3a fixture implementation. C4i3b remains CLI plus
+complete mixed-provider no-network replay acceptance and is unstarted. The future AI
+policy remains
+`FUTURE_AI_SIGNAL_ARCHITECTURE=OPTIONAL_AUDITABLE_AUGMENTATION_AFTER_VER0_8`, with
+`AI_SIGNAL_USAGE_BASELINE=DISABLED` and `CURRENT_C4I3A_AI_EFFECT=NONE`. No pytest was
+required for this docs-only PREPARE. Stop for independent evidence/provenance
+architecture review.
