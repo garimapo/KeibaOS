@@ -1,6 +1,6 @@
 # Current Phase
 
-Status: `DRAFT_FOR_REVIEW`
+Status: `READY_FOR_REVIEW`
 
 ## Identity and scope
 
@@ -57,33 +57,163 @@ C4I introduces a distinct `HistoricalReplayRequestDocument` with its own
 `run_persisted_simulation_request` application and `run_persisted_simulation` CLI keep
 their exact behavior.
 
-The new immutable manifest contains only direct consumers:
+The root JSON object has exactly these keys and no others:
 
-- `schema_version`;
-- main simulation `database_path`;
-- provider-keyed capture archive paths for `JRA/jra_official` and/or
-  `NAR/nar_official`;
-- `run_context`, `strategy`, and `pipeline` configuration material;
-- `budgets_by_race_id`;
-- an ordered non-empty race array, each item containing:
-  - exact natural `snapshot_identity`: `dataset_id`, `organization`,
-    `source_system`, `external_race_id`, and aware `captured_at`;
-  - expected `internal_race_id` as a mandatory cross-check and binding key, never as
-    a replacement lookup identity;
-  - one aware `settlement_information_cutoff`;
-  - one exact `result_capture_id`; and
-  - a provider bet-type-to-exact-capture-ID payout evidence catalog.
+```text
+schema_version
+database_path
+capture_archives
+run_context
+strategy
+budgets_by_race_id
+races
+```
+
+There is no `pipeline` key, `track_reference_date`, `PredictionPipeline`, or
+`PipelineConfig` in the document. C4g0 remains sole owner of per-race historical
+pipeline construction through `build_historical_prediction_pipeline(...)`, using
+exactly `snapshot.race.target_race_date` and
+`strategy_identity.strategy_config`. C4i1 constructs no pipeline, and C4i2 passes no
+caller pipeline to C4g1. The legacy schema-v1 request's existing `pipeline` field is
+unchanged.
+
+Exact root value contracts are:
+
+- `schema_version`: exact non-bool integer `1`.
+- `database_path`: exact non-empty, NUL-free string path. A relative value resolves
+  against the replay manifest parent directory.
+- `capture_archives`: exact object with allowed keys only `JRA/jra_official` and
+  `NAR/nar_official`; at least one key is required. Each value is an exact non-empty,
+  NUL-free path string resolved against the manifest parent when relative. Unused
+  configured supported-provider archives are allowed, but every provider represented
+  by a race must be configured. Provider is never inferred from path or capture ID.
+- `run_context`: exact object with only `run_id`, `dataset_id`, `started_at`, and
+  `target_commit_id`. The three IDs are exact non-empty strings; `started_at` is an
+  ISO-8601 aware datetime string. Existing formal semantics produce an exact
+  `SimulationRunContext`.
+- `strategy`: exact existing RuleBased strategy object with only `strategy_name`,
+  `allowed_bet_types`, `max_bet_count`, `selection_style`,
+  `min_combination_score`, `max_candidates`, `sort_condition`, and
+  `allocation_policy`. The allocation object has exactly `policy_name`,
+  `policy_version`, and `parameters`; fixed-stake `parameters` has exactly
+  `stake_amount`. Formal bet types remain exactly `単勝`, `馬連`, `ワイド`, and
+  `3連複`. C4i1 constructs `StrategyConfig` and `AllocationPolicyConfig`, then uses
+  the existing public identity builder to construct the exact `StrategyIdentity`.
+  `strategy_name` is exactly `RuleBasedBetStrategy`; `allowed_bet_types` is an array
+  of unique supported values; count fields are non-bool non-negative integers;
+  `selection_style` is `box` or `formation`; `min_combination_score` is finite; and
+  `sort_condition` uses the existing four formal values. The allocation policy is
+  exactly `fixed_stake_per_recommendation`, version `1`, with a positive non-bool
+  `stake_amount` multiple of 100. Settlement facts cannot influence this construction.
+- `budgets_by_race_id`: exact object keyed by canonical positive ASCII integer strings.
+  Each value is exactly `{"total_amount": value}`, where `value` is a non-bool,
+  non-negative integer multiple of 100. The document stores the result as a frozen
+  `Mapping[int, BetStakeBudget]`, with exact race-ID coverage.
+- `races`: exact non-empty array of exact race objects.
+
+Each race object has exactly:
+
+```text
+snapshot_identity
+internal_race_id
+settlement_information_cutoff
+result_capture_id
+payout_capture_catalog_by_bet_type
+```
+
+`snapshot_identity` is an exact object with only `dataset_id`, `organization`,
+`source_system`, `external_race_id`, and `captured_at`. C4i1 constructs the existing
+`HistoricalInputSnapshotIdentity`, with `organization/source_system` represented by
+its exact source-identity value. Allowed pairs are only `JRA/jra_official` and
+`NAR/nar_official`. `internal_race_id`, `source_url`, `information_cutoff`, and
+`content_sha256` do not occur inside `snapshot_identity`. Its four text identity
+values are exact non-empty strings and `captured_at` is an ISO-8601 aware datetime
+string; construction applies the existing formal identity normalization.
+
+`internal_race_id` is an exact non-bool positive integer used only as cross-check and
+binding metadata. `settlement_information_cutoff` is an exact ISO-8601 aware datetime
+string parsed to an aware `datetime`, with no current-time default. The same value is
+later supplied to C4h4a and C4h4b. `result_capture_id` is an exact non-empty string;
+C4i1 infers no provider semantics from it.
+
+`payout_capture_catalog_by_bet_type` is an exact object whose only allowed keys are
+`単勝`, `馬連`, `ワイド`, and `3連複`, with exact non-empty string values. It may be
+empty. Required-type completeness is not checked before planning. Equal capture-ID
+values are explicitly allowed: one exact capture may serve result normalization and
+one or more payout types, and multiple payout keys may reference the same capture.
+Only JSON object keys must remain unique through duplicate-key rejection.
 
 Relative paths resolve against the manifest directory. JSON duplicate keys,
-non-finite values, unknown root/race keys, empty identifiers, naive timestamps,
-duplicate natural snapshot identities, duplicate internal race IDs, unsupported
-provider identities, duplicate payout keys, and incoherent coverage fail closed.
+non-finite values, unknown or omitted schema keys, invalid exact types, empty required
+identifiers, naive timestamps, duplicate natural snapshot identities, duplicate
+internal race IDs, unsupported provider pairs, unsupported payout keys, and incoherent
+cross-field coverage fail closed.
 
 The manifest's input race order is not repository or execution identity. After every
 snapshot is exact-loaded, the application validates each expected internal race ID
 and freezes the existing formal canonical order `(scheduled_start_at,
 internal_race_id)`. Budgets, cutoffs, and official evidence must cover exactly that
 loaded race set.
+
+## C4i1 public domain surface
+
+Module-local `__all__` contains exactly:
+
+```text
+HistoricalReplayRequestValidationError
+HistoricalReplayRaceRequest
+HistoricalReplayRequestDocument
+load_historical_replay_request_document
+```
+
+There is no package-root export. `HistoricalReplayRequestValidationError` subclasses
+`ValueError` and owns only request JSON, schema, and document-domain validation.
+Filesystem `OSError` from reading the request path propagates unchanged; no broad
+exception hierarchy is introduced.
+
+`HistoricalReplayRaceRequest` is frozen and slotted, with exactly:
+
+```python
+snapshot_identity: HistoricalInputSnapshotIdentity
+internal_race_id: int
+settlement_information_cutoff: datetime
+result_capture_id: str
+payout_capture_catalog_by_bet_type: Mapping[str, str]
+```
+
+`HistoricalReplayRequestDocument` is frozen and slotted, with exactly:
+
+```python
+schema_version: int
+source_path: Path
+database_path: Path
+capture_archive_paths_by_provider: Mapping[str, Path]
+run_context: SimulationRunContext
+strategy_identity: StrategyIdentity
+budgets_by_race_id: Mapping[int, BetStakeBudget]
+races: tuple[HistoricalReplayRaceRequest, ...]
+```
+
+Both types defensively freeze their mappings and tuple contents. The document contains
+no prediction pipeline/config, track-reference date, embedded prediction input,
+result/payout domain object, or capture bytes.
+
+Static cross-field validation requires a non-empty race tuple; unique snapshot natural
+identities and internal race IDs; exact equality between budget race IDs and manifest
+internal race IDs; `run_context.dataset_id` equality with every snapshot dataset ID;
+only the two exact supported provider pairs; and an archive for every represented
+provider. An unused configured supported archive and an empty payout catalog are
+allowed. Capture-ID value reuse is allowed.
+
+Input race order is preserved in the C4i1 document. C4i1 cannot sort by
+`scheduled_start_at` because it does not load snapshots. Canonical execution order is
+C4i2 responsibility after all exact snapshot loads.
+
+C4i1 performs static request validation only. It does not open the main database or
+capture archives, inspect capture existence/bytes, derive purchased bet types,
+determine `NO_BET`, load snapshots, run planning or settlement, or consult a clock.
+Capture availability and required payout-subset validation remain post-planning C4i2
+responsibilities.
 
 ## Exact snapshot and plan policies
 
@@ -156,9 +286,10 @@ formal repositories and boundaries are reused instead.
 `DURABLE_AUDITABLE_PREFIX_ALLOWED`: C4g1 plans and C4h4a results/publications already
 committed before a later failure remain immutable and auditable. C4I stops immediately,
 returns no final summary, performs no hidden retry or compensation, deletes nothing,
-and does not claim global atomicity. Owned manifest/application validation uses a
-narrow C4I error hierarchy; collaborator errors propagate unchanged. A later identical
-retry may rely only on existing repository idempotence/conflict contracts.
+and does not claim global atomicity. C4i1 owns only its single request-validation
+error; later application validation must remain narrow, and collaborator errors
+propagate unchanged. A later identical retry may rely only on existing repository
+idempotence/conflict contracts.
 
 The user-facing result comes only from one successful C4h4b call after all
 acquisition. C4I returns its exact `SimulationSummary` object and never exposes a
@@ -192,8 +323,6 @@ missing snapshot, missing capture, after-cutoff capture, missing required payout
 evidence, non-final settlement, and silent race skipping. Tests perform no network and
 do not manually insert `PersistedRaceResult`, `PayoutPublication`, or `PayoutRecord`.
 
-## C4I implementation split
-
 ## Frozen decision matrix
 
 ```text
@@ -208,6 +337,21 @@ NEW_DISTINCT_HISTORICAL_REPLAY_REQUEST_DOCUMENT_SCHEMA_V1
 
 EXISTING_SCHEMA_V1_COMPATIBILITY_POLICY:
 LEGACY_PERSISTED_SIMULATION_REQUEST_AND_CLI_UNCHANGED
+
+HISTORICAL_REPLAY_PIPELINE_POLICY:
+NO_MANIFEST_PIPELINE_FIELD_C4G0_SOLE_HISTORICAL_PIPELINE_OWNER
+
+ROOT_SCHEMA_KEYS:
+schema_version; database_path; capture_archives; run_context; strategy; budgets_by_race_id; races
+
+RACE_SCHEMA_KEYS:
+snapshot_identity; internal_race_id; settlement_information_cutoff; result_capture_id; payout_capture_catalog_by_bet_type
+
+C4I1_PUBLIC_SURFACE:
+HistoricalReplayRequestValidationError; HistoricalReplayRaceRequest; HistoricalReplayRequestDocument; load_historical_replay_request_document
+
+CAPTURE_ID_VALUE_REUSE_POLICY:
+ALLOWED
 
 EXACT_SNAPSHOT_IDENTITY_POLICY:
 DATASET_ORGANIZATION_SOURCE_EXTERNAL_RACE_CAPTURED_AT_NATURAL_IDENTITY_WITH_INTERNAL_RACE_ID_CROSS_CHECK
@@ -265,6 +409,12 @@ ONE_MIXED_PROVIDER_TWO_RACE_REPLAY_WITH_AT_LEAST_ONE_COMPLETE_JRA_AND_ONE_COMPLE
 
 SIMULATION_RESULT_AUDIT_PERSISTENCE_STATUS:
 OPTIONAL_POST_VER0_8
+
+C4I0_ARCHITECTURE_STATUS:
+READY_FOR_REVIEW
+
+C4I1_IMPLEMENTATION_AUTHORIZATION:
+NOT_YET_APPROVED
 
 VER0_8_REMAINING_OPEN_CRITERIA:
 DETERMINISTIC_FULL_RERUN; APPLICATION_COMPOSITION; FORMAL_HISTORICAL_REPLAY_EXECUTABLE_PATH; FULL_NO_NETWORK_OFFICIAL_SETTLEMENT_E2E

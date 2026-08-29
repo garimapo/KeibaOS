@@ -5754,3 +5754,46 @@ C4i1 blocker after architecture approval. Run-result audit persistence remains
 
 No production, test, schema, migration, database, HTTP, or capture activity occurred.
 No pytest was required. Stop for independent architecture review.
+
+## Phase 4C-2d3b1i6d1d5f1c4i0 Correction — Exact Replay Manifest Contract
+
+Status: `READY_FOR_REVIEW`.
+
+Independent review found that the initial C4i0 draft incorrectly carried legacy
+pipeline configuration into the new historical replay manifest and did not freeze the
+future C4i1 JSON/domain surface exactly. The corrected manifest has only
+`schema_version`, `database_path`, `capture_archives`, `run_context`, `strategy`,
+`budgets_by_race_id`, and `races` at its root. It has no `pipeline`,
+`track_reference_date`, `PredictionPipeline`, or `PipelineConfig`. C4g0 remains the
+sole owner of per-race historical pipeline construction from the loaded snapshot race
+date and formal strategy configuration; the legacy request pipeline field and CLI are
+unchanged.
+
+The exact root, nested run-context/RuleBased-strategy/allocation/budget, race, snapshot
+identity, cutoff, result-capture, and payout-catalog JSON keys and value constraints
+are now frozen. Each race uses the exact natural snapshot identity plus a distinct
+positive internal-race-ID cross-check. Budgets exactly cover manifest race IDs, every
+snapshot dataset matches the run context, supported provider pairs are closed, and
+every represented provider has a configured archive. Input race order is preserved
+because C4i1 does not load snapshots; C4i2 owns canonical scheduling order after all
+exact loads.
+
+Capture-ID values need not be unique. The same archived official page may be used for
+result normalization and multiple payout catalog keys. The payout catalog may be empty
+and unused supported entries remain allowed; existence and required-type completeness
+are intentionally deferred until after planning in C4i2.
+
+The C4i1 public surface is exactly
+`HistoricalReplayRequestValidationError`, `HistoricalReplayRaceRequest`,
+`HistoricalReplayRequestDocument`, and
+`load_historical_replay_request_document`, with no package-root export. The error is a
+single `ValueError` subclass for request validation; filesystem `OSError` propagates.
+The two document types are frozen/slotted and defensively freeze mappings. C4i1
+constructs exact `HistoricalInputSnapshotIdentity`, `SimulationRunContext`,
+`StrategyIdentity`, and `BetStakeBudget` values but performs no database/archive I/O,
+snapshot load, capture inspection, planning, settlement, required-type derivation,
+`NO_BET` decision, or current-clock access.
+
+The duplicated implementation-split heading was removed. C4i0 is ready for independent
+re-review; C4i1 implementation is not yet authorized. No production, tests, schema,
+migration, database, HTTP, or capture activity occurred, and no pytest was required.
