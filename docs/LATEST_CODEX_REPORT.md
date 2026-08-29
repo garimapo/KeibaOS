@@ -5828,3 +5828,107 @@ Verification passed: dedicated `19 passed, 143 subtests passed`; related `168 pa
 371 subtests passed` across the exact legacy request/input and formal identity,
 run-context, strategy, allocation, and budget tests; full suite `3082 passed, 2447
 subtests passed`. C4i2 remains unstarted. Stop for independent implementation review.
+
+## Phase 4C-2d3b1i6d1d5f1c4i2 — Exact SQLite Historical Replay Application Composition PREPARE
+
+Status: `DRAFT_FOR_REVIEW`.
+
+Prepared the exact C4i2 Python application composition on formal C4i1 commit
+`523a59069a15108bee06347a29c49adb947737c6`. The smallest surface is two new
+module-local boundaries: a thin request-path wrapper that performs exactly one C4i1
+load and one SQLite runner call, and a SQLite runner with one public
+`SQLiteHistoricalReplayApplicationError(ValueError)` for only its own dynamic replay
+contradictions. No third orchestration module or repository protocol is needed, and
+collaborator errors remain untranslated.
+
+The runner owns one writable migrated main connection. Before settlement access it
+constructs only the exact historical snapshot and shared plan repositories, exact-loads
+every snapshot by natural identity, validates all manifest bindings, canonicalizes by
+`(scheduled_start_at, internal_race_id)`, and makes one complete C4g1 call. The returned
+tuple must exactly cover the canonical batch and match run, race, strategy/hash, and
+snapshot information-cutoff identity. Only those returned plan bets determine unique
+required payout types. Every race's required-only catalog subset is preflighted before
+any archive or result/payout repository is opened; unused catalog entries are not
+consumed. A zero-bet race still reaches C4h4a with its exact result capture and an empty
+payout mapping.
+
+After that barrier, the runner constructs the shared main result/payout repositories
+and opens all and only represented provider archives before the first acquisition.
+Provider comes solely from the loaded snapshot's exact JRA/NAR source pair. Each archive
+uses `archive_path.absolute().as_uri() + "?mode=ro"` with `uri=True`, so Windows drive
+paths and URI-reserved characters are encoded and SQLite enforces read-only without
+creating a missing file. Verified `PRAGMA query_only=ON` is a secondary defense. No
+archive migration, capture save/load by C4i2, provider search, or writable fallback is
+allowed.
+
+C4h4a runs once per canonical race with the exact shared plan/result/payout repositories
+and the request cutoff. One complete cutoff map is then passed to exactly one C4h4b
+call, whose exact `SimulationSummary` is returned. The first acquisition/final failure
+stops immediately without compensation; durable immutable prefixes remain auditable.
+Connections are all closed in reverse opening order. An active primary error is never
+replaced by cleanup failure; absent a primary error, the first close failure is raised
+after every close is attempted.
+
+Future C4i2 implementation is limited to the two new production modules, two dedicated
+tests, and the two phase docs. Tests will prove request pass-through, one main
+connection/migration, exact snapshot loads, canonical order, the planning/archive
+barrier, exact returned-plan coverage, whole-batch payout subset preflight, hard
+read-only archive opening and no-create behavior, provider/acquisition/final ordering,
+shared repository identity, reverse cleanup, exception propagation, and static
+ownership. Portable official fixture evidence remains C4i3a; CLI plus mixed-provider
+no-network E2E remains C4i3b. No production, tests, schema, migration, HTTP, capture,
+database replay, CLI, or C4i3 work occurred, and no pytest was required. Stop for
+independent architecture review.
+
+## Phase 4C-2d3b1i6d1d5f1c4i2 — Exact SQLite Historical Replay Application Composition
+
+Status: `READY_FOR_REVIEW`.
+
+Implemented the two approved module-local boundaries. The request wrapper performs one
+exact C4i1 load, calls the SQLite runner once with that same document object, and
+returns the same final summary object without owning SQLite, capture, planning,
+settlement, clock, or exception policy. The SQLite runner has the sole owned
+`SQLiteHistoricalReplayApplicationError(ValueError)` for its own dynamic binding,
+plan-batch, catalog, provider, and verified query-only contradictions; collaborator
+errors propagate unchanged.
+
+The runner uses exactly one writable migrated main connection. It exact-loads every
+snapshot by natural identity in manifest order, validates all dynamic request bindings,
+then canonicalizes by `(scheduled_start_at, internal_race_id)`. It constructs only the
+snapshot and plan repositories before one complete C4g1 call. Returned plans must be
+the exact canonical tuple and match the run/race/strategy/hash/snapshot-cutoff binding.
+Only their frozen bet types drive required payout evidence; all races receive a
+required-only catalog-subset preflight before result/payout repository construction or
+any archive opening. Zero-bet races still call C4h4a with their exact result capture and
+an empty payout mapping.
+
+After the barrier, C4i2 constructs one shared result repository and one shared payout
+repository on the main connection, opens only represented provider archives in canonical
+first-occurrence order, and constructs the exact provider capture repositories. Archive
+paths are opened with `Path.absolute().as_uri() + "?mode=ro"` and `uri=True`; verified
+`PRAGMA query_only=ON` supplies the secondary defense. The runner itself never loads or
+saves a capture. Each canonical race invokes C4h4a once with the shared repositories
+and its exact request cutoff. Only after all acquisition succeeds does one C4h4b call
+receive the complete cutoff mapping and return its exact `SimulationSummary`.
+
+All runner-owned connections close in strict reverse opening order. Cleanup attempts
+every close; an active primary exception is re-raised unchanged, while a no-primary
+cleanup path raises the first reverse-close error after remaining closes are attempted.
+There is no global transaction, compensation, retry, current clock, C4g2c, audit
+persistence, HTTP, capture creation/save, schema/migration change, package export,
+legacy-path modification, CLI, C4i3a, or C4i3b work.
+
+The future AI signal principle is documentation-only:
+`FUTURE_AI_SIGNAL_ARCHITECTURE=OPTIONAL_AUDITABLE_AUGMENTATION_AFTER_VER0_8`, with the
+deterministic baseline runnable under `AI_SIGNAL_USAGE=DISABLED` and
+`AI_SIGNAL_USAGE_BASELINE=DISABLED`, and
+`CURRENT_C4I2_AI_EFFECT=NONE`. Future AI/LLM signals must remain optional,
+independently auditable, causally valid, explicitly switchable, and historically plus
+out-of-sample validated before receiving non-zero influence. C4i2 adds no AI client,
+prompt, external call, model setting, schema, migration, persistence, weighting, or
+fixture.
+
+Verification passed: dedicated `24 passed, 31 subtests passed`; related `151 passed,
+287 subtests passed`; full suite `3106 passed, 2478 subtests passed`. Static ownership,
+scope, and Git diff verification are recorded in the review commit. Stop for
+independent implementation review.
