@@ -18,6 +18,36 @@ from scripts.simulation.repositories.sqlite_jra_official_response_capture_reposi
 class JRAMigrationTests(unittest.TestCase):
     _REGISTRY = "jra_official_response_capture_schema_migrations"
 
+    def _replace_fixture_sql_once(self, sql: str, change: tuple[str, str]) -> str:
+        old, new = change
+        self.assertGreaterEqual(sql.count(old), 1)
+        return sql.replace(old, new, 1)
+
+    def _assert_constructed_fixture_schema(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        body_sql: str,
+        capture_sql: str,
+        evidence_index_sql: str,
+        request_index_sql: str | None = None,
+    ) -> None:
+        expected = {
+            "jra_official_response_bodies": body_sql,
+            "jra_official_response_captures": capture_sql,
+            "ux_jra_official_response_captures_evidence": evidence_index_sql,
+        }
+        if request_index_sql is not None:
+            expected["ux_jra_official_response_captures_request_evidence"] = request_index_sql
+        for name, sql in expected.items():
+            row = connection.execute(
+                "SELECT sql FROM sqlite_master WHERE name=?", (name,)
+            ).fetchone()
+            self.assertIsNotNone(row)
+            self.assertEqual(row[0], sql)
+        self.assertEqual(connection.execute("PRAGMA integrity_check").fetchone(), ("ok",))
+        self.assertFalse(connection.in_transaction)
+
     def _v003_connection(self, *, capture_change: tuple[str, str] | None = None) -> sqlite3.Connection:
         source = sqlite3.connect(":memory:")
         apply(source)
@@ -33,7 +63,7 @@ class JRAMigrationTests(unittest.TestCase):
         index_one = source.execute("SELECT sql FROM sqlite_master WHERE type='index' AND name='ux_jra_official_response_captures_evidence'").fetchone()[0]
         index_two = source.execute("SELECT sql FROM sqlite_master WHERE type='index' AND name='ux_jra_official_response_captures_request_evidence'").fetchone()[0]
         if capture_change is not None:
-            capture_sql = capture_sql.replace(*capture_change)
+            capture_sql = self._replace_fixture_sql_once(capture_sql, capture_change)
         c = sqlite3.connect(":memory:")
         c.execute("""CREATE TABLE jra_official_response_capture_schema_migrations (
             version INTEGER PRIMARY KEY CHECK(typeof(version)='integer' AND version>0),
@@ -44,6 +74,13 @@ class JRAMigrationTests(unittest.TestCase):
             ((VERSION, NAME), (VERSION_V2, NAME_V2), (VERSION_V3, NAME_V3)),
         )
         c.execute(body_sql); c.execute(capture_sql); c.execute(index_one); c.execute(index_two); c.commit()
+        self._assert_constructed_fixture_schema(
+            c,
+            body_sql=body_sql,
+            capture_sql=capture_sql,
+            evidence_index_sql=index_one,
+            request_index_sql=index_two,
+        )
         return c
 
     def _weakened_v002_connection(self, *, body_change: tuple[str, str] | None = None, capture_change: tuple[str, str] | None = None, evidence_sql: str | None = None, request_sql: str | None = None) -> sqlite3.Connection:
@@ -55,15 +92,26 @@ class JRAMigrationTests(unittest.TestCase):
         capture_sql = source.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='jra_official_response_captures'").fetchone()[0]
         index_one = source.execute("SELECT sql FROM sqlite_master WHERE type='index' AND name='ux_jra_official_response_captures_evidence'").fetchone()[0]
         index_two = source.execute("SELECT sql FROM sqlite_master WHERE type='index' AND name='ux_jra_official_response_captures_request_evidence'").fetchone()[0]
-        if body_change is not None: body_sql = body_sql.replace(*body_change)
-        if capture_change is not None: capture_sql = capture_sql.replace(*capture_change)
+        if body_change is not None:
+            body_sql = self._replace_fixture_sql_once(body_sql, body_change)
+        if capture_change is not None:
+            capture_sql = self._replace_fixture_sql_once(capture_sql, capture_change)
         c = sqlite3.connect(":memory:")
         c.execute("""CREATE TABLE jra_official_response_capture_schema_migrations (
             version INTEGER PRIMARY KEY CHECK(typeof(version)='integer' AND version>0),
             name TEXT NOT NULL UNIQUE CHECK(typeof(name)='text' AND length(name)>0)
         ) WITHOUT ROWID""")
         c.executemany("INSERT INTO jra_official_response_capture_schema_migrations(version,name) VALUES(?,?)", ((VERSION, NAME), (VERSION_V2, NAME_V2)))
-        c.execute(body_sql); c.execute(capture_sql); c.execute(evidence_sql or index_one); c.execute(request_sql or index_two); c.commit()
+        selected_evidence_sql = evidence_sql or index_one
+        selected_request_sql = request_sql or index_two
+        c.execute(body_sql); c.execute(capture_sql); c.execute(selected_evidence_sql); c.execute(selected_request_sql); c.commit()
+        self._assert_constructed_fixture_schema(
+            c,
+            body_sql=body_sql,
+            capture_sql=capture_sql,
+            evidence_index_sql=selected_evidence_sql,
+            request_index_sql=selected_request_sql,
+        )
         return c
 
     def _weakened_v001_connection(self, *, body_change: tuple[str, str] | None = None, capture_change: tuple[str, str] | None = None, index_sql: str | None = None) -> sqlite3.Connection:

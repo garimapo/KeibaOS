@@ -5939,3 +5939,32 @@ Independent review found no C4i2 production blocker and implementation code rema
 unchanged. `CURRENT_PHASE.md` review-branch metadata now identifies the implementation
 review branch rather than the earlier PREPARE branch. Formal integration remains pending
 independent re-verification.
+
+## Phase 4C-2d3b1i6d1d5f1c4i3a0ci0 — Remote CI SQLite Migration-Test Compatibility Correction
+
+C4i3a0 parser compatibility work stopped because the exact formal base
+`7cec11686e7ac02d98782834200debe24bb9d15b` was already red in the normal GitHub
+Actions `pytest (3.12)` run `33255103731`; the rejected parser review was not the
+cause. The failing node IDs were
+`JRAMigrationTests::test_v003_rejects_weakened_v002_schema_before_mutation` and
+`JRAMigrationTests::test_v004_rejects_lookalike_v003_before_mutation_and_rolls_back_failure`,
+each at its `page` variant with `sqlite3.OperationalError: row value misused`.
+
+The test-only fixture builder had applied `str.replace` to every matching page-kind
+literal. That correctly widened the intended column membership constraint but also
+rewrote the final composite-family equality into invalid SQLite DDL such as
+`page_kind='final_win_odds','other'`. GitHub Actions did not report its SQLite library
+version; the local interpreter uses SQLite `3.50.4`.
+
+The correction replaces exactly the first intended fixture-DDL occurrence, leaving the
+composite constraint intact. It then confirms each deliberately weakened schema's
+tables and indexes in `sqlite_master`, verifies `PRAGMA integrity_check`, and only then
+asserts that the production migration validator raises `RuntimeError` without mutation.
+No production migration, migration contract, schema, capture domain, parser file,
+workflow, fixture, HTTP, or CLI changed.
+
+Local verification: dedicated migration suite `12 passed, 58 subtests passed`; related
+JRA capture/migration/repository suites `32 passed, 75 subtests passed`; full suite
+`3106 passed, 2478 subtests passed`. The corrected review's GitHub Actions result is
+required to pass before independent review. C4i3a0 remains blocked pending this phase's
+independent review and formal integration.
