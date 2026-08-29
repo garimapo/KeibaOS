@@ -5828,3 +5828,54 @@ Verification passed: dedicated `19 passed, 143 subtests passed`; related `168 pa
 371 subtests passed` across the exact legacy request/input and formal identity,
 run-context, strategy, allocation, and budget tests; full suite `3082 passed, 2447
 subtests passed`. C4i2 remains unstarted. Stop for independent implementation review.
+
+## Phase 4C-2d3b1i6d1d5f1c4i2 — Exact SQLite Historical Replay Application Composition PREPARE
+
+Status: `DRAFT_FOR_REVIEW`.
+
+Prepared the exact C4i2 Python application composition on formal C4i1 commit
+`523a59069a15108bee06347a29c49adb947737c6`. The smallest surface is two new
+module-local boundaries: a thin request-path wrapper that performs exactly one C4i1
+load and one SQLite runner call, and a SQLite runner with one public
+`SQLiteHistoricalReplayApplicationError(ValueError)` for only its own dynamic replay
+contradictions. No third orchestration module or repository protocol is needed, and
+collaborator errors remain untranslated.
+
+The runner owns one writable migrated main connection. Before settlement access it
+constructs only the exact historical snapshot and shared plan repositories, exact-loads
+every snapshot by natural identity, validates all manifest bindings, canonicalizes by
+`(scheduled_start_at, internal_race_id)`, and makes one complete C4g1 call. The returned
+tuple must exactly cover the canonical batch and match run, race, strategy/hash, and
+snapshot information-cutoff identity. Only those returned plan bets determine unique
+required payout types. Every race's required-only catalog subset is preflighted before
+any archive or result/payout repository is opened; unused catalog entries are not
+consumed. A zero-bet race still reaches C4h4a with its exact result capture and an empty
+payout mapping.
+
+After that barrier, the runner constructs the shared main result/payout repositories
+and opens all and only represented provider archives before the first acquisition.
+Provider comes solely from the loaded snapshot's exact JRA/NAR source pair. Each archive
+uses `archive_path.absolute().as_uri() + "?mode=ro"` with `uri=True`, so Windows drive
+paths and URI-reserved characters are encoded and SQLite enforces read-only without
+creating a missing file. Verified `PRAGMA query_only=ON` is a secondary defense. No
+archive migration, capture save/load by C4i2, provider search, or writable fallback is
+allowed.
+
+C4h4a runs once per canonical race with the exact shared plan/result/payout repositories
+and the request cutoff. One complete cutoff map is then passed to exactly one C4h4b
+call, whose exact `SimulationSummary` is returned. The first acquisition/final failure
+stops immediately without compensation; durable immutable prefixes remain auditable.
+Connections are all closed in reverse opening order. An active primary error is never
+replaced by cleanup failure; absent a primary error, the first close failure is raised
+after every close is attempted.
+
+Future C4i2 implementation is limited to the two new production modules, two dedicated
+tests, and the two phase docs. Tests will prove request pass-through, one main
+connection/migration, exact snapshot loads, canonical order, the planning/archive
+barrier, exact returned-plan coverage, whole-batch payout subset preflight, hard
+read-only archive opening and no-create behavior, provider/acquisition/final ordering,
+shared repository identity, reverse cleanup, exception propagation, and static
+ownership. Portable official fixture evidence remains C4i3a; CLI plus mixed-provider
+no-network E2E remains C4i3b. No production, tests, schema, migration, HTTP, capture,
+database replay, CLI, or C4i3 work occurred, and no pytest was required. Stop for
+independent architecture review.

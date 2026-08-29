@@ -1,524 +1,444 @@
 # Current Phase
 
-Status: `READY_FOR_REVIEW`
+Status: `DRAFT_FOR_REVIEW`
 
 ## Identity and scope
 
-- Phase: `4C-2d3b1i6d1d5f1c4i1`
-- Name: `Historical Replay Request Document and Strict Loader`
-- Phase-family assignment: `C4I`, explicitly assigned by independent architecture
-  review after completion of C4H; it is not claimed as a pre-existing hierarchy ID.
-- Exact formal base: `8205dd860a61da916f0bd5cd38eb5d26ea0497a6`
+- Phase: `4C-2d3b1i6d1d5f1c4i2`
+- Name: `Exact SQLite Historical Replay Application Composition PREPARE`
+- Exact formal base/C4i1 formal commit:
+  `523a59069a15108bee06347a29c49adb947737c6`
 - Formal branch: `feature/ver0.8-simulator`
 - Review branch:
-  `review/4c-2d3b1i6d1d5f1c4i1-historical-replay-request`
-- Git setting: `core.autocrlf=true`; no Git configuration or attributes change is
-  authorized.
+  `review/4c-2d3b1i6d1d5f1c4i2-sqlite-historical-replay-application-prepare`
+- C4i1 status: `FORMALLY_VERIFIED`
+- Git setting: `core.autocrlf=true`; C4i2 changes no Git configuration or
+  attributes.
 
-Allowed changed files are exactly:
+This PREPARE is docs-only. Its only changed files are:
 
 ```text
-scripts/simulation/historical_replay_request_document.py
-tests/test_historical_replay_request_document.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-The approved C4i0 architecture is frozen. C4i1 implements only the immutable request
-domain and strict UTF-8 JSON loader. It changes no existing production/test module,
-package export, repository, schema, migration, database, capture, application
-composition, or CLI; performs no HTTP; and creates no capture. C4i2 is not started.
+It performs no production/test/schema/migration/CLI change, HTTP, capture creation,
+or replay/database mutation. C4i3a and C4i3b are not started. No pytest is required.
 
-## Implemented C4i1 public boundary
+## C4i2 purpose and public surface
 
-Module-local `scripts.simulation.historical_replay_request_document` exports exactly:
+C4i2 composes the already-formal C4i1, C4g1, C4h4a, and C4h4b boundaries into one
+deterministic SQLite historical replay application. It exact-loads all requested
+historical snapshots, completes and validates one batch planning call before any
+settlement-evidence access, opens only represented official archives read-only,
+acquires official facts once per canonical race, and returns the exact final
+`SimulationSummary` from one C4h4b call.
 
-```text
-HistoricalReplayRequestValidationError
-HistoricalReplayRaceRequest
-HistoricalReplayRequestDocument
-load_historical_replay_request_document
-```
-
-The loader has one keyword-only `request_path: str | Path` parameter and returns
-`HistoricalReplayRequestDocument`. There is no package-root export.
-
-`HistoricalReplayRequestValidationError(ValueError)` owns request-path validation,
-UTF-8/JSON/schema/value/datetime/path/domain construction, and static cross-field
-validation. Native filesystem `OSError` from `Path.read_text(...)` propagates
-unchanged. Duplicate keys at every nesting level, JSON constants and overflow-created
-non-finite floats, malformed/trailing JSON, invalid UTF-8, and non-object roots fail
-with the owned validation error.
-
-Both public request types are frozen and slotted, validate direct construction, and
-defensively copy/freeze mappings. `HistoricalReplayRaceRequest` preserves the exact
-five-field race contract and permits capture-ID value reuse.
-`HistoricalReplayRequestDocument` preserves input race tuple order and constructs or
-contains only the exact formal snapshot identity, run context, strategy identity, and
-budget types frozen by C4i0.
-
-The load operation reads only the request JSON file. It opens no SQLite database or
-capture archive, performs no snapshot/capture load, creates no prediction pipeline,
-uses no clock, and calls no C4g1, C4h4a, or C4h4b boundary.
-
-## Purpose and frozen causal chain
-
-C4I owns the missing deterministic, no-network application path from exact persisted
-historical inputs to the final Ver0.8 settlement summary. The future application must:
-
-1. load and validate the complete replay manifest;
-2. exact-load every `HistoricalInputSnapshot` by natural identity;
-3. validate complete one-to-one race coverage and freeze canonical order;
-4. call `execute_and_persist_historical_bet_plans(...)` exactly once for the complete
-   batch;
-5. only after the whole planning call succeeds, derive each race's required payout
-   types from its frozen returned/persisted plan;
-6. call `acquire_and_persist_official_settlement_facts(...)` once per canonical race;
-7. only after every acquisition call succeeds, call
-   `execute_final_historical_settlement_simulation(...)` exactly once; and
-8. return the exact `SimulationSummary` returned by that final boundary.
-
-No settlement capture, result, or payout may be loaded or normalized before C4g1 has
-completed for the entire batch. Settlement evidence therefore cannot influence
-prediction, strategy, bet generation, allocation, plan persistence, or required
-bet-type generation.
-
-## Replay manifest policy
-
-C4I introduces a distinct `HistoricalReplayRequestDocument` with its own
-`schema_version=1`. It does not add a version or reinterpret the existing
-`PersistedSimulationRequestDocument` schema-v1 `races` field. The legacy
-`run_persisted_simulation_request` application and `run_persisted_simulation` CLI keep
-their exact behavior.
-
-The root JSON object has exactly these keys and no others:
-
-```text
-schema_version
-database_path
-capture_archives
-run_context
-strategy
-budgets_by_race_id
-races
-```
-
-There is no `pipeline` key, `track_reference_date`, `PredictionPipeline`, or
-`PipelineConfig` in the document. C4g0 remains sole owner of per-race historical
-pipeline construction through `build_historical_prediction_pipeline(...)`, using
-exactly `snapshot.race.target_race_date` and
-`strategy_identity.strategy_config`. C4i1 constructs no pipeline, and C4i2 passes no
-caller pipeline to C4g1. The legacy schema-v1 request's existing `pipeline` field is
-unchanged.
-
-Exact root value contracts are:
-
-- `schema_version`: exact non-bool integer `1`.
-- `database_path`: exact non-empty, NUL-free string path. A relative value resolves
-  against the replay manifest parent directory.
-- `capture_archives`: exact object with allowed keys only `JRA/jra_official` and
-  `NAR/nar_official`; at least one key is required. Each value is an exact non-empty,
-  NUL-free path string resolved against the manifest parent when relative. Unused
-  configured supported-provider archives are allowed, but every provider represented
-  by a race must be configured. Provider is never inferred from path or capture ID.
-- `run_context`: exact object with only `run_id`, `dataset_id`, `started_at`, and
-  `target_commit_id`. The three IDs are exact non-empty strings; `started_at` is an
-  ISO-8601 aware datetime string. Existing formal semantics produce an exact
-  `SimulationRunContext`.
-- `strategy`: exact existing RuleBased strategy object with only `strategy_name`,
-  `allowed_bet_types`, `max_bet_count`, `selection_style`,
-  `min_combination_score`, `max_candidates`, `sort_condition`, and
-  `allocation_policy`. The allocation object has exactly `policy_name`,
-  `policy_version`, and `parameters`; fixed-stake `parameters` has exactly
-  `stake_amount`. Formal bet types remain exactly `単勝`, `馬連`, `ワイド`, and
-  `3連複`. C4i1 constructs `StrategyConfig` and `AllocationPolicyConfig`, then uses
-  the existing public identity builder to construct the exact `StrategyIdentity`.
-  `strategy_name` is exactly `RuleBasedBetStrategy`; `allowed_bet_types` is an array
-  of unique supported values; count fields are non-bool non-negative integers;
-  `selection_style` is `box` or `formation`; `min_combination_score` is finite; and
-  `sort_condition` uses the existing four formal values. The allocation policy is
-  exactly `fixed_stake_per_recommendation`, version `1`, with a positive non-bool
-  `stake_amount` multiple of 100. Settlement facts cannot influence this construction.
-- `budgets_by_race_id`: exact object keyed by canonical positive ASCII integer strings.
-  Each value is exactly `{"total_amount": value}`, where `value` is a non-bool,
-  non-negative integer multiple of 100. The document stores the result as a frozen
-  `Mapping[int, BetStakeBudget]`, with exact race-ID coverage.
-- `races`: exact non-empty array of exact race objects.
-
-Each race object has exactly:
-
-```text
-snapshot_identity
-internal_race_id
-settlement_information_cutoff
-result_capture_id
-payout_capture_catalog_by_bet_type
-```
-
-`snapshot_identity` is an exact object with only `dataset_id`, `organization`,
-`source_system`, `external_race_id`, and `captured_at`. C4i1 constructs the existing
-`HistoricalInputSnapshotIdentity`, with `organization/source_system` represented by
-its exact source-identity value. Allowed pairs are only `JRA/jra_official` and
-`NAR/nar_official`. `internal_race_id`, `source_url`, `information_cutoff`, and
-`content_sha256` do not occur inside `snapshot_identity`. Its four text identity
-values are exact non-empty strings and `captured_at` is an ISO-8601 aware datetime
-string; construction applies the existing formal identity normalization.
-
-`internal_race_id` is an exact non-bool positive integer used only as cross-check and
-binding metadata. `settlement_information_cutoff` is an exact ISO-8601 aware datetime
-string parsed to an aware `datetime`, with no current-time default. The same value is
-later supplied to C4h4a and C4h4b. `result_capture_id` is an exact non-empty string;
-C4i1 infers no provider semantics from it.
-
-`payout_capture_catalog_by_bet_type` is an exact object whose only allowed keys are
-`単勝`, `馬連`, `ワイド`, and `3連複`, with exact non-empty string values. It may be
-empty. Required-type completeness is not checked before planning. Equal capture-ID
-values are explicitly allowed: one exact capture may serve result normalization and
-one or more payout types, and multiple payout keys may reference the same capture.
-Only JSON object keys must remain unique through duplicate-key rejection.
-
-Relative paths resolve against the manifest directory. JSON duplicate keys,
-non-finite values, unknown or omitted schema keys, invalid exact types, empty required
-identifiers, naive timestamps, duplicate natural snapshot identities, duplicate
-internal race IDs, unsupported provider pairs, unsupported payout keys, and incoherent
-cross-field coverage fail closed.
-
-The manifest's input race order is not repository or execution identity. After every
-snapshot is exact-loaded, the application validates each expected internal race ID
-and freezes the existing formal canonical order `(scheduled_start_at,
-internal_race_id)`. Budgets, cutoffs, and official evidence must cover exactly that
-loaded race set.
-
-## C4i1 public domain surface
-
-Module-local `__all__` contains exactly:
-
-```text
-HistoricalReplayRequestValidationError
-HistoricalReplayRaceRequest
-HistoricalReplayRequestDocument
-load_historical_replay_request_document
-```
-
-There is no package-root export. `HistoricalReplayRequestValidationError` subclasses
-`ValueError` and owns only request JSON, schema, and document-domain validation.
-Filesystem `OSError` from reading the request path propagates unchanged; no broad
-exception hierarchy is introduced.
-
-`HistoricalReplayRaceRequest` is frozen and slotted, with exactly:
+The exact two-module public surface is:
 
 ```python
-snapshot_identity: HistoricalInputSnapshotIdentity
-internal_race_id: int
-settlement_information_cutoff: datetime
-result_capture_id: str
-payout_capture_catalog_by_bet_type: Mapping[str, str]
+# scripts/simulation/historical_replay_request_application.py
+run_historical_replay_request(
+    *,
+    request_path: str | Path,
+) -> SimulationSummary
+
+# scripts/simulation/sqlite_historical_replay_application.py
+class SQLiteHistoricalReplayApplicationError(ValueError): ...
+
+run_sqlite_historical_replay(
+    *,
+    document: HistoricalReplayRequestDocument,
+) -> SimulationSummary
 ```
 
-`HistoricalReplayRequestDocument` is frozen and slotted, with exactly:
+The request module's module-local `__all__` contains only
+`run_historical_replay_request`. The SQLite module's module-local `__all__` contains
+only `SQLiteHistoricalReplayApplicationError` and
+`run_sqlite_historical_replay`. Nothing is exported from the simulation package root.
+No third production module, orchestration protocol, or repository protocol is needed:
+private, dependency-patchable helpers in the SQLite runner preserve causal testability
+without widening the public architecture.
+
+`run_historical_replay_request` calls
+`load_historical_replay_request_document(request_path=request_path)` exactly once,
+passes that exact returned document once as
+`run_sqlite_historical_replay(document=document)`, and returns the exact runner result.
+It owns no SQLite/repository/snapshot/planning/capture/settlement logic, clock access,
+or exception translation. C4i1 validation errors and native filesystem `OSError`
+propagate unchanged. The legacy `run_persisted_simulation_request` path is unchanged.
+
+The SQLite runner validates `type(document) is HistoricalReplayRequestDocument`
+before opening a connection. Its sole owned error is
+`SQLiteHistoricalReplayApplicationError(ValueError)`. It owns only dynamic
+contradictions detected by C4i2 itself: missing or mismatched exact snapshots,
+incoherent returned plan coverage, missing required payout-catalog evidence,
+unsupported/dynamically contradictory provider binding, and failure of the required
+read-only safety verification. A missing snapshot is not assigned a speculative
+separate unavailable hierarchy. Request, SQLite open/migration/repository, C4g1,
+C4h4a, and C4h4b exceptions propagate unchanged; C4i2 does not broadly catch and
+translate collaborator failures.
+
+## Main SQLite ownership and exact snapshot phase
+
+The runner owns exactly one writable main connection opened from
+`document.database_path`. It calls `apply_migrations(connection)` exactly once and
+closes the connection on every success or failure. It uses no second main connection,
+`ATTACH`, global transaction, cross-database transaction, new migration, or repository
+change.
+
+After migration, it first constructs on that same connection only:
+
+```text
+SQLiteHistoricalInputSnapshotRepository
+SQLiteSimulationBetPlanSnapshotRepository
+```
+
+The same plan repository object is later supplied as C4g1 `snapshot_repository` and
+as the C4h4a/C4h4b `bet_plan_snapshot_source`. Result and payout repository objects
+are deliberately not constructed until the complete planning and payout-subset
+preflight barrier has succeeded; this makes the no-settlement-access-before-planning
+policy physical as well as logical.
+
+For each `HistoricalReplayRaceRequest`, in manifest order, C4i2 calls exactly:
 
 ```python
-schema_version: int
-source_path: Path
-database_path: Path
-capture_archive_paths_by_provider: Mapping[str, Path]
-run_context: SimulationRunContext
-strategy_identity: StrategyIdentity
-budgets_by_race_id: Mapping[int, BetStakeBudget]
-races: tuple[HistoricalReplayRaceRequest, ...]
+snapshot_repository.load_snapshot_by_identity(
+    identity=race_request.snapshot_identity,
+)
 ```
 
-Both types defensively freeze their mappings and tuple contents. The document contains
-no prediction pipeline/config, track-reference date, embedded prediction input,
-result/payout domain object, or capture bytes.
+once. It never uses latest, race-only, cutoff, row-order, or provider fallback. It
+fails fast before C4g1 if a value is absent or is not an exact
+`HistoricalInputSnapshot`, or if its identity, internal race ID, dataset ID, or
+uniqueness disagrees with the request/document binding. Specifically, the loaded
+identity must equal the requested identity, `snapshot.internal_race_id` must equal the
+request cross-check, `snapshot.identity.dataset_id` must equal
+`document.run_context.dataset_id`, and loaded internal race IDs must remain unique.
+Nothing is repaired or substituted.
 
-Static cross-field validation requires a non-empty race tuple; unique snapshot natural
-identities and internal race IDs; exact equality between budget race IDs and manifest
-internal race IDs; `run_context.dataset_id` equality with every snapshot dataset ID;
-only the two exact supported provider pairs; and an archive for every represented
-provider. An unused configured supported archive and an empty payout catalog are
-allowed. Capture-ID value reuse is allowed.
+Only after every load succeeds, snapshots are sorted exactly by:
 
-Input race order is preserved in the C4i1 document. C4i1 cannot sort by
-`scheduled_start_at` because it does not load snapshots. Canonical execution order is
-C4i2 responsibility after all exact snapshot loads.
-
-C4i1 performs static request validation only. It does not open the main database or
-capture archives, inspect capture existence/bytes, derive purchased bet types,
-determine `NO_BET`, load snapshots, run planning or settlement, or consult a clock.
-Capture availability and required payout-subset validation remain post-planning C4i2
-responsibilities.
-
-## Exact snapshot and plan policies
-
-Every snapshot is loaded only through
-`SQLiteHistoricalInputSnapshotRepository.load_snapshot_by_identity(identity=...)`.
-`load_latest_snapshot`, race-only/cutoff-only lookup, database row order, and any
-current-state/provider fallback are forbidden. A missing snapshot, returned identity
-mismatch, duplicate loaded race, dataset/run-context mismatch, or internal-race-ID
-cross-check mismatch fails before planning.
-
-C4g1 receives the complete canonical snapshot tuple and exact budget mapping in one
-call. Its returned `SimulationBetPlanSnapshot` values must have exact mutual race
-coverage and identity with the loaded batch. Only those frozen plans determine
-required payout types. C4I does not predict, regenerate, mutate, or independently
-persist bets.
-
-## Payout evidence catalog and NO_BET
-
-The manifest catalog exists before planning and may contain supported payout capture
-IDs that the final plan does not require. Such entries are
-`ALLOWED_BUT_NOT_CONSUMED`: they are neither preloaded nor passed to C4h4a. After
-planning, C4I takes the unique formal bet types from each frozen plan, requires every
-one in that race's catalog, and constructs an exact required-type-only mapping.
-Missing required evidence fails closed; capture availability never adds or removes a
-required type.
-
-An empty persisted plan still follows the uniform race path: C4h4a is called with the
-exact result capture and an empty payout mapping. It performs no payout normalization.
-Settlement evidence never decides `NO_BET`.
-
-## Cutoff, provider, and archive ownership
-
-Each race has exactly one aware settlement cutoff. The identical value is passed to
-C4h4a as `settlement_information_cutoff` and to C4h4b in
-`settlement_cutoffs_by_race_id`. It is never inferred from a clock, race time,
-snapshot cutoff, capture metadata, or finalization time.
-
-Provider dispatch comes only from the exact loaded snapshot pair:
-
-```text
-JRA / jra_official -> configured JRA archive
-NAR / nar_official -> configured NAR archive
+```python
+(
+    snapshot.race.scheduled_start_at,
+    snapshot.internal_race_id,
+)
 ```
 
-Capture ID prefixes, URLs, venue text, external-ID patterns, and archive searching are
-not provider identity. Every provider represented in the loaded batch must have one
-configured archive path. A configured supported-provider archive unused by the batch
-is allowed but is not opened.
+The runner builds a race-ID keyed mapping from each canonical loaded snapshot to its
+exact original race request. Manifest order, provider order, and repository row order
+never control execution order.
 
-The future SQLite application runner owns:
+## Planning barrier, returned plans, and payout subset
 
-- one writable main simulation connection;
-- existing main-database migration application;
-- the historical snapshot, plan snapshot/source, result, and payout repositories on
-  that connection;
-- at most one read-only JRA capture connection and one read-only NAR capture
-  connection, opened only for represented providers;
-- exact provider capture repository construction; and
-- closing every connection it opens in reverse order in `finally`.
+Before the complete C4g1 call succeeds, C4i2 does not open an official archive,
+construct a capture/result/payout repository, load or inspect a capture, test capture
+existence, derive required payout types, call C4h4a/C4h4b, or read settlement facts.
+Only the main connection, migrations, exact historical snapshot loads, and plan
+persistence infrastructure are available.
 
-Capture archives must already carry their approved dedicated schemas. Replay opens
-them read-only and does not apply capture migrations or write captures. The main and
-archive databases are never joined with `ATTACH` and have no cross-database
-transaction. The old SQLite composition root cannot be reused because it consumes
-embedded race inputs and assumes settlement facts already exist; its lower-level
-formal repositories and boundaries are reused instead.
-
-## Failure, durability, and final output
-
-`DURABLE_AUDITABLE_PREFIX_ALLOWED`: C4g1 plans and C4h4a results/publications already
-committed before a later failure remain immutable and auditable. C4I stops immediately,
-returns no final summary, performs no hidden retry or compensation, deletes nothing,
-and does not claim global atomicity. C4i1 owns only its single request-validation
-error; later application validation must remain narrow, and collaborator errors
-propagate unchanged. A later identical retry may rely only on existing repository
-idempotence/conflict contracts.
-
-The user-facing result comes only from one successful C4h4b call after all
-acquisition. C4I returns its exact `SimulationSummary` object and never exposes a
-partial/as-of C4g2b summary as final. `SimulationResult` or selected-publication
-run-audit persistence remains `OPTIONAL_POST_VER0_8`; C4g2c is not introduced.
-
-## CLI and portable acceptance policy
-
-C4I adds a separate `run_historical_replay` CLI and application entry point. The new
-CLI owns only request-path argument handling, deterministic summary serialization,
-stdout/stderr, and exit codes. It owns no snapshot selection, prediction, capture
-selection/parsing, repository composition, or settlement. The existing schema-v1 CLI
-and request path remain unchanged.
-
-Portable acceptance uses committed, minimized, provenance-bound derived JRA and NAR
-official structural capture fixtures, not developer-machine archive paths and not
-manually inserted settlement-domain facts. Each fixture has deterministic extraction
-metadata binding its source capture ID, canonical URL, original response SHA-256 and
-observation time, extraction boundary/method, derived bytes SHA-256, encoding, and an
-explicit derived-not-original statement. The derived bytes must retain every structure
-used by the production result and payout normalizers and are loaded through the real
-capture domains and SQLite archives.
-
-Final acceptance requires one mixed-provider two-race replay containing at least one
-complete JRA and one complete NAR race. It must prove exact snapshot persistence/load,
-batch planning before any acquisition, frozen-plan consumption, provider-normalizer
-creation of official result/payout facts, one shared per-race cutoff across write/read,
-only `SETTLED`/`NO_BET` final states, exact investment/payout/profit/ROI, deterministic
-equal summaries from equivalent fresh repository states, and fail-closed cases for a
-missing snapshot, missing capture, after-cutoff capture, missing required payout
-evidence, non-final settlement, and silent race skipping. Tests perform no network and
-do not manually insert `PersistedRaceResult`, `PayoutPublication`, or `PayoutRecord`.
-
-## Frozen decision matrix
+C4i2 calls `execute_and_persist_historical_bet_plans(...)` exactly once with:
 
 ```text
-C4I_FAMILY_ASSIGNMENT:
-EXPLICITLY_ASSIGNED_AFTER_C4H_COMPLETION
+snapshots = complete canonical loaded tuple
+run_context = document.run_context (same object)
+strategy_identity = document.strategy_identity (same object)
+budgets_by_race_id = document.budgets_by_race_id
+snapshot_repository = the one shared SQLite plan repository
+```
 
-C4I_PURPOSE:
-EXACT_ARCHIVED_HISTORICAL_REPLAY_APPLICATION_COMPOSITION
+There is no per-race C4g1 call, pipeline construction, prediction outside C4g1, or
+settlement access during planning. A C4g1 exception propagates unchanged, leaves zero
+archive opens and zero C4h4a/C4h4b calls, and does not roll back an already-durable
+C4g1 prefix.
 
-REPLAY_REQUEST_OR_MANIFEST_POLICY:
-NEW_DISTINCT_HISTORICAL_REPLAY_REQUEST_DOCUMENT_SCHEMA_V1
+Before archive opening, C4i2 requires the C4g1 result to be an exact tuple in canonical
+race order with one exact `SimulationBetPlanSnapshot` per loaded snapshot. Length,
+position, and race coverage must be exact; no duplicate, missing, or extra race is
+allowed. For every paired plan/snapshot, the plan identity must equal the expected
+formal binding field-by-field:
 
-EXISTING_SCHEMA_V1_COMPATIBILITY_POLICY:
-LEGACY_PERSISTED_SIMULATION_REQUEST_AND_CLI_UNCHANGED
+```text
+run_id = document.run_context.run_id
+race_id = snapshot.internal_race_id
+strategy_id = document.strategy_identity.strategy_id
+strategy_config_hash = document.strategy_identity.strategy_config_hash
+information_cutoff = snapshot.information_cutoff
+```
 
-HISTORICAL_REPLAY_PIPELINE_POLICY:
-NO_MANIFEST_PIPELINE_FIELD_C4G0_SOLE_HISTORICAL_PIPELINE_OWNER
+This is the smallest C4i2 coverage check: the existing
+`SimulationBetPlanSnapshot` domain remains owner of its policy, budget, bet, stake,
+and internal bet/identity invariants. C4i2 neither reloads nor replaces a returned
+plan to repair incoherence. The shared persisted repository remains authoritative to
+C4h4a/C4h4b.
 
-ROOT_SCHEMA_KEYS:
-schema_version; database_path; capture_archives; run_context; strategy; budgets_by_race_id; races
+Only after the complete returned batch passes does C4i2 derive each race's required
+payout types from `plan.bets`, as unique `bet.bet_type` values in first-occurrence
+order. Catalog keys, strategy allowed types, archive metadata, capture existence, and
+official page content never create a required type.
 
-RACE_SCHEMA_KEYS:
-snapshot_identity; internal_race_id; settlement_information_cutoff; result_capture_id; payout_capture_catalog_by_bet_type
+Before any archive opens, every canonical race is preflighted. Each required type must
+exist in that original race request's `payout_capture_catalog_by_bet_type`. C4i2 builds
+a new insertion-ordered mapping containing all and only required types. Unused
+supported catalog keys are `ALLOWED_BUT_NOT_CONSUMED`. Any missing required entry
+raises `SQLiteHistoricalReplayApplicationError` before archive/repository acquisition
+and before any settlement write.
 
-C4I1_PUBLIC_SURFACE:
-HistoricalReplayRequestValidationError; HistoricalReplayRaceRequest; HistoricalReplayRequestDocument; load_historical_replay_request_document
+A zero-bet plan has an empty required tuple and exact empty payout mapping. It remains
+in the acquisition loop and still calls C4h4a with the request's exact result capture.
+It is never skipped and settlement evidence never determines `NO_BET`.
 
-CAPTURE_ID_VALUE_REUSE_POLICY:
-ALLOWED
+## Provider binding and hard read-only archives
 
-EXACT_SNAPSHOT_IDENTITY_POLICY:
-DATASET_ORGANIZATION_SOURCE_EXTERNAL_RACE_CAPTURED_AT_NATURAL_IDENTITY_WITH_INTERNAL_RACE_ID_CROSS_CHECK
+Represented providers are determined only from the exact loaded snapshot source pair:
 
-SNAPSHOT_LOAD_POLICY:
-EXACT_LOAD_ALL_BY_IDENTITY_BEFORE_PLANNING_NO_LATEST_OR_FALLBACK
+```text
+JRA / jra_official -> JRA/jra_official
+NAR / nar_official -> NAR/nar_official
+```
 
-PLANNING_BEFORE_SETTLEMENT_POLICY:
-ONE_COMPLETE_C4G1_BATCH_MUST_SUCCEED_BEFORE_ANY_C4H4A_CALL
+Capture ID, URL, path, venue, and external-ID shape are forbidden provider sources.
+Any unsupported pair or missing matching configured path after exact load is a dynamic
+application contradiction. Provider open order is deterministic first occurrence in
+canonical race order.
 
-PAYOUT_EVIDENCE_CATALOG_POLICY:
-PREPLANNING_CATALOG_UNUSED_SUPPORTED_ENTRIES_ALLOWED_BUT_NOT_CONSUMED
+Only after snapshot loading, canonicalization, C4g1 success, returned-plan validation,
+and whole-batch payout-subset preflight does C4i2 construct, on the main connection:
 
-REQUIRED_PAYOUT_SUBSET_POLICY:
-DERIVE_ONLY_FROM_FROZEN_PLANS_REQUIRE_COMPLETE_SUBSET_PASS_NO_EXTRA_KEYS
+```text
+SQLiteRaceResultRepository
+SQLitePayoutRepository
+```
 
-NO_BET_APPLICATION_POLICY:
-CALL_C4H4A_WITH_EXACT_RESULT_CAPTURE_AND_EMPTY_PAYOUT_MAPPING
+The exact same objects are used by every C4h4a call and the final C4h4b call.
 
-SETTLEMENT_CUTOFF_POLICY:
-ONE_EXPLICIT_AWARE_CUTOFF_PER_RACE_IDENTICAL_FOR_C4H4A_AND_C4H4B
+Then all and only represented provider archives are opened successfully before the
+first C4h4a call. A configured but unrepresented archive is never opened. For each
+stored archive `Path`, C4i2 derives an opening-only URI without changing the document
+field:
 
-PROVIDER_DISPATCH_POLICY:
-EXACT_LOADED_SNAPSHOT_SOURCE_IDENTITY_ONLY
+```python
+archive_uri = archive_path.absolute().as_uri() + "?mode=ro"
+connection = sqlite3.connect(archive_uri, uri=True)
+```
 
-JRA_ARCHIVE_OWNERSHIP:
-RUNNER_OWNED_READ_ONLY_CONNECTION_OPENED_ONLY_WHEN_JRA_IS_REPRESENTED
+`Path.absolute()` anchors any remaining relative spelling without resolving symlinks;
+`Path.as_uri()` supplies the required absolute `file:` form and percent-encodes Windows
+drive paths, spaces, `#`, `?`, `%`, and other URI-reserved path characters. The sole
+query component is `mode=ro`. SQLite therefore enforces read-only at open time, and a
+missing archive fails without creating a file. C4i2 does not mutate the stored `Path`,
+open a normal writable fallback, retry another path/provider, or apply archive
+migrations.
 
-NAR_ARCHIVE_OWNERSHIP:
-RUNNER_OWNED_READ_ONLY_CONNECTION_OPENED_ONLY_WHEN_NAR_IS_REPRESENTED
+Immediately after each archive open, C4i2 executes `PRAGMA query_only=ON` and requires
+`PRAGMA query_only` to report integer `1` as a secondary defense. This does not replace
+`mode=ro`. It then constructs exactly
+`SQLiteJRAOfficialResponseCaptureRepository` or
+`SQLiteNAROfficialResponseCaptureRepository` for that provider. C4i2 never calls
+`load_capture` or any capture save method; C4h4a owns the first capture-byte access.
+There is no archive search or cross-provider fallback.
 
-MAIN_DATABASE_OWNERSHIP:
-RUNNER_OWNED_WRITABLE_CONNECTION_WITH_EXISTING_MAIN_MIGRATIONS_AND_FORMAL_REPOSITORIES
+## Acquisition, final settlement, and connection closure
 
-CONNECTION_LIFETIME_POLICY:
-APPLICATION_SCOPE_CLOSE_ALL_OWNED_CONNECTIONS_IN_REVERSE_ORDER_IN_FINALLY
+After all represented archive connections and repositories are ready, C4i2 iterates
+the canonical races exactly once and calls
+`acquire_and_persist_official_settlement_facts(...)` exactly once per race with the
+exact snapshot, document run/strategy values, request cutoff/result capture,
+required-only payout mapping, provider-selected archive repository, and shared
+plan/result/payout repositories. Its return is not used to bypass later repository
+reads. C4i2 performs no provider normalization, persistence, or settlement arithmetic.
+
+The first C4h4a failure propagates unchanged, stops all later race acquisition, and
+prevents C4h4b. Previously committed immutable facts remain durable; there is no retry,
+compensation, deletion, or rollback across calls.
+
+C4i2 creates exactly one insertion-ordered cutoff mapping covering every canonical
+internal race ID with the unchanged corresponding
+`HistoricalReplayRaceRequest.settlement_information_cutoff`. The same cutoff supplied
+to each race's C4h4a is supplied to C4h4b. It is not normalized to another semantic
+time or derived from snapshot/capture/race/clock data.
+
+Only after all C4h4a calls succeed, C4i2 calls
+`execute_final_historical_settlement_simulation(...)` exactly once with the complete
+canonical snapshots, exact document run/strategy values, complete cutoff mapping, and
+the same shared plan/result/payout repositories. It returns that exact
+`SimulationSummary`; it does not reconstruct metrics, calculate ROI, wrap the result,
+or call C4g2b directly as the user-facing final boundary.
+
+Every owned connection is registered in actual open order and closure is attempted in
+strict reverse order, so archives close before the main connection. All closes are
+attempted on success and failure. When an application/collaborator exception is
+already active, cleanup errors are retained only as diagnostic context and cannot
+replace that primary exception. When there is no primary error, all closes are still
+attempted and the first close error is propagated after cleanup. No caller-owned
+connection exists in either public API.
+
+`DURABLE_AUDITABLE_PREFIX_ALLOWED` remains frozen. There is no global transaction over
+C4g1 + C4h4a + C4h4b, no rollback or DELETE compensation for committed immutable
+facts, no hidden retry, and no summary on failure. An identical later replay relies
+only on existing repository idempotence/conflict behavior.
+
+C4i2 uses no current clock (`datetime.now`, `datetime.utcnow`, `time.time`, or
+equivalent), creates no `completed_at`, and introduces no C4g2c, run-result table,
+manifest persistence, selected-publication persistence, or new audit schema. C4g2c
+remains `OPTIONAL_POST_VER0_8`.
+
+## Future implementation/test scope
+
+After independent approval, C4i2 implementation is limited exactly to:
+
+```text
+scripts/simulation/historical_replay_request_application.py
+scripts/simulation/sqlite_historical_replay_application.py
+tests/test_historical_replay_request_application.py
+tests/test_sqlite_historical_replay_application.py
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+```
+
+It must not modify C4i1, C4g1, C4h4a, C4h4b, repositories, migrations, legacy
+request/application paths, CLI/main, or package exports.
+
+Dedicated tests must pin exact public surfaces/types, request-wrapper call/identity
+behavior, one main connection/migration and shared repository identities, exact
+snapshot-by-identity loading and fail-fast bindings, canonical order, the complete
+planning barrier, returned-plan exact coverage/identity, plan-only required-type
+derivation, whole-batch subset preflight, uniform `NO_BET`, provider binding, exact
+read-only URI/query-only safety (including Windows paths/reserved characters and
+missing-file no-create), all-required-archives-before-acquisition, reverse closure and
+primary-error precedence, one C4h4a per canonical race, stop-on-first-failure, one
+C4h4b after complete acquisition, exact summary identity, collaborator exception
+propagation, durable-prefix behavior, and static ownership exclusions. Tests use
+injection/patching and synthetic SQLite state only; they do not claim the later real
+mixed-provider official-fixture E2E.
+
+Static checks forbid HTTP, capture save/discovery/latest lookup, `PredictionPipeline`,
+bet regeneration, settlement arithmetic, current clock, `ATTACH`, global transaction,
+CLI or legacy changes, package export, schema/migration changes, and a third
+orchestration module/protocol.
+
+## C4i2/C4i3 boundary and disposition
+
+C4i2 closes `DETERMINISTIC_FULL_RERUN` application composition at the Python boundary
+and `APPLICATION_COMPOSITION`. It does not close
+`FORMAL_HISTORICAL_REPLAY_EXECUTABLE_PATH` (C4i3b CLI) or
+`FULL_NO_NETWORK_OFFICIAL_SETTLEMENT_E2E` (portable fixture evidence in C4i3a and
+mixed-provider acceptance in C4i3b).
+
+C4i3a remains evidence/provenance freeze only for portable derived official fixtures.
+C4i3b remains the separate CLI plus mixed-provider full no-network E2E. Neither is
+started here.
+
+```text
+C4I1:
+FORMALLY_VERIFIED
+
+C4I2_PUBLIC_SURFACE:
+run_historical_replay_request; SQLiteHistoricalReplayApplicationError; run_sqlite_historical_replay
+
+C4I2_MODULE_SPLIT:
+TWO_MODULE_REQUEST_WRAPPER_AND_SQLITE_RUNNER_NO_THIRD_ORCHESTRATION_MODULE
+
+REQUEST_WRAPPER_POLICY:
+ONE_C4I1_LOAD_ONE_SQLITE_RUNNER_CALL_EXACT_DOCUMENT_AND_SUMMARY_IDENTITY
+
+MAIN_SQLITE_CONNECTION_POLICY:
+ONE_RUNNER_OWNED_WRITABLE_CONNECTION_CLOSED_ON_ALL_PATHS
+
+MAIN_MIGRATION_POLICY:
+APPLY_EXISTING_MIGRATIONS_EXACTLY_ONCE
+
+MAIN_REPOSITORY_COMPOSITION:
+ONE_SHARED_SNAPSHOT_REPOSITORY_ONE_SHARED_PLAN_REPOSITORY_THEN_POST_BARRIER_SHARED_RESULT_AND_PAYOUT_REPOSITORIES
+
+EXACT_SNAPSHOT_LOAD_POLICY:
+ONE_LOAD_BY_EXACT_NATURAL_IDENTITY_PER_REQUEST_NO_LATEST_OR_FALLBACK
+
+DYNAMIC_SNAPSHOT_BINDING_VALIDATION:
+EXACT_TYPE_IDENTITY_INTERNAL_RACE_DATASET_AND_UNIQUENESS_FAIL_FAST
+
+CANONICAL_ORDER_POLICY:
+SCHEDULED_START_AT_THEN_INTERNAL_RACE_ID_AFTER_ALL_EXACT_LOADS
+
+PLANNING_BARRIER_POLICY:
+NO_SETTLEMENT_REPOSITORY_OR_ARCHIVE_ACCESS_BEFORE_COMPLETE_C4G1_SUCCESS_AND_PLAN_PREFLIGHT
+
+C4G1_CALL_POLICY:
+ONE_COMPLETE_CANONICAL_BATCH_CALL
+
+PLAN_BATCH_COVERAGE_POLICY:
+EXACT_TUPLE_CANONICAL_POSITION_AND_RUN_RACE_STRATEGY_HASH_INFORMATION_CUTOFF_IDENTITY
+
+REQUIRED_PAYOUT_TYPE_POLICY:
+UNIQUE_FIRST_OCCURRENCE_FROM_RETURNED_FROZEN_PLAN_BETS_ONLY
+
+PAYOUT_SUBSET_PREFLIGHT_POLICY:
+ALL_RACES_REQUIRED_ONLY_SUBSETS_COMPLETE_BEFORE_ANY_ARCHIVE_OPEN_UNUSED_KEYS_NOT_CONSUMED
+
+NO_BET_POLICY:
+C4H4A_STILL_CALLED_WITH_EXACT_RESULT_CAPTURE_AND_EMPTY_PAYOUT_MAPPING
+
+ARCHIVE_OPEN_TIMING_POLICY:
+ALL_REPRESENTED_ARCHIVES_AFTER_PLANNING_PREFLIGHT_AND_BEFORE_FIRST_C4H4A
+
+ARCHIVE_READ_ONLY_OPEN_POLICY:
+PATH_ABSOLUTE_AS_URI_PLUS_MODE_RO_URI_TRUE_WITH_VERIFIED_QUERY_ONLY_SECONDARY_DEFENSE
+
+JRA_ARCHIVE_REPOSITORY_POLICY:
+ONE_SQLITE_JRA_CAPTURE_REPOSITORY_ON_REPRESENTED_READ_ONLY_CONNECTION
+
+NAR_ARCHIVE_REPOSITORY_POLICY:
+ONE_SQLITE_NAR_CAPTURE_REPOSITORY_ON_REPRESENTED_READ_ONLY_CONNECTION
+
+PROVIDER_BINDING_POLICY:
+EXACT_LOADED_SNAPSHOT_SOURCE_PAIR_ONLY_NO_CAPTURE_PATH_OR_ID_INFERENCE
+
+C4H4A_CALL_POLICY:
+EXACTLY_ONCE_PER_CANONICAL_RACE_STOP_ON_FIRST_FAILURE
+
+SETTLEMENT_CUTOFF_MAP_POLICY:
+EXACT_COMPLETE_REQUEST_CUTOFF_MAPPING_SHARED_WITH_C4H4A_AND_C4H4B
+
+C4H4B_CALL_POLICY:
+EXACTLY_ONCE_AFTER_ALL_ACQUISITION_RETURN_EXACT_SUMMARY
+
+CONNECTION_CLOSE_POLICY:
+ATTEMPT_ALL_IN_REVERSE_OPEN_ORDER_PRIMARY_ERROR_WINS_OTHERWISE_FIRST_CLOSE_ERROR
 
 DURABLE_PREFIX_POLICY:
-DURABLE_AUDITABLE_PREFIX_ALLOWED_NO_GLOBAL_TRANSACTION_OR_COMPENSATION
+DURABLE_AUDITABLE_PREFIX_ALLOWED_NO_GLOBAL_TRANSACTION_COMPENSATION_OR_RETRY
 
-ERROR_PROPAGATION_POLICY:
-OWNED_VALIDATION_ERRORS_NARROW_COLLABORATOR_ERRORS_UNCHANGED_STOP_IMMEDIATELY
+C4I2_ERROR_SURFACE:
+SQLITE_HISTORICAL_REPLAY_APPLICATION_ERROR_VALUE_ERROR_SINGLE_OWNED_DYNAMIC_CONTRADICTION_TYPE
 
-FINAL_SUMMARY_POLICY:
-ONE_C4H4B_CALL_AFTER_ALL_ACQUISITION_RETURN_EXACT_FINAL_SIMULATION_SUMMARY_ONLY
+COLLABORATOR_ERROR_PROPAGATION:
+UNCHANGED
 
-CLI_APPLICATION_SPLIT:
-SEPARATE_HISTORICAL_REPLAY_APPLICATION_AND_CLI_LEGACY_PATH_UNCHANGED
+CURRENT_CLOCK_POLICY:
+FORBIDDEN
 
-PORTABLE_CAPTURE_FIXTURE_POLICY:
-MINIMIZED_PROVENANCE_BOUND_DERIVED_JRA_AND_NAR_STRUCTURAL_FIXTURES_AFTER_EVIDENCE_APPROVAL
-
-FINAL_PROVIDER_ACCEPTANCE_COVERAGE:
-ONE_MIXED_PROVIDER_TWO_RACE_REPLAY_WITH_AT_LEAST_ONE_COMPLETE_JRA_AND_ONE_COMPLETE_NAR_RACE
-
-SIMULATION_RESULT_AUDIT_PERSISTENCE_STATUS:
+C4G2C_STATUS:
 OPTIONAL_POST_VER0_8
 
-C4I0_ARCHITECTURE:
-APPROVED
+C4I2_TEST_POLICY:
+INJECTED_ORCHESTRATION_AND_SQLITE_OWNERSHIP_TESTS_NO_REAL_OFFICIAL_FIXTURE_E2E
 
-FILESYSTEM_ERROR_POLICY:
-OSERROR_PROPAGATES_UNCHANGED
+C4I2_IMPLEMENTATION_ALLOWED_FILES:
+historical_replay_request_application.py; sqlite_historical_replay_application.py; two dedicated tests; two docs
 
-REQUEST_VALIDATION_ERROR_POLICY:
-HISTORICAL_REPLAY_REQUEST_VALIDATION_ERROR
+C4I3A_BOUNDARY:
+PORTABLE_DERIVED_OFFICIAL_FIXTURE_EVIDENCE_AND_PROVENANCE_ONLY
 
-C4I1_SIDE_EFFECT_POLICY:
-REQUEST_FILE_READ_ONLY
+C4I3B_BOUNDARY:
+SEPARATE_CLI_AND_MIXED_PROVIDER_FULL_NO_NETWORK_E2E
 
-C4I1_IMPLEMENTATION_STATUS:
-READY_FOR_REVIEW
+IMPLEMENTATION_BLOCKERS:
+NONE
 
-C4I2_STARTED:
-NO
-
-VER0_8_REMAINING_OPEN_CRITERIA:
-DETERMINISTIC_FULL_RERUN; APPLICATION_COMPOSITION; FORMAL_HISTORICAL_REPLAY_EXECUTABLE_PATH; FULL_NO_NETWORK_OFFICIAL_SETTLEMENT_E2E
+RECOMMENDED_NEXT_PHASE:
+4C-2d3b1i6d1d5f1c4i2_EXACT_SQLITE_HISTORICAL_REPLAY_APPLICATION_IMPLEMENTATION_AFTER_INDEPENDENT_REVIEW
 ```
 
-## C4I implementation split
-
-The smallest reviewable sequence is:
-
-1. `4C-2d3b1i6d1d5f1c4i1` — historical replay request document/domain and strict
-   loader only, implemented in this review with allowed files:
-   `scripts/simulation/historical_replay_request_document.py`,
-   `tests/test_historical_replay_request_document.py`, and the two phase docs.
-2. `4C-2d3b1i6d1d5f1c4i2` — exact SQLite historical replay application composition,
-   input assembly, connection/archive ownership, and the frozen C4g1 -> C4h4a -> C4h4b
-   orchestration. Exact file scope must be prepared after C4i1 fixes the manifest type.
-3. `4C-2d3b1i6d1d5f1c4i3a` — evidence-only freeze of portable derived JRA/NAR capture
-   fixtures and manifests; no production implementation.
-4. `4C-2d3b1i6d1d5f1c4i3b` — separate historical replay CLI plus mixed-provider
-   no-network end-to-end acceptance closure using the approved portable fixtures.
-
-The evidence-only step is separate because provenance-minimized official fixtures
-must be independently approved before application acceptance code treats them as the
-portable proof boundary.
-
-## Gate disposition and next phase
-
-Existing generic CLI availability is `PASS`. C4I must close the currently open:
-
-```text
-DETERMINISTIC_FULL_RERUN
-APPLICATION_COMPOSITION
-FORMAL_HISTORICAL_REPLAY_EXECUTABLE_PATH
-FULL_NO_NETWORK_OFFICIAL_SETTLEMENT_E2E
-```
-
-C4i1 is ready for independent implementation review. C4i2 remains unstarted and is
-not authorized by this phase. Portable derived fixture provenance remains a later
-C4i3a approval gate.
-
-## Verification and stop condition
-
-The dedicated public-boundary contract covers exact exports/signature/type hints,
-frozen/slotted field order, mixed-provider success, absence of pipeline concepts,
-every exact nested schema, duplicate/non-finite/malformed JSON, UTF-8 and native
-filesystem errors, path anchoring, provider/archive coverage, run-context and strategy
-construction, canonical budget keys and coverage, identity uniqueness/provider pairs,
-aware timestamps, payout catalog/capture-ID reuse, defensive immutability, direct
-construction validation, and static no-side-effect ownership.
-
-Verification results:
-
-```text
-DEDICATED_TESTS: 19 passed, 143 subtests passed
-RELATED_TESTS: 168 passed, 371 subtests passed
-FULL_SUITE: 3082 passed, 2447 subtests passed
-```
-
-Require `git diff --check`, exact four-file scope relative to the formal base, and
-clean final status. Push only the C4i1 review branch and stop for independent
-implementation review. Do not formal-integrate or begin C4i2.
+Stop for independent ChatGPT architecture review. Do not implement C4i2 or begin
+C4i3a/C4i3b.
