@@ -10,7 +10,7 @@ Status: `READY_FOR_REVIEW`
   `523a59069a15108bee06347a29c49adb947737c6`
 - Formal branch: `feature/ver0.8-simulator`
 - Review branch:
-  `review/4c-2d3b1i6d1d5f1c4i2-sqlite-historical-replay-application-prepare`
+  `review/4c-2d3b1i6d1d5f1c4i2-sqlite-historical-replay-application`
 - C4i1 status: `FORMALLY_VERIFIED`
 - Git setting: `core.autocrlf=true`; C4i2 changes no Git configuration or
   attributes.
