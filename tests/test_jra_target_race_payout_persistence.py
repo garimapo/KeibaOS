@@ -273,23 +273,25 @@ class JRATargetRacePayoutPersistenceTest(unittest.TestCase):
             "ワイド": (((1003, 1006), 1370), ((1003, 1007), 420), ((1006, 1007), 300)),
             "3連複": (((1003, 1006, 1007), 2280),),
         }
-        for bet_type, records in expected.items():
-            with self.subTest(bet_type=bet_type):
-                publication, archive, repository = _run(bet_type=bet_type)
-                self.assertEqual(archive.calls, [_capture().capture_id])
-                self.assertEqual(repository.saved, [publication])
-                self.assertEqual(publication.race_id, 700)
-                self.assertEqual(publication.bet_type, bet_type)
-                self.assertTrue(publication.is_complete)
-                self.assertEqual(publication.observed_at, CAPTURE_TIME)
-                self.assertEqual(publication.finalized_at, CAPTURE_TIME)
-                self.assertEqual(publication.source, _capture().capture_id)
-                self.assertEqual(publication.source_url, URL)
-                self.assertEqual(
-                    tuple((record.race_entry_ids, record.payout_per_100) for record in publication.entries),
-                    records,
-                )
-                self.assertEqual({record.payout_status for record in publication.entries}, {PayoutStatus.WINNING})
+        for race_alt in ("4R", "4レース"):
+            for bet_type, records in expected.items():
+                with self.subTest(race_alt=race_alt, bet_type=bet_type):
+                    capture = _capture(body=_html(race_alt=race_alt))
+                    publication, archive, repository = _run(bet_type=bet_type, capture=capture)
+                    self.assertEqual(archive.calls, [capture.capture_id])
+                    self.assertEqual(repository.saved, [publication])
+                    self.assertEqual(publication.race_id, 700)
+                    self.assertEqual(publication.bet_type, bet_type)
+                    self.assertTrue(publication.is_complete)
+                    self.assertEqual(publication.observed_at, CAPTURE_TIME)
+                    self.assertEqual(publication.finalized_at, CAPTURE_TIME)
+                    self.assertEqual(publication.source, capture.capture_id)
+                    self.assertEqual(publication.source_url, URL)
+                    self.assertEqual(
+                        tuple((record.race_entry_ids, record.payout_per_100) for record in publication.entries),
+                        records,
+                    )
+                    self.assertEqual({record.payout_status for record in publication.entries}, {PayoutStatus.WINNING})
 
     def test_repository_return_identity_and_exception_are_preserved(self) -> None:
         capture = _capture()
@@ -387,6 +389,13 @@ class JRATargetRacePayoutPersistenceTest(unittest.TestCase):
             (_capture(body=_html(race_alt="14R")), _snapshot()),
             (_capture(body=_html(race_alt="X4R")), _snapshot()),
             (_capture(body=_html(race_alt="4Rfoo")), _snapshot()),
+            (_capture(body=_html(race_alt="04レース")), _snapshot()),
+            (_capture(body=_html(race_alt="13レース")), _snapshot()),
+            (_capture(body=_html(race_alt="4 レース")), _snapshot()),
+            (_capture(body=_html(race_alt="4Ｒ")), _snapshot()),
+            (_capture(body=_html(race_alt="４レース")), _snapshot()),
+            (_capture(body=_html(race_alt="4レースfoo")), _snapshot()),
+            (_capture(body=_html(race_alt="5レース")), _snapshot()),
         )
         for capture, snapshot in cases:
             with self.subTest(capture_id=capture.capture_id):

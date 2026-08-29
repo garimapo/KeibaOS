@@ -342,6 +342,60 @@ class NARTargetRacePayoutPersistenceTests(unittest.TestCase):
                 )
                 self.assertEqual({record.payout_status for record in publication.entries}, {PayoutStatus.WINNING})
 
+    def test_structural_comments_are_ignored_but_direct_text_tags_and_payout_text_remain_fail_closed(self) -> None:
+        expected = {
+            "単勝": (((1008,), 720),),
+            "馬連": (((1008, 1010), 730),),
+            "ワイド": (((1008, 1010), 300), ((1008, 1011), 410), ((1010, 1011), 350)),
+            "3連複": (((1008, 1010, 1011), 1230),),
+        }
+        commented = _html().replace(
+            b"<div class='twoRefundTable'>",
+            b"<div class='twoRefundTable'><!-- before --><!-- source-layout -->",
+            1,
+        ).replace(
+            b"</table><table><tbody>",
+            b"</table><!-- between tables --><table><tbody>",
+            1,
+        ).replace(
+            b"</table></div></section>",
+            b"</table><!-- after --></div></section>",
+            1,
+        )
+        for bet_type, records in expected.items():
+            with self.subTest(bet_type=bet_type):
+                publication, _, repository = _run(bet_type=bet_type, capture=_capture(body=commented))
+                self.assertEqual(repository.saved, [publication])
+                self.assertEqual(
+                    tuple((record.race_entry_ids, record.payout_per_100) for record in publication.entries),
+                    records,
+                )
+
+        self._assert_no_save(
+            _html().replace(
+                b"<div class='twoRefundTable'>",
+                b"<div class='twoRefundTable'>unexpected-text",
+                1,
+            )
+        )
+        self._assert_no_save(
+            _html().replace(
+                b"<div class='twoRefundTable'>",
+                b"<div class='twoRefundTable'><div></div>",
+                1,
+            )
+        )
+        self._assert_no_save(
+            _html().replace(b"<td class='a'>8</td>", b"<td class='a'><!-- comment -->8</td>", 1)
+        )
+        self._assert_no_save(
+            _html().replace(
+                "<td class='refundMoney'>720円</td>".encode(),
+                "<td class='refundMoney'><!-- comment -->720円</td>".encode(),
+                1,
+            )
+        )
+
     def test_repository_return_identity_and_exception_propagate(self) -> None:
         capture = _capture()
         archive = _Archive(capture)
