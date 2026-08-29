@@ -5700,3 +5700,131 @@ static ownership. It also uses the existing C4g2b test harness to prove that mis
 result/payout, incomplete payout, unsupported result, and after-cutoff evidence cannot
 escape as a final summary. No HTTP, new capture, repository/schema/migration, or C4h4c
 activity occurred. Stop for independent implementation review.
+
+## Phase 4C-2d3b1i6d1d5f1c4i0 — Exact Archived Historical Replay Application PREPARE
+
+Status: `DRAFT_FOR_REVIEW`.
+
+`C4I` is explicitly assigned after formal C4H completion to own the missing
+deterministic no-network application path. Inspection confirmed that the legacy
+schema-v1 persisted request embeds race inputs and its existing SQLite composition
+assumes settlement facts are already present. It therefore remains unchanged. C4I
+uses a distinct `HistoricalReplayRequestDocument` schema-v1 and a later separate
+historical replay CLI.
+
+The new manifest binds the main database, provider archive paths, run/strategy/pipeline
+configuration, budgets, and per-race exact natural snapshot identity, expected
+internal race ID, one settlement cutoff, result capture ID, and payout evidence
+catalog. Natural identity is the sole snapshot lookup key through
+`load_snapshot_by_identity`; internal race ID is a mandatory cross-check and coverage
+key. All snapshots are loaded and canonicalized before one complete C4g1 batch call.
+No C4h4a call may begin until that batch has succeeded.
+
+Required payout types come only from each frozen plan. The pre-planning manifest
+catalog may contain unused supported-type captures, but only the exact required subset
+is loaded and passed to C4h4a; missing required evidence fails closed. An empty plan
+still invokes C4h4a with its exact result capture and an empty payout mapping. One
+explicit aware cutoff per race is passed unchanged to both acquisition and final
+settlement.
+
+The application selects JRA or NAR only from the loaded snapshot source identity. It
+owns one writable migrated main SQLite connection and only the read-only provider
+archive connections needed by the batch. Capture archives must already be migrated;
+replay neither writes nor migrates them. It closes owned connections in reverse order
+and uses no `ATTACH` or cross-database transaction. Existing immutable writes may
+leave a durable auditable prefix on failure; the application stops, returns no final
+summary, performs no compensation or hidden retry, and propagates collaborator errors.
+Only one successful C4h4b call can yield the exact user-facing final summary.
+
+Portable acceptance will use independently approved, minimized,
+provenance-bound derived JRA and NAR official structural fixtures loaded through real
+capture domains/archives and production normalizers. A mixed-provider two-race replay
+will prove both provider paths, planning-before-acquisition, exact cutoff visibility,
+real persisted-plan consumption, final accounting, deterministic rerun from equivalent
+fresh states, and the required fail-closed cases without network or manual settlement
+fact insertion.
+
+The approved implementation proposal is split into C4i1 request document/loader, C4i2
+SQLite application composition, C4i3a portable fixture evidence freeze, and C4i3b
+separate CLI plus mixed-provider end-to-end closure. The next recommended phase is
+`4C-2d3b1i6d1d5f1c4i1_HISTORICAL_REPLAY_REQUEST_DOCUMENT_AND_LOADER`, limited to a new
+request-document module, its dedicated test, and the two phase docs. There is no narrow
+C4i1 blocker after architecture approval. Run-result audit persistence remains
+`OPTIONAL_POST_VER0_8`; C4g2c is not introduced.
+
+No production, test, schema, migration, database, HTTP, or capture activity occurred.
+No pytest was required. Stop for independent architecture review.
+
+## Phase 4C-2d3b1i6d1d5f1c4i0 Correction — Exact Replay Manifest Contract
+
+Status: `READY_FOR_REVIEW`.
+
+Independent review found that the initial C4i0 draft incorrectly carried legacy
+pipeline configuration into the new historical replay manifest and did not freeze the
+future C4i1 JSON/domain surface exactly. The corrected manifest has only
+`schema_version`, `database_path`, `capture_archives`, `run_context`, `strategy`,
+`budgets_by_race_id`, and `races` at its root. It has no `pipeline`,
+`track_reference_date`, `PredictionPipeline`, or `PipelineConfig`. C4g0 remains the
+sole owner of per-race historical pipeline construction from the loaded snapshot race
+date and formal strategy configuration; the legacy request pipeline field and CLI are
+unchanged.
+
+The exact root, nested run-context/RuleBased-strategy/allocation/budget, race, snapshot
+identity, cutoff, result-capture, and payout-catalog JSON keys and value constraints
+are now frozen. Each race uses the exact natural snapshot identity plus a distinct
+positive internal-race-ID cross-check. Budgets exactly cover manifest race IDs, every
+snapshot dataset matches the run context, supported provider pairs are closed, and
+every represented provider has a configured archive. Input race order is preserved
+because C4i1 does not load snapshots; C4i2 owns canonical scheduling order after all
+exact loads.
+
+Capture-ID values need not be unique. The same archived official page may be used for
+result normalization and multiple payout catalog keys. The payout catalog may be empty
+and unused supported entries remain allowed; existence and required-type completeness
+are intentionally deferred until after planning in C4i2.
+
+The C4i1 public surface is exactly
+`HistoricalReplayRequestValidationError`, `HistoricalReplayRaceRequest`,
+`HistoricalReplayRequestDocument`, and
+`load_historical_replay_request_document`, with no package-root export. The error is a
+single `ValueError` subclass for request validation; filesystem `OSError` propagates.
+The two document types are frozen/slotted and defensively freeze mappings. C4i1
+constructs exact `HistoricalInputSnapshotIdentity`, `SimulationRunContext`,
+`StrategyIdentity`, and `BetStakeBudget` values but performs no database/archive I/O,
+snapshot load, capture inspection, planning, settlement, required-type derivation,
+`NO_BET` decision, or current-clock access.
+
+The duplicated implementation-split heading was removed. C4i0 is ready for independent
+re-review; C4i1 implementation is not yet authorized. No production, tests, schema,
+migration, database, HTTP, or capture activity occurred, and no pytest was required.
+
+## Phase 4C-2d3b1i6d1d5f1c4i1 — Historical Replay Request Document and Strict Loader
+
+Status: `READY_FOR_REVIEW`.
+
+Implemented the distinct module-local C4i1 request boundary with exactly
+`HistoricalReplayRequestValidationError`, `HistoricalReplayRaceRequest`,
+`HistoricalReplayRequestDocument`, and
+`load_historical_replay_request_document`. The two domain types are frozen/slotted,
+validate direct construction, preserve input race order, and defensively freeze archive,
+budget, and payout mappings. No package-root export was added.
+
+The UTF-8 loader enforces the approved seven-key root and five-key race schemas, every
+exact nested object, duplicate-key rejection at all depths, non-finite numeric rejection
+including overflow-created infinity, strict aware datetimes, path anchoring without
+resolution, the two exact provider pairs, canonical budget IDs, exact race/budget and
+dataset coverage, and unique snapshot/race identities. It constructs the existing
+formal `HistoricalInputSnapshotIdentity`, `SimulationRunContext`, `StrategyIdentity`,
+and `BetStakeBudget` values. Capture-ID values may be reused across result and payout
+roles. The catalog may be empty and archive existence is deliberately not checked.
+
+The manifest contains no pipeline or track-reference field and the implementation
+imports or constructs no `PredictionPipeline`. Filesystem `OSError` propagates
+unchanged while request/UTF-8/JSON/schema/domain failures use the sole owned validation
+error. Loading reads only the request file: no database or archive opens, snapshot or
+capture loads, HTTP, clock, planning, acquisition, settlement, or persistence occurs.
+
+Verification passed: dedicated `19 passed, 143 subtests passed`; related `168 passed,
+371 subtests passed` across the exact legacy request/input and formal identity,
+run-context, strategy, allocation, and budget tests; full suite `3082 passed, 2447
+subtests passed`. C4i2 remains unstarted. Stop for independent implementation review.
