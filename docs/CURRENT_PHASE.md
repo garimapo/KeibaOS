@@ -4,126 +4,165 @@ Status: `READY_FOR_REVIEW`
 
 ## Identity and scope
 
-- Phase: `4C-2d3b1i6d1d5f1c4i3a0`
-- Name: `Exact Source Parser Compatibility Correction RESTART — Contract Correction 1`
-- Exact formal base: `54cc6b8b02ff53ec2168ae9d3c0f0816b9b1b122`
+- Phase: `4C-2d3b1i6d1d5f1c4i3a`
+- Name: `Portable Official Fixture Evidence and Provenance IMPLEMENTATION`
+- Formal base: `08bf62135cf9dc1b555c7f26e728ae145e81f066`
 - Formal branch: `feature/ver0.8-simulator`
 - Review branch:
-  `review/4c-2d3b1i6d1d5f1c4i3a0-exact-source-parser-compatibility-restart`
+  `review/4c-2d3b1i6d1d5f1c4i3a-portable-official-fixtures`
 
 Allowed changed files are exactly:
 
 ```text
-scripts/simulation/jra_target_race_result_persistence.py
-scripts/simulation/jra_target_race_payout_persistence.py
-scripts/simulation/nar_target_race_payout_persistence.py
-tests/test_jra_target_race_result_persistence.py
-tests/test_jra_target_race_payout_persistence.py
-tests/test_nar_target_race_payout_persistence.py
+.gitattributes
+tests/fixtures/historical_replay/official/jra/race_result_20250913_nakayama_04.cp932.html
+tests/fixtures/historical_replay/official/nar/race_mark_table_20260503_31_01.utf8.html
+tests/fixtures/historical_replay/official/provenance.json
+tests/fixtures/historical_replay/official/expected_facts.json
+tests/test_portable_official_replay_fixtures.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-## Restart provenance
+## Phase lineage
 
 ```text
-C4I3A0:
-RESTARTED_WITH_CONTRACT_CORRECTION_1
-
-PREVIOUS_CANDIDATE:
-d28176095f56c642f30e8eca2589cb98ced1720b
-
-PREVIOUS_CANDIDATE_OVERALL_APPROVAL:
-REVOKED_FOR_NAR_SEMANTIC_COMMENT_HOLE
-
-C4I3A0CI0:
+C4I2:
 FORMALLY_VERIFIED
 
-C4I3A0CI0_FORMAL_COMMIT:
-54cc6b8b02ff53ec2168ae9d3c0f0816b9b1b122
+C4I3A_PREPARE:
+ARCHITECTURE_APPROVED
 
-FORMAL_BASELINE_CI:
+C4I3A0:
+FORMALLY_VERIFIED
+
+C4I3A0_FORMAL_COMMIT:
+08bf62135cf9dc1b555c7f26e728ae145e81f066
+```
+
+## Fixture evidence contract
+
+```text
+FIXTURE_DERIVATION_POLICY:
+EXACT_SOURCE_BYTES
+
+DERIVED_BYTES_USED:
+NO
+
+BACKDATING_POLICY:
+ORIGINAL_TIMESTAMPS_RETAINED_ONLY_WITH_EXACT_SOURCE_BYTES
+
+FIXTURE_CAPTURE_IDENTITY_POLICY:
+RECONSTRUCT_AND_REQUIRE_EXACT_SOURCE_CAPTURE_ID
+
+JRA_FIXTURE_SHA256:
+f5daa967f05ae1ee0cfcbe8d4c0e59aa8a6b3ceef126ce9d8689fe10ffa8ed0e
+
+JRA_FIXTURE_BYTES:
+94570
+
+NAR_FIXTURE_SHA256:
+3b909b6c9509713150199c3bb3821051181671e10c906f5c315aa4a4c4dbf2db
+
+NAR_FIXTURE_BYTES:
+96614
+
+JRA_CAPTURE_ID_RECONSTRUCTION:
+PASS_EXACT_COMPLETE_ID
+
+NAR_CAPTURE_ID_RECONSTRUCTION:
+PASS_EXACT_COMPLETE_ID
+
+JRA_PUBLIC_RESULT_NORMALIZER:
 PASS
 
-FOUR_JRA_CANDIDATE_BLOBS_REUSED_EXACTLY:
-YES
+JRA_PUBLIC_PAYOUT_NORMALIZERS:
+PASS_ALL_FOUR_SUPPORTED_TYPES
 
-TWO_NAR_CANDIDATE_BLOBS_USED_AS_STARTING_POINT:
-YES
+NAR_PUBLIC_RESULT_NORMALIZER:
+PASS
 
-TWO_NAR_FINAL_BLOBS_DIFFER_FROM_OLD_CANDIDATE:
-EXPECTED
+NAR_PUBLIC_PAYOUT_NORMALIZERS:
+PASS_ALL_FOUR_SUPPORTED_TYPES
+```
 
-OLD_REVIEW_DOCS_REUSED:
+The two raw fixtures were written directly from the already-trusted read-only capture
+objects without decoding, transcoding, newline normalization, comment removal, HTML
+rewriting, or other byte mutation. The NAR complete capture ID is the exact
+concatenation of prefix `nar-capture-v1:` and frozen suffix
+`d6692261a54c1038a5ffd804ae79edda9ca543cb5d78f37c41ffaeefe281013b`.
+
+## Portability and schemas
+
+```text
+PORTABILITY_POLICY:
+CLEAN_CLONE_REPOSITORY_RELATIVE_NO_EXTERNAL_ARCHIVE
+
+GIT_BINARY_POLICY:
+EXACT_TWO_FIXTURE_MINUS_TEXT_MINUS_DIFF_RULES
+
+PROVENANCE_SCHEMA:
+STRICT_UTF8_SCHEMA_V1
+
+EXPECTED_FACTS_SCHEMA:
+STRICT_UTF8_SCHEMA_V1
+
+COPYRIGHT_DATA_MINIMIZATION_POLICY:
+TWO_EXACT_REQUIRED_TARGET_RESPONSES_ONLY
+```
+
+The fixture test uses only repository-relative files, reconstructs the exact formal
+capture values, and exercises the public JRA and NAR result normalizers plus all four
+supported public payout normalizers. It has no website, HTTP, browser, developer
+archive, absolute-path, environment-variable, or current-clock dependency.
+
+## Verification and boundaries
+
+```text
+DEDICATED_TESTS:
+3 passed
+
+RELATED_TESTS:
+79 passed, 324 subtests passed
+
+FULL_SUITE:
+3111 passed, 2506 subtests passed
+
+HTTP_PERFORMED:
 NO
+
+SOURCE_ARCHIVE_MUTATED:
+NO
+
+CAPTURE_SAVED:
+NO
+
+PRODUCTION_CHANGED:
+NO
+
+SCHEMA_CHANGED:
+NO
+
+MIGRATION_CHANGED:
+NO
+
+C4I3B_STARTED:
+NO
+
+FUTURE_AI_SIGNAL_ARCHITECTURE:
+OPTIONAL_AUDITABLE_AUGMENTATION_AFTER_VER0_8
+
+AI_SIGNAL_USAGE_BASELINE:
+DISABLED
+
+CURRENT_C4I3A_AI_EFFECT:
+NONE
+
+IMPLEMENTATION_BLOCKERS:
+NONE
+
+RECOMMENDED_NEXT_PHASE:
+4C-2d3b1i6d1d5f1c4i3b_AFTER_INDEPENDENT_REVIEW_AND_FORMAL_INTEGRATION
 ```
 
-The four JRA production/test blobs remain byte-identical to the individually reviewed
-candidate blobs. The two NAR candidate blobs supplied only the reviewed structural
-starting point; their final blobs include the independently required semantic-comment
-correction and its dedicated regression tests. The formal SQLite-portable migration
-test correction remains inherited unchanged as blob
-`3ee4f329abc39e56c2c7e74f9a0fed24ff47b1fc`.
-
-## Frozen parser semantics
-
-```text
-JRA_OFFICIAL_RACE_NUMBER_GRAMMAR:
-ASCII_1_TO_12_PLUS_EXACT_R_OR_JAPANESE_RACE_SUFFIX
-
-NAR_STRUCTURAL_COMMENT_POLICY:
-STRUCTURAL_COMMENTS_IGNORED
-
-NAR_SEMANTIC_COMMENT_POLICY:
-COMMENTS_NEVER_BECOME_SEMANTIC_TEXT
-```
-
-Both JRA boundaries accept only ASCII `1`–`12` followed by exact `R` or `レース`,
-using full-match grammar and unchanged canonical race-identity equality. Leading zero,
-zero, omitted/English/full-width/whitespace suffixes, prefixes, concatenations, and
-extra suffixes remain rejected.
-
-NAR structural guards ignore only BeautifulSoup `Comment` nodes where structural
-comments are expressly allowed; ordinary non-whitespace direct text and unexpected
-tags remain rejected. Strict semantic text requires no direct child tag and exactly
-one ordinary `NavigableString`; a sole `Comment` is invalid. Comments never provide a
-payout group label, selection, or amount, and comment-plus-text remains invalid. All
-failures occur before payout save.
-
-No public API, error hierarchy, provider/race identity, finality, crosswalk, payout
-table/group/row count, supported bet type, selection/amount grammar, unsupported-state
-handling, or persistence behavior changed.
-
-## Exact-source and verification disposition
-
-The exact immutable JRA (`94570` bytes; SHA-256
-`f5daa967f05ae1ee0cfcbe8d4c0e59aa8a6b3ceef126ce9d8689fe10ffa8ed0e`)
-and NAR (`96614` bytes; SHA-256
-`3b909b6c9509713150199c3bb3821051181671e10c906f5c315aa4a4c4dbf2db`)
-capture bodies were reloaded through read-only SQLite archives without mutation. Both
-public result boundaries and all four supported payout boundaries reproduced the
-approved finish orders, selections, and amounts.
-
-```text
-JRA_SOURCE_SHA_RECHECK: PASS
-NAR_SOURCE_SHA_RECHECK: PASS
-JRA_EXACT_SOURCE_RESULT_COMPATIBILITY: PASS
-JRA_EXACT_SOURCE_PAYOUT_COMPATIBILITY: PASS_ALL_FOUR_SUPPORTED_TYPES
-NAR_EXACT_SOURCE_RESULT_COMPATIBILITY: PASS
-NAR_EXACT_SOURCE_PAYOUT_COMPATIBILITY: PASS_ALL_FOUR_SUPPORTED_TYPES
-EXACT_SOURCE_FACTS_MATCH_PREPARE: PASS
-NEW_EXACT_SOURCE_BLOCKER: NONE
-
-DEDICATED_TESTS: 42 passed, 200 subtests passed
-RELATED_TESTS: 59 passed, 106 subtests passed
-FULL_SUITE: 3108 passed, 2506 subtests passed
-REMOTE_CI: PASS
-```
-
-No fixture, HTTP, capture save, archive mutation, schema, migration, public surface,
-AI runtime, or C4i3b work occurred. The future AI policy remains
-`OPTIONAL_AUDITABLE_AUGMENTATION_AFTER_VER0_8` with baseline usage disabled and
-`CURRENT_C4I3A0_AI_EFFECT=NONE`.
-
-Stop for independent ChatGPT review. Do not formal-integrate or begin C4i3a fixture
-provenance/C4i3b work.
+Stop for independent ChatGPT review. Do not formal-integrate or begin C4i3b.
