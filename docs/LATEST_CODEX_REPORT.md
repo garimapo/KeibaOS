@@ -5968,3 +5968,37 @@ JRA capture/migration/repository suites `32 passed, 75 subtests passed`; full su
 `3106 passed, 2478 subtests passed`. The corrected review's GitHub Actions result is
 required to pass before independent review. C4i3a0 remains blocked pending this phase's
 independent review and formal integration.
+
+## Phase 4C-2d3b1i6d1d5f1c4i3a0 — Exact Source Parser Compatibility Correction RESTART
+
+Restarted C4i3a0 from the independently verified green formal base
+`54cc6b8b02ff53ec2168ae9d3c0f0816b9b1b122`. The previous candidate
+`d28176095f56c642f30e8eca2589cb98ced1720b` remains unmodified and its overall
+approval is revoked for the NAR semantic-comment hole. Its four unaffected JRA
+production/test blobs were materialized exactly from Git object bytes. The old NAR
+production and test blobs were used only as starting content; old review documentation
+was not reused.
+
+The previously reviewed JRA grammar remains the exact full-match ASCII race number
+`1`–`12` followed by `R` or `レース`. In NAR payout parsing, structural comments remain
+ignored only by the structural no-direct-text policy, while `_strict_direct_text` now
+rejects a sole BeautifulSoup `Comment`. Dedicated no-save tests cover comment-only
+`単勝` group labels, `8` and `8-10` selections, and `720円` amounts. Existing tests still
+prove comment-plus-text, ordinary unclassified structural text, and unexpected tags
+fail closed, while comments between the two official payout tables remain accepted.
+
+The final NAR production blob is
+`f37ebfd57aa3c8f304c49b0e920ad0669ebf0b42`; the final NAR test blob is
+`935aa4b02343d0b67bd9d065a0e6f897598806be`. The inherited formal migration-test blob
+remains exactly `3ee4f329abc39e56c2c7e74f9a0fed24ff47b1fc`.
+
+Read-only rechecks of the unchanged trusted JRA and NAR archive bodies matched the
+approved SHA-256 digests, byte lengths, finish orders, and every supported normal
+payout for `単勝`, `馬連`, `ワイド`, and `3連複`. No HTTP, archive mutation, capture save,
+or fixture creation occurred.
+
+Local verification passed: dedicated `42 passed, 200 subtests passed`; related NAR
+result/official acquisition/final settlement suites `59 passed, 106 subtests passed`;
+full suite `3108 passed, 2506 subtests passed`. This includes the now-formal portable
+JRA migration probes unchanged. Static scope, Git-diff, and remote GitHub Actions must
+all pass before independent review. C4i3a fixture provenance and C4i3b remain unstarted.

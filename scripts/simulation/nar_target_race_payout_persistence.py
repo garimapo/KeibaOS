@@ -7,7 +7,7 @@ import re as _re
 from unicodedata import normalize as _normalize
 
 from bs4 import BeautifulSoup as _BeautifulSoup
-from bs4.element import NavigableString as _NavigableString, Tag as _Tag
+from bs4.element import Comment as _Comment, NavigableString as _NavigableString, Tag as _Tag
 
 from scripts.simulation.historical_input_snapshots import HistoricalInputSnapshot
 from scripts.simulation.nar_official_response_capture import (
@@ -122,7 +122,12 @@ def _direct_elements(node: _Tag) -> tuple[_Tag, ...]:
 
 
 def _require_no_direct_text(node: _Tag, name: str) -> None:
-    if any(isinstance(item, _NavigableString) and str(item).strip() for item in node.children):
+    if any(
+        isinstance(item, _NavigableString)
+        and not isinstance(item, _Comment)
+        and str(item).strip()
+        for item in node.children
+    ):
         raise _validation(f"{name} has unclassified direct text")
 
 
@@ -138,7 +143,7 @@ def _strict_direct_text(node: _Tag, name: str) -> str:
     if _direct_elements(node):
         raise _validation(f"{name} direct structure is invalid")
     values = tuple(item for item in node.children if isinstance(item, _NavigableString))
-    if len(values) != 1:
+    if len(values) != 1 or isinstance(values[0], _Comment):
         raise _validation(f"{name} direct text is invalid")
     value = _normalize("NFC", str(values[0]))
     if not value:
