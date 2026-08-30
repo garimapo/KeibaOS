@@ -6134,3 +6134,74 @@ diagnostics to those source-preserved bodies. No diff-check exclusion, ignored e
 code, HTML cleanup, byte mutation, newline normalization, transcoding, reserialization,
 comment removal, or fixture reduction is used. All eight-file scope and evidence
 semantics remain unchanged.
+
+## Phase 4C-2d3b1i6d1d5f1c4i3b — Historical Replay CLI and Acceptance PREPARE
+
+The exact formal base `6ea6c3720f2e30e2dc0d1d13466193e8a4658ee0` and tree
+`89edf702347a9be3a13c725fce5a7180b13c558d` were verified before inspection. The
+C4i3a exact-byte JRA/NAR fixtures and strict provenance remain present and unchanged.
+
+The formal application layering is sufficient. The future CLI is one thin
+`scripts/cli/run_historical_replay.py` module with the existing CLI-style
+`build_parser()`, `run(...)`, and `main()` functions, one positional request path, and
+exactly one call to `run_historical_replay_request(request_path=...)`. It owns no
+loader, SQLite, planning, archive, acquisition, settlement, or clock work.
+
+Serialization choice A is exact. The public
+`scripts.simulation.serialization.to_json_compatible` result was compared with the
+persisted CLI's complete private summary payload for populated, empty, and
+multi-bet-type summaries and matched exactly. C4i3b can retain the existing schema-v1
+`ok`/`error` envelopes, fixed-point Decimal strings, sorted compact JSON, and one
+newline without changing the legacy CLI or adding a second summary mapper. Its exact
+expected error tuple remains `OSError`, `RuntimeError`, `TypeError`, `ValueError`, and
+`sqlite3.Error`; success is exit 0/stdout, expected failure is exit 1/stderr, and
+argparse retains native usage errors.
+
+Portable official evidence can be placed in temporary formal archives using existing
+APIs. JRA uses `apply_jra_capture_schema_migrations`,
+`SQLiteJRAOfficialResponseCaptureRepository`, and one `save_capture`; NAR uses
+`apply_capture_schema_migrations`, `SQLiteNAROfficialResponseCaptureRepository`, and
+one `save_capture`. Setup connections close before production reopens represented
+archives through the already-formal hard read-only URI and `query_only` boundary. The
+manifest and all three SQLite files live under one `tmp_path`, using only manifest-
+relative paths.
+
+The main temporary database uses the established prerequisite `races`/`horses` test
+bootstrap, `apply_migrations`, disjoint exact JRA/NAR entry crosswalks, and two saves
+through `SQLiteHistoricalInputSnapshotRepository`. No official prediction snapshot
+accompanies the settlement fixtures, so the acceptance explicitly labels its formal
+immutable prediction inputs `c4i3b_test_generated`, uses a test-only evidence host and
+fixed digests/timestamps, and never represents them as C4i3a official evidence. Exact
+official bytes remain solely the post-race result/payout source.
+
+The pre-race causality chains are frozen as JRA
+`2025-09-12T23:50Z <= 23:55Z <= 2025-09-13T00:00Z <= 01:00Z <= 02:30Z`
+and NAR
+`2026-05-02T11:50Z <= 11:55Z <= 12:00Z <= 13:00Z <= 2026-05-03T03:00Z`.
+Settlement cutoffs retain the exact official observed times
+`2026-08-26T11:38:28.113891Z` and `2026-08-27T15:41:31.026438Z`; no response is
+backdated. Temporary migration audit time is fixed in test setup and is not a replay
+input or wall-clock dependency.
+
+The causally fixed strategy allows only `単勝`, maximum one bet/candidate, formation
+style, generator-rank ordering, fixed stake 100, and budget 100 per race. Complete
+equal-odds/no-history synthetic inputs make the existing deterministic internal-ID
+tie-break select JRA entry 1001/horse 1 and NAR entry 2001/horse 1 before settlement.
+Both lose in the exact official results. This exercises both result and required payout
+paths without manufacturing all four payout types already covered by C4i3a.
+
+A disposable offline architecture probe using repository fixtures and test-temporary
+SQLite state confirmed the exact outcome without changing a repository file:
+strategy `RuleBasedBetStrategy:e05f27f5729da71b`, config hash
+`e05f27f5729da71b9d057aebe9b60c70c98ee2d7877266cdf6f392e65bb9e60e`, two settled
+races, two settled bets, investment 200, payout 0, profit -200, zero ROI/hit rates,
+maximum drawdown 200, and only the corresponding `単勝` summary.
+
+The complete schema-v1 request shape, exact identities/timestamps/capture catalogs,
+temporary archive ownership, hard no-network gate, exact output, and expected summary
+are frozen in `CURRENT_PHASE.md`. The proposed implementation is one bounded phase:
+one new CLI module, one dedicated CLI test, one mixed-provider/no-network acceptance
+test, and the two docs. No serializer, legacy CLI, runner, normalizer, fixture,
+repository, schema, migration, package export, AI runtime, HTTP, capture, or C4i3b code
+was changed in this PREPARE. Architectural blockers are `NONE`; implementation remains
+pending independent ChatGPT architecture review.
