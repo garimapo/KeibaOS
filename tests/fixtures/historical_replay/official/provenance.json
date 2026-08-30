@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "fixtures": [
+    {
+      "provider": "JRA",
+      "fixture_role": "historical_replay_official_result_and_payout",
+      "source_capture_id": "jra-capture-v1:2d8fbee2df4a201923a49a48e02de3f6837293e0166a1347e30ef3f0b0aad296",
+      "source_canonical_source_url": "https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde0106202504030420250913%2FDC",
+      "source_page_kind": "race_result",
+      "source_response_sha256": "f5daa967f05ae1ee0cfcbe8d4c0e59aa8a6b3ceef126ce9d8689fe10ffa8ed0e",
+      "source_response_byte_length": 94570,
+      "source_charset": "cp932",
+      "source_requested_at": "2026-08-26T11:38:27.557867+00:00",
+      "source_observed_at": "2026-08-26T11:38:28.113891+00:00",
+      "source_stored_at": "2026-08-26T11:38:28.113897+00:00",
+      "source_http_status": 200,
+      "source_content_type": "text/html",
+      "source_content_encoding": null,
+      "source_http_date": "Wed, 26 Aug 2026 11:38:29 GMT",
+      "source_etag": null,
+      "source_last_modified": null,
+      "source_content_length": null,
+      "source_race_identity": "jra:race:2025:06:04:03:04",
+      "derivation_kind": "exact_source_bytes",
+      "fixture_relative_path": "tests/fixtures/historical_replay/official/jra/race_result_20250913_nakayama_04.cp932.html",
+      "fixture_sha256": "f5daa967f05ae1ee0cfcbe8d4c0e59aa8a6b3ceef126ce9d8689fe10ffa8ed0e",
+      "fixture_byte_length": 94570,
+      "fixture_charset": "cp932",
+      "fixture_capture_identity_policy": "reconstructs_exact_source_capture_identity",
+      "supported_normalization_roles": [
+        "target_race_result",
+        "target_race_payout"
+      ]
+    },
+    {
+      "provider": "NAR",
+      "fixture_role": "historical_replay_official_result_and_payout",
+      "source_capture_id": "nar-capture-v1:d6692261a54c1038a5ffd804ae79edda9ca543cb5d78f37c41ffaeefe281013b",
+      "source_canonical_source_url": "https://www.keiba.go.jp/KeibaWeb/TodayRaceInfo/RaceMarkTable?k_babaCode=31&k_raceDate=2026%2F05%2F03&k_raceNo=1",
+      "source_page_kind": "race_mark_table",
+      "source_response_sha256": "3b909b6c9509713150199c3bb3821051181671e10c906f5c315aa4a4c4dbf2db",
+      "source_response_byte_length": 96614,
+      "source_charset": "utf-8",
+      "source_requested_at": "2026-08-27T15:41:30.631495+00:00",
+      "source_observed_at": "2026-08-27T15:41:31.026438+00:00",
+      "source_stored_at": "2026-08-27T15:41:31.026443+00:00",
+      "source_http_status": 200,
+      "source_content_type": "text/html; charset=UTF-8",
+      "source_content_encoding": null,
+      "source_http_date": "Thu, 27 Aug 2026 15:41:31 GMT",
+      "source_etag": null,
+      "source_last_modified": null,
+      "source_content_length": null,
+      "source_race_identity": "nar:20260503:31:1",
+      "derivation_kind": "exact_source_bytes",
+      "fixture_relative_path": "tests/fixtures/historical_replay/official/nar/race_mark_table_20260503_31_01.utf8.html",
+      "fixture_sha256": "3b909b6c9509713150199c3bb3821051181671e10c906f5c315aa4a4c4dbf2db",
+      "fixture_byte_length": 96614,
+      "fixture_charset": "utf-8",
+      "fixture_capture_identity_policy": "reconstructs_exact_source_capture_identity",
+      "supported_normalization_roles": [
+        "target_race_result",
+        "target_race_payout"
+      ]
+    }
+  ]
+}

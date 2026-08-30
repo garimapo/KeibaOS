@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "fixtures": [
+    {
+      "provider": "JRA",
+      "fixture_relative_path": "tests/fixtures/historical_replay/official/jra/race_result_20250913_nakayama_04.cp932.html",
+      "source_race_identity": "jra:race:2025:06:04:03:04",
+      "result_status": "complete",
+      "finish_order": [
+        {"horse_number": 7, "finish_position": 1, "result_status": "confirmed"},
+        {"horse_number": 3, "finish_position": 2, "result_status": "confirmed"},
+        {"horse_number": 6, "finish_position": 3, "result_status": "confirmed"},
+        {"horse_number": 12, "finish_position": 4, "result_status": "confirmed"},
+        {"horse_number": 5, "finish_position": 5, "result_status": "confirmed"},
+        {"horse_number": 2, "finish_position": 6, "result_status": "confirmed"},
+        {"horse_number": 13, "finish_position": 7, "result_status": "confirmed"},
+        {"horse_number": 4, "finish_position": 8, "result_status": "confirmed"},
+        {"horse_number": 9, "finish_position": 9, "result_status": "confirmed"},
+        {"horse_number": 10, "finish_position": 10, "result_status": "confirmed"},
+        {"horse_number": 8, "finish_position": 11, "result_status": "confirmed"},
+        {"horse_number": 11, "finish_position": 12, "result_status": "confirmed"},
+        {"horse_number": 1, "finish_position": 13, "result_status": "confirmed"}
+      ],
+      "payouts_by_bet_type": {
+        "単勝": [
+          {"horse_numbers": [7], "payout_per_100": 160, "payout_status": "winning"}
+        ],
+        "馬連": [
+          {"horse_numbers": [3, 7], "payout_per_100": 1030, "payout_status": "winning"}
+        ],
+        "ワイド": [
+          {"horse_numbers": [3, 7], "payout_per_100": 420, "payout_status": "winning"},
+          {"horse_numbers": [6, 7], "payout_per_100": 300, "payout_status": "winning"},
+          {"horse_numbers": [3, 6], "payout_per_100": 1370, "payout_status": "winning"}
+        ],
+        "3連複": [
+          {"horse_numbers": [3, 6, 7], "payout_per_100": 2280, "payout_status": "winning"}
+        ]
+      }
+    },
+    {
+      "provider": "NAR",
+      "fixture_relative_path": "tests/fixtures/historical_replay/official/nar/race_mark_table_20260503_31_01.utf8.html",
+      "source_race_identity": "nar:20260503:31:1",
+      "result_status": "complete",
+      "finish_order": [
+        {"horse_number": 8, "finish_position": 1, "result_status": "confirmed"},
+        {"horse_number": 10, "finish_position": 2, "result_status": "confirmed"},
+        {"horse_number": 11, "finish_position": 3, "result_status": "confirmed"},
+        {"horse_number": 4, "finish_position": 4, "result_status": "confirmed"},
+        {"horse_number": 1, "finish_position": 5, "result_status": "confirmed"},
+        {"horse_number": 5, "finish_position": 6, "result_status": "confirmed"},
+        {"horse_number": 7, "finish_position": 7, "result_status": "confirmed"},
+        {"horse_number": 9, "finish_position": 8, "result_status": "confirmed"},
+        {"horse_number": 3, "finish_position": 9, "result_status": "confirmed"},
+        {"horse_number": 6, "finish_position": 10, "result_status": "confirmed"},
+        {"horse_number": 2, "finish_position": 11, "result_status": "confirmed"}
+      ],
+      "payouts_by_bet_type": {
+        "単勝": [
+          {"horse_numbers": [8], "payout_per_100": 720, "payout_status": "winning"}
+        ],
+        "馬連": [
+          {"horse_numbers": [8, 10], "payout_per_100": 730, "payout_status": "winning"}
+        ],
+        "ワイド": [
+          {"horse_numbers": [8, 10], "payout_per_100": 300, "payout_status": "winning"},
+          {"horse_numbers": [8, 11], "payout_per_100": 410, "payout_status": "winning"},
+          {"horse_numbers": [10, 11], "payout_per_100": 350, "payout_status": "winning"}
+        ],
+        "3連複": [
+          {"horse_numbers": [8, 10, 11], "payout_per_100": 1230, "payout_status": "winning"}
+        ]
+      }
+    }
+  ]
+}

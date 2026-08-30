@@ -5992,6 +5992,69 @@ The final NAR production blob is
 `935aa4b02343d0b67bd9d065a0e6f897598806be`. The inherited formal migration-test blob
 remains exactly `3ee4f329abc39e56c2c7e74f9a0fed24ff47b1fc`.
 
+## Phase 4C-2d3b1i6d1d5f1c4i3a — Fixture Implementation Preflight Blocker
+
+Fixture implementation stopped before creating or modifying any fixture file. The
+authorized C4i3a contract requires reconstruction of the NAR capture with exact
+`capture_id` `nar-capture-v1`, but the existing formal
+`NAROfficialResponseCapture` capture-ID contract deterministically includes a
+SHA-derived suffix. The read-only trusted archive recheck returned the exact existing
+capture ID
+`nar-capture-v1:d6692261a54c1038a5ffd804ae79edda9ca543cb5d78f37c41ffaeefe281013b`,
+with the approved response SHA-256
+`3b909b6c9509713150199c3bb3821051181671e10c906f5c315aa4a4c4dbf2db` and byte length
+`96614`. The bare string is only the capture-ID prefix, not a valid reconstructed
+capture ID. No alternate identity rule was inferred. No HTTP, archive mutation,
+capture save, fixture write, production/test change, schema/migration, or C4i3b work
+occurred. A corrected exact NAR capture-ID requirement is needed before C4i3a can
+continue.
+
+## Phase 4C-2d3b1i6d1d5f1c4i3a — Contract Amendment 1 Still Inconsistent
+
+Contract Amendment 1 authorizes resolving the capture-ID blocker, but its displayed
+`NAR_EXPECTED_CAPTURE_ID` and required equality target remain the bare
+`nar-capture-v1` while the same amendment says that bare string is only a prefix and
+must never be used as an expected complete ID. The exact suffix is not present in the
+amendment. The formal type and read-only trusted archive continue to establish
+`nar-capture-v1:d6692261a54c1038a5ffd804ae79edda9ca543cb5d78f37c41ffaeefe281013b`.
+The amendment therefore cannot be applied as a deterministic exact-identity contract.
+No fixture implementation work continued; a corrected amendment with that complete
+NAR capture ID written exactly is required.
+
+## Phase 4C-2d3b1i6d1d5f1c4i3a — Contract Amendment 2 Still Missing the NAR Suffix
+
+Amendment 2 supersedes Amendment 1 but again displays `NAR_COMPLETE_CAPTURE_ID` and
+the required formal equality target as bare `nar-capture-v1`, despite also declaring
+that bare string a prefix that must not be used as a complete capture ID. The exact
+formal and trusted-archive value remains
+`nar-capture-v1:d6692261a54c1038a5ffd804ae79edda9ca543cb5d78f37c41ffaeefe281013b`.
+Because Amendment 2 forbids inferring or patching a missing suffix, it cannot be
+applied deterministically. C4i3a remains stopped before fixture creation; no fixture,
+archive, network, production, test, schema, migration, CLI, or C4i3b change occurred.
+
+## Phase 4C-2d3b1i6d1d5f1c4i3a — Final Capture-ID Correction Still Contradicts Formal Identity
+
+The final correction again freezes the NAR equality target, provenance value, archive
+lookup key, and report value as bare `nar-capture-v1`. That value differs from the
+formal reconstructed capture ID and trusted archive key by the complete deterministic
+suffix. The exact established value remains
+`nar-capture-v1:d6692261a54c1038a5ffd804ae79edda9ca543cb5d78f37c41ffaeefe281013b`.
+Because the correction requires exact character-for-character equality and directs a
+fail-closed stop on any difference, it cannot be applied. No resolution entry claiming
+success was appended, and fixture implementation did not continue.
+
+## Phase 4C-2d3b1i6d1d5f1c4i3a — Capture-ID Contract Resolution
+
+The NAR complete capture ID is now defined by the exact prefix
+`nar-capture-v1:` plus the exact frozen suffix
+`d6692261a54c1038a5ffd804ae79edda9ca543cb5d78f37c41ffaeefe281013b`.
+Their exact concatenation is
+`nar-capture-v1:d6692261a54c1038a5ffd804ae79edda9ca543cb5d78f37c41ffaeefe281013b`.
+This value matches the formal `NAROfficialResponseCapture.capture_id` and the trusted
+archive lookup key. The earlier blocker records remain preserved as audit history;
+the identity contradiction is resolved without changing the formal algorithm or
+inferring a suffix.
+
 Read-only rechecks of the unchanged trusted JRA and NAR archive bodies matched the
 approved SHA-256 digests, byte lengths, finish orders, and every supported normal
 payout for `単勝`, `馬連`, `ワイド`, and `3連複`. No HTTP, archive mutation, capture save,
@@ -6002,3 +6065,72 @@ result/official acquisition/final settlement suites `59 passed, 106 subtests pas
 full suite `3108 passed, 2506 subtests passed`. This includes the now-formal portable
 JRA migration probes unchanged. Static scope, Git-diff, and remote GitHub Actions must
 all pass before independent review. C4i3a fixture provenance and C4i3b remain unstarted.
+
+## Phase 4C-2d3b1i6d1d5f1c4i3a — Portable Official Fixture Implementation
+
+The final prefix-plus-suffix correction resolved the NAR capture-ID contract. The
+complete value reconstructed by the formal capture type is
+`nar-capture-v1:d6692261a54c1038a5ffd804ae79edda9ca543cb5d78f37c41ffaeefe281013b`;
+no identity algorithm or suffix was recomputed in the fixture test. All earlier
+fail-closed blocker records remain above as append-only audit history.
+
+The trusted JRA and NAR captures were reopened through their formal read-only SQLite
+repository paths with `query_only` enabled. Exact capture type, complete ID, canonical
+URL, page kind, charset, timestamps, HTTP metadata, response length, SHA-256, and race
+identity were rechecked before writing. The JRA response remains `94570` bytes with
+SHA-256 `f5daa967f05ae1ee0cfcbe8d4c0e59aa8a6b3ceef126ce9d8689fe10ffa8ed0e`;
+the NAR response remains `96614` bytes with SHA-256
+`3b909b6c9509713150199c3bb3821051181671e10c906f5c315aa4a4c4dbf2db`.
+
+Each fixture was created by one binary write of the exact trusted `response_body` and
+immediately reread for byte equality. No decoding, encoding, newline normalization,
+comment removal, DOM rewriting, or source-body mutation occurred. `.gitattributes`
+contains only the two exact fixture-specific `-text` rules, and `git check-attr`
+reports `text: unset` for each body. Strict UTF-8 schema-v1 provenance records exact
+source/fixture identity and HTTP metadata; strict UTF-8 schema-v1 expected facts record
+only the supported result and payout subset.
+
+The repository-relative fixture test rejects duplicate JSON keys, pins exact schemas,
+hashes, lengths, mixed JRA line endings, NAR LF-only content, encodings, and byte
+roundtrips. It reconstructs exact formal capture IDs and exercises only the public JRA
+and NAR result/payout persistence boundaries using test-only in-memory collaborators.
+Both exact unmodified bodies reproduce the approved finish orders and every supported
+`単勝`, `馬連`, `ワイド`, and `3連複` payout; reads after normalization confirm the
+fixtures and capture bodies remain unchanged.
+
+Local verification passed: dedicated portable fixture suite `3 passed`; required
+related suites `79 passed, 324 subtests passed`; full suite `3111 passed, 2506 subtests
+passed`. No HTTP, recapture, capture save, source archive mutation, external archive
+test dependency, production change, schema, migration, CLI, AI runtime, or C4i3b work
+occurred. Clean-checkout and remote-CI portability gates remain required before this
+review candidate is reported ready for independent review.
+
+## Phase 4C-2d3b1i6d1d5f1c4i3a — Binary Diff-Check Contract Blocker
+
+Fixture creation, strict schema tests, exact public normalizer tests, source/worktree
+byte equality, and staged/index byte equality all passed. The exact JRA index body is
+`94570` bytes with SHA-256
+`f5daa967f05ae1ee0cfcbe8d4c0e59aa8a6b3ceef126ce9d8689fe10ffa8ed0e`;
+the exact NAR index body is `96614` bytes with SHA-256
+`3b909b6c9509713150199c3bb3821051181671e10c906f5c315aa4a4c4dbf2db`.
+
+The required global `git diff --cached --check` nevertheless fails on the unchanged
+official bodies. The two exact `-text` attributes prevent newline conversion but do
+not classify these NUL-free HTML bodies as binary for diff purposes. Git therefore
+reports their original CRLF bytes and original trailing spaces as whitespace errors.
+Making the global check pass would require at least one currently unauthorized action:
+mutating the exact source bytes, adding `-diff`/binary attributes beyond the exact
+two `-text` rules, or scoping the diff check to exclude the two immutable evidence
+bodies. The phase explicitly requires a fail-closed stop if a broader attribute is
+needed. No commit or push was performed, and C4i3b remains unstarted.
+
+## Phase 4C-2d3b1i6d1d5f1c4i3a — Binary Diff-Policy Resolution
+
+The binary diff-policy amendment resolves the Git representation blocker with exact
+path-only `-text -diff` attributes for the two immutable official HTML evidence
+fixtures. No wildcard or broad binary macro is used. `-text` preserves exact bytes
+through add/checkout, while `-diff` prevents Git from applying textual whitespace
+diagnostics to those source-preserved bodies. No diff-check exclusion, ignored exit
+code, HTML cleanup, byte mutation, newline normalization, transcoding, reserialization,
+comment removal, or fixture reduction is used. All eight-file scope and evidence
+semantics remain unchanged.
