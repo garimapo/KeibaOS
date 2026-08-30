@@ -71,7 +71,7 @@ _DATE_LINE = _re.compile(
     r"(?P<year>[0-9]{4})年(?P<month>[0-9]{1,2})月(?P<day>[0-9]{1,2})日(?:\([^)]*\)|（[^）]*）)?\s*"
     r"(?P<meeting>[0-9]{1,2})回(?P<venue>札幌|函館|福島|新潟|東京|中山|中京|京都|阪神|小倉)(?P<meeting_day>[0-9]{1,2})日\Z"
 )
-_RACE_NUMBER = _re.compile(r"(?P<race>[1-9]|1[0-2])R")
+_RACE_NUMBER = _re.compile(r"(?P<race>[1-9]|1[0-2])(?:R|レース)\Z")
 _HORSE_NUMBER = _re.compile(r"[1-9][0-9]*\Z")
 _AMOUNT = _re.compile(r"[1-9][0-9]{0,2}(?:,[0-9]{3})*\Z")
 _UNSUPPORTED_MARKERS = frozenset({"返還", "不成立", "同着", "特払い"})

@@ -231,20 +231,23 @@ class JRATargetRaceResultPersistenceTest(unittest.TestCase):
         self.assertEqual(hints["return"], PersistedRaceResult)
         self.assertTrue(issubclass(JRATargetRaceResultPersistenceValidationError, JRATargetRaceResultPersistenceError))
 
-    def test_normal_final_complete_thirteen_entry_result_is_persisted_once(self) -> None:
-        result, archive, repository = _run()
-        self.assertEqual(archive.calls, [_capture().capture_id])
-        self.assertEqual(repository.saved, [result])
-        self.assertIs(repository.saved[0], result)
-        self.assertEqual(result.race_id, 700)
-        self.assertIs(result.result_status, RaceResultStatus.COMPLETE)
-        self.assertEqual(result.observed_at, CAPTURE_TIME)
-        self.assertEqual(result.finalized_at, CAPTURE_TIME)
-        self.assertEqual(result.source, _capture().capture_id)
-        self.assertEqual({entry.horse_no for entry in result.entries}, set(range(1, 14)))
-        self.assertEqual({entry.race_entry_id for entry in result.entries}, set(range(1001, 1014)))
-        self.assertEqual({entry.finish_position for entry in result.entries}, set(range(1, 14)))
-        self.assertEqual({entry.result_status for entry in result.entries}, {RaceResultEntryStatus.CONFIRMED})
+    def test_normal_final_complete_thirteen_entry_result_is_persisted_once_for_each_approved_race_suffix(self) -> None:
+        for race_alt in ("4R", "4レース"):
+            with self.subTest(race_alt=race_alt):
+                capture = _capture(body=_html(race_alt=race_alt))
+                result, archive, repository = _run(capture=capture)
+                self.assertEqual(archive.calls, [capture.capture_id])
+                self.assertEqual(repository.saved, [result])
+                self.assertIs(repository.saved[0], result)
+                self.assertEqual(result.race_id, 700)
+                self.assertIs(result.result_status, RaceResultStatus.COMPLETE)
+                self.assertEqual(result.observed_at, CAPTURE_TIME)
+                self.assertEqual(result.finalized_at, CAPTURE_TIME)
+                self.assertEqual(result.source, capture.capture_id)
+                self.assertEqual({entry.horse_no for entry in result.entries}, set(range(1, 14)))
+                self.assertEqual({entry.race_entry_id for entry in result.entries}, set(range(1001, 1014)))
+                self.assertEqual({entry.finish_position for entry in result.entries}, set(range(1, 14)))
+                self.assertEqual({entry.result_status for entry in result.entries}, {RaceResultEntryStatus.CONFIRMED})
 
     def test_public_boundary_failures_happen_before_archive_io(self) -> None:
         archive = _Archive(_capture())
@@ -327,7 +330,10 @@ class JRATargetRaceResultPersistenceTest(unittest.TestCase):
                 self.assertEqual(repository.saved, [])
 
     def test_visible_race_number_requires_exact_complete_approved_value(self) -> None:
-        for value in ("14R", "X4R", "4Rfoo", "foo4R", "4R5R", "4R 5R", "04R", "R", ""):
+        for value in (
+            "14R", "X4R", "4Rfoo", "foo4R", "4R5R", "4R 5R", "04R", "R", "",
+            "04レース", "13レース", "4 レース", "4Ｒ", "４レース", "4レースfoo", "5レース",
+        ):
             with self.subTest(value=value):
                 capture = _capture(body=_html(race_alt=value))
                 repository = _RaceResultRepository()
