@@ -6214,3 +6214,208 @@ The implementation is limited to one new CLI module, two new test modules, and t
 two docs. Review-branch GitHub Actions `Tests / pytest (3.12)` must pass before the
 phase is reported ready for independent review. Formal integration remains
 unauthorized.
+
+## Phase 4C-2d3b1i6d1d5f1c4j0 — Ver0.8 Completion and Release-Readiness Audit PREPARE
+
+The completion audit was performed against exact formal base
+`c6c2f17934c2274d5bc720c60e40e52bd0c3ee58`. The corrected AGENTS-compliant phase
+status is `DRAFT_FOR_REVIEW`. This activity changes only `docs/CURRENT_PHASE.md` and
+this append-only report. It authorizes neither implementation nor release work.
+
+### Completion judgment
+
+```text
+VER0_8_GO_NO_GO:
+VER0_8_RELEASE_READY_AFTER_DOCS
+
+VER0_8_RELEASE_BLOCKERS:
+NONE
+
+IMPLEMENTATION_AUTHORIZATION:
+NO
+
+RELEASE_AUTHORIZATION:
+NO
+```
+
+The implemented platform satisfies the controlling Ver0.8 goal: deterministic replay
+of exact persisted historical prediction snapshots through the real prediction stack,
+fixed 100-yen-unit allocation, immutable plan storage, exact archived official
+settlement, and summary aggregation. No additional production/schema/test phase is
+needed before release preparation. Release is not yet authorized because public docs
+and release/version state are stale.
+
+### Causal prediction and plan evidence
+
+`HistoricalInputEvidenceReference` rejects `available_at > observed_at`. Snapshot
+assembly and immutable domain construction require evidence observation before the
+captured snapshot, `captured_at <= information_cutoff`, and cutoff no later than the
+scheduled start. Every required track, entry, jockey, win-odds and past-race/absence
+audit key must exist. The SQLite repository persists normalized audit evidence and
+external identities, recomputes the canonical content digest on load, rejects selected
+corruption, and never falls back from a malformed latest/exact row.
+
+C4i uses only `load_snapshot_by_identity`; manifest `internal_race_id` is a binding
+cross-check rather than a substitute lookup. C4g0 adapts the immutable snapshot and
+constructs the real historical `PredictionPipeline` with the target race date. The
+normal call executes `AbilityEngine`, `PaceEngine`, `JockeyEngine`, `TrackEngine`,
+`Predictor`, `ValueEngine`, `BetGenerator`, and `RuleBasedBetStrategy`. Planning is a
+whole-batch barrier: no capture archive or settlement repository is opened before the
+complete C4g1 return and payout-catalog subset preflight.
+
+Strategy configuration and allocation-policy payloads are canonically serialized and
+SHA-256 identified. `SimulationBetPlanIdentity` binds run, race, strategy, config hash,
+and prediction cutoff. `FixedStakeBetAllocator` enforces one configured positive
+100-yen multiple per recommendation, explicit per-race budgets, exact purchase order,
+empty/no-bet plans, audit-visible unallocated amount, and fail-closed insufficient
+budget. The normalized plan repository preserves selection/purchase order, treats an
+identical save as idempotent, rejects conflicts/corruption, and is the only bet source
+for later settlement. No hindsight-aware plan regeneration path was found.
+
+### Official evidence and settlement evidence
+
+JRA and NAR capture repositories load exact immutable capture IDs. The replay opens
+only the provider archives represented by loaded snapshots, using SQLite `mode=ro`
+and verified `query_only`; it does not search another provider, discover a latest
+capture, refetch live data, or infer provider from a capture ID/path. C4h4 validates
+all exact captures against the settlement cutoff before its first provider write.
+
+Both providers have exact portable official-response fixtures. Public result and
+payout normalizers validate canonical/visible race identity, page structure,
+race-local external-entry crosswalk, positive finality, and normal complete data.
+Supported normal payout settlement is `単勝`, `馬連`, `ワイド`, and `3連複`; JRA and
+NAR exact evidence reproduces all four. Unsupported exceptional structures remain
+fail-closed. NAR displayed yen values use the frozen official 100-yen denomination
+semantics and become exact `payout_per_100` facts.
+
+The settlement source first loads the exact persisted plan. Empty persisted plans
+produce `NO_BET`; missing plans are errors. Purchased types alone select bounded
+payout publications at or before the explicit settlement cutoff. Missing/incomplete,
+void, error, and unsupported states carry no settled money, and the final C4h4b
+boundary refuses to return a summary containing any non-final state. A partial durable
+repository prefix is never misreported as a completed final ROI.
+
+Payout is exact integer yen: `stake * payout_per_100 / 100`, with nonintegral results
+rejected. Neither estimated EV, prediction score, current odds, post-race reconstructed
+odds nor `combination_score` enters settlement. Only settled races feed investment,
+payout, profit, rates, and drawdown. Maximum drawdown uses `(settled_at, race_id)`;
+`NO_BET` and non-settled states are excluded. Immutable by-type summaries cross-check
+their counts and money against the overall summary.
+
+### Replay reproducibility, dependencies, and auditability
+
+The strict schema-v1 request contains the database/archive paths, run context and
+target commit, exact snapshot natural identities, strategy configuration, budgets,
+prediction capture time, result/payout capture IDs and settlement cutoffs. Relative
+paths anchor to the manifest. Main SQLite state retains exact historical input and
+provenance, immutable plans, exact result capture sources, and exact payout capture
+sources. Together with the retained request and archives this is sufficient to
+recompute the final summary exactly.
+
+The final `SimulationSummary` is deterministic CLI output rather than a persisted
+run-result row. The already approved C4g2c disposition is
+`OPTIONAL_POST_VER0_8`; absence of a second run-audit table is not a release blocker.
+The normal replay path has no random or environment-variable input, implicit
+`database/keiba.db`, HTTP client, DNS/network acquisition, live fallback, or current
+clock in prediction/settlement decisions. The mixed-provider acceptance pre-applies
+migrations, installs a fail-closed migration-clock sentinel and socket sentinels, and
+still completes. A migration audit timestamp when setting up an older database is
+setup metadata and does not influence replay results.
+
+C4i3b runs the public CLI with both JRA and NAR, deliberately noncanonical manifest
+order, exact fixture-derived archives, and synthetic but causally audited pre-race
+prediction snapshots. It proves the application boundary, not predictive validity.
+The replay architecture promises deterministic execution of an already-audited
+snapshot; automatic historical official-input collection/request generation is a
+post-Ver0.8 ingestion extension, not a missing runtime boundary.
+
+### Bet-type and claim disposition
+
+Candidate generation recognizes all four formal types, and official normal-final
+settlement can settle all four. Prediction-time market-odds EV is formal only for
+`単勝`; combination candidates use `combination_score` only as a ranking heuristic.
+The release acceptance purchases `単勝` only. Release documentation must not describe
+the combination score as odds or EV.
+
+The formal output establishes arithmetic correctness, reproducible official
+settlement, status counts, hit metrics and drawdown. It does not establish
+profitability, 120% ROI, calibrated probability, statistically demonstrated strategy
+edge, or long-term performance. A losing acceptance summary is valid evidence that
+the platform settles honestly, not evidence of a platform defect.
+
+One replay request carries one strategy. Stable configuration identities and
+deterministic separate runs are sufficient for the baseline Strategy/config comparison
+goal. One-command multi-strategy orchestration, combined race detail and independent
+capital-curve policy remain post-Ver0.8 because the formal design leaves the combined
+capital semantics unresolved.
+
+### Gap classification
+
+`A — VER0_8_RELEASE_BLOCKER`: `NONE`.
+
+`B — VER0_8_RELEASE_DOCUMENTATION_ONLY`:
+
+- README still presents Ver0.7, does not explain the historical replay CLI/manifest,
+  and has stale fixed-stake allocation language.
+- ROADMAP, CHANGELOG and `VER0.8_DESIGN.md` still call Ver0.8 Horse Engine and defer
+  results to Ver0.9; ARCHITECTURE omits the formal simulator/replay layers.
+- No copyable strict schema-v1 operator manifest or prerequisite/claim-limit guidance
+  is published.
+- Latest Git tag is `v0.7.0`; `v0.8.0` is untagged, no GitHub release or package-version
+  source exists, and formal is 158 commits ahead of `master`.
+
+`C — POST_VER0_8_EXTENSION`:
+
+- automatic live historical input collection/request generation;
+- additional allocation policies, portfolio/bankroll management and live betting;
+- true combination-ticket pre-race odds/EV;
+- probability calibration and statistical edge validation;
+- one-command multi-strategy reports;
+- C4g2c run-result/manifest persistence, race-detail and CSV artifacts;
+- result revision/time-travel and exceptional settlement semantics;
+- automatic daily execution, X/note publishing, and optional external AI signals.
+
+`D — NOT_A_REAL_GAP / ALREADY_SATISFIED` covers every PASS row in
+`docs/CURRENT_PHASE.md`, including causal isolation, persisted audit inputs/plans,
+both providers, official arithmetic, finality, deterministic CLI, clean checkout,
+no-network replay, and stable repeated-run strategy comparison.
+
+CSV/report-file output from the early design is superseded as the minimum release
+surface by the deterministic JSON summary CLI. Rich race-detail/CSV artifacts remain a
+post-Ver0.8 extension. Live acquisition capability is distinct from archived replay;
+the latter is the release requirement and is complete.
+
+### Test and release-state audit
+
+Critical boundary tests cover causality, audit completeness, digest/corruption,
+no-fallback lookup, allocation and empty budgets, plan identity/order/idempotency,
+provider/parser/finality/crosswalk errors, cutoff-bounded settlement, non-final states,
+official payout arithmetic, denominators, drawdown, by-type aggregation, read-only
+archive ownership, CLI serialization/errors, exact fixture bytes, mixed-provider
+ordering, no network and no replay clock. No high-risk required boundary without a
+dedicated test was found.
+
+The exact formal base passes locally:
+
+```text
+FULL_SUITE:
+3125 passed, 2506 subtests passed
+```
+
+Formal remote GitHub Actions already passed at run `33389634074`, job `99480037939`
+(`Tests / pytest (3.12)`). The only tag is `v0.7.0`; `gh release list` returns no
+published release. `master` remains at `a136ab8d4d6aa48e37d3a62f5b8b79560dcc5b7a`
+and formal is 158 commits ahead, zero behind.
+
+### Recommended next phase
+
+Exactly one next phase is recommended:
+
+```text
+4C-2d3b1i6d1d5f1c4j1 — Ver0.8 Release Documentation and Version-State Preparation
+```
+
+It must be limited to public/release documentation, one operator-safe manifest
+example, and explicit version/integration/tag/release-state preparation. It must not
+add simulator behavior or begin Ver0.9. Actual integration to `master`, tag creation,
+or release publication still requires separate explicit authorization.
