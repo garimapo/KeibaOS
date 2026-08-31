@@ -6134,3 +6134,83 @@ diagnostics to those source-preserved bodies. No diff-check exclusion, ignored e
 code, HTML cleanup, byte mutation, newline normalization, transcoding, reserialization,
 comment removal, or fixture reduction is used. All eight-file scope and evidence
 semantics remain unchanged.
+
+## Phase 4C-2d3b1i6d1d5f1c4i3b — Historical Replay CLI and Acceptance Implementation
+
+The PREPARE architecture at `6fb5034042fe12327b7e8f9798fd8d77331ac1e7` was
+approved with one exact temporal-provenance correction. The C4i3b implementation was
+started directly from formal base `6ea6c3720f2e30e2dc0d1d13466193e8a4658ee0`;
+the PREPARE commit was not merged, cherry-picked, rebased, or formal-integrated.
+
+The corrected run context uses `2026-08-30T15:25:00+00:00`, strictly after the target
+commit creation time `2026-08-30T15:24:15+00:00`. Main-database setup migrations use
+that same fixed audit time. Immediately before the real CLI/application replay, the
+test replaces the migration runner's clock source with a fail-closed sentinel. The
+successful replay proves no current migration time is requested once setup is
+complete.
+
+The new `scripts/cli/run_historical_replay.py` is a thin schema-v1 CLI. It parses one
+required `Path`, calls `run_historical_replay_request` exactly once, uses public
+`to_json_compatible`, and writes compact sorted UTF-8-friendly JSON with one newline.
+Success is exit `0` on stdout. The exact expected error tuple is `OSError`,
+`RuntimeError`, `TypeError`, `ValueError`, and `sqlite3.Error`; those failures produce
+exit `1` on stderr. Argparse retains native `SystemExit`. The CLI owns no loader,
+SQLite, migration, repository, planning, capture, acquisition, settlement, clock, or
+second replay path.
+
+The mixed-provider acceptance reconstructs the unchanged exact C4i3a JRA and NAR
+captures, rechecks their complete IDs, body SHA-256 values, and byte lengths, and saves
+them through the dedicated formal migrations and repositories into test-temporary
+archives. It builds one test-temporary main database with exact JRA race `700` and NAR
+race `800` snapshots. All prediction provenance is explicitly
+`c4i3b_test_generated`; the C4i3a official responses remain post-race settlement
+evidence only.
+
+The manifest deliberately lists NAR before JRA while the existing application runs
+canonical scheduled-start order. The exact single-win strategy identity remains
+`RuleBasedBetStrategy:e05f27f5729da71b` with config hash
+`e05f27f5729da71b9d057aebe9b60c70c98ee2d7877266cdf6f392e65bb9e60e`.
+Planning selects JRA entry `1001`/horse `1` and NAR entry `2001`/horse `1`, each with
+stake `100`, before settlement. Both lose against the exact official results.
+
+The normal CLI -> request application -> SQLite runner -> C4g1 -> C4h4a -> C4h4b path
+returns the exact two-race summary: two settled races and bets, investment `200`,
+payout `0`, profit `-200`, zero ROI and hit rates, maximum drawdown `200`, and only the
+`単勝` bet-type summary. The temporary main database contains exactly two intended plan
+snapshots, both complete official results, and the two required complete `単勝` payout
+publications. No error, unsupported, extra race, or extra provider appears.
+
+During actual replay, `socket.create_connection` and `socket.socket.connect` are
+fail-closed. No network call occurred. Exact archive file bytes, exact reloaded capture
+objects, and both repository fixture bodies remain unchanged after replay. No HTTP,
+capture creation outside temporary test setup, source-archive mutation, fixture
+change, existing production change, schema change, migration change, package export,
+AI runtime, or successor-phase work occurred.
+
+Local verification passed:
+
+```text
+Dedicated CLI: 13 passed
+Dedicated mixed-provider acceptance: 1 passed
+Related: 183 passed, 299 subtests passed
+  tests/test_historical_replay_request_document.py
+  tests/test_historical_replay_request_application.py
+  tests/test_sqlite_historical_replay_application.py
+  tests/test_portable_official_replay_fixtures.py
+  tests/test_historical_prediction_bet_plan_execution.py
+  tests/test_historical_prediction_bet_plan_batch_execution.py
+  tests/test_official_settlement_acquisition.py
+  tests/test_final_historical_settlement_simulation.py
+  tests/test_sqlite_historical_input_snapshot_repository.py
+  tests/test_sqlite_jra_official_response_capture_repository.py
+  tests/test_sqlite_nar_official_response_capture_repository.py
+  tests/test_cli_run_persisted_simulation.py
+Full suite: 3125 passed, 2506 subtests passed
+git diff --check: PASS
+Static five-file scope and ownership: PASS
+```
+
+The implementation is limited to one new CLI module, two new test modules, and these
+two docs. Review-branch GitHub Actions `Tests / pytest (3.12)` must pass before the
+phase is reported ready for independent review. Formal integration remains
+unauthorized.
