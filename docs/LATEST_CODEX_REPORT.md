@@ -7559,3 +7559,136 @@ The review formally approved all of the following conclusions:
 Phase 3 remains `RESEARCH_AND_DESIGN_ONLY`. No production code, tests, migrations,
 schemas, database, archives, CLI, or Ver0.8 contract/history were changed as part of
 this final approval record.
+
+## POST_V0_8_DAILY_REPLAY_4 Preparation Report
+
+Phase 3 was committed as `6b7b153cab518538ee0f2c9c5682ce79b6ebf7a2` with message
+`docs: qualify historical daily official sources`, pushed normally to
+`origin/feature/post-v0.8-daily-replay`, fetched, and verified byte-for-byte equal to
+the remote branch SHA. The worktree was clean before Phase 4 PREPARE began.
+
+Phase 4 is `RESEARCH_AND_DESIGN_ONLY`, status `DRAFT_FOR_REVIEW`, with overall outcome
+`IMPLEMENTABLE_SUPPORTED_PROFILE`. This does not reverse Phase 3: universal JRA and
+NAR provider-day completeness remain `UNPROVEN`. The new conclusion is narrower: an
+exact date can be admitted only when every machine-checkable predicate of a strict
+source composite succeeds; every other date remains `TARGET_DISCOVERY_INCOMPLETE`.
+
+### JRA research
+
+Official year program pages, annual `nittei.pdf` documents, and linked per-meeting
+`bangumi/*.pdf` documents were fetched read-only for 2020 through 2025. All returned
+official PDF bytes and stable same-origin link families. The 2024 annual schedule was
+visually inspected as a date-by-meeting table, and the 2024 first Nakayama bangumi was
+visually inspected as a day-by-exact-race-number program rather than an inferred
+1-to-12 sequence. PDFs are opaque binary evidence, not CP932 text artifacts.
+
+The official accessS past-result-search POST response was found to contain selectable
+years back to 1986, an exact year/month token table, and exact month and meeting
+selection CNAME locators. Exact January month responses and their first racing-day
+meeting fragments were tested for 2020 through 2025. The observed first days were
+2020-01-05, 2021-01-05, 2022-01-05, 2023-01-05, 2024-01-06, and 2025-01-05; each had
+two accessS meeting locators and each tested meeting fragment enumerated 12 exact race
+identities. For 2020-01-05, the annual planned Nakayama/Kyoto meeting set agreed with
+the actual accessS Nakayama/Kyoto set, and both exact race lists were inspected.
+
+An accessS meeting race-selection fragment does not itself display start time. Exact
+supplied accessS race-result pages do display official target date, meeting/race
+identity, and `発走時刻`; for example the exact 2020-01-05 Nakayama 1R page displayed
+09:55. A future strict start-time selector contract remains a gated implementation
+requirement. The JRA ordinary-day profile therefore adds exact bangumi planned-race
+equality and exact per-race accessS facts to the user-proposed schedule/accessS
+composite. Cancellation, substitute, partial-cancellation, and zero cases remain
+fail-closed initially.
+
+### NAR research
+
+MonthlyConveneInfo and every exact RaceList fragment for 1 January were checked for
+2020 through 2025. In each tested year, the monthly marked venue set, captured
+fragment venue set, and same-day RaceList navigation set agreed. RaceList rows provide
+exact target date, babaCode/raceNo locator material, and displayed start time.
+
+The exact 2025-05-17 Obihiro locator supplied by MonthlyConveneInfo was compared with
+alternate URL spellings. Reverse query order and literal slash dates currently returned
+the same body; `www2` redirected to `www`; zero-padded `03` returned different bytes
+from unpadded `3`. The design therefore freezes one rule only: use the exact
+MonthlyConveneInfo-supplied unpadded, percent-encoded, date-first RaceList href and do
+not treat other spellings as aliases.
+
+The 2025-12-26 Kanazawa cancellation page was rechecked. MonthlyConveneInfo preserves
+Kanazawa in the date envelope, same-day navigation includes the same venue set, the
+RaceList explicitly says the meeting was cancelled with no substitute, and exact race
+rows 1 through 12 remain present. This narrow exact-row case can preserve the complete
+denominator in the initial profile. Partial cancellation, `△` substitute dates,
+original cancelled dates without identities, and blank/apparent-zero dates remain
+deferred fail-closed.
+
+### Formal decisions
+
+- A historical replay race target requires a positively enumerated exact provider race
+  identity. Meeting-level evidence never creates hypothetical race numbers.
+- When a partition is proven but race identities are unavailable, choose Option 1:
+  the whole date is `TARGET_DISCOVERY_INCOMPLETE`.
+- JRA ordinary dates require planned/actual equality at both meeting and race-tuple
+  levels; the per-meeting bangumi PDF is the planned race envelope.
+- NAR ordinary dates require exact equality of MonthlyConveneInfo marked venues,
+  captured RaceList venues, and same-day navigation, plus strict all-row normalization.
+- NAR same-day navigation is consistency evidence only and never replaces the monthly
+  envelope.
+- The initial floor proposal is 2020-01-01 inclusive, still subject to every per-date
+  predicate and live acquisition availability check.
+- Zero days are unsupported initially for both providers.
+- Missing, duplicate, malformed, contradictory, or unsupported evidence rejects the
+  full provider/date; no partial-day fallback exists.
+- Source-support qualification is documented separately from implementation/audit
+  feasibility. Digestability or parser feasibility never proves completeness.
+- JRA HTML is a strict CP932/Shift_JIS family per fragment, JRA PDFs are opaque binary
+  bytes, and NAR HTML is strict UTF-8; no provider-wide charset is invented.
+- Phase 2 contracts remain unchanged, including the shared provider-neutral evidence
+  bundle, exact ordering, nullable exceptional start time, honest observation,
+  `content_sha256`, and acquisition/no-network replay separation.
+
+Only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` were changed during this
+PREPARE. No production code, tests, fixtures, migrations, schemas, database, archive,
+CLI, stage, commit, push, formal evidence acquisition, or Phase 5 work was performed.
+
+## POST_V0_8_DAILY_REPLAY_4 Independent Review Corrections
+
+ChatGPT's independent review otherwise accepted the Phase 4 supported-profile design
+but required two source-identity corrections before approval. The Phase remains
+`DRAFT_FOR_REVIEW`, `RESEARCH_AND_DESIGN_ONLY`, with outcome direction
+`IMPLEMENTABLE_SUPPORTED_PROFILE`; no implementation is authorized.
+
+For NAR, the canonical RaceList request identity is now the exact raw href supplied by
+the captured MonthlyConveneInfo official envelope. Query parameter order, spelling,
+percent encoding, and `babaCode` spelling are retained exactly from that raw locator rather
+than manually reconstructed or reordered. The MonthlyConveneInfo request likewise
+cannot freeze a developer-chosen year/month query order until exact official navigation,
+form, or href material proves it. Alternate URL spellings remain non-equivalent, and
+future cross-year variation requires an explicit versioned contract or review stop.
+
+For JRA, the annual schedule evidence is now named
+`OFFICIAL_YEAR_PROGRAM_SCHEDULE_VERSION`. It denotes the exact schedule version formally
+supplied by the captured historical year program page, including a uniquely resolvable
+explicitly labeled revised version; it is not represented as original pre-event or
+prediction-time evidence. Selection must retain the exact visible label/title and href,
+bind exact PDF bytes and digest to the year-page reference/digest, and fail closed on
+zero or unresolved multiple operative candidates. Filenames, guessed `nittei` names,
+link positions, download/filesystem time, current clock, and unproven URL aliases are
+never identity. Exact per-meeting bangumi identity similarly comes from captured page
+context and exact href, never filename alone.
+
+The later implementation gate now separately requires reviewed, versioned contracts
+for JRA year-program HTML, JRA nittei PDF grammar, JRA bangumi PDF grammar, accessS
+month/meeting normalization, accessS scheduled-start selection, NAR
+MonthlyConveneInfo raw-href grammar, and NAR RaceList strict all-row normalization.
+Any unsatisfied predicate remains `TARGET_DISCOVERY_INCOMPLETE` or stops for ChatGPT
+review. The approved exceptional-case decisions and 2020 floor were not changed. No
+production code, tests, migrations, schemas, database, archive, CLI, stage, commit,
+push, acquisition, Phase 5, or Ver0.8 contract/history change was authorized or made.
+
+## POST_V0_8_DAILY_REPLAY_4 Final Approval
+
+ChatGPT completed the final independent review and approved Phase 4 for commit. The
+approved `RESEARCH_AND_DESIGN_ONLY` contract and
+`IMPLEMENTABLE_SUPPORTED_PROFILE` outcome are unchanged; production implementation
+remains unauthorized.
