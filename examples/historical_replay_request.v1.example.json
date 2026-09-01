@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "database_path": "REPLACE_WITH_MAIN_DATABASE.sqlite3",
+  "capture_archives": {
+    "JRA/jra_official": "REPLACE_WITH_JRA_CAPTURE_ARCHIVE.sqlite3"
+  },
+  "run_context": {
+    "run_id": "example-run-v1",
+    "dataset_id": "example-dataset-v1",
+    "started_at": "2026-01-01T00:00:00+00:00",
+    "target_commit_id": "REPLACE_WITH_TARGET_COMMIT_SHA"
+  },
+  "strategy": {
+    "strategy_name": "RuleBasedBetStrategy",
+    "allowed_bet_types": [
+      "単勝"
+    ],
+    "max_bet_count": 1,
+    "selection_style": "formation",
+    "min_combination_score": 0.0,
+    "max_candidates": 1,
+    "sort_condition": "generator_rank",
+    "allocation_policy": {
+      "policy_name": "fixed_stake_per_recommendation",
+      "policy_version": "1",
+      "parameters": {
+        "stake_amount": 100
+      }
+    }
+  },
+  "budgets_by_race_id": {
+    "1": {
+      "total_amount": 100
+    }
+  },
+  "races": [
+    {
+      "snapshot_identity": {
+        "dataset_id": "example-dataset-v1",
+        "organization": "JRA",
+        "source_system": "jra_official",
+        "external_race_id": "REPLACE_WITH_EXTERNAL_RACE_ID",
+        "captured_at": "2025-12-31T23:00:00+00:00"
+      },
+      "internal_race_id": 1,
+      "settlement_information_cutoff": "2026-01-02T00:00:00+00:00",
+      "result_capture_id": "REPLACE_WITH_EXACT_RESULT_CAPTURE_ID",
+      "payout_capture_catalog_by_bet_type": {
+        "単勝": "REPLACE_WITH_EXACT_PAYOUT_CAPTURE_ID"
+      }
+    }
+  ]
+}
