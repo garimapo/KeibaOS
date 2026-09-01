@@ -1,49 +1,44 @@
 # KeibaOS
 
-## Persisted simulation request CLI
+KeibaOS Ver0.8 is a release-candidate platform for deterministic, auditable historical
+horse-racing replay. It loads exact persisted prediction-time snapshots, executes the
+real prediction and recommendation pipeline, fixes purchase plans before settlement,
+and settles them against archived official JRA/NAR result and payout evidence.
 
-Persisted simulation requests are executed through the approved request application boundary:
+The project is for research and verification. It does not guarantee profit or future
+performance.
 
-```bash
-python -m scripts.cli.run_persisted_simulation <request_path>
-```
+## Ver0.8 capabilities
 
-`<request_path>` is the request JSON file. A relative `database_path` in that file is anchored to the
-request file's parent directory. A successful run writes one deterministic JSON document to stdout and
-returns exit code `0`. Expected request, validation, or SQLite errors write one deterministic JSON error
-document to stderr and return exit code `1`. Native argparse usage errors return `2`; `--help` exits `0`.
+- Audited `HistoricalInputSnapshot` inputs with explicit future-information cutoffs.
+- The existing deterministic Engine -> Predictor -> Value -> Generator -> Strategy ->
+  Pipeline prediction path.
+- Deterministic fixed stake per recommendation, explicit per-race budgets, and
+  immutable persisted `SimulationBetPlanSnapshot` identities.
+- Archived official JRA and NAR result/payout settlement without live network access.
+- Exact payout-per-100-yen arithmetic and deterministic `SimulationSummary` metrics,
+  including investment, payout, profit, ROI, hit rates, per-bet-type summaries, and
+  maximum drawdown.
+- A strict schema-v1 request manifest and one-line deterministic JSON CLI result.
+- Fail-closed rejection of missing, malformed, contradictory, unsupported, or non-final
+  replay evidence.
 
-Rates represented by `Decimal` are emitted as fixed-point JSON strings, or `null` where no denominator
-exists. This tool is for research and verification only; it does not guarantee profit or performance.
+The formal bet types are `単勝`, `馬連`, `ワイド`, and `3連複`. Archived normal-final
+settlement supports all four. Exceptional states outside the approved normal-final
+winning envelope are not inferred.
 
-KeibaOS は、取得済みの競馬レース・出走馬・過去走データをもとに、馬ごとの総合評価、暫定的な単勝期待値、買い目候補を生成する Python プロジェクトです。
+## Requirements and setup
 
-> Ver0.7 では予想パイプラインとCLI実行を提供します。確率校正、券種別の実オッズ期待値、資金配分・自動購入は対象外です。
+- Python 3.12 or later
+- SQLite through Python's standard-library `sqlite3`
 
-## 主な機能
-
-- SQLite へのレース・出走馬・過去走の保存と互換マイグレーション
-- Beautiful Soup を利用した過去走テーブル解析
-- 能力・展開・騎手・コース適性を統合した総合スコア
-- スコアをsoftmax変換した暫定推定勝率と単勝推定EV
-- 単勝、馬連、ワイド、3連複の候補生成
-- 設定可能な候補抽出戦略
-- 1レースをCLIから実行する統合パイプライン
-
-## 必要環境
-
-- Python 3.12 以降
-- SQLite（Python標準ライブラリの `sqlite3` を使用）
-
-## セットアップ
-
-```bash
-python -m venv .venv
-```
+Create and activate a virtual environment, then install runtime and development
+dependencies.
 
 Windows PowerShell:
 
 ```powershell
+python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
@@ -53,35 +48,23 @@ python -m pip install -r requirements-dev.txt
 macOS / Linux:
 
 ```bash
+python -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m pip install -r requirements-dev.txt
 ```
 
-## テスト
+## Prediction CLI
 
-全テストはpytestで実行します。
-
-```bash
-python -m pytest -v
-```
-
-標準ライブラリのunittest形式で実行する場合は次のとおりです。
-
-```bash
-python -m unittest discover -s tests -v
-```
-
-## CLIでの予想実行
-
-CLIは保存済みのSQLiteデータを読み取り、`PredictionPipeline` を実行します。
+The existing single-race prediction CLI reads saved SQLite race inputs and executes the
+`PredictionPipeline`:
 
 ```bash
 python -m scripts.cli.run_prediction <race_id>
 ```
 
-戦略設定は任意です。
+For example:
 
 ```bash
 python -m scripts.cli.run_prediction 37 \
@@ -93,47 +76,88 @@ python -m scripts.cli.run_prediction 37 \
   --sort generator_rank
 ```
 
-主なオプション:
+This command produces prediction and candidate output. It is distinct from the
+audited historical replay application below.
 
-- `--bet-types`: 対象券種をカンマ区切りで指定
-- `--max-bets`: 戦略が抽出する最大購入点数
-- `--max-candidates`: 戦略が考慮する最大候補数
-- `--style`: `box` または `formation`
-- `--min-combination-score`: 組み合わせ候補の比較値下限
-- `--sort`: `generator_rank`、`combination_score`、`prediction_score`、`estimated_probability`
+## Historical replay CLI
 
-出力には、総合順位・総合スコア・暫定推定勝率・単勝推定EV・戦略抽出後の買い目候補が含まれます。ログは標準エラー出力へ表示されます。
+Run one strict historical replay request with:
 
-## 予想パイプライン
-
-`scripts/prediction/prediction_pipeline.py` は、DB・HTTP通信を直接行わない統合層です。
-
-1. `AbilityEngine`
-2. `PaceEngine`
-3. `JockeyEngine`
-4. `TrackEngine`
-5. `Predictor`
-6. `ValueEngine`
-7. `BetGenerator`
-8. `BetStrategy`
-
-各段階の中間結果は `PipelineResult` に保持されます。段階で例外が発生した場合は、段階名を持つ `PipelineExecutionError` が送出されます。
-
-## ディレクトリ構成
-
-```text
-scripts/
-  cli/                 # CLIエントリーポイント
-  parsers/             # HTML解析
-  prediction/          # 評価・候補・戦略・統合パイプライン
-  database.py          # SQLite永続化とマイグレーション
-tests/                 # 単体・E2Eテスト
-.github/workflows/     # CI
+```bash
+python -m scripts.cli.run_historical_replay <request_path>
 ```
 
-## 注意事項と今後の課題
+The request selects the main SQLite database, provider capture archives, exact snapshot
+identities, run and strategy configuration, race budgets, exact result/payout capture
+IDs, and per-race settlement cutoffs. Relative database and archive paths are anchored
+to the request JSON's parent directory.
 
-- `estimated_win_probability` は総合スコアをsoftmax変換した校正前の暫定推定値であり、実測勝率ではありません。
-- 単勝以外の候補比較値は実オッズを使った期待値ではありません。
-- 購入判断、資金配分、市場控除率、実績データによる確率校正は未実装です。
-- 本プロジェクトの出力は研究・検証用途であり、利益を保証するものではありません。
+See [Historical Replay](docs/HISTORICAL_REPLAY.md) for the operator contract and
+[the schema-v1 example](examples/historical_replay_request.v1.example.json) for a
+machine-readable template.
+
+> The example JSON is a schema template only. Its placeholder capture IDs are not
+> official evidence. Replace every `REPLACE_WITH_...` value with exact audited values
+> before replay. Successful schema parsing does not prove that the referenced database,
+> archive, snapshot, or capture exists or is trustworthy; replay fails closed if it
+> does not.
+
+On success the CLI writes one compact JSON line to stdout and exits `0`. Expected
+filesystem, request, application, or SQLite errors write one JSON line to stderr and
+exit `1`. Native argument errors remain argparse-owned and exit `2`.
+
+The older persisted-simulation request CLI remains available as a separate application
+boundary:
+
+```bash
+python -m scripts.cli.run_persisted_simulation <request_path>
+```
+
+## Reproducibility and auditability
+
+Replay binds an exact audited snapshot natural identity, target commit, strategy and
+allocation configuration, immutable plan identity, exact official capture IDs, and
+explicit cutoffs. Prediction uses only evidence at or before its prediction
+`information_cutoff`. Later official result/payout evidence is bounded independently
+by the settlement cutoff and cannot flow backward into planning.
+
+For identical audited inputs, configuration, databases, and archived evidence, the
+replay and serialized summary are deterministic. Capture archives are opened read-only
+during replay. The CLI does not discover a latest capture, switch providers, fetch live
+data, or manufacture missing evidence.
+
+## Payout and prediction-time EV
+
+Settlement uses official displayed payout-per-100-yen values and integer stake
+arithmetic. It never substitutes predicted EV, scores, popularity, or hindsight odds
+for an official payout.
+
+Prediction-time market-odds EV semantics are formal only for `単勝`. Combination-ticket
+`combination_score` values are ranking heuristics, not true market EV for `馬連`,
+`ワイド`, or `3連複`.
+
+## Tests
+
+Run the complete suite with:
+
+```bash
+python -m pytest -q
+```
+
+Verbose execution is also available:
+
+```bash
+python -m pytest -v
+```
+
+## Limitations and non-claims
+
+Ver0.8 does not claim guaranteed profitability, 120% ROI, calibrated win
+probabilities, or a statistically proven strategy edge. It does not provide complete
+provider-wide historical coverage, automatic historical replay-input construction,
+all exceptional settlement states, live automated betting, or true combination-ticket
+market EV.
+
+External AI/LLM signals are disabled in the Ver0.8 baseline. The implemented prediction
+engines are deterministic formal components; optional external AI augmentation remains
+post-Ver0.8 work.

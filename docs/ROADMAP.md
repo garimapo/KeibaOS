@@ -1,98 +1,64 @@
 # KeibaOS Roadmap
 
-## Project Goal
+## Project goal
 
-KeibaOS is a long-term horse racing analysis system.
+KeibaOS is a long-term horse-racing research platform that separates acquisition,
+prediction, planning, archived settlement, and evaluation so each result can be
+audited and reproduced.
 
-Target:
+## Completed milestones
 
-- Weekdays: Local horse racing
-- Weekends: JRA
+### Ver0.5 — Data Foundation
 
-The system collects race data, stores results, performs AI analysis, and improves prediction accuracy through accumulated data.
+- Logging, SQLite storage, and database foundations
+- Race domain and fetch foundations
+- Repository and Git workflow foundations
 
----
+### Ver0.6 — Meeting Engine
 
-# Version History
+- NAR connectivity and HTML acquisition
+- Beautiful Soup integration
+- `RaceMeeting` and today's racecourse acquisition
 
-## Ver0.5 Data Foundation
+### Ver0.7 — Race and Prediction Foundations
 
-Completed:
+- Race-list acquisition and parsing
+- SQLite race persistence and duplicate detection
+- Deterministic prediction engines, candidate generation, strategy selection, and
+  single-race prediction CLI
 
-- Logger
-- SQLite database
-- Database layer
-- Race model
-- Fetch foundation
-- Git management
+### Ver0.8 — Historical Replay / Simulation Platform
 
+Status: release candidate pending final integration.
 
-## Ver0.6 Meeting Engine
+- Audited historical input snapshots with explicit future-information boundaries
+- Deterministic execution through the real prediction/recommendation pipeline
+- Fixed-stake allocation with explicit race budgets
+- Immutable persisted bet-plan identities and purchase order
+- Archived official JRA/NAR result and payout settlement
+- Real payout arithmetic, ROI/hit-rate/by-type metrics, and maximum drawdown
+- Strict replay manifests and deterministic historical replay CLI output
+- Clean-clone mixed-provider acceptance without live network access
 
-Completed:
+## Superseded planning
 
-- NAR connection
-- HTML fetching
-- BeautifulSoup integration
-- RaceMeeting model
-- Today's racecourse acquisition
+An earlier roadmap proposed `Ver0.8 Horse Engine`, `Ver0.9 Result Engine`, and
+`Ver1.0 AI Prediction Engine`. That sequence records historical planning but is not the
+current version contract. Horse/result capabilities evolved as prerequisites inside the
+audited Ver0.8 replay platform, and no detailed Ver0.9 scope has been approved.
 
+## Post-Ver0.8
 
-## Ver0.7 Race Engine
+Future work remains subject to separate design and approval. Candidate areas include:
 
-Completed:
+- broader historical-input ingestion and request preparation;
+- probability calibration and out-of-sample strategy validation;
+- true prediction-time market odds/EV for combination tickets;
+- additional allocation and portfolio/bankroll policies;
+- combined multi-strategy reporting and persistent run-result artifacts;
+- wider exceptional settlement-state support;
+- operational automation and live betting boundaries;
+- optional, independently auditable external AI signals.
 
-- RaceList acquisition
-- RaceParser
-- Race model generation
-- SQLite race storage
-- Duplicate detection
-
-
-# Future Versions
-
-## Ver0.8 Horse Engine
-
-Goal:
-
-Acquire horse entry information.
-
-Data:
-
-- Frame number
-- Horse number
-- Horse name
-- Jockey
-- Trainer
-- Weight
-- Odds
-- Popularity
-
-
-## Ver0.9 Result Engine
-
-Goal:
-
-Collect race results.
-
-Data:
-
-- Finish position
-- Margin
-- Winning time
-- Payout
-
-
-## Ver1.0 AI Prediction Engine
-
-Goal:
-
-AI-based race analysis.
-
-Features:
-
-- OpenAI API integration
-- Prediction generation
-- S rating
-- Betting support
-- Automatic operation
+The deterministic Ver0.8 baseline remains executable with external AI/LLM signals
+disabled.

@@ -6214,3 +6214,262 @@ The implementation is limited to one new CLI module, two new test modules, and t
 two docs. Review-branch GitHub Actions `Tests / pytest (3.12)` must pass before the
 phase is reported ready for independent review. Formal integration remains
 unauthorized.
+
+## Phase 4C-2d3b1i6d1d5f1c4j1 — Ver0.8 Release Documentation and Version-State PREPARE
+
+This PREPARE was performed against exact formal base
+`c6c2f17934c2274d5bc720c60e40e52bd0c3ee58` on
+`review/4c-2d3b1i6d1d5f1c4j1-ver0.8-release-docs-prepare`, created directly from that
+base. The approved C4j0 audit at `0cdee716c703c32867231719d65bd8f567b725a9`
+was read as evidence only and was not used as ancestry. The corrected phase status is
+exactly `DRAFT_FOR_REVIEW`.
+
+The completion disposition remains `VER0_8_RELEASE_READY_AFTER_DOCS`, with no runtime,
+test, fixture, schema, migration, or workflow blocker. This activity changes only
+`docs/CURRENT_PHASE.md` and this append-only report. It does not authorize or perform
+release-document implementation, master integration, tagging, GitHub Release
+publication, or Ver0.9 work.
+
+### Repository and release-state evidence
+
+The exact formal public docs remain stale: README leads with the legacy persisted
+request boundary and Ver0.7, still says allocation is unimplemented, ROADMAP and
+CHANGELOG retain the obsolete Horse Engine/Result Engine version mapping,
+ARCHITECTURE omits the replay stack, and `docs/VER0.8_DESIGN.md` is the original Horse
+Engine proposal. The implemented strict replay request, two-provider SQLite runner,
+and deterministic CLI confirm the exact operator contract that the release documents
+must describe.
+
+No authoritative application/package version source exists. Searches found only
+migration, schema, capture, and allocation-policy versions, none of which identifies a
+KeibaOS release. Therefore C4j1 freezes
+`NO_NEW_RUNTIME_VERSION_SOURCE_FOR_V0_8`; release docs, the final tag, and GitHub
+Release metadata will represent `0.8.0`.
+
+The only existing tag, `v0.7.0`, is annotated and has message
+`KeibaOS Ver0.7.0`. GitHub has no published Releases. `master` is
+`a136ab8d4d6aa48e37d3a62f5b8b79560dcc5b7a`; the exact formal base is 158 commits
+ahead, zero behind, and has `master` as an ancestor. Formal CI for the base is green at
+run `33389634074` (`Tests / pytest (3.12)`).
+
+### Frozen documentation plan
+
+README becomes the concise Ver0.8 entry point for setup, the prediction CLI, strict
+historical replay CLI, manifest/guide links, supported JRA/NAR normal-final envelope,
+four formal bet types, fixed stake, exact evidence, payout-versus-EV distinction,
+fail-closed behavior, tests, and research-only limitations. ROADMAP preserves completed
+history, defines Ver0.8 as Historical Replay / Simulation Platform, identifies the old
+Horse/Result/AI version sequence as superseded, and places unapproved work under
+Post-Ver0.8. CHANGELOG receives `Ver0.8.0 (Unreleased)` with platform-visible
+capabilities and limitations, without a release date.
+
+ARCHITECTURE receives a compact current flow from `HistoricalInputSnapshot` through the
+real pipeline, strategy, allocator, immutable persisted plan, archived official
+settlement, `SimulationSummary`, and CLI. Prediction and settlement cutoffs remain
+visibly distinct. The old `VER0.8_DESIGN.md` is retained unchanged beneath a prominent
+historical/superseded notice pointing to the authoritative simulator design; it is not
+rewritten as false chronology.
+
+The operator guide is frozen at `docs/HISTORICAL_REPLAY.md`. A separate strict,
+machine-readable single-provider structural template is frozen at
+`examples/historical_replay_request.v1.example.json`. It uses conspicuous replacement
+tokens rather than official-looking fake IDs, contains no pipeline field, and is
+explicitly non-executable until the operator substitutes exact persisted identities,
+paths, cutoffs, and capture IDs. The existing public loader will validate it during
+implementation; no new test file is required.
+
+Release notes are frozen at `docs/VER0.8_RELEASE_NOTES.md`, with target `v0.8.0` and
+status `RELEASE_CANDIDATE_PENDING_FINAL_INTEGRATION`. They omit a final release date and
+do not freeze raw pytest counts as a public semantic guarantee. The shared claim
+boundary guarantees deterministic replay of the same audited inputs/config/evidence,
+causal cutoff checks, reproducible plan identity, exact archived settlement, real payout
+arithmetic, fail-closed errors, and deterministic output. It does not claim future
+profit, 120% ROI, calibrated probability, strategy edge, true combination-ticket EV,
+complete/automatic data coverage, exceptional settlement coverage, live betting, or
+active AI/LLM augmentation. `AI_SIGNAL_USAGE_BASELINE` remains `DISABLED`.
+
+### Deferred final release policy
+
+Master integration is deferred. A separately authorized final release phase must stop
+unless master remains unchanged, remains an ancestor, formal is not behind, the exact
+approved release commit is known, and CI is green. Under those conditions the policy is
+fast-forward-only to the exact approved commit, without an unnecessary merge commit.
+Tag `v0.8.0` is deferred until master equals that commit and will be annotated with
+message `KeibaOS Ver0.8.0`, matching the existing convention. GitHub Release title
+`KeibaOS v0.8.0` is deferred until after tagging and will use the independently approved
+release notes. The actual release date is omitted until publication.
+
+### Proposed implementation scope and verification
+
+The future C4j1 implementation is restricted to exactly ten paths:
+
+```text
+README.md
+docs/ROADMAP.md
+docs/CHANGELOG.md
+docs/ARCHITECTURE.md
+docs/VER0.8_DESIGN.md
+docs/HISTORICAL_REPLAY.md
+docs/VER0.8_RELEASE_NOTES.md
+examples/historical_replay_request.v1.example.json
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+```
+
+No production or test source is proposed. Implementation remains unauthorized. The
+current unchanged formal runtime passed locally:
+
+```text
+FULL_SUITE:
+3125 passed, 2506 subtests passed in 15.18s
+```
+
+The PREPARE must now stop for independent release-docs architecture review. Under the
+repository PREPARE workflow it is not staged, committed, pushed, integrated, tagged,
+or published.
+
+### C4j1 architecture approval disposition
+
+Independent review approved the C4j1 architecture with exact clarifications. The
+phase status is now `APPROVED_FOR_CODEX`, but implementation has not started and must
+wait for a separate `EXECUTE_APPROVED_PHASE` instruction.
+
+The approved release identity is `0.8.0`, annotated tag `v0.8.0`, tag message
+`KeibaOS Ver0.8.0`, and release name `KeibaOS v0.8.0`. No runtime/package version
+source will be added. Tagging, master integration, and GitHub Release publication are
+not authorized in C4j1.
+
+The approval pins the README as the Ver0.8 release-candidate entry point; preserves
+the old Horse Engine design behind a prominent superseded notice; requires the exact
+current replay architecture with separate prediction and settlement cutoffs; and
+freezes `Ver0.8.0 (Unreleased)` without a date. The operator guide and release notes
+retain their approved paths and exact section contracts.
+
+The schema-v1 example remains a strict one-JRA-provider JSON template. It must parse
+through the existing public loader while using conspicuous non-official placeholders,
+including replacement database/archive paths, commit, external-race identity, result
+capture ID, and payout capture ID. README and the operator guide must warn that schema
+validity does not establish the existence or trustworthiness of referenced evidence.
+The loader must not be modified for the example.
+
+The exact later implementation scope remains the approved ten paths and no others.
+Required execution checks now explicitly include the public-loader example validation,
+the existing replay CLI and request-document tests, the full suite, `git diff --check`,
+exact ten-file scope, and proof of no production, test, fixture, schema, migration,
+workflow, master, tag, release, or runtime-version change.
+
+```text
+C4J1_ARCHITECTURE:
+APPROVED
+
+C4J1_IMPLEMENTATION:
+NOT_YET_EXECUTED
+
+MASTER_INTEGRATION:
+NOT_AUTHORIZED
+
+TAG_CREATION:
+NOT_AUTHORIZED
+
+GITHUB_RELEASE_PUBLICATION:
+NOT_AUTHORIZED
+
+VER0_9:
+NOT_AUTHORIZED
+```
+
+This approval activity changed only the two phase documents. It did not stage, commit,
+push, implement release-facing documentation, integrate master, tag, publish, or start
+Ver0.9. Stop pending the separate execution authorization.
+
+### C4j1 release-document implementation
+
+The separately authorized C4j1 execution implemented the approved release-document
+contract directly on exact formal parent
+`c6c2f17934c2274d5bc720c60e40e52bd0c3ee58`. `docs/CURRENT_PHASE.md` is now
+`READY_FOR_REVIEW`.
+
+README now presents Ver0.8 as the current historical replay release candidate. It
+documents setup, the existing prediction CLI, the strict historical replay CLI,
+audited snapshot/request boundaries, archived JRA/NAR settlement, deterministic fixed
+stake, immutable plans, summary metrics, supported bet types, payout/EV limits,
+reproducibility, fail-closed behavior, tests, and explicit non-claims. The obsolete
+statement that stake allocation is unimplemented was removed.
+
+ROADMAP preserves completed project history, defines Ver0.8 as Historical Replay /
+Simulation Platform, marks the old Horse/Result/AI sequence as superseded planning, and
+places unapproved work under Post-Ver0.8 without inventing a Ver0.9 contract. CHANGELOG
+adds `Ver0.8.0 (Unreleased)` without a date and records platform-level capabilities,
+normal settlement for all four formal types, and material limitations.
+
+ARCHITECTURE now documents the exact replay flow from audited snapshot through the real
+prediction responsibility chain, deterministic allocation, immutable SQLite plan,
+archived official evidence, final settlement, summary, and CLI JSON. Prediction and
+settlement cutoffs are separate and later official evidence cannot flow backward into
+planning. The old Horse Engine design body remains unchanged beneath a prominent
+historical/superseded notice linking to the authoritative simulator design and current
+operator documents.
+
+`docs/HISTORICAL_REPLAY.md` is the operator guide. It documents prerequisites, the
+trust boundary, exact schema-v1 names, path anchoring, main/archive ownership, cutoff
+separation, CLI outputs/exits, no-network replay, fail-closed conditions,
+reproducibility, supported capabilities, and non-claims. It does not present test-only
+fixture creation as operator behavior.
+
+`examples/historical_replay_request.v1.example.json` is strict JSON with one
+`JRA / jra_official` race, all exact schema-v1 keys, fixed-stake policy version `"1"`,
+matching race budget, aware timestamps, and conspicuous `REPLACE_WITH_...` values. It
+contains no official capture identity and is explicitly not ready for real replay.
+README and the operator guide state that schema validity does not establish referenced
+evidence existence or trustworthiness.
+
+`docs/VER0.8_RELEASE_NOTES.md` uses target `v0.8.0`, status
+`RELEASE_CANDIDATE_PENDING_FINAL_INTEGRATION`, no date, and the exact eleven approved
+sections. It does not claim master integration, tag creation, or GitHub Release
+publication. The shared release claim boundary consistently permits deterministic
+replay, causal isolation, fixed stake, immutable plans, archived normal settlement,
+official arithmetic, deterministic metrics/JSON, and fail-closed errors. It rejects
+profit/120%-ROI, calibration, edge, combination market-EV, complete-coverage,
+exceptional-state, live-betting, and active external AI/LLM claims.
+
+Release identity remains documentation plus a future annotated Git tag. No runtime or
+package version source was added. Master, `v0.8.0`, GitHub Releases, production, tests,
+fixtures, schemas, migrations, workflows, requirements, and AI runtime remain
+unchanged.
+
+The example passed the unchanged public loader:
+
+```text
+EXAMPLE_MANIFEST_PUBLIC_LOADER_VALIDATION:
+PASS
+```
+
+Local verification passed:
+
+```text
+REQUEST_DOCUMENT_TESTS:
+19 passed, 143 subtests passed in 0.62s
+
+CLI_TESTS:
+13 passed in 0.28s
+
+MIXED_PROVIDER_ACCEPTANCE:
+1 passed in 0.72s
+
+FULL_SUITE:
+3125 passed, 2506 subtests passed in 15.15s
+
+CLAIM_BOUNDARY_CONSISTENCY:
+PASS
+
+GIT_DIFF_CHECK:
+PASS
+
+STATIC_SCOPE_CHECK:
+PASS_EXACT_TEN_PATHS
+```
+
+Exactly ten approved paths comprise the implementation. One review commit with message
+`docs: prepare Ver0.8 release` will be pushed only to the C4j1 review branch. Review
+GitHub Actions `Tests / pytest (3.12)` must pass before readiness is reported. Formal,
+master, tag, and release refs remain untouched.
