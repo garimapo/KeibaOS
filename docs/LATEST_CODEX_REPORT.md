@@ -7143,3 +7143,191 @@ This approval authorizes only the exact Phase 1 design-document commit and norma
 push requested by the user. Production code, tests, migrations, CLI, schemas,
 databases, archives, `EXECUTE_APPROVED_PHASE`, and implementation remain
 unauthorized. No `v0.8.0` tag or release history mutation is authorized.
+
+## POST_V0_8_DAILY_REPLAY_1 Final Commit and Push
+
+ChatGPT's final independent review verdict was `APPROVED_FOR_COMMIT`. The exact two
+approved design documents were staged by name and committed with message
+`docs: design post-v0.8 daily replay orchestration`.
+
+```text
+local commit:  dca745c3f8e076ad8bdc9ae4cd320d0a6df7a0ad
+remote branch: dca745c3f8e076ad8bdc9ae4cd320d0a6df7a0ad
+branch:        feature/post-v0.8-daily-replay
+```
+
+The normal push succeeded, `git fetch origin` completed, local and remote SHAs matched
+exactly, and the working tree and diff check were clean before Phase 2 preparation.
+No production, test, migration, CLI, schema, database, archive, tag, or release-history
+file was committed.
+
+## PREPARE_PHASE POST_V0_8_DAILY_REPLAY_2
+
+Status: `DRAFT_FOR_REVIEW` as a `DESIGN_ONLY` phase.
+
+Phase name: `Historical Daily Target Discovery / Completeness Design`.
+Base commit is the exact pushed Phase 1 commit
+`dca745c3f8e076ad8bdc9ae4cd320d0a6df7a0ad` on
+`feature/post-v0.8-daily-replay`.
+
+The preparation read the working agreement, Ver0.8 simulator design, prior report, Git
+history/state, and investigated legacy race storage, v010 external identity mapping,
+JRA target navigation/card discovery and tests, JRA historical/capture domains, NAR
+target and prior-race sources and tests, capture archive schemas/repositories, and the
+legacy current NAR fetch/parser path. The tracked main DB was inspected only through a
+read-only SQLite URI; it was not modified.
+
+The central finding is that the baseline has no formal immutable provider-day source
+which proves complete meeting/venue coverage for either JRA or NAR. The legacy `races`
+table is nullable and has no day-completeness evidence or race uniqueness constraint.
+`historical_input_external_races` maps known identities but has no coverage proof.
+Individual snapshots, cards, results, payouts, and archive rows likewise cannot define
+the denominator.
+
+JRA's exact identity, request locator, v4 target-race-selection capture, and strict
+race-list parser are reusable meeting-level fragments. They begin with a known external
+race/meeting, while the current root/meeting responses used by live acquisition are not
+archived and cannot prove an arbitrary historical day's complete meeting set. NAR's
+formal capture vocabulary contains individual DebaTable, RaceMarkTable, and horse
+history pages only. The legacy TopTodayRaceListMini parser is current/live, silently
+skips malformed material, can return empty on missing structure, and has no formal
+capture identity, digest, time, or coverage contract; it cannot be historical evidence.
+
+The draft therefore defines a new provider-specific immutable
+`HistoricalDailyTargetEvidenceBundle` as the formal input and an audited
+`DailyHistoricalReplayTargetSet` as its content-addressed canonical projection. Shared
+logic validates exact closed provider coverage, partition coverage, target identity,
+proven zero, conflicts, and deterministic ordering. Provider adapters own only formal
+historical source validation and native identity/status projection. Existing JRA
+formal parsing must be reused rather than duplicated.
+
+The minimal target-set proposal freezes exact date and provider scope, canonical target
+races with exact provider identity, `scheduled_start_at`, race-level disposition,
+completeness evidence identity/source/digest/time/coverage, and a deterministic
+target-set identity. Internal SQLite IDs are intentionally excluded and remain Phase B
+reconciliation work. A cancelled/postponed/abandoned race remains in the denominator;
+it is not confused with a race that never existed.
+
+An empty target tuple is accepted only when every provider in scope supplies positive
+formal zero-day evidence. Any missing provider/partition proof, duplicate, contradiction,
+unknown status, or invalid evidence returns no set and fails the whole request as
+`TARGET_DISCOVERY_INCOMPLETE`; no arbitrary tie-break or partial denominator is allowed.
+
+Acquisition is separated from no-network replay. Acquisition must retain honest
+observation time and exact immutable evidence without backdating. Replay exact-loads
+the frozen set and never fetches or falls back. Exact official historical daily sources,
+postponement semantics, availability-time support, and durable storage choice remain
+explicit review questions. No source/repository/schema/migration choice is guessed
+before those sources are proven.
+
+Only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` were changed. No code,
+tests, migrations, schemas, CLI, databases, archives, fixtures, stage, commit, push, or
+next phase is authorized by this PREPARE activity.
+
+## POST_V0_8_DAILY_REPLAY_2 Independent Design Review Corrections
+
+Status: `APPROVED_FOR_CODEX` as a `DESIGN_ONLY` phase.
+
+ChatGPT independently reviewed the Phase 2 draft with verdict
+`APPROVE_WITH_CORRECTIONS`. Only the two approved design documents were corrected;
+production code, tests, migrations, schemas, CLI, databases, archives, fixtures,
+provider evidence, stage, commit, push, and later phases remain untouched and
+unauthorized.
+
+The scheduled-start contract now distinguishes normal replay-candidate targets from
+non-run/exceptional denominator members. A normal candidate requires an exact aware
+`scheduled_start_at`. An exceptional target retains an exact original scheduled start
+only when formal official evidence supplies it and otherwise uses `None`; no display
+text or expected timetable may fill it. The Phase 1
+`selection_upper_bound = audited_target.scheduled_start_at` rule applies only to later
+replay candidates with a formally present exact start. A target with no start remains
+in the denominator and is ineligible for `LATEST_CAUSAL_IN_DATASET`.
+
+Canonical target-set order no longer depends on nullable time. It is exactly
+`(organization, source_system, external_race_id)`. Provider official order may be
+retained as evidence but cannot determine canonical identity. Display place, SQLite
+identity, insertion order, current clock, and nullable start are excluded.
+
+The earlier wording which appeared to freeze a provider-neutral disposition enum was
+withdrawn. Phase 2 freezes only semantic requirements: official membership is never
+erased; provider-native status/disposition evidence remains auditable; unknown or
+contradictory status does not fall back to normal; and denominator membership remains
+separate from later replay classification. Exact JRA/NAR status semantics and any
+closed normalized enum require real-source qualification and another ChatGPT review.
+
+Completeness-evidence `observed_at` is now explicitly the honest time KeibaOS acquired
+or observed the historical official evidence and may be later than the historical
+date. It must not be backdated. It is audit/orchestration metadata, not prediction
+`information_cutoff`, snapshot upper bound, settlement cutoff, provider availability,
+or scheduled start, and it must not flow into prediction or strategy. Formal
+`provider_available_at` is retained only when the provider source itself supplies it.
+
+Concrete but unapproved candidates are now recorded. JRA qualification will examine
+the official historical JRADB `accessD`/`accessS` navigation/race-selection family and
+reuse the repository's strict navigation/identity grammar, while recognizing that
+saved v4 fragments alone do not prove provider-day completeness. NAR qualification
+will examine date-qualified official `TodayRaceInfo` venue `RaceList` pages using
+`k_babaCode` and `k_raceDate`, including possible same-day venue navigation. Legacy
+`TopTodayRaceListMini`/`NARParser` remains unsuitable as-is. Neither candidate is
+approved until historical request identity, all partitions/races, zero-day and non-run
+semantics, conflicts, charset/content, exact bytes/digest, honest times, historical
+availability, deterministic normalization, and no-skip/no-backdating behavior are
+proven.
+
+`HistoricalDailyTargetEvidenceBundle` is clarified as one shared provider-neutral
+immutable normalized contract containing exactly one provider identity. Provider
+adapters produce that common bundle; separate provider bundle classes require a proven
+semantic need. Raw official evidence remains primary, while bundle and target set are
+traceable immutable audited projections retaining exact source identity, capture or
+reference identity, digest, and provenance.
+
+The target set now has one formal deterministic identity field: `content_sha256`.
+`target_set_id / content_sha256` was removed. A future artifact phase may derive
+`daily-target-set-v1:<content_sha256>` without altering digest semantics, but no durable
+storage is designed here.
+
+The recommended next phase is recorded but not started:
+
+```text
+POST_V0_8_DAILY_REPLAY_3
+Historical Daily Official Source Qualification
+RESEARCH_AND_DESIGN_ONLY
+```
+
+It will qualify the candidate JRA/NAR official historical sources before any target
+discovery production implementation. Evidence Resolver implementation must not begin
+before that qualification is formally reviewed and approved.
+
+## POST_V0_8_DAILY_REPLAY_2 Final Independent Review Approval
+
+ChatGPT completed the final independent review with verdict `APPROVED_FOR_COMMIT`.
+Phase `POST_V0_8_DAILY_REPLAY_2` remains `DESIGN_ONLY`; the approved state changes no
+production code, tests, migrations, schemas, databases, archives, CLI, release tag, or
+Ver0.8 contract.
+
+The final approval confirms these contracts:
+
+- the daily denominator is never inferred from legacy races, snapshots, or result
+  captures and instead requires positive official provider-day completeness evidence;
+- one shared provider-neutral `HistoricalDailyTargetEvidenceBundle` is the normalized
+  immutable contract, while raw official material remains the primary source evidence;
+- `DailyHistoricalReplayTargetSet` is an audited immutable projection which fails
+  closed as `TARGET_DISCOVERY_INCOMPLETE` unless complete coverage or an explicit
+  proven-zero day is established;
+- `scheduled_start_at: datetime | None` requires an exact aware value for a normal
+  replay candidate, preserves exceptional targets with `None` in the denominator, and
+  never participates in canonical target ordering;
+- canonical target ordering is exactly
+  `(organization, source_system, external_race_id)`;
+- provider-native disposition evidence is preserved without prematurely freezing a
+  provider-neutral closed enum;
+- completeness `observed_at` is honest acquisition time, is never backdated, and is
+  never prediction, snapshot-selection, or settlement causal time;
+- `provider_available_at` exists only when the official source formally supplies it;
+- `content_sha256` is the sole deterministic target-set content identity;
+- acquisition/preparation remains separate from no-network replay;
+- the JRA/NAR source candidates remain unqualified pending Phase 3; and
+- the v0.8.0 release contract and history remain unchanged.
+
+Only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` are authorized for the
+Phase 2 final design commit.
