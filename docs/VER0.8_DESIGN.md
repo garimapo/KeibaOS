@@ -1,5 +1,12 @@
 # KeibaOS Ver0.8 Horse Engine Design
 
+> **Historical proposal — superseded.** This document records an earlier Ver0.8 Horse
+> Engine proposal. It does not define the released Ver0.8 scope. The authoritative
+> simulator/replay design is [`VER0.8_SIMULATOR_DESIGN.md`](VER0.8_SIMULATOR_DESIGN.md).
+> Current release and operator behavior is documented in [`README.md`](../README.md)
+> and [`HISTORICAL_REPLAY.md`](HISTORICAL_REPLAY.md). The historical body below is
+> preserved without rewriting its original intent.
+
 
 ## Overview
 
