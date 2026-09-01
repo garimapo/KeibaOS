@@ -29,8 +29,6 @@ audited and reproduced.
 
 ### Ver0.8 — Historical Replay / Simulation Platform
 
-Status: release candidate pending final integration.
-
 - Audited historical input snapshots with explicit future-information boundaries
 - Deterministic execution through the real prediction/recommendation pipeline
 - Fixed-stake allocation with explicit race budgets

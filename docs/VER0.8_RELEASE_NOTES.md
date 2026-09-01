@@ -1,8 +1,6 @@
 # KeibaOS Ver0.8 Release Notes
 
-Release target: `v0.8.0`
-
-Status: `RELEASE_CANDIDATE_PENDING_FINAL_INTEGRATION`
+Release: `v0.8.0`
 
 ## Summary
 
@@ -112,7 +110,10 @@ arbitrary legacy databases or generation of missing historical evidence.
 
 ## Release State
 
-Release-candidate documentation has been prepared and independently reviewed. Master
-integration is pending. The `v0.8.0` tag has not been created, and a GitHub Release has
-not been published. Final integration, annotated tagging, release date, and publication
-require separate authorization.
+This document defines the approved release content for KeibaOS v0.8.0.
+The authoritative publication identity is the annotated v0.8.0 Git tag and the
+corresponding GitHub Release.
+
+The release remains a deterministic historical replay and verification platform.
+Its release identity does not imply profitability, calibrated predictive probability,
+or a demonstrated strategy edge.
