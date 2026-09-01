@@ -7331,3 +7331,231 @@ The final approval confirms these contracts:
 
 Only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` are authorized for the
 Phase 2 final design commit.
+
+## POST_V0_8_DAILY_REPLAY_2 Final Commit and Push
+
+The approved Phase 2 design was committed as
+`873ab8eb854716c93886ed689cee93c1ef8bfd23` with message
+`docs: design historical daily target completeness` and pushed normally to
+`origin/feature/post-v0.8-daily-replay`. After `git fetch origin`, local HEAD and the
+remote branch both resolved to that exact SHA. The post-push working tree and diff check
+were clean, so the explicitly authorized Phase 3 PREPARE was allowed to begin.
+
+## PREPARE_PHASE POST_V0_8_DAILY_REPLAY_3
+
+Phase name: `Historical Daily Official Source Qualification`.
+
+Status: `DRAFT_FOR_REVIEW` as `RESEARCH_AND_DESIGN_ONLY`.
+
+Base commit: `873ab8eb854716c93886ed689cee93c1ef8bfd23` on
+`feature/post-v0.8-daily-replay`.
+
+The repository's formal JRA/NAR identity, target-card, supplied-response, capture,
+repository exact-load, historical-input, and related tests were inspected before public
+research. Read-only public research was then limited to official `jra.go.jp` and
+`keiba.go.jp` material. Responses were inspected only as research material and were not
+saved to repository databases, logs, fixtures, or provider archives and were not
+backdated as historical captures.
+
+### JRA research result
+
+The official accessS past-results search is materially stronger than an unknown known-
+race bootstrap. Posting the official past-search locator exposes exact year/month
+selection and an official opaque-tail map; the exact month request returns meeting/day
+CNAMEs with date, venue, meeting, and day identity; each meeting request returns race
+selection; direct accessS result pages retain meeting and race navigation. Exact old
+month responses were observed for January 2020 and January 2015. The inspected bytes
+declare Shift_JIS and decode strictly as CP932, so exact-byte capture and SHA-256 are
+technically possible.
+
+The 2024-09-01 official static daily program listed Niigata, Chukyo, and Sapporo with
+twelve planned races each, but explicitly describes itself as planned information which
+can change or be cancelled/postponed. On 2019-10-12 the official static page records the
+Tokyo cancellation and substitute date 2019-10-15 while accessS results retain Kyoto on
+the 12th and Tokyo on the 15th. This proves a concrete cancellation case but not the
+general identity/membership mapping for postponed targets. No positive zero-day source
+was established, and no inspected contract guarantees that the monthly result list is
+an exhaustive provider-day envelope including all cancelled/non-run meetings.
+
+JRA Phase 3 outcome: `UNPROVEN`.
+
+### NAR research result
+
+Historical date-qualified `TodayRaceInfo/RaceList` pages successfully bound an exact
+date and venue, directly enumerated venue race rows, and exposed same-day venue
+navigation. Multi-venue examples were observed for 2025-05-05 and 2024-09-01, and the
+Saga page for 2020-01-03 remained available. Exact response bytes use UTF-8 and are
+technically digestible.
+
+Two concrete official whole-race cancellation cases proved that the historical
+RaceList can preserve target membership: Funabashi 2025-08-30 retained all twelve rows
+and announced cancellation of races 10 through 12; Kochi 2026-04-04 retained all twelve
+rows and announced cancellation from race 4 with no substitute meeting. Official result
+books independently retain the affected race identities as `競走取止め`.
+
+The provider-day boundary nevertheless remains unproven. No inspected contract states
+that same-day venue navigation is exhaustive, a no-racing request returned only a
+generic error rather than positive zero evidence, and exact request identity remains
+ambiguous across literal versus percent-encoded date slashes, host variants, and zero-
+padded versus canonical decimal baba codes. Postponement/abandonment mappings also remain
+unqualified.
+
+NAR Phase 3 outcome: `UNPROVEN`.
+
+### Qualification decision
+
+Both providers have plausible unapproved composite candidates:
+
+```text
+JRA accessS historical month envelope
+  -> exact meeting/day race-selection fragments
+  -> official static cancellation/status material when needed
+
+NAR historical same-day venue navigation envelope
+  -> exact date-qualified RaceList fragment per venue
+  -> official provider-native cancellation/status material when needed
+```
+
+Neither composite is frozen. Provider-day envelope completeness, positive zero, and
+general non-run semantics remain unproven, so the approved Phase 2 behavior stays
+`TARGET_DISCOVERY_INCOMPLETE`. No Phase 2 contract was changed: the shared provider-
+neutral bundle, raw-primary-evidence rule, nullable scheduled start, native disposition
+evidence, honest acquisition observation, deterministic ordering, and
+`content_sha256` remain intact.
+
+Only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` were changed during this
+PREPARE. No production code, tests, migrations, schemas, database, archives, CLI,
+fixtures, stage, commit, push, or next phase was authorized or performed.
+
+## POST_V0_8_DAILY_REPLAY_3 Independent Review Corrections
+
+ChatGPT returned `CHANGES_REQUIRED` for the initial Phase 3 research draft and requested
+deeper qualification of provider schedule/envelope candidates. The phase remains
+`DRAFT_FOR_REVIEW` and `RESEARCH_AND_DESIGN_ONLY`; this activity authorizes no production
+implementation, tests, migrations, schemas, database, archives, CLI, stage, commit,
+push, or Phase 4.
+
+### NAR MonthlyConveneInfo research
+
+The official historical `MonthlyConveneInfoTop?k_year=YYYY&k_month=M` family was added
+as the strongest provider-day envelope candidate. It presents historical date columns
+and all displayed racecourse rows, links marked cells to venue/date race information,
+defines ordinary/night/dirt-grade marks and `△` for substitute dates, and warns that
+disasters can alter schedules. The official NAR FAQ directs historical result users to
+this monthly schedule and states that all conducted race results since 1998 are
+viewable.
+
+For the tested ordinary dates, monthly marked venue sets exactly matched RaceList
+same-day navigation: six venues on 2025-05-05, four on 2024-09-01, and three on
+2025-08-30. This agreement was recorded as research, not generalized into an exhaustive
+contract.
+
+Adjustment cases exposed the planned/actual boundary. The December 2017 table marks
+Kanazawa December 19 with `△` after the December 17 cancellation, but the original date
+cell is blank and does not retain exact original race identities. On 2025-12-26 the
+monthly table still marks Kanazawa `●` even though the historical RaceList states that
+the whole meeting was cancelled with no substitute. The monthly mark therefore proves
+schedule/meeting membership, not that races were conducted; native RaceList/status
+evidence remains necessary.
+
+Every displayed venue row was blank on 2020-03-09. The official legend does not define
+blank as an audited actual-zero assertion, and the FAQ's conducted-result statement does
+not establish immutable post-adjustment blank semantics. `PROVEN_ZERO_SUPPORTED` and
+`PROVIDER_DAY_PARTITION_COMPLETE` therefore remain `UNPROVEN`. The earlier 2025-01-01
+zero attempt was corrected: MonthlyConveneInfo shows Kawasaki, Nagoya, and Kochi racing,
+so a generic error from one arbitrary venue request was never zero evidence.
+
+The strongest NAR composite candidate is now:
+
+```text
+MonthlyConveneInfo historical year/month envelope
+  -> one exact date-qualified RaceList per marked venue
+  -> exact provider-native cancellation/substitute evidence when needed
+```
+
+It remains unapproved because blank-cell zero semantics, exhaustive actual-versus-
+planned coverage, original identity on moved meetings, and canonical RaceList request
+identity are not proven.
+
+### JRA annual schedule and adjustment research
+
+The official historical annual Racing Schedule, year-specific program pages,
+`開催日割表`, schedule decision documents, racing calendar, and schedule/cancellation
+FAQ were added to the source candidates. The 2024 materials provide an exact annual
+planned schedule and state that the year's first meetings were Nakayama and Kyoto on
+January 6. The daily program pages themselves state that they are pre-announced plans
+subject to cancellations, postponements, and changes, so an unlisted date such as
+2024-01-02 is a planned-zero candidate but not yet a qualified post-adjustment actual
+zero.
+
+The 2019-10-12 static page retains the cancelled Tokyo meeting and its October 15
+substitute while preserving Kyoto on October 12; the October 15 page contains the Tokyo
+replacement program, accessS exposes Kyoto results on the 12th and Tokyo results on the
+15th, and the JRA FAQ explains that some later conduct may occur without new entry when
+formal conditions hold. These sources agree for the case, but no inspected official
+index proved exhaustive schedule adjustments or exact original-to-replacement race
+identity across every cancellation mode.
+
+Two composites were compared. The preferred unapproved direction begins with the
+annual/period planned schedule, then requires an exhaustive exact adjustment source,
+then exact accessS meeting/race fragments. An accessS-first composite cannot recover a
+fully cancelled original denominator from absence. JRA remains `UNPROVEN`.
+
+### Contract and matrix corrections
+
+Denominator semantics now separately name races conducted on target date, races
+scheduled but cancelled there, substitute-date conduct, and original versus replacement
+identity. Race identities may not be synthesized from a meeting-level schedule.
+
+Every matrix property now has a one-line definition. Historical-date addressability is
+explicitly separate from completeness and zero. Availability was split into
+`OBSERVED_AVAILABLE_TO_TESTED_FLOOR` and the new
+`REQUIRED_RETENTION_HORIZON_SUPPORTED`; the former is qualified only for the observed
+JRA January 2015 and NAR January 2020 RaceList floors, while required retention remains
+`UNPROVEN` for both providers. `FORMAL_PROVIDER_AVAILABLE_AT_HANDLING` replaces the
+ambiguous provider-time label: the tested contracts yield exact `None`, forbid a
+substitute, and make no permanent claim about other source families.
+
+Research-observation wording now states exactly that Phase 3 responses were honestly
+observed but were not formally captured, qualified, or persisted as bundle evidence;
+their timestamps are not formal completeness-evidence `observed_at` values. Any future
+authorized acquisition must record its own exact retrieval time and must not backdate.
+
+The formal outcomes remain:
+
+```text
+JRA: UNPROVEN
+NAR: UNPROVEN
+```
+
+Accordingly, future attempted discovery remains fail-closed as
+`TARGET_DISCOVERY_INCOMPLETE`. Phase 2 contracts are unchanged, and no provider source,
+bundle, target set, archive, or implementation has been approved or created.
+
+## POST_V0_8_DAILY_REPLAY_3 Final Independent Review Approval
+
+ChatGPT completed the final independent review and approved Phase 3 for commit. The
+approved formal research conclusions are `JRA: UNPROVEN` and `NAR: UNPROVEN`; this is
+the intentional fail-closed research result, not a phase failure.
+
+The review formally approved all of the following conclusions:
+
+- a planned schedule is not automatically the actual race denominator;
+- positive zero-day semantics remain unproven;
+- cancellation and substitute-date original race identity remain unproven;
+- universal provider-day partition completeness remains unproven;
+- NAR `MonthlyConveneInfo` is the strongest provider-day envelope candidate;
+- NAR date-qualified `RaceList` is the strongest venue-day race-list fragment candidate;
+- the JRA annual/period schedule is the strongest planned-envelope candidate;
+- JRA `accessS` is the strongest actual historical meeting/race fragment candidate;
+- composite official evidence is permitted conceptually but is not universally qualified;
+- Phase 3 research responses are not formal historical replay evidence;
+- any future formal acquisition must record an honest `observed_at` and must never
+  backdate it;
+- every approved Phase 2 contract remains unchanged; and
+- `TARGET_DISCOVERY_INCOMPLETE` remains the correct future behavior for unqualified
+  provider dates.
+
+Phase 3 remains `RESEARCH_AND_DESIGN_ONLY`. No production code, tests, migrations,
+schemas, database, archives, CLI, or Ver0.8 contract/history were changed as part of
+this final approval record.
