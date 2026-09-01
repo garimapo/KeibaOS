@@ -1,7 +1,7 @@
 # KeibaOS
 
-KeibaOS Ver0.8 is a release-candidate platform for deterministic, auditable historical
-horse-racing replay. It loads exact persisted prediction-time snapshots, executes the
+KeibaOS Ver0.8 is a deterministic, auditable historical horse-racing replay platform.
+It loads exact persisted prediction-time snapshots, executes the
 real prediction and recommendation pipeline, fixes purchase plans before settlement,
 and settles them against archived official JRA/NAR result and payout evidence.
 

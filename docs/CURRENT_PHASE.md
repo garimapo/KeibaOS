@@ -4,19 +4,21 @@ Status: `READY_FOR_REVIEW`
 
 ## Identity and authority
 
-- Phase: `4C-2d3b1i6d1d5f1c4j1`
-- Name: `Ver0.8 Release Documentation and Version-State Preparation — Review Correction`
-- Base Commit: `c6c2f17934c2274d5bc720c60e40e52bd0c3ee58`
-- Branch: `review/4c-2d3b1i6d1d5f1c4j1-ver0.8-release-docs-correction`
+- Phase: `4C-2d3b1i6d1d5f1c4j2`
+- Name: `Ver0.8 Final Release-State and Publication Gate Preparation`
+- Base Commit: `5c633d7c81c09df1851baabd2bcc22e064a43042`
+- Branch: `review/4c-2d3b1i6d1d5f1c4j2-ver0.8-final-release-prepare`
 - Formal branch: `feature/ver0.8-simulator`
-- Approved C4j0 audit: `0cdee716c703c32867231719d65bd8f567b725a9`
-- C4j0 disposition: `VER0_8_RELEASE_READY_AFTER_DOCS`
+- Previous phase: `4C-2d3b1i6d1d5f1c4j1`
+- Previous phase status: `FORMALLY_COMPLETE`
+- Version target: `0.8.0`
+- Tag target: `v0.8.0`
+- Release name: `KeibaOS v0.8.0`
 
-The C4j1 architecture is approved with the exact clarifications in this document.
-This approval activity may change only this file and `docs/LATEST_CODEX_REPORT.md`.
-Implementation must wait for a separate `EXECUTE_APPROVED_PHASE` instruction;
-public/release documents, production, tests, fixtures, schemas, migrations, workflows,
-master, tags, and GitHub Releases remain unchanged in this activity.
+The C4j2 architecture and exact finalization contract were independently approved and
+the six-file documentation implementation is complete pending independent review.
+This implementation authorizes no formal integration, master update, tag, GitHub
+Release, or post-Ver0.8 phase.
 
 ```text
 IMPLEMENTATION_AUTHORIZATION:
@@ -33,44 +35,349 @@ NO
 
 VER0_9_AUTHORIZATION:
 NO
-
-C4J1_ARCHITECTURE:
-APPROVED
-
-C4J1_IMPLEMENTATION:
-CORRECTION_COMPLETE_PENDING_INDEPENDENT_REVIEW
-
-C4J1_REVIEW_CORRECTION:
-COMPLETE_PENDING_INDEPENDENT_REVIEW
-
-PRIOR_REVIEW:
-5f80717c9fde71a5357d0e06682e72ade9c15712
-
-PRIOR_REVIEW_DISPOSITION:
-REJECTED_FOR_DOCUMENTATION_CORRECTION
-
-CHANGELOG_PUBLISHED_HISTORY_PRESERVED:
-PASS
-
-RELEASE_NOTES_BRANCH_SPECIFIC_STATE_REMOVED:
-PASS
 ```
 
-## Release target and version source
+## Verified repository and release state
+
+The PREPARE audit verified the following exact remote state on 2026-09-01:
 
 ```text
-VERSION_TARGET:
-0.8.0
+FORMAL_REMOTE_HEAD:
+5c633d7c81c09df1851baabd2bcc22e064a43042
 
-TAG_TARGET:
-v0.8.0
+MASTER_REMOTE_HEAD:
+a136ab8d4d6aa48e37d3a62f5b8b79560dcc5b7a
 
-RELEASE_NAME:
-KeibaOS v0.8.0
+FORMAL_AHEAD_MASTER:
+159
 
-VERSION_SOURCE_DECISION:
-NO_NEW_RUNTIME_VERSION_SOURCE_FOR_V0_8
+FORMAL_BEHIND_MASTER:
+0
 
+MASTER_IS_ANCESTOR_OF_FORMAL:
+PASS
+
+FORMAL_REMOTE_CI:
+PASS
+
+FORMAL_REMOTE_CI_RUN:
+33456151832
+
+FORMAL_REMOTE_CI_JOB:
+99696405437
+
+EXISTING_RELEASE_TAGS:
+v0.7.0_ONLY
+
+V0_7_0_TAG_TYPE:
+ANNOTATED
+
+V0_7_0_TAG_MESSAGE:
+KeibaOS Ver0.7.0
+
+V0_8_0_TAG_STATE:
+DOES_NOT_EXIST
+
+GITHUB_RELEASE_STATE:
+NONE
+```
+
+The existing annotated `v0.7.0` tag resolves to current master
+`a136ab8d4d6aa48e37d3a62f5b8b79560dcc5b7a`. Any changed remote state requires
+fail-closed re-review; it must not be repaired by merge, rebase, or force push.
+
+## C4j2 purpose and durable-state rule
+
+C4j1 formally integrated the runtime-complete and release-documentation-complete
+Ver0.8 release candidate. C4j2 freezes the smallest final documentation transition
+whose content is true both immediately before publication and after publication.
+
+The final tagged release commit must not require a post-tag documentation mutation.
+Transient claims about a review branch, pending master integration, a missing tag, a
+missing GitHub Release, or candidate status must not remain in the release-facing
+final state. Historical phase reports remain unchanged because they are audit records
+of the state that existed when they were written.
+
+## Exact finalization proposal
+
+### README
+
+Change only the opening description from release-candidate wording to:
+
+```text
+KeibaOS Ver0.8 is a deterministic, auditable historical horse-racing replay platform.
+```
+
+All capability, setup, CLI, auditability, payout/EV, test, limitation, and non-claim
+content remains unchanged. No release date or profitability claim is added.
+
+```text
+README_FINALIZATION:
+REMOVE_RELEASE_CANDIDATE_QUALIFIER_ONLY
+```
+
+### ROADMAP
+
+Remove only the transient line:
+
+```text
+Status: release candidate pending final integration.
+```
+
+Keep the exact `Ver0.8 — Historical Replay / Simulation Platform` heading, completed
+capability list, superseded-planning explanation, and Post-Ver0.8 section. Do not
+invent a Ver0.9 contract or add a publication date.
+
+```text
+ROADMAP_FINALIZATION:
+REMOVE_TRANSIENT_STATUS_LINE_ONLY
+```
+
+### CHANGELOG
+
+Change only the heading:
+
+```text
+## Ver0.8.0 (Unreleased)
+```
+
+to:
+
+```text
+## Ver0.8.0
+```
+
+Preserve the complete approved Ver0.8 entry, complete published Ver0.7/Ver0.6/Ver0.5
+history, and superseded-future-plan notice exactly. Do not add a guessed or predated
+release date.
+
+```text
+CHANGELOG_FINALIZATION:
+REMOVE_UNRELEASED_QUALIFIER_ONLY
+
+CHANGELOG_PUBLISHED_HISTORY_POLICY:
+PRESERVE_EXACTLY
+
+CHANGELOG_OBSOLETE_FUTURE_PLAN:
+REMAIN_SUPERSEDED
+```
+
+### Release notes
+
+Change the top identity from:
+
+```text
+Release target: `v0.8.0`
+
+Status: `RELEASE_CANDIDATE_PENDING_FINAL_INTEGRATION`
+```
+
+to exactly:
+
+```text
+Release: `v0.8.0`
+```
+
+Remove the transient candidate status. Keep the existing capability, limitation,
+verification, migration, and non-claim sections. The two uses of
+`release-candidate` in `Verification State` remain valid provenance: they describe
+which candidate runtime passed verification and explicitly state that raw counts are
+not a permanent semantic contract.
+
+Rewrite only `Release State` to this durable meaning:
+
+```text
+This document defines the approved release content for KeibaOS v0.8.0.
+The authoritative publication identity is the annotated v0.8.0 Git tag and the
+corresponding GitHub Release.
+
+The release remains a deterministic historical replay and verification platform.
+Its release identity does not imply profitability, calibrated predictive probability,
+or a demonstrated strategy edge.
+```
+
+The final text must not say that master integration is pending, that the tag or
+GitHub Release does not exist, that the release is a candidate, or that final
+integration is pending.
+
+```text
+RELEASE_NOTES_FINALIZATION:
+DURABLE_RELEASE_IDENTITY_AND_RELEASE_STATE
+```
+
+## Release date policy
+
+```text
+RELEASE_DATE_IN_REPOSITORY_DOCS:
+OMITTED
+```
+
+The annotated tag and GitHub Release metadata provide the actual publication time.
+Omitting a repository release date prevents guessing, backdating, and a post-tag docs
+commit.
+
+## Transient release-state search audit
+
+The exact formal-base search covered, case-insensitively:
+
+```text
+release-candidate
+release candidate
+pending final integration
+RELEASE_CANDIDATE_PENDING_FINAL_INTEGRATION
+Unreleased
+master integration is pending
+tag has not been created
+GitHub Release has not been published
+```
+
+It returned 24 baseline hit lines. Their exact disposition is:
+
+### A — needs correction
+
+- `README.md:3` — remove the opening release-candidate qualifier.
+- `docs/ROADMAP.md:32` — remove the transient status line.
+- `docs/CHANGELOG.md:3` — remove `(Unreleased)` from the Ver0.8 heading.
+- `docs/VER0.8_RELEASE_NOTES.md:5` — remove the transient status line as part of the
+  top identity replacement.
+- `docs/VER0.8_RELEASE_NOTES.md:115-116` — replace the transient `Release State`
+  paragraph with the durable release identity contract.
+- Former C4j1 `docs/CURRENT_PHASE.md:99,130,139,274,278,358` — superseded live-phase
+  instructions; replaced by this C4j2 PREPARE document. These are not release-facing
+  implementation edits.
+
+### B — historical/audit record; preserve unchanged
+
+- `docs/LATEST_CODEX_REPORT.md:6263,6282,6342,6345,6392,6402,6427,6487,6498,6499`
+  — append-only C4j1 PREPARE, approval, implementation, and correction evidence.
+
+### C — valid non-transient context; preserve unchanged
+
+- `docs/VER0.8_RELEASE_NOTES.md:76,79` — verification provenance describing the
+  candidate runtime that passed and clarifying that exact counts are not a permanent
+  semantic contract.
+
+The audit found no additional release-facing path that requires a final-state edit.
+Any matching terms added to this document or the appended PREPARE report are audit
+quotations and therefore disposition B.
+
+## Proposed C4j2 implementation scope
+
+Allowed Files are exactly:
+
+```text
+README.md
+docs/ROADMAP.md
+docs/CHANGELOG.md
+docs/VER0.8_RELEASE_NOTES.md
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+```
+
+Every other path is forbidden. In particular, implementation must not modify:
+
+```text
+scripts/**
+tests/**
+tests/fixtures/**
+scripts/migrations/**
+.github/**
+requirements.txt
+requirements-dev.txt
+AGENTS.md
+examples/historical_replay_request.v1.example.json
+docs/HISTORICAL_REPLAY.md
+docs/ARCHITECTURE.md
+docs/VER0.8_DESIGN.md
+docs/VER0.8_SIMULATOR_DESIGN.md
+```
+
+No production, test, fixture, schema, migration, workflow, package-version source,
+manifest, architecture, runtime, or AI behavior is part of C4j2.
+
+## Proposed implementation verification
+
+A later separately approved C4j2 implementation must:
+
+1. make only the four exact release-facing edits above;
+2. preserve the published CHANGELOG history byte-for-byte outside the Ver0.8 heading;
+3. repeat the transient-state search and classify any remaining match;
+4. run `python -m pytest -q`;
+5. run `git diff --check`;
+6. prove exactly the six allowed files differ from the formal implementation base;
+7. prove no production, test, fixture, schema, migration, workflow, manifest,
+   package-version source, or AI runtime change;
+8. stop for independent review without updating formal, master, tags, or Releases.
+
+The proposed implementation review branch is:
+
+```text
+review/4c-2d3b1i6d1d5f1c4j2-ver0.8-final-release-state
+```
+
+The proposed review commit message is:
+
+```text
+docs: finalize Ver0.8 release state
+```
+
+These implementation details are architecturally approved but remain unexecuted until
+a later `EXECUTE_APPROVED_PHASE` instruction.
+
+## Future publication transaction — design only
+
+The publication transaction is not authorized by this PREPARE or by the future docs
+implementation. It requires a separate independent approval after the exact final
+release-state docs commit is formally integrated and verified.
+
+### Preconditions
+
+Freeze the following exact gates:
+
+```text
+FORMAL_RELEASE_COMMIT:
+EXACT_INDEPENDENTLY_APPROVED_COMMIT_REQUIRED
+
+FORMAL_RELEASE_TREE:
+EXACT_INDEPENDENTLY_APPROVED_TREE_REQUIRED
+
+MASTER_PRECONDITION:
+origin/master == a136ab8d4d6aa48e37d3a62f5b8b79560dcc5b7a
+
+ANCESTRY:
+MASTER_IS_ANCESTOR_OF_FORMAL_RELEASE_COMMIT
+
+FORMAL_BEHIND_MASTER:
+0
+
+FORMAL_REMOTE_CI:
+PASS_FOR_EXACT_FORMAL_RELEASE_COMMIT
+
+TAG_PRECONDITION:
+refs/tags/v0.8.0_DOES_NOT_EXIST
+
+GITHUB_RELEASE_PRECONDITION:
+NO_EXISTING_V0_8_0_RELEASE
+```
+
+If master has moved, formal is behind, CI is not green, the tag exists, or a v0.8.0
+release exists, stop for changed-state review. Do not merge, rebase, overwrite, or
+repair refs.
+
+### Master policy
+
+```text
+MASTER_INTEGRATION_METHOD:
+FAST_FORWARD_ONLY
+```
+
+Fast-forward master to the exact approved formal release commit with no merge commit,
+squash, rebase, or force push. Verify remote master equals that exact commit. If the
+master push triggers a new CI run, require it to complete successfully before tagging.
+
+### Tag policy
+
+```text
 TAG_TYPE:
 ANNOTATED
 
@@ -79,370 +386,121 @@ v0.8.0
 
 TAG_MESSAGE:
 KeibaOS Ver0.8.0
-
-TAG_CREATION:
-NOT_AUTHORIZED_IN_C4J1
 ```
 
-Repository inspection found no authoritative Python/package version source. Migration
-version constants, request schema versions, allocation-policy versions, and fixture
-schema versions are not application-release versions. C4j1 must not introduce
-`__version__`, `pyproject.toml`, `setup.py`, `setup.cfg`, `version`, `VERSION`, package
-metadata, or another runtime version constant merely to label this release. Release
-documentation, CHANGELOG, the final annotated Git tag, and GitHub Release metadata will
-identify Ver0.8.
+Create the annotated tag only after remote master equals the exact approved release
+commit. The tag object must peel to that exact commit. Push only the tag, then
+independently verify its object type, message, and target.
 
-## Public documentation contract
-
-### README plan
-
-`README.md` must make Ver0.8 the current release-candidate capability and use this
-concise operator-facing order:
-
-1. KeibaOS Ver0.8 purpose: deterministic, auditable replay of persisted historical
-   prediction inputs through real planning and archived official settlement.
-2. Supported envelope: archived JRA/NAR, formal bet types `単勝`, `馬連`, `ワイド`,
-   `3連複`, and normal-final winning payout evidence only.
-3. Requirements and setup for Python 3.12, SQLite, and the two requirements files.
-4. Existing one-race prediction CLI, explicitly separated from historical replay.
-5. Historical replay CLI:
-   `python -m scripts.cli.run_historical_replay <request_path>`.
-6. Manifest purpose and a link to `docs/HISTORICAL_REPLAY.md` and the checked-in
-   schema-v1 template.
-7. Reproducibility and auditability: exact snapshot natural identity, target commit,
-   strategy/config identity, fixed-stake plan identity, exact capture IDs, separate
-   prediction and settlement cutoffs, read-only archives, and deterministic JSON.
-8. Official result/payout settlement and `SimulationSummary` metrics, including real
-   ROI and maximum-drawdown arithmetic.
-9. Prediction-time payout/EV distinction and fail-closed behavior.
-10. Test command and research/non-profit-guarantee statement.
-11. Known limits and post-Ver0.8 extensions.
-
-The leading persisted-simulation CLI description must no longer substitute for the
-Ver0.8 replay overview. It may remain as a secondary legacy/application-boundary note.
-The stale statement that stake allocation is unimplemented must be corrected: Ver0.8
-has deterministic fixed stake per recommendation and explicit per-race budgets, while
-Kelly/proportional/portfolio allocation and live bankroll management remain deferred.
-
-### ROADMAP plan
-
-`docs/ROADMAP.md` must retain the completed Ver0.5-Ver0.7 milestones concisely, add
-Ver0.8 as the completed/release-candidate `Historical Replay / Simulation Platform`,
-and list its audited replay, planning, archived settlement, metrics, and CLI outcomes.
-The former `Ver0.8 Horse Engine -> Ver0.9 Result Engine -> Ver1.0 AI Prediction Engine`
-sequence must be retained only as an explicitly superseded historical roadmap concept,
-not as the current version mapping. Unapproved future work belongs under
-`Post-Ver0.8`; C4j1 must not invent a detailed Ver0.9 contract.
-
-### CHANGELOG plan
-
-`docs/CHANGELOG.md` must add a top entry titled exactly `Ver0.8.0 (Unreleased)` with no
-release date. It must summarize platform-visible changes rather than internal phase
-commits:
-
-- auditable `HistoricalInputSnapshot` and future-information cutoff enforcement;
-- historical execution of the real `PredictionPipeline`;
-- deterministic fixed-stake allocation and immutable persisted bet plans;
-- exact archived JRA/NAR official result and payout settlement;
-- the four formal normal-settlement bet types;
-- real payout arithmetic, summary/ROI/hit-rate/drawdown metrics;
-- strict schema-v1 historical replay request and CLI;
-- clean-checkout, mixed-provider, no-network acceptance.
-
-The same entry must list material limitations and non-claims. Published v0.5-v0.7
-history remains intact. Obsolete future-version promises must not remain presented as
-current commitments.
-
-### ARCHITECTURE plan
-
-`docs/ARCHITECTURE.md` must receive the smallest coherent update that replaces its
-obsolete top-level flow with the implemented replay flow:
+### GitHub Release policy
 
 ```text
-HistoricalInputSnapshot
--> PredictionPipeline
--> BetStrategy
--> BetStakeAllocator
--> SimulationBetPlanSnapshot
--> immutable persisted plan
--> archived official JRA/NAR result and payout evidence
--> final settlement
--> SimulationSummary
--> historical replay CLI JSON
-```
-
-The document must show prediction `information_cutoff` and per-race settlement cutoff
-as separate causal boundaries. It must explain that the replay CLI is a thin wrapper,
-the SQLite application owns exact snapshot loading/planning/read-only archives, and
-final settlement consumes persisted plans rather than regenerating bets. Legacy live
-acquisition remains a separate concern. The architecture page must link to the
-authoritative detailed simulator design rather than reproduce its chronology.
-
-### VER0.8 design disposition
-
-```text
-VER0_8_DESIGN_DISPOSITION:
-RETAIN_AS_HISTORICAL_WITH_PROMINENT_SUPERSEDED_NOTICE
-```
-
-Choose disposition A. Preserve the old Horse Engine proposal in
-`docs/VER0.8_DESIGN.md` as historical project evidence, but add a prominent notice at
-the top stating that it was superseded and that
-`docs/VER0.8_SIMULATOR_DESIGN.md` is the authoritative Ver0.8 design. Rewriting the old
-proposal as though it had always described the simulator would destroy useful design
-chronology; replacing all content is unnecessary.
-
-## Operator guide and manifest template
-
-Create exactly one operator guide:
-
-```text
-OPERATOR_GUIDE:
-docs/HISTORICAL_REPLAY.md
-```
-
-Its sections are exactly: Purpose; Prerequisites; Historical replay trust boundary;
-Request-file location and relative-path anchoring; `database_path`;
-`capture_archives`; `run_context`; `strategy`; `budgets_by_race_id`; races and
-snapshot identity; prediction cutoff vs settlement cutoff; executing the CLI;
-deterministic success JSON; deterministic expected-error JSON / exit codes; archived
-no-network replay behavior; fail-closed conditions; reproducibility checklist;
-supported capabilities and explicit non-claims.
-
-The guide must not present internal fixture construction as operator behavior. It must
-state that replay does not acquire live data or manufacture snapshots/captures, that
-all represented providers need an archive, and that required payout catalog entries
-are determined only after planning.
-
-Create one machine-readable template:
-
-```text
-MANIFEST_EXAMPLE:
-examples/historical_replay_request.v1.example.json
-
-MANIFEST_EXAMPLE_POLICY:
-STRICT_SCHEMA_VALID_SINGLE_PROVIDER_TEMPLATE_NON_EXECUTABLE_UNTIL_EXACT_EVIDENCE_REPLACED
-
-STRICT_JSON:
+CREATE_GITHUB_RELEASE:
 YES
-
-SCHEMA_VERSION:
-1
-
-SCHEMA_VALID:
-YES
-
-INTENTIONALLY_EXECUTABLE:
-NO
-
-OFFICIAL_EVIDENCE:
-NO
-```
-
-The JSON uses every exact schema-v1 root/race/nested key, one JRA race, one matching
-budget, `RuleBasedBetStrategy`, and fixed-stake policy version string `"1"`. Paths and
-identity/capture values use conspicuous `REPLACE_WITH_EXACT_*` or `example-only-*`
-strings, including `REPLACE_WITH_MAIN_DATABASE.sqlite3`,
-`REPLACE_WITH_JRA_CAPTURE_ARCHIVE.sqlite3`, `REPLACE_WITH_TARGET_COMMIT_SHA`,
-`REPLACE_WITH_EXTERNAL_RACE_ID`, `REPLACE_WITH_EXACT_RESULT_CAPTURE_ID`, and
-`REPLACE_WITH_EXACT_PAYOUT_CAPTURE_ID`. It uses the exact `JRA / jra_official`
-provider pair, `allowed_bet_types: ["単勝"]`, stake `100`, a positive internal race ID
-with the same canonical budget key, and timezone-aware ISO-8601 timestamps. It must
-contain no official-looking fake capture ID, no JSON comments, no `pipeline`, and no
-`track_reference_date`. The guide must label it a structural template, not executable
-official ROI evidence, and require replacement with exact persisted identities and
-capture IDs before replay. README and the guide must state prominently that this is a
-schema template, placeholder capture IDs are not official evidence identities, exact
-audited replacement values are mandatory, and successful schema parsing does not prove
-that referenced archives, snapshots, or captures exist or are trustworthy. During
-implementation, load this file through the public strict request loader as a
-verification command without requiring referenced paths to exist; no committed test
-source is needed.
-
-## Release notes contract
-
-Create:
-
-```text
-RELEASE_NOTES:
-docs/VER0.8_RELEASE_NOTES.md
-
-RELEASE_TARGET:
-v0.8.0
-
-RELEASE_STATE:
-RELEASE_CANDIDATE_PENDING_FINAL_INTEGRATION
-```
-
-The top must state `Release target: v0.8.0` and
-`Status: RELEASE_CANDIDATE_PENDING_FINAL_INTEGRATION`. Sections are exactly: Summary;
-What Changed Since v0.7.0; Reproducibility and Auditability; JRA and NAR Archived
-Settlement Support; Supported Bet Types; Historical Replay CLI; Verification State;
-Known Limitations; Explicit Non-Claims; Upgrade and Migration Notes; Release State.
-No final release date is included. The verification section may say the release
-candidate passed the full suite, GitHub Actions remote CI, and mixed-provider
-no-network acceptance, but raw pytest counts remain phase evidence rather than a
-long-term public contract. It must not claim that v0.8.0 is already merged to master,
-tagged, or published as a GitHub Release.
-
-## Shared claim boundary
-
-README, operator guide, CHANGELOG, and release notes must use one consistent boundary.
-
-Platform guarantees:
-
-- deterministic replay for the same audited inputs, configuration, database, and
-  archived evidence;
-- future-information boundary validation;
-- immutable strategy/allocation/plan identity and reproducible fixed-stake plans;
-- exact archived official JRA/NAR settlement with real per-100-yen payout arithmetic;
-- fail-closed missing, corrupt, contradictory, unsupported, or non-final evidence;
-- deterministic summary serialization.
-
-Not guaranteed:
-
-- future profitability, 120% ROI, calibrated win probability, or demonstrated strategy
-  edge;
-- true market EV for combination tickets (`combination_score` is only a ranking
-  heuristic; prediction-time odds EV is formal only for `単勝`);
-- complete historical-data coverage or automatic historical-data collection;
-- exceptional race/settlement states outside the normal-final winning envelope;
-- live automated betting;
-- active AI/LLM augmentation.
-
-```text
-AI_SIGNAL_USAGE_BASELINE:
-DISABLED
-```
-
-Existing deterministic prediction engines are not marketed as an external AI/LLM
-service. Optional external AI signals remain post-Ver0.8.
-
-## Deferred release-state workflow
-
-Repository evidence is exact:
-
-- `v0.7.0` is an annotated tag with message `KeibaOS Ver0.7.0`;
-- GitHub currently has no published Releases;
-- `master` is `a136ab8d4d6aa48e37d3a62f5b8b79560dcc5b7a`;
-- the formal base is 158 commits ahead of and zero behind `master`;
-- `master` is an ancestor of formal.
-
-```text
-MASTER_INTEGRATION:
-DEFERRED_TO_FINAL_RELEASE_PHASE
-
-PREFERRED_FUTURE_INTEGRATION:
-FAST_FORWARD_ONLY_IF_MASTER_UNCHANGED_AND_ANCESTOR
-
-TAG_POLICY:
-DEFERRED_ANNOTATED_V0_8_0_AFTER_MASTER_EQUALS_APPROVED_RELEASE_COMMIT
-
-GITHUB_RELEASE:
-YES_AFTER_FINAL_TAG
-
-GITHUB_RELEASE_TAG:
-v0.8.0
 
 GITHUB_RELEASE_TITLE:
 KeibaOS v0.8.0
 
+GITHUB_RELEASE_TAG:
+v0.8.0
+
 GITHUB_RELEASE_BODY_SOURCE:
-INDEPENDENTLY_APPROVED_DOCS_VER0_8_RELEASE_NOTES
-
-RELEASE_DATE_POLICY:
-OMIT_UNTIL_ACTUAL_RELEASE_OPERATION
+EXACT_APPROVED_DOCS_VER0_8_RELEASE_NOTES
 ```
 
-C4j1 implementation must not update `master`, tag, or publish. A separately authorized
-final release phase must verify the exact approved release-candidate formal commit,
-formal CI, unchanged/ancestor `master`, and zero formal-behind-master count. If true,
-fast-forward `master` to that exact commit; do not create an unnecessary merge commit.
-If not true, stop for review rather than rebase or improvise.
+Create the GitHub Release only after the annotated tag is independently verified.
+Use exact approved `docs/VER0.8_RELEASE_NOTES.md` content as the body; do not derive
+claims from commit history or publish alternate draft text. Independently verify the
+published title, tag, body, target, and non-draft/non-prerelease state.
 
-After independently verified master integration, create an annotated `v0.8.0` tag with
-message `KeibaOS Ver0.8.0`, only when `master` equals the approved release commit. Then
-create GitHub Release title `KeibaOS v0.8.0` for that tag, using the approved
-`docs/VER0.8_RELEASE_NOTES.md` body and the actual publication date where appropriate.
+## C4j2 implementation result
 
-## Proposed C4j1 implementation scope
+The exact four release-facing transitions were applied. README now uses the approved
+durable platform description. ROADMAP has no transient Ver0.8 status line. CHANGELOG
+uses `Ver0.8.0` without a date and otherwise matches the approved baseline exactly.
+Release notes use `Release: v0.8.0`, preserve Verification State provenance, and use
+the exact durable Release State wording.
 
-Allowed Files are exactly:
+The release-facing transient-state search now returns exactly two hits, both in
+`docs/VER0.8_RELEASE_NOTES.md` Verification State:
 
 ```text
-README.md
-docs/ROADMAP.md
-docs/CHANGELOG.md
-docs/ARCHITECTURE.md
-docs/VER0.8_DESIGN.md
-docs/HISTORICAL_REPLAY.md
-docs/VER0.8_RELEASE_NOTES.md
-examples/historical_replay_request.v1.example.json
-docs/CURRENT_PHASE.md
-docs/LATEST_CODEX_REPORT.md
+docs/VER0.8_RELEASE_NOTES.md:74
+release-candidate runtime passed the full test suite and GitHub Actions
+
+docs/VER0.8_RELEASE_NOTES.md:77
+release-candidate verification results are not a permanent semantic contract
 ```
 
-Every other path is forbidden. In particular, do not modify production, tests,
-fixtures, `docs/VER0.8_SIMULATOR_DESIGN.md`, `AGENTS.md`, requirements, schemas,
-migrations, workflows, package exports, CLI implementation, or runtime version state.
-
-No committed example-validation test is proposed. The example must be checked with the
-existing public loader during C4j1 implementation. If that cannot pass without changing
-runtime/test code, stop for independent review rather than expanding scope.
-
-## Implementation verification
-
-The approved implementation completed these checks:
-
-1. Load the checked-in example through
-   `load_historical_replay_request_document(request_path=...)` without running replay.
-2. Run `tests/test_cli_run_historical_replay.py` and
-   `tests/test_historical_replay_request_document.py`.
-3. Run the full suite: `python -m pytest -q`.
-4. Run `git diff --check`.
-5. Verify exactly the ten allowed implementation files differ from the formal base.
-6. Verify no production/test/fixture/schema/migration/workflow/runtime-version change.
-7. Verify no master, tag, or GitHub Release change.
-8. Commit exactly the ten files once, push only the review branch, and require GitHub
-   Actions `Tests / pytest (3.12)` PASS before reporting review readiness.
-
-The unchanged exact formal runtime tree currently passes:
+Both are approved provenance. README, ROADMAP, CHANGELOG, release-note top metadata,
+and release-note Release State contain no transient public release-state wording.
 
 ```text
-FULL_SUITE:
-3125 passed, 2506 subtests passed in 13.57s
+PHASE:
+4C-2d3b1i6d1d5f1c4j2
 
-EXAMPLE_MANIFEST_PUBLIC_LOADER_VALIDATION:
-PASS
+PHASE_NAME:
+Ver0.8 Final Release-State and Publication Gate Preparation
 
-REQUEST_DOCUMENT_TESTS:
-19 passed, 143 subtests passed in 0.72s
+FORMAL_BASE:
+5c633d7c81c09df1851baabd2bcc22e064a43042
 
-CLI_TESTS:
-13 passed in 0.31s
+VERSION_TARGET:
+0.8.0
 
-MIXED_PROVIDER_ACCEPTANCE:
-1 passed in 0.76s
+TAG_TARGET:
+v0.8.0
 
-RELEASE_DOCS_IMPLEMENTED:
+RELEASE_STATE_FINALIZED:
 YES
 
-CLAIM_BOUNDARY_CONSISTENCY:
+README_DURABLE_STATE:
 PASS
 
-CHANGELOG_OBSOLETE_FUTURE_PLAN:
-SUPERSEDED
-
-RELEASE_NOTES_BRANCH_SPECIFIC_STATE_REMOVED:
+ROADMAP_DURABLE_STATE:
 PASS
+
+CHANGELOG_DURABLE_STATE:
+PASS
+
+RELEASE_NOTES_DURABLE_STATE:
+PASS
+
+VERIFICATION_PROVENANCE_PRESERVED:
+PASS
+
+PUBLISHED_HISTORY_PRESERVED:
+PASS
+
+TRANSIENT_PUBLIC_RELEASE_STATE:
+NONE
+
+REMAINING_TRANSIENT_SEARCH_HITS:
+43_HIT_LINES_TOTAL; 2_RELEASE_NOTES_PROVENANCE; 20_CURRENT_PHASE_AUDIT;
+21_LATEST_REPORT_HISTORY_AND_AUDIT
+
+RELEASE_DATE_IN_REPOSITORY_DOCS:
+OMITTED
+
+MASTER_INTEGRATION_METHOD:
+FAST_FORWARD_ONLY
+
+FULL_SUITE:
+3125 passed, 2506 subtests passed in 13.00s
+
+MASTER_CHANGED:
+NO
+
+TAG_CREATED:
+NO
+
+GITHUB_RELEASE_CREATED:
+NO
 
 PRODUCTION_CHANGED:
 NO
 
 TEST_CHANGED:
-NO
-
-FIXTURE_CHANGED:
 NO
 
 SCHEMA_CHANGED:
@@ -454,34 +512,50 @@ NO
 WORKFLOW_CHANGED:
 NO
 
-PACKAGE_VERSION_SOURCE_CHANGED:
-NO
-
 AI_RUNTIME_CHANGED:
 NO
 
-MASTER_CHANGED:
+PUBLICATION_AUTHORIZATION:
+NO
+```
+
+## Implementation and publication authorization
+
+```text
+C4J2_PHASE_STATUS:
+READY_FOR_REVIEW
+
+C4J2_ARCHITECTURE:
+APPROVED
+
+C4J2_IMPLEMENTATION:
+COMPLETE_PENDING_INDEPENDENT_REVIEW
+
+MASTER_INTEGRATION_AUTHORIZATION:
 NO
 
-TAG_CREATED:
+TAG_AUTHORIZATION:
 NO
 
-GITHUB_RELEASE_CREATED:
+GITHUB_RELEASE_AUTHORIZATION:
 NO
 
-AI_SIGNAL_USAGE_BASELINE:
-DISABLED
+PUBLICATION_AUTHORIZATION:
+NO
+
+POST_VER0_8_WORK:
+NOT_AUTHORIZED
 ```
 
 ## Stop condition
 
-After exactly one ten-file review commit, review-branch push, and successful remote CI,
-stop for independent review. Do not integrate master, create `v0.8.0`, publish a GitHub
-Release, or begin Ver0.9.
+After exactly one six-file review commit, review-branch push, and successful remote
+CI, stop. Do not formally integrate C4j2, update master, create or push a tag, publish
+a Release, add a date, or begin post-Ver0.8 work.
 
-Formal integration remains pending a separate user command:
+The only recommended next activity is:
 
 ```text
 RECOMMENDED_NEXT_PHASE:
-INDEPENDENT_C4J1_IMPLEMENTATION_REVIEW
+INDEPENDENT_C4J2_FINAL_RELEASE_STATE_REVIEW
 ```

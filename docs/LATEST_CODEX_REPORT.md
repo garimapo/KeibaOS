@@ -6561,3 +6561,346 @@ Production, tests, fixtures, schemas, migrations, workflows, package-version sou
 AI runtime, formal, master, tags, and GitHub Releases remain unchanged. Exactly one
 ten-file correction review commit is required, after which review-branch remote CI must
 pass before the phase returns for independent correction review.
+
+## Phase 4C-2d3b1i6d1d5f1c4j2 — Ver0.8 Final Release-State and Publication Gate PREPARE
+
+This PREPARE was performed directly from exact formal base
+`5c633d7c81c09df1851baabd2bcc22e064a43042` on local branch
+`review/4c-2d3b1i6d1d5f1c4j2-ver0.8-final-release-prepare`. C4j1 is formally
+complete. This activity changes only `docs/CURRENT_PHASE.md` and this append-only
+report. It authorizes and performs no release-facing implementation, formal or master
+integration, tag creation, GitHub Release publication, or post-Ver0.8 work.
+
+### Exact release-state evidence
+
+Origin was fetched before inspection. Exact formal remote HEAD is
+`5c633d7c81c09df1851baabd2bcc22e064a43042`; exact master remote HEAD is
+`a136ab8d4d6aa48e37d3a62f5b8b79560dcc5b7a`. Formal is 159 commits ahead of
+and zero behind master, and master is an ancestor of formal. Exact formal CI is green
+at GitHub Actions run `33456151832`, job `99696405437` (`Tests / pytest (3.12)`).
+
+The remote contains only tag `v0.7.0`. It is an annotated tag with message
+`KeibaOS Ver0.7.0` and resolves to current master. `v0.8.0` does not exist. GitHub
+Releases are empty. These exact refs and absence conditions are mandatory publication
+preconditions, not authority to mutate them.
+
+```text
+FORMAL_AHEAD_MASTER:
+159
+
+FORMAL_BEHIND_MASTER:
+0
+
+MASTER_IS_ANCESTOR_OF_FORMAL:
+PASS
+
+TAG_STATE:
+V0_7_0_ANNOTATED_ONLY; V0_8_0_DOES_NOT_EXIST
+
+GITHUB_RELEASE_STATE:
+NONE
+```
+
+### Transient release-state audit
+
+The required case-insensitive search returned exactly 24 baseline hit lines at the formal
+base. Disposition A contains the release-facing or superseded live-phase text that
+must change; B contains append-only historical audit evidence; C contains valid
+verification provenance that remains durable after publication.
+
+Disposition A:
+
+- `README.md:3`: remove only the release-candidate qualifier.
+- `docs/ROADMAP.md:32`: remove only the pending-final-integration status line.
+- `docs/CHANGELOG.md:3`: change `Ver0.8.0 (Unreleased)` to `Ver0.8.0`.
+- `docs/VER0.8_RELEASE_NOTES.md:5`: replace the target/status top with
+  `Release: v0.8.0` and no candidate status.
+- `docs/VER0.8_RELEASE_NOTES.md:115-116`: replace only the transient Release State
+  paragraph with durable release/tag identity and non-claim wording.
+- superseded C4j1 `docs/CURRENT_PHASE.md:99,130,139,274,278,358`: replaced by the
+  C4j2 PREPARE document, not carried into the future release implementation.
+
+Disposition B:
+
+- `docs/LATEST_CODEX_REPORT.md:6263,6282,6342,6345,6392,6402,6427,6487,6498,6499`:
+  preserve the complete C4j1 PREPARE, approval, implementation, and correction history.
+
+Disposition C:
+
+- `docs/VER0.8_RELEASE_NOTES.md:76,79`: preserve verification provenance stating
+  which candidate runtime passed and that raw counts are not a permanent semantic
+  contract.
+
+No other release-facing path needs finalization. Search terms quoted by the new C4j2
+phase/audit documents are themselves disposition-B audit context.
+
+### Durable finalization contract
+
+The proposed implementation changes exactly six files. README loses only its opening
+candidate qualifier. ROADMAP loses only its transient status line. CHANGELOG loses
+only `(Unreleased)` from the Ver0.8 heading while the complete Ver0.8 body, published
+Ver0.7/Ver0.6/Ver0.5 history, and superseded-future-plan notice remain exact. Release
+notes use `Release: v0.8.0`, omit the candidate status, retain all other sections, and
+replace only Release State with durable wording that identifies this document as the
+release content, the annotated tag plus GitHub Release as authoritative publication
+identity, and the existing profitability/calibration/edge non-claim boundary.
+
+```text
+PROPOSED_FINALIZATION_FILES:
+README.md
+docs/ROADMAP.md
+docs/CHANGELOG.md
+docs/VER0.8_RELEASE_NOTES.md
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+
+RELEASE_DATE_IN_REPOSITORY_DOCS:
+OMITTED
+```
+
+The tag and GitHub Release metadata provide actual publication time. No repository
+date is guessed or backdated, and no post-tag documentation commit is required.
+
+### Frozen future publication transaction
+
+Publication remains separately unauthorized. After exact final-state docs are
+implemented, reviewed, formally integrated, and independently verified, the later
+operation must require an exact approved formal release commit/tree, green formal CI,
+unchanged master `a136ab8d4d6aa48e37d3a62f5b8b79560dcc5b7a`, master ancestry,
+zero formal-behind-master count, absent `v0.8.0`, and no existing v0.8.0 GitHub
+Release.
+
+Master integration is fast-forward-only to the exact approved formal release commit.
+If master moves, stop; do not merge or rebase. After remote master equality and any
+triggered master CI pass, create annotated tag `v0.8.0` with message
+`KeibaOS Ver0.8.0`, require it to peel to the exact approved release commit, and push
+only that tag. After independent tag verification, create GitHub Release
+`KeibaOS v0.8.0` for `v0.8.0` using the exact independently approved
+`docs/VER0.8_RELEASE_NOTES.md` as its body, then verify the published release.
+
+```text
+MASTER_INTEGRATION_METHOD:
+FAST_FORWARD_ONLY
+
+TAG_TYPE:
+ANNOTATED
+
+TAG_NAME:
+v0.8.0
+
+TAG_MESSAGE:
+KeibaOS Ver0.8.0
+
+GITHUB_RELEASE_TITLE:
+KeibaOS v0.8.0
+
+GITHUB_RELEASE_BODY_SOURCE:
+docs/VER0.8_RELEASE_NOTES.md
+```
+
+### PREPARE verification and authority
+
+The unchanged runtime tree passed locally:
+
+```text
+FULL_SUITE:
+3125 passed, 2506 subtests passed in 14.10s
+
+GIT_DIFF_CHECK:
+PASS
+
+STATIC_SCOPE_CHECK:
+PASS_EXACT_TWO_DOCS
+```
+
+No production, test, fixture, schema, migration, workflow, requirements, manifest,
+architecture, package-version source, runtime, or AI behavior changed. README,
+ROADMAP, CHANGELOG, and release notes remain untouched during PREPARE. Nothing was
+staged, committed, pushed, formally integrated, merged to master, tagged, or
+published.
+
+```text
+PHASE_STATUS_IN_CURRENT_PHASE:
+DRAFT_FOR_REVIEW
+
+IMPLEMENTATION_AUTHORIZATION:
+NO
+
+PUBLICATION_AUTHORIZATION:
+NO
+
+RECOMMENDED_NEXT_PHASE:
+INDEPENDENT_C4J2_FINAL_RELEASE_PREPARE_REVIEW
+```
+
+Stop for independent final-release PREPARE review.
+
+### C4j2 architecture approval
+
+Independent review approved the C4j2 PREPARE architecture with the exact finalization
+contract. `docs/CURRENT_PHASE.md` now has status `APPROVED_FOR_CODEX`.
+Implementation has not started and must wait for a separate
+`EXECUTE_APPROVED_PHASE` instruction.
+
+The approved implementation scope is exactly:
+
+```text
+README.md
+docs/ROADMAP.md
+docs/CHANGELOG.md
+docs/VER0.8_RELEASE_NOTES.md
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+```
+
+README will lose only its opening release-candidate qualifier. ROADMAP will lose only
+the transient Ver0.8 status line. CHANGELOG will change only `Ver0.8.0 (Unreleased)`
+to `Ver0.8.0`, preserving `Release target: v0.8.0`, the full approved Ver0.8 entry,
+all published Ver0.7/Ver0.6/Ver0.5 history, and the superseded-future-plan notice.
+
+Release notes will replace the target/status top with `Release: v0.8.0`, with no
+status line or release date. The existing Verification State references to the
+release-candidate runtime and release-candidate verification results are approved
+historical provenance and remain unchanged. Only the transient Release State body will
+be replaced with the exact approved durable meaning:
+
+```text
+This document defines the approved release content for KeibaOS v0.8.0.
+The authoritative publication identity is the annotated v0.8.0 Git tag and the
+corresponding GitHub Release.
+
+The release remains a deterministic historical replay and verification platform.
+Its release identity does not imply profitability, calibrated predictive probability,
+or a demonstrated strategy edge.
+```
+
+Repository release dates remain omitted. Actual publication timing belongs to
+annotated-tag and GitHub Release metadata; no guessed/backdated date or post-tag date
+commit is approved.
+
+The later publication transaction remains frozen but unauthorized: require exact
+approved formal release commit/tree and CI, unchanged master
+`a136ab8d4d6aa48e37d3a62f5b8b79560dcc5b7a`, ancestry and zero-behind checks,
+absent `v0.8.0`, and no existing v0.8.0 Release; fast-forward master only; verify any
+triggered master CI; create annotated tag `v0.8.0` with message
+`KeibaOS Ver0.8.0`; verify the tag resolves to the exact approved release commit; then
+publish GitHub Release `KeibaOS v0.8.0` using the exact approved release-notes file as
+its body. No merge, squash, rebase, force push, or review-branch release is allowed.
+
+```text
+C4J2_ARCHITECTURE:
+APPROVED
+
+C4J2_IMPLEMENTATION:
+NOT_STARTED
+
+MASTER_INTEGRATION:
+NOT_AUTHORIZED
+
+TAG_CREATION:
+NOT_AUTHORIZED
+
+GITHUB_RELEASE_PUBLICATION:
+NOT_AUTHORIZED
+
+POST_VER0_8_WORK:
+NOT_AUTHORIZED
+```
+
+This approval activity changes only the two phase/audit documents. It does not edit
+README, ROADMAP, CHANGELOG, release notes, runtime, tests, schemas, migrations,
+workflows, examples, or design files. Nothing is staged, committed, pushed, merged,
+tagged, or published. Stop pending separate C4j2 execution authorization.
+
+### C4j2 durable release-state implementation
+
+The separately authorized C4j2 execution applied the exact approved documentation
+transition directly on formal base
+`5c633d7c81c09df1851baabd2bcc22e064a43042`. The phase status is now
+`READY_FOR_REVIEW`.
+
+Exactly four release-facing edits were made:
+
+1. README changed only its opening release-candidate phrase to
+   `KeibaOS Ver0.8 is a deterministic, auditable historical horse-racing replay platform.`
+2. ROADMAP removed only `Status: release candidate pending final integration.`
+3. CHANGELOG changed only `Ver0.8.0 (Unreleased)` to `Ver0.8.0`.
+4. Release notes changed their top to `Release: v0.8.0`, removed the candidate status,
+   and replaced only Release State with the exact approved durable text identifying
+   the approved content, annotated tag/GitHub Release publication identity, and
+   profitability/calibration/edge non-claim.
+
+Programmatic comparison against the exact formal-base blobs proved that README,
+ROADMAP, CHANGELOG, and release notes contain no other change. The complete Ver0.8
+CHANGELOG body, published Ver0.7/Ver0.6/Ver0.5 history, superseded-future-plan notice,
+release-note capability/limitation/migration/non-claim sections, and release-note
+Verification State are preserved exactly.
+
+The required transient-state search across the four release-facing documents returns
+exactly two remaining hit lines:
+
+```text
+docs/VER0.8_RELEASE_NOTES.md:74
+The release-candidate runtime passed the full test suite and GitHub Actions.
+
+docs/VER0.8_RELEASE_NOTES.md:77
+Exact test counts are release-candidate verification results, not a permanent
+semantic contract.
+```
+
+Both are the explicitly approved Verification State provenance. No transient public
+release-state wording remains in README, ROADMAP, CHANGELOG, release-note top metadata,
+or release-note Release State. Historical candidate/pending text in prior entries of
+this append-only report remains unchanged. C4j2 phase-document search quotations are
+current workflow/audit evidence, not public release state.
+
+Across the exact six changed files, the search has 43 remaining hit lines: two approved
+release-note provenance lines, 20 current-phase workflow/audit lines, and 21
+LATEST_CODEX_REPORT historical/audit lines. README, ROADMAP, and CHANGELOG have zero
+remaining hits.
+
+No repository release date was added. Annotated-tag and GitHub Release metadata remain
+the only planned publication-time sources. No production, test, fixture, schema,
+migration, workflow, example, architecture, package-version source, runtime, or AI
+behavior changed.
+
+Local verification passed:
+
+```text
+FULL_SUITE:
+3125 passed, 2506 subtests passed in 13.00s
+
+README_DURABLE_STATE:
+PASS
+
+ROADMAP_DURABLE_STATE:
+PASS
+
+CHANGELOG_DURABLE_STATE:
+PASS
+
+RELEASE_NOTES_DURABLE_STATE:
+PASS
+
+VERIFICATION_PROVENANCE_PRESERVED:
+PASS
+
+PUBLISHED_HISTORY_PRESERVED:
+PASS
+
+TRANSIENT_PUBLIC_RELEASE_STATE:
+NONE
+
+RELEASE_DATE_IN_REPOSITORY_DOCS:
+OMITTED
+```
+
+The final scope is exactly six documentation paths: README, ROADMAP, CHANGELOG,
+release notes, current phase, and this report. One review commit with message
+`docs: finalize Ver0.8 release state` will be pushed only to
+`review/4c-2d3b1i6d1d5f1c4j2-ver0.8-final-release-prepare`; its remote CI must pass
+before readiness is reported.
+
+Formal and master remain at their exact pre-execution commits. No `v0.8.0` tag or
+GitHub Release exists. Formal integration, master fast-forward, tagging, publication,
+release-date mutation, and post-Ver0.8 work remain unauthorized.

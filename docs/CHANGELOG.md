@@ -1,6 +1,6 @@
 # KeibaOS Changelog
 
-## Ver0.8.0 (Unreleased)
+## Ver0.8.0
 
 Release target: `v0.8.0`
 
