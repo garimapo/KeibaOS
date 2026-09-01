@@ -1,561 +1,632 @@
 # Current Phase
 
-Status: `READY_FOR_REVIEW`
+Status: `APPROVED_FOR_COMMIT`
 
 ## Identity and authority
 
-- Phase: `4C-2d3b1i6d1d5f1c4j2`
-- Name: `Ver0.8 Final Release-State and Publication Gate Preparation`
-- Base Commit: `5c633d7c81c09df1851baabd2bcc22e064a43042`
-- Branch: `review/4c-2d3b1i6d1d5f1c4j2-ver0.8-final-release-prepare`
-- Formal branch: `feature/ver0.8-simulator`
-- Previous phase: `4C-2d3b1i6d1d5f1c4j1`
-- Previous phase status: `FORMALLY_COMPLETE`
-- Version target: `0.8.0`
-- Tag target: `v0.8.0`
-- Release name: `KeibaOS v0.8.0`
+- Phase: `POST_V0_8_DAILY_REPLAY_1`
+- Name: `Post-Ver0.8 Daily Historical Replay Orchestration Design`
+- Base Commit: `c08bedb5421b44d63a8bac017699efffca2a4b73`
+- Branch: `feature/post-v0.8-daily-replay`
+- Release baseline: `v0.8.0`
+- Phase type: `DESIGN_ONLY`
+- Production implementation: `NOT_AUTHORIZED`
+- Test implementation: `NOT_AUTHORIZED`
+- Stage / commit / push: `AUTHORIZED_FOR_THIS_DESIGN_COMMIT_ONLY`
+- Release/tag/history mutation: `FORBIDDEN`
 
-The C4j2 architecture and exact finalization contract were independently approved and
-the six-file documentation implementation is complete pending independent review.
-This implementation authorizes no formal integration, master update, tag, GitHub
-Release, or post-Ver0.8 phase.
+This design is prepared in the fresh clone
+`C:\Users\garim\Desktop\KeibaOS-post-v0.8`. The old Ver0.8 working repository is
+outside this phase and must remain unchanged.
+
+ChatGPT independent design review approved this phase only after the corrections frozen
+below. `APPROVED_FOR_CODEX` approves the design document. It does not authorize any
+production code, test, migration, CLI, schema, database, archive, stage, commit, push,
+or subsequent phase.
+
+## Verified baseline
+
+Before branch creation the fresh clone passed every required gate:
 
 ```text
-IMPLEMENTATION_AUTHORIZATION:
-EXECUTED_REVIEW_PENDING
-
-MASTER_INTEGRATION_AUTHORIZATION:
-NO
-
-TAG_AUTHORIZATION:
-NO
-
-GITHUB_RELEASE_AUTHORIZATION:
-NO
-
-VER0_9_AUTHORIZATION:
-NO
+CURRENT_BRANCH: master
+HEAD: c08bedb5421b44d63a8bac017699efffca2a4b73
+ORIGIN_MASTER: c08bedb5421b44d63a8bac017699efffca2a4b73
+GIT_STATUS_SHORT: CLEAN
+GIT_DIFF_CHECK: PASS
+V0_8_0_TAG: PRESENT
 ```
 
-## Verified repository and release state
+The feature branch was created directly from that exact baseline.
 
-The PREPARE audit verified the following exact remote state on 2026-09-01:
+## Objective
+
+Design the boundaries required to replay one audited historical day without changing
+the Ver0.8 engine. An eventual daily flow must:
+
+1. receive an audited, complete target set for one exact date and closed provider scope;
+2. reconcile each canonical provider race to persisted internal identity;
+3. resolve one exact existing prediction snapshot and exact official settlement
+   evidence for every executable target;
+4. classify every target without silently removing denominator members;
+5. generate and freeze one real existing schema-v1 manifest artifact;
+6. load that artifact through the existing request loader; and
+7. delegate the complete executable projection once to
+   `run_sqlite_historical_replay`.
+
+This phase designs those responsibilities and their future decomposition. It implements
+none of them.
+
+## Mandatory principles
 
 ```text
-FORMAL_REMOTE_HEAD:
-5c633d7c81c09df1851baabd2bcc22e064a43042
-
-MASTER_REMOTE_HEAD:
-a136ab8d4d6aa48e37d3a62f5b8b79560dcc5b7a
-
-FORMAL_AHEAD_MASTER:
-159
-
-FORMAL_BEHIND_MASTER:
-0
-
-MASTER_IS_ANCESTOR_OF_FORMAL:
-PASS
-
-FORMAL_REMOTE_CI:
-PASS
-
-FORMAL_REMOTE_CI_RUN:
-33456151832
-
-FORMAL_REMOTE_CI_JOB:
-99696405437
-
-EXISTING_RELEASE_TAGS:
-v0.7.0_ONLY
-
-V0_7_0_TAG_TYPE:
-ANNOTATED
-
-V0_7_0_TAG_MESSAGE:
-KeibaOS Ver0.7.0
-
-V0_8_0_TAG_STATE:
-DOES_NOT_EXIST
-
-GITHUB_RELEASE_STATE:
-NONE
+NO_FUTURE_LEAKAGE
+NO_HINDSIGHT
+FAIL_CLOSED
+NO_SILENT_FALLBACK
+NO_HIDDEN_SKIP
+NO_CURRENT_CLOCK_CAUSALITY
+DETERMINISTIC_ORDERING
+EXACT_PROVIDER_AND_RACE_IDENTITY
+AUDITED_COMPLETE_TARGET_SET
+EXISTING_REPLAY_ENGINE_REUSE
+NO_DUPLICATE_PREDICTION_OR_SETTLEMENT_LOGIC
+NO_RAW_HTML_REPARSE_WHERE_A_FORMAL_DOMAIN_EXISTS
+NO_VER0_8_CONTRACT_CHANGE_FOR_CONVENIENCE
 ```
 
-The existing annotated `v0.7.0` tag resolves to current master
-`a136ab8d4d6aa48e37d3a62f5b8b79560dcc5b7a`. Any changed remote state requires
-fail-closed re-review; it must not be repaired by merge, rebase, or force push.
+`SimulationSummary.race_count` remains the formal Ver0.8 summary field. This design
+does not add `target_race_count` to `SimulationSummary` and does not change its
+meaning.
 
-## C4j2 purpose and durable-state rule
+## Existing replay boundary
 
-C4j1 formally integrated the runtime-complete and release-documentation-complete
-Ver0.8 release candidate. C4j2 freezes the smallest final documentation transition
-whose content is true both immediately before publication and after publication.
-
-The final tagged release commit must not require a post-tag documentation mutation.
-Transient claims about a review branch, pending master integration, a missing tag, a
-missing GitHub Release, or candidate status must not remain in the release-facing
-final state. Historical phase reports remain unchanged because they are audit records
-of the state that existed when they were written.
-
-## Exact finalization proposal
-
-### README
-
-Change only the opening description from release-candidate wording to:
+The implemented Ver0.8 flow is:
 
 ```text
-KeibaOS Ver0.8 is a deterministic, auditable historical horse-racing replay platform.
+run_historical_replay_request(request_path)
+  -> load_historical_replay_request_document(request_path)
+  -> run_sqlite_historical_replay(document)
+  -> execute_and_persist_historical_bet_plans(all canonical snapshots)
+  -> acquire_and_persist_official_settlement_facts(each canonical race)
+  -> execute_final_historical_settlement_simulation(all canonical snapshots)
+  -> SimulationSummary
 ```
 
-All capability, setup, CLI, auditability, payout/EV, test, limitation, and non-claim
-content remains unchanged. No release date or profitability claim is added.
+There is no `SQLiteHistoricalReplayApplication` class. The application boundary is
+`run_sqlite_historical_replay`. It already exact-loads all manifest snapshots,
+canonicalizes by `(scheduled_start_at, internal_race_id)`, performs one multi-race
+planning batch, derives required payout types from frozen plans, acquires official
+facts, and performs one final settlement pass.
+
+The future daily orchestrator must call `run_sqlite_historical_replay` exactly once
+for the complete executable projection. It must not call the prediction pipeline, bet
+generator, strategy, allocator, provider normalizers, or settlement engine directly.
+It must not run a per-race retry/replay loop.
+
+## Audited daily target-set boundary
+
+### Legacy races table is not completeness evidence
+
+The legacy `races` table is a population of races already persisted in one database.
+It contains no day-level evidence proving that all provider races for a requested date
+and scope were acquired.
+
+Therefore:
+
+- `races` may be used for persisted candidate lookup and internal race identity
+  reconciliation;
+- `races` must not be treated as the authoritative complete daily denominator;
+- absence of a row must not be interpreted as proof that a provider race did not exist;
+- a partial database population must not be presented as a complete daily target set;
+  and
+- daily ROI or total race count must not be reported as a full-day result unless target
+  completeness is independently proven.
+
+The existing `get_all_races()` and `get_race_id(Race)` helpers are also unsuitable
+as completeness APIs. They neither carry day-level provenance nor prove provider-wide
+coverage.
+
+### DailyHistoricalReplayTargetSet
+
+A new immutable, frozen/slotted domain value is necessary:
 
 ```text
-README_FINALIZATION:
-REMOVE_RELEASE_CANDIDATE_QUALIFIER_ONLY
+DailyHistoricalReplayTargetSet
 ```
 
-### ROADMAP
-
-Remove only the transient line:
+It must contain at least:
 
 ```text
-Status: release candidate pending final integration.
+target_date
+closed provider_scope
+canonical target_races, each with formal scheduled_start_at
+completeness provenance/evidence identity
+deterministic target order
 ```
 
-Keep the exact `Ver0.8 — Historical Replay / Simulation Platform` heading, completed
-capability list, superseded-planning explanation, and Post-Ver0.8 section. Do not
-invent a Ver0.9 contract or add a publication date.
+The value asserts that its canonical race tuple is the audited complete target
+population for the exact date and provider scope. Construction must validate exact
+provider/race identity, uniqueness, canonical ordering, and a non-empty formal
+completeness evidence identity. It must not infer completeness from local row count,
+race-number continuity, venue expectations, current provider pages, or the current
+clock.
+
+If no trustworthy complete target set is supplied or its completeness evidence cannot
+be validated, the whole daily operation fails closed with:
 
 ```text
-ROADMAP_FINALIZATION:
-REMOVE_TRANSIENT_STATUS_LINE_ONLY
+TARGET_DISCOVERY_INCOMPLETE
 ```
 
-### CHANGELOG
+No partial target tuple, schema-v1 manifest, runner call, `DailyHistoricalReplayResult`,
+daily ROI, or full-day total is produced in that state.
 
-Change only the heading:
+Actual provider historical daily race discovery, acquisition of completeness evidence,
+and construction/persistence of this target set belong to the separate future phase
+`Historical Daily Target Discovery / Completeness`. They are not designed in detail
+or implemented by this phase.
+
+### Full-day reporting qualification
+
+An audited complete target set proves the denominator only. If one or more targets are
+`MISSING_EVIDENCE`, `UNSUPPORTED`, or `INVALID`, any Ver0.8
+`SimulationSummary` covers only the executable projection. It must not be labeled a
+complete full-day ROI or complete full-day replay result.
+
+A result may be described as a successful full-day replay only when:
+
+1. the target set is audited complete;
+2. every canonical target is `EXECUTABLE`;
+3. the one multi-race runner invocation succeeds; and
+4. the returned summary covers that exact executable tuple.
+
+Reporting and cumulative metric semantics remain future phases.
+
+## Request document and real schema-v1 artifact
+
+`HistoricalReplayRequestDocument` schema v1 is the unchanged strict execution
+contract. It requires a non-empty race tuple, exact snapshot identities, exact internal
+race-ID cross-checks, explicit budgets, exact result/payout capture IDs, explicit
+settlement cutoffs, and a real `source_path`.
+
+The earlier in-memory-only construction proposal is rejected. A synthetic or
+non-existent `source_path` is forbidden.
+
+The formal future flow is:
 
 ```text
-## Ver0.8.0 (Unreleased)
+audited DailyHistoricalReplayTargetSet
+  -> identity/evidence resolution and complete outcome classification
+  -> executable projection
+  -> deterministic existing schema-v1 manifest artifact generation
+  -> freeze the real artifact before execution
+  -> load_historical_replay_request_document(real manifest path)
+  -> run_sqlite_historical_replay(exact loaded document)
 ```
 
-to:
+The generated artifact:
+
+- uses existing schema version integer `1` without adding or changing JSON keys;
+- is a real UTF-8 file retained for audit and exact rerun;
+- deterministically serializes the frozen inputs and executable order;
+- exists before the request loader is called;
+- is not mutated after freeze; and
+- yields a document whose `source_path` points to that exact existing file.
+
+The future manifest builder must not bypass
+`load_historical_replay_request_document`, and the orchestrator must pass the exact
+loaded document to `run_sqlite_historical_replay`.
+
+If the executable projection is empty, no manifest is generated, the loader is not
+called, and the runner is not called. The complete classified target outcome tuple is
+still retained in the successful zero-executable daily result.
+
+Manifest-builder path policy, immutable write/conflict semantics, and exact
+serialization tests belong to the separate future
+`Existing Schema-v1 Manifest Builder` phase. No new JSON schema is authorized.
+
+## HistoricalInputSnapshot resolution
+
+### Existing capability
+
+`HistoricalInputSnapshotSource.load_latest_snapshot` accepts exact dataset, race,
+provider identity, and caller cutoff. The SQLite repository also provides
+`load_snapshot_by_identity`, which reconstructs and validates the exact formal domain
+required by schema v1. Neither API owns audited daily target discovery.
+
+The formal snapshot domain already proves:
 
 ```text
-## Ver0.8.0
+captured_at <= prediction information_cutoff <= scheduled_start_at
 ```
 
-Preserve the complete approved Ver0.8 entry, complete published Ver0.7/Ver0.6/Ver0.5
-history, and superseded-future-plan notice exactly. Do not add a guessed or predated
-release date.
+and validates target entries plus provenance observation/availability causality.
+
+### Initial policy: LATEST_CAUSAL_IN_DATASET
+
+The initial daily snapshot-selection policy is explicitly named:
 
 ```text
-CHANGELOG_FINALIZATION:
-REMOVE_UNRELEASED_QUALIFIER_ONLY
-
-CHANGELOG_PUBLISHED_HISTORY_POLICY:
-PRESERVE_EXACTLY
-
-CHANGELOG_OBSOLETE_FUTURE_PLAN:
-REMAIN_SUPERSEDED
+LATEST_CAUSAL_IN_DATASET
 ```
 
-### Release notes
-
-Change the top identity from:
+Its explicit selection upper bound is the formal scheduled start retained by the
+audited target:
 
 ```text
-Release target: `v0.8.0`
-
-Status: `RELEASE_CANDIDATE_PENDING_FINAL_INTEGRATION`
+selection_upper_bound = audited_target.scheduled_start_at
 ```
 
-to exactly:
+Only candidates satisfying all of the following are eligible:
+
+- exact `dataset_id`;
+- exact provider identity;
+- exact canonical provider race identity;
+- exact reconciled internal race identity;
+- snapshot `target_race_date == DailyHistoricalReplayTargetSet.target_date`;
+- `captured_at <= selection_upper_bound`;
+- snapshot `information_cutoff <= selection_upper_bound`; and
+- all formal snapshot causal and schema invariants.
+
+Among eligible candidates, choose the unique greatest `captured_at`. An equal greatest
+capture instant is ambiguous and must not be broken by row ID, digest, insertion order,
+or implicit SQLite order.
+
+Current time, daily run `started_at`, settlement cutoff, database insertion time,
+archive observation/storage time, and any unbounded-latest query are forbidden as the
+snapshot selection upper bound.
+
+Metadata may identify the candidate natural identity, but after selection the resolver
+must call the existing repository's exact-identity loader. The returned exact
+`HistoricalInputSnapshot` domain value must be revalidated against target set,
+provider, dataset, race, date, and selected identity. Raw SQLite rows must never be used
+to reimplement or partially reconstruct the snapshot domain.
+
+The selected exact `HistoricalInputSnapshotIdentity` is frozen into the generated
+schema-v1 manifest.
+
+`LATEST_CAUSAL_IN_DATASET` means only the latest causal snapshot in the exact dataset
+which existed no later than the audited `scheduled_start_at`. It is not a fixed
+lead-time prediction policy. A future policy such as
+`scheduled_start_at - N minutes` requires a separate formal design phase, causal
+contract, and approval.
+
+The future Evidence Resolver phase must verify that this policy is compatible with the
+existing
+`load_latest_snapshot(..., information_cutoff=selection_upper_bound, ...)` contract,
+including its two inclusive cutoff predicates. It must not bypass that repository
+merely to reconstruct a snapshot from raw rows. If unique-greatest ambiguity detection
+cannot be reconciled with the existing repository contract, that phase must stop and
+return to ChatGPT review; it must not guess or change the repository contract.
+
+Missing eligible snapshot is target-scoped `MISSING_EVIDENCE` only when identity and
+repository integrity remain trustworthy. Schema corruption, invariant violations, or
+contradictions which cannot be attributed safely to one target are global integrity
+failures; they must not be downgraded casually to a race-level `INVALID`.
+
+## Official result and payout evidence resolution
+
+Both provider archives support exact `load_capture(capture_id)`. JRA additionally
+has a latest supplied-response lookup which neither returns a capture ID nor supplies
+the cross-provider boundary needed here. NAR has no comparable latest-by-race API.
+
+A future evidence resolver reads formal capture metadata only. For each exact target it:
+
+1. restricts provider and page kind to `JRA RACE_RESULT` or
+   `NAR RACE_MARK_TABLE`;
+2. restricts `observed_at <= explicit settlement_information_cutoff`;
+3. derives and validates exact race identity from the canonical URL domain;
+4. selects the greatest eligible `observed_at`;
+5. requires exactly one candidate at that instant; and
+6. exact-loads the selected capture through the existing repository and validates its
+   type, ID, provider, page kind, URL identity, and time.
+
+JRA reuses public `parse_jra_result_url_identity`. NAR reuses
+`canonicalize_nar_official_capture_url` and derives the already-formal
+`nar:YYYYMMDD:babaCode:raceNo` identity from the validated canonical query. Response
+bodies and raw HTML are not parsed during selection.
+
+If different captures share the greatest eligible observation instant, evidence is
+ambiguous. Capture ID, digest, row ID, stored time, or query order must not break the
+tie.
+
+The formal JRA/NAR result page may serve both result and payout normalizers. The same
+selected capture ID may therefore populate `result_capture_id` and every supported
+payout catalog key when the existing normalizers support that page. Schema v1 already
+permits capture-ID reuse. Only frozen plan bet types are consumed later by the existing
+runner.
+
+The daily layer never parses body content to predict purchased bet types, finality,
+completeness, or exceptional-state support. Existing provider normalizers remain the
+sole owners of those validations.
+
+## Settlement-information-cutoff responsibility
+
+The caller supplies one explicit timezone-aware
+`settlement_information_cutoff` for the daily operation. The evidence resolver uses
+it as the inclusive capture-selection bound, and the exact same instant is written to
+every executable schema-v1 race request.
+
+It must not be derived from current time, run start, target date, file time, database
+insertion time, archive storage time, an unbounded latest query, or the prediction
+cutoff. Prediction and settlement cutoffs remain separate responsibilities.
+
+## Budget contract
+
+The initial daily API accepts exactly one existing value:
 
 ```text
-Release: `v0.8.0`
+race_budget: BetStakeBudget
 ```
 
-Remove the transient candidate status. Keep the existing capability, limitation,
-verification, migration, and non-claim sections. The two uses of
-`release-candidate` in `Verification State` remain valid provenance: they describe
-which candidate runtime passed verification and explicitly state that raw counts are
-not a permanent semantic contract.
+The manifest builder projects that exact same immutable budget to every
+`EXECUTABLE` target, keyed by its reconciled internal race ID. Budget coverage must
+then satisfy the unchanged schema-v1 exact-coverage contract.
 
-Rewrite only `Release State` to this durable meaning:
+Per-race, confidence-based, venue-based, portfolio, bankroll, or other differentiated
+budget policy is not part of the initial daily orchestration and requires a separate
+future design phase.
+
+## Migration and schema responsibility
+
+The main database currently uses migrations v008-v015. Provider capture archives use
+their own JRA v001-v004 and NAR v001 histories. No daily-run or daily-result schema
+exists.
+
+Daily target discovery and evidence resolution must not run
+`apply_migrations`, archive migration runners, DDL, schema repair, or compatibility
+fallback. They are read-only consumers of the required existing formal schemas.
+
+`run_sqlite_historical_replay` remains the sole owner of main-database migration
+application within the existing replay execution path. The daily layer must not
+duplicate or preempt that responsibility.
+
+If discovery/resolution requires a table, column, index contract, or archive schema
+which is missing, unknown, or inconsistent, preparation fails globally and closed. It
+must not create or upgrade schema and must not turn schema absence into a target-level
+missing-evidence classification.
+
+This design phase adds no schema, migration, or index.
+
+## Complete outcome classification
+
+After an audited complete target set is validated, every canonical target receives
+exactly one preparation classification:
 
 ```text
-This document defines the approved release content for KeibaOS v0.8.0.
-The authoritative publication identity is the annotated v0.8.0 Git tag and the
-corresponding GitHub Release.
-
-The release remains a deterministic historical replay and verification platform.
-Its release identity does not imply profitability, calibrated predictive probability,
-or a demonstrated strategy edge.
+EXECUTABLE
+MISSING_EVIDENCE
+UNSUPPORTED
+INVALID
 ```
 
-The final text must not say that master integration is pending, that the tag or
-GitHub Release does not exist, that the release is a candidate, or that final
-integration is pending.
+Every non-executable outcome has a stable machine-readable reason code. The reason
+domain must distinguish at least missing internal identity reconciliation, missing
+snapshot, missing result capture, unsupported provider/page, ambiguous internal
+mapping, ambiguous latest snapshot/capture, and safely target-attributable malformed
+identity/evidence.
+
+Resolution annotates the complete canonical tuple; it never filters the target set in
+place. Only `EXECUTABLE` outcomes are projected into schema v1. The full outcome tuple
+remains in `DailyHistoricalReplayResult`, so the projection is not a hidden skip.
+
+`TARGET_DISCOVERY_INCOMPLETE` is not a target classification. It is a whole-operation
+failure before outcomes are accepted because there is no trustworthy denominator.
+Global schema/repository/archive integrity failures likewise remain whole-operation
+failures.
+
+## Necessary and reused models
+
+Reuse exact existing values:
 
 ```text
-RELEASE_NOTES_FINALIZATION:
-DURABLE_RELEASE_IDENTITY_AND_RELEASE_STATE
+date
+timezone-aware datetime
+Path
+SimulationRunContext
+StrategyIdentity
+BetStakeBudget
+HistoricalInputSnapshotIdentity
+HistoricalReplayRaceRequest
+HistoricalReplayRequestDocument
+SimulationSummary
 ```
 
-## Release date policy
+The necessary new immutable daily domain is:
 
 ```text
-RELEASE_DATE_IN_REPOSITORY_DOCS:
-OMITTED
+DailyHistoricalReplayTargetSet
+DailyHistoricalReplayTargetClassification
+DailyHistoricalReplayTargetOutcome
+DailyHistoricalReplayResult
 ```
 
-The annotated tag and GitHub Release metadata provide the actual publication time.
-Omitting a repository release date prevents guessing, backdating, and a post-tag docs
-commit.
+`DailyHistoricalReplayTargetSet` owns audited completeness and canonical target order.
+An outcome binds one canonical target to reconciliation/evidence status and exact
+resolved identities when executable. The result retains the exact target set, complete
+ordered outcomes, optional real manifest artifact identity/path, and optional exact
+`SimulationSummary`.
 
-## Transient release-state search audit
+Any denominator accessor is named `discovered_race_count` or
+`canonical_target_count` on the daily domain. It does not change or shadow
+`SimulationSummary.race_count`, and no `target_race_count` is added to that model.
 
-The exact formal-base search covered, case-insensitively:
+The initial future orchestrator inputs reuse existing values and include the audited
+target set, database/archive paths, manifest output identity/path, explicit run context,
+strategy identity, one `race_budget`, and settlement cutoff. No new input JSON schema
+is approved.
+
+## Formal future orchestration sequence
 
 ```text
-release-candidate
-release candidate
-pending final integration
-RELEASE_CANDIDATE_PENDING_FINAL_INTEGRATION
-Unreleased
-master integration is pending
-tag has not been created
-GitHub Release has not been published
+validate audited DailyHistoricalReplayTargetSet and completeness evidence
+  -> fail TARGET_DISCOVERY_INCOMPLETE if completeness is unproven
+  -> read-only reconcile provider race identities to persisted internal candidates
+  -> resolve LATEST_CAUSAL_IN_DATASET through metadata selection plus exact repository load
+  -> open only required provider archives read-only/query-only
+  -> resolve exact official captures by metadata, identity, and explicit settlement cutoff
+  -> freeze complete target outcome classification
+  -> if zero executable, return without manifest/loader/runner
+  -> project the same race_budget to every executable target
+  -> generate and freeze one real deterministic existing schema-v1 manifest artifact
+  -> load_historical_replay_request_document(real manifest path)
+  -> call run_sqlite_historical_replay(exact loaded document) exactly once
+  -> return complete outcomes and the exact returned SimulationSummary
 ```
 
-It returned 24 baseline hit lines. Their exact disposition is:
+Daily discovery/resolution performs no migration. The existing runner retains its own
+main migration behavior after the real manifest has been loaded.
 
-### A — needs correction
+## Runner failure semantics
 
-- `README.md:3` — remove the opening release-candidate qualifier.
-- `docs/ROADMAP.md:32` — remove the transient status line.
-- `docs/CHANGELOG.md:3` — remove `(Unreleased)` from the Ver0.8 heading.
-- `docs/VER0.8_RELEASE_NOTES.md:5` — remove the transient status line as part of the
-  top identity replacement.
-- `docs/VER0.8_RELEASE_NOTES.md:115-116` — replace the transient `Release State`
-  paragraph with the durable release identity contract.
-- Former C4j1 `docs/CURRENT_PHASE.md:99,130,139,274,278,358` — superseded live-phase
-  instructions; replaced by this C4j2 PREPARE document. These are not release-facing
-  implementation edits.
+A target classified `EXECUTABLE` during metadata preparation may still contain
+body-level unsupported, incomplete, exceptional, or malformed official evidence which
+only the formal provider normalizer can determine.
 
-### B — historical/audit record; preserve unchanged
+Once `run_sqlite_historical_replay` begins, any exception must:
 
-- `docs/LATEST_CODEX_REPORT.md:6263,6282,6342,6345,6392,6402,6427,6487,6498,6499`
-  — append-only C4j1 PREPARE, approval, implementation, and correction evidence.
+- propagate according to the existing runner/collaborator contract;
+- produce no partial `SimulationSummary`;
+- never be converted into a successful `DailyHistoricalReplayResult`;
+- trigger no retry;
+- trigger no target removal and reduced-manifest rerun; and
+- trigger no per-race replay fallback.
 
-### C — valid non-transient context; preserve unchanged
+The existing replay application's documented durable immutable prefix may remain after
+failure. The daily layer does not compensate, delete, or misreport it.
 
-- `docs/VER0.8_RELEASE_NOTES.md:76,79` — verification provenance describing the
-  candidate runtime that passed and clarifying that exact counts are not a permanent
-  semantic contract.
+A future persistence phase may record a state such as `BATCH_FAILED` together with
+the frozen target set, outcomes, manifest identity, and exception classification. This
+design phase implements no failure or result persistence.
 
-The audit found no additional release-facing path that requires a final-state edit.
-Any matching terms added to this document or the appended PREPARE report are audit
-quotations and therefore disposition B.
+## Future daily-result persistence boundary
 
-## Proposed C4j2 implementation scope
+Future persistence belongs to a separate immutable daily-run repository and migration.
+It may retain target-set evidence identity, canonical target order, every outcome,
+frozen manifest identity, and final summary or batch failure.
 
-Allowed Files are exactly:
+It must not alter `SimulationSummary`, overload result/payout/plan/snapshot tables,
+repair evidence, erase failed targets, or claim an atomic transaction spanning
+read-only provider archives. It must respect the replay runner's durable-prefix
+semantics.
+
+## Future candidate phases
+
+No production or test module is an execution target of
+`POST_V0_8_DAILY_REPLAY_1`. The following are conceptual future phases only:
+
+### A. Historical Daily Target Discovery / Completeness
+
+Design and implement provider historical day discovery, completeness evidence capture,
+canonical race identity, and immutable `DailyHistoricalReplayTargetSet` creation.
+
+### B. Evidence Resolver
+
+Design and implement read-only internal identity reconciliation,
+`LATEST_CAUSAL_IN_DATASET` snapshot resolution bounded by each audited target's
+formal `scheduled_start_at`, compatibility verification against the existing
+`load_latest_snapshot` contract, and metadata-only exact official capture resolution.
+Any unresolved repository-contract/unique-greatest conflict is a mandatory stop for
+ChatGPT review.
+
+### C. Existing Schema-v1 Manifest Builder
+
+Design and implement deterministic generation, freeze, audit identity, and exact reload
+of a real existing schema-v1 manifest artifact. No new schema.
+
+### D. Daily Replay Orchestrator
+
+Design and implement complete classification, zero-executable handling, one-budget
+projection, one manifest load, and exactly one multi-race existing runner invocation.
+
+### E. Daily Result Persistence
+
+Design immutable daily result/batch-failure persistence and migrations without changing
+Ver0.8 result, payout, plan, snapshot, or summary contracts.
+
+### F. Reporting / cumulative metrics
+
+Design explicit completeness-qualified daily and cumulative reporting. Never label an
+executable subset as a full-day result.
+
+### G. Strategy Comparison
+
+Design comparable strategy runs over identical audited target sets, evidence,
+cutoffs, budgets, and manifests.
+
+Each phase requires its own `PREPARE_PHASE`, ChatGPT independent review,
+`APPROVE_PHASE`, explicit execution authorization, tests, and stop condition. No
+future phase is automatically authorized or advanced by approval of this design.
+
+Candidate modules previously mentioned for daily orchestration and tests belong only to
+these future phases after their own approved file contracts. They are not Allowed Files
+or implementation targets now.
+
+## Preserved approved contracts
+
+The corrected design preserves:
+
+- no future leakage, hindsight, silent fallback, or hidden skip;
+- fail-closed behavior and no current-clock causality;
+- explicit settlement cutoff;
+- exact provider/race identity;
+- metadata-only capture selection followed by exact repository load;
+- unique greatest `observed_at` with no arbitrary tie-break;
+- reuse of one formal result-page capture ID for result/payout catalog where supported;
+- complete outcome classification after audited target-set validation;
+- zero-executable no-manifest/no-run behavior;
+- exactly one multi-race `run_sqlite_historical_replay` invocation;
+- no per-race retry/replay loop;
+- unchanged `SimulationSummary.race_count` and no `target_race_count`;
+- no direct prediction, bet, normalizer, or settlement reimplementation; and
+- no `v0.8.0` tag or release-history mutation.
+
+## Current phase Allowed Files
+
+Allowed Files for `POST_V0_8_DAILY_REPLAY_1` are exactly:
 
 ```text
-README.md
-docs/ROADMAP.md
-docs/CHANGELOG.md
-docs/VER0.8_RELEASE_NOTES.md
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-Every other path is forbidden. In particular, implementation must not modify:
+Every other path is Forbidden, including:
 
 ```text
 scripts/**
 tests/**
 tests/fixtures/**
 scripts/migrations/**
+scripts/cli/**
+examples/**
+database/**
+logs/**
 .github/**
-requirements.txt
-requirements-dev.txt
-AGENTS.md
-examples/historical_replay_request.v1.example.json
-docs/HISTORICAL_REPLAY.md
+README.md
 docs/ARCHITECTURE.md
-docs/VER0.8_DESIGN.md
+docs/HISTORICAL_REPLAY.md
 docs/VER0.8_SIMULATOR_DESIGN.md
+docs/VER0.8_RELEASE_NOTES.md
 ```
 
-No production, test, fixture, schema, migration, workflow, package-version source,
-manifest, architecture, runtime, or AI behavior is part of C4j2.
+Production code, tests, migrations, CLI, JSON schema, database, archive, release tag,
+release history, stage, commit, and push remain unauthorized.
 
-## Proposed implementation verification
-
-A later separately approved C4j2 implementation must:
-
-1. make only the four exact release-facing edits above;
-2. preserve the published CHANGELOG history byte-for-byte outside the Ver0.8 heading;
-3. repeat the transient-state search and classify any remaining match;
-4. run `python -m pytest -q`;
-5. run `git diff --check`;
-6. prove exactly the six allowed files differ from the formal implementation base;
-7. prove no production, test, fixture, schema, migration, workflow, manifest,
-   package-version source, or AI runtime change;
-8. stop for independent review without updating formal, master, tags, or Releases.
-
-The proposed implementation review branch is:
+## Required checks
 
 ```text
-review/4c-2d3b1i6d1d5f1c4j2-ver0.8-final-release-state
+git diff --check
+git diff --name-only
+git status --short
 ```
 
-The proposed review commit message is:
-
-```text
-docs: finalize Ver0.8 release state
-```
-
-These implementation details are architecturally approved but remain unexecuted until
-a later `EXECUTE_APPROVED_PHASE` instruction.
-
-## Future publication transaction — design only
-
-The publication transaction is not authorized by this PREPARE or by the future docs
-implementation. It requires a separate independent approval after the exact final
-release-state docs commit is formally integrated and verified.
-
-### Preconditions
-
-Freeze the following exact gates:
-
-```text
-FORMAL_RELEASE_COMMIT:
-EXACT_INDEPENDENTLY_APPROVED_COMMIT_REQUIRED
-
-FORMAL_RELEASE_TREE:
-EXACT_INDEPENDENTLY_APPROVED_TREE_REQUIRED
-
-MASTER_PRECONDITION:
-origin/master == a136ab8d4d6aa48e37d3a62f5b8b79560dcc5b7a
-
-ANCESTRY:
-MASTER_IS_ANCESTOR_OF_FORMAL_RELEASE_COMMIT
-
-FORMAL_BEHIND_MASTER:
-0
-
-FORMAL_REMOTE_CI:
-PASS_FOR_EXACT_FORMAL_RELEASE_COMMIT
-
-TAG_PRECONDITION:
-refs/tags/v0.8.0_DOES_NOT_EXIST
-
-GITHUB_RELEASE_PRECONDITION:
-NO_EXISTING_V0_8_0_RELEASE
-```
-
-If master has moved, formal is behind, CI is not green, the tag exists, or a v0.8.0
-release exists, stop for changed-state review. Do not merge, rebase, overwrite, or
-repair refs.
-
-### Master policy
-
-```text
-MASTER_INTEGRATION_METHOD:
-FAST_FORWARD_ONLY
-```
-
-Fast-forward master to the exact approved formal release commit with no merge commit,
-squash, rebase, or force push. Verify remote master equals that exact commit. If the
-master push triggers a new CI run, require it to complete successfully before tagging.
-
-### Tag policy
-
-```text
-TAG_TYPE:
-ANNOTATED
-
-TAG_NAME:
-v0.8.0
-
-TAG_MESSAGE:
-KeibaOS Ver0.8.0
-```
-
-Create the annotated tag only after remote master equals the exact approved release
-commit. The tag object must peel to that exact commit. Push only the tag, then
-independently verify its object type, message, and target.
-
-### GitHub Release policy
-
-```text
-CREATE_GITHUB_RELEASE:
-YES
-
-GITHUB_RELEASE_TITLE:
-KeibaOS v0.8.0
-
-GITHUB_RELEASE_TAG:
-v0.8.0
-
-GITHUB_RELEASE_BODY_SOURCE:
-EXACT_APPROVED_DOCS_VER0_8_RELEASE_NOTES
-```
-
-Create the GitHub Release only after the annotated tag is independently verified.
-Use exact approved `docs/VER0.8_RELEASE_NOTES.md` content as the body; do not derive
-claims from commit history or publish alternate draft text. Independently verify the
-published title, tag, body, target, and non-draft/non-prerelease state.
-
-## C4j2 implementation result
-
-The exact four release-facing transitions were applied. README now uses the approved
-durable platform description. ROADMAP has no transient Ver0.8 status line. CHANGELOG
-uses `Ver0.8.0` without a date and otherwise matches the approved baseline exactly.
-Release notes use `Release: v0.8.0`, preserve Verification State provenance, and use
-the exact durable Release State wording.
-
-The release-facing transient-state search now returns exactly two hits, both in
-`docs/VER0.8_RELEASE_NOTES.md` Verification State:
-
-```text
-docs/VER0.8_RELEASE_NOTES.md:74
-release-candidate runtime passed the full test suite and GitHub Actions
-
-docs/VER0.8_RELEASE_NOTES.md:77
-release-candidate verification results are not a permanent semantic contract
-```
-
-Both are approved provenance. README, ROADMAP, CHANGELOG, release-note top metadata,
-and release-note Release State contain no transient public release-state wording.
-
-```text
-PHASE:
-4C-2d3b1i6d1d5f1c4j2
-
-PHASE_NAME:
-Ver0.8 Final Release-State and Publication Gate Preparation
-
-FORMAL_BASE:
-5c633d7c81c09df1851baabd2bcc22e064a43042
-
-VERSION_TARGET:
-0.8.0
-
-TAG_TARGET:
-v0.8.0
-
-RELEASE_STATE_FINALIZED:
-YES
-
-README_DURABLE_STATE:
-PASS
-
-ROADMAP_DURABLE_STATE:
-PASS
-
-CHANGELOG_DURABLE_STATE:
-PASS
-
-RELEASE_NOTES_DURABLE_STATE:
-PASS
-
-VERIFICATION_PROVENANCE_PRESERVED:
-PASS
-
-PUBLISHED_HISTORY_PRESERVED:
-PASS
-
-TRANSIENT_PUBLIC_RELEASE_STATE:
-NONE
-
-REMAINING_TRANSIENT_SEARCH_HITS:
-43_HIT_LINES_TOTAL; 2_RELEASE_NOTES_PROVENANCE; 20_CURRENT_PHASE_AUDIT;
-21_LATEST_REPORT_HISTORY_AND_AUDIT
-
-RELEASE_DATE_IN_REPOSITORY_DOCS:
-OMITTED
-
-MASTER_INTEGRATION_METHOD:
-FAST_FORWARD_ONLY
-
-FULL_SUITE:
-3125 passed, 2506 subtests passed in 13.00s
-
-MASTER_CHANGED:
-NO
-
-TAG_CREATED:
-NO
-
-GITHUB_RELEASE_CREATED:
-NO
-
-PRODUCTION_CHANGED:
-NO
-
-TEST_CHANGED:
-NO
-
-SCHEMA_CHANGED:
-NO
-
-MIGRATION_CHANGED:
-NO
-
-WORKFLOW_CHANGED:
-NO
-
-AI_RUNTIME_CHANGED:
-NO
-
-PUBLICATION_AUTHORIZATION:
-NO
-```
-
-## Implementation and publication authorization
-
-```text
-C4J2_PHASE_STATUS:
-READY_FOR_REVIEW
-
-C4J2_ARCHITECTURE:
-APPROVED
-
-C4J2_IMPLEMENTATION:
-COMPLETE_PENDING_INDEPENDENT_REVIEW
-
-MASTER_INTEGRATION_AUTHORIZATION:
-NO
-
-TAG_AUTHORIZATION:
-NO
-
-GITHUB_RELEASE_AUTHORIZATION:
-NO
-
-PUBLICATION_AUTHORIZATION:
-NO
-
-POST_VER0_8_WORK:
-NOT_AUTHORIZED
-```
+No pytest is required because this phase is design-only and changes no production code
+or tests.
 
 ## Stop condition
 
-After exactly one six-file review commit, review-branch push, and successful remote
-CI, stop. Do not formally integrate C4j2, update master, create or push a tag, publish
-a Release, add a date, or begin post-Ver0.8 work.
-
-The only recommended next activity is:
-
-```text
-RECOMMENDED_NEXT_PHASE:
-INDEPENDENT_C4J2_FINAL_RELEASE_STATE_REVIEW
-```
+Stop at `APPROVED_FOR_CODEX` after applying only the independent design-review
+corrections to the two Allowed Files and running the required Git checks. Do not execute
+`EXECUTE_APPROVED_PHASE`, implement any future candidate phase, add tests, stage,
+commit, push, modify `v0.8.0`, or advance automatically.

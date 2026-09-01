@@ -6904,3 +6904,242 @@ before readiness is reported.
 Formal and master remain at their exact pre-execution commits. No `v0.8.0` tag or
 GitHub Release exists. Formal integration, master fast-forward, tagging, publication,
 release-date mutation, and post-Ver0.8 work remain unauthorized.
+
+## Phase POST_V0_8_DAILY_REPLAY_1 — Daily Historical Replay Orchestration PREPARE
+
+Status: `DRAFT_FOR_REVIEW`.
+
+The first Post-Ver0.8 design was prepared from the formal released baseline
+`c08bedb5421b44d63a8bac017699efffca2a4b73` in a separate fresh clone at
+`C:\Users\garim\Desktop\KeibaOS-post-v0.8`. Before branch creation, local
+`master`, `HEAD`, and `origin/master` all resolved to that exact commit;
+`git status --short` was clean; `git diff --check` passed; and the released
+`v0.8.0` tag was present. Only then was
+`feature/post-v0.8-daily-replay` created from the exact baseline. The old dirty
+Ver0.8 work repository was not switched, repaired, overwritten, or otherwise changed.
+
+The investigation covered all requested boundaries:
+
+1. The exact historical replay entry points are the thin request-path wrapper and
+   `run_sqlite_historical_replay`; there is no application class.
+2. Schema-v1 is an immutable non-empty execution manifest. The daily layer should
+   construct its existing document type in memory and call the SQLite runner directly,
+   leaving request-file loading and schema v1 unchanged.
+3. The snapshot repository supports latest-by-explicit-cutoff and exact natural-identity
+   lookup, but no date/provider listing.
+4. The legacy `races` table is the only denominator source that does not erase races
+   lacking snapshots. Existing hard-coded legacy helpers are not an adequate
+   connection-injected daily source.
+5. JRA/NAR archives support exact capture-ID loads. JRA's extra latest-result API
+   returns supplied parser input and requires a canonical URL; NAR has no comparable
+   latest lookup.
+6. No cross-provider exact capture-ID resolver exists. The design resolves using
+   metadata-only provider/page/race identity plus an explicit inclusive cutoff, selects
+   the unique greatest observation time, and rejects ambiguity without an arbitrary
+   tie-break.
+7. Settlement cutoff is an explicit daily caller value copied unchanged to each
+   executable race. It is never derived from the current clock, run start, prediction
+   cutoff, storage time, or unbounded latest evidence.
+8. Main v008-v015 and separate JRA v001-v004/NAR v001 archive schemas were inspected.
+   No daily run/outcome persistence schema exists and no migration is proposed here.
+9. Future daily-result persistence is assigned to a separate immutable daily-run
+   repository/migration, not `SimulationSummary`, snapshots, plans, results, or
+   payouts.
+10. The full target denominator is frozen before evidence resolution. Every logical
+    race receives `EXECUTABLE`, `MISSING_EVIDENCE`, `UNSUPPORTED`, or `INVALID`
+    plus a stable reason where non-executable; only the executable projection enters
+    schema v1.
+
+The existing `run_sqlite_historical_replay` already executes a multi-race canonical
+batch through real prediction, strategy, allocation, official normalization, persisted
+facts, final settlement, and `SimulationSummary`. The proposed daily application
+delegates to it exactly once. It must not run one replay per race, call prediction/bet
+generation/normalization/settlement directly, reparse raw official HTML, acquire live
+data, retry with another provider, or manufacture missing evidence.
+
+The only justified new public domain is the daily denominator/result boundary:
+`DailyHistoricalReplayTargetClassification`,
+`DailyHistoricalReplayTargetOutcome`, and `DailyHistoricalReplayResult`. Existing
+run, strategy, budget, snapshot identity, request race/document, capture, and summary
+models are reused. New daily values are necessary because schema v1 cannot contain a
+non-executable race. The daily result uses `discovered_race_count`; formal
+`SimulationSummary.race_count` remains unchanged and no `target_race_count` is
+added.
+
+Target discovery uses exact date and closed JRA/NAR provider scope against the legacy
+race population. Duplicate logical identity is invalid rather than resolved by row ID.
+Snapshot selection is confined to the explicit dataset and exact provider race mapping,
+uses only formally causal snapshots, and chooses a unique greatest capture instant.
+Settlement capture selection uses formal URL/capture metadata only and a unique greatest
+`observed_at` at or before the explicit settlement cutoff. The one formal result page
+capture ID may populate result and every supported payout catalog key; the existing
+runner later selects only frozen-plan bet types and the existing provider normalizers
+remain authoritative for body finality, completeness, exceptional states, and payouts.
+
+If no target is executable, the daily result still contains the full classified
+denominator, but no invalid empty schema-v1 document is built and the Ver0.8 runner is
+not called. Safely target-scoped evidence failures are classified; global schema,
+archive-open, operational, or denominator-integrity failures remain whole-application
+failures. Existing replay collaborator exceptions propagate unchanged.
+
+The proposed later implementation is limited to two new production modules, two new
+dedicated tests, and the two phase documents. Existing Ver0.8 request, replay,
+normalizer, model, migration, prediction, database-helper, and fixture files remain
+forbidden. No CLI, JSON schema, migration, daily persistence, network capture, tag, or
+release-history mutation is part of the proposal.
+
+This PREPARE activity changed only `docs/CURRENT_PHASE.md` and this append-only report.
+No production code, tests, fixtures, schemas, migrations, databases, archives, tag,
+release history, stage, commit, or push changed. Pytest was not run because the
+authorized activity is design-only. Stop for design review; do not approve or execute
+the phase automatically.
+
+## POST_V0_8_DAILY_REPLAY_1 Independent Design Review Corrections
+
+Status: `APPROVED_FOR_CODEX` as a `DESIGN_ONLY` phase.
+
+ChatGPT independent review approved the design only after eight corrective groups were
+applied. Production code, tests, migrations, CLI, schemas, databases, archives, stage,
+commit, push, and `EXECUTE_APPROVED_PHASE` remain unauthorized.
+
+First, the design no longer treats the legacy `races` table as an authoritative
+complete day denominator. That table may reconcile persisted candidates and internal
+race IDs, but absence cannot prove that a provider race did not exist. The approved
+boundary introduces immutable `DailyHistoricalReplayTargetSet`, containing exact
+target date, closed provider scope, canonical race tuple, deterministic order, and
+auditable completeness provenance/evidence identity. Unproven completeness is the
+whole-operation fail-closed state `TARGET_DISCOVERY_INCOMPLETE`; no partial set,
+manifest, runner call, daily result, daily ROI, or full-day total is produced.
+Provider historical day discovery and completeness acquisition are deferred to a
+separate future phase.
+
+Second, daily discovery and evidence resolution no longer apply migrations. They are
+read-only consumers which fail globally when required formal schema is absent or
+inconsistent. Existing `run_sqlite_historical_replay` remains the sole owner of main
+database migration application in the replay execution path. No archive migration,
+DDL, repair, or compatibility fallback is duplicated.
+
+Third, the in-memory-only document proposal was withdrawn. The approved flow generates
+and freezes a real deterministic UTF-8 artifact using unchanged historical replay
+schema version 1, then calls `load_historical_replay_request_document` with that real
+path and passes the exact loaded document once to `run_sqlite_historical_replay`.
+`HistoricalReplayRequestDocument.source_path` therefore identifies an existing
+auditable rerun artifact, never a synthetic path. Zero executable targets still produce
+no manifest, loader call, or runner call. Manifest-builder design and implementation
+are deferred to their own future phase; no new JSON schema is approved.
+
+Fourth, snapshot policy is now explicitly `LATEST_CAUSAL_IN_DATASET`. Eligibility
+requires exact dataset, provider, provider race, reconciled internal race, requested
+target date, and formal causal/schema invariants. The unique greatest `captured_at`
+is selected, then the existing exact-identity repository loader must reconstruct and
+validate the formal `HistoricalInputSnapshot`. Raw rows must not reimplement snapshot
+domain construction. The exact selected `HistoricalInputSnapshotIdentity` is frozen
+into schema v1. This is not a fixed lead-time policy; race-start-minus-N policy is
+future work. Non-attributable corruption remains a global integrity failure rather
+than an automatic race-level `INVALID`.
+
+Fifth, the initial API accepts one `race_budget: BetStakeBudget`, projected unchanged
+to every `EXECUTABLE` target. Per-race, confidence, venue, portfolio, and bankroll
+policies are deferred.
+
+Sixth, runner failure semantics are explicit. Metadata-prepared executable targets may
+still fail formal body-level normalization or settlement. Once the one multi-race
+runner call begins, exceptions propagate unchanged; no partial `SimulationSummary`,
+successful daily result conversion, retry, target removal, reduced-manifest rerun, or
+per-race fallback is permitted. A future persistence phase may record
+`BATCH_FAILED`, but this phase implements no result/failure persistence.
+
+Seventh, `POST_V0_8_DAILY_REPLAY_1` remains design-only through completion. Its exact
+Allowed Files are only `docs/CURRENT_PHASE.md` and this report. All candidate
+production/test modules are future-phase concepts, ordered as:
+
+```text
+A. Historical Daily Target Discovery / Completeness
+B. Evidence Resolver
+C. Existing Schema-v1 Manifest Builder
+D. Daily Replay Orchestrator
+E. Daily Result Persistence
+F. Reporting / cumulative metrics
+G. Strategy Comparison
+```
+
+Each requires a separate PREPARE, ChatGPT review, approval, execution authorization,
+tests, and stop condition.
+
+Finally, the approved corrections preserve all causal and reuse constraints: no future
+leakage, hindsight, silent fallback, hidden skip, current-clock causality, arbitrary
+capture tie-break, per-race retry, or duplicated prediction/bet/normalizer/settlement
+logic; explicit settlement cutoff; exact provider/race identity; metadata-only capture
+selection followed by exact repository load; same formal result-page capture reuse for
+result/payout where supported; complete outcome classifications after target-set
+validation; zero-executable no-run behavior; exactly one multi-race runner invocation;
+unchanged `SimulationSummary.race_count`; no `target_race_count`; and no
+`v0.8.0` tag/history mutation.
+
+No future phase was started. Stop with the corrected design approved and production
+implementation still unauthorized.
+
+## POST_V0_8_DAILY_REPLAY_1 Final Snapshot Upper-Bound Correction
+
+Status remains `APPROVED_FOR_CODEX` and the phase remains `DESIGN_ONLY`.
+
+The final independent review added one bounded-selection clarification only.
+`LATEST_CAUSAL_IN_DATASET` now uses the exact audited target race
+`scheduled_start_at` as its explicit upper bound:
+
+```text
+selection_upper_bound = audited_target.scheduled_start_at
+```
+
+Eligible snapshots must match the exact dataset, provider, provider race, reconciled
+internal race, and target date; satisfy both
+`captured_at <= selection_upper_bound` and
+`snapshot.information_cutoff <= selection_upper_bound`; and satisfy every formal
+snapshot causal/schema invariant. Current time, daily run start, settlement cutoff,
+database insertion time, archive time, and unbounded latest selection are forbidden
+upper bounds.
+
+The policy means only the latest causal snapshot in the same dataset which existed no
+later than the audited scheduled start. It is not a fixed lead-time policy. A future
+`scheduled_start_at - N minutes` policy requires a separate formal design phase.
+
+The future Evidence Resolver phase must verify compatibility with the existing
+`load_latest_snapshot(..., information_cutoff=selection_upper_bound, ...)` contract,
+then use exact-identity repository loading for formal snapshot reconstruction. Raw-row
+snapshot reconstruction intended to bypass the repository remains forbidden. If
+unique-greatest ambiguity detection and the existing repository contract cannot be
+reconciled, that future phase must stop for ChatGPT review rather than guessing or
+changing the repository contract.
+
+No other approved design changed. Production code, tests, migrations, CLI, schemas,
+databases, archives, stage, commit, push, `EXECUTE_APPROVED_PHASE`, and subsequent
+phases remain unauthorized.
+
+## POST_V0_8_DAILY_REPLAY_1 Final Independent Review Approval
+
+Status: `APPROVED_FOR_COMMIT` as a `DESIGN_ONLY` phase.
+
+ChatGPT completed the final independent design review with verdict
+`APPROVED_FOR_COMMIT`. The approved Phase 1 design formally includes:
+
+- an audited immutable `DailyHistoricalReplayTargetSet`;
+- whole-application fail-closed `TARGET_DISCOVERY_INCOMPLETE` when the complete
+  denominator cannot be proven;
+- the rule that the legacy `races` table alone cannot prove full-day completeness;
+- a real, frozen, deterministic artifact using the unchanged existing schema v1;
+- `LATEST_CAUSAL_IN_DATASET` snapshot selection;
+- `selection_upper_bound = audited_target.scheduled_start_at`;
+- no current-clock snapshot causality;
+- exact selected `HistoricalInputSnapshotIdentity` freeze in the manifest;
+- explicit `settlement_information_cutoff` responsibility;
+- one `race_budget: BetStakeBudget` projected unchanged to all executable targets;
+- exactly one multi-race `run_sqlite_historical_replay` invocation;
+- no per-race retry, target removal, or reduced-manifest rerun;
+- unchanged `SimulationSummary.race_count` and no `target_race_count`; and
+- future phases A through G remaining separately gated by their own PREPARE,
+  ChatGPT review, approval, and execution authorization.
+
+This approval authorizes only the exact Phase 1 design-document commit and normal
+push requested by the user. Production code, tests, migrations, CLI, schemas,
+databases, archives, `EXECUTE_APPROVED_PHASE`, and implementation remain
+unauthorized. No `v0.8.0` tag or release history mutation is authorized.
