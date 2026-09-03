@@ -4,341 +4,281 @@ Status: `APPROVED_FOR_COMMIT`
 
 ## Identity and authority
 
-- Phase: `POST_V0_8_DAILY_REPLAY_8`
-- Name: `JRA Daily Target Source Contract Qualification`
+- Phase: `POST_V0_8_DAILY_REPLAY_9`
+- Name: `JRA Daily Target Source Gap Resolution`
 - Phase type: `RESEARCH_AND_DESIGN_ONLY`
-- Base Commit: `57c78dc486e715535ea1f30e7c31db0f77597969`
+- Base Commit: `58750303a5fca21c2e2fcea7dd13b74b1aa76b93`
 - Branch: `feature/post-v0.8-daily-replay`
 - Outcome: `BLOCKED`
 - Implementation contract: `NOT_FROZEN`
 - Production/test/fixture implementation or materialization: `NOT_AUTHORIZED`
 - Stage/commit/push and `EXECUTE_APPROVED_PHASE`: `NOT_AUTHORIZED`
 
-Authority is AGENTS.md and the approved Phase 7 design at the Base Commit, with
-its Phase 2-6 dependencies unchanged. Phase 7 was committed and pushed normally;
-local HEAD and fetched remote HEAD both equal the Base Commit. This document records
-only Phase 8 qualification findings and unresolved gates, not replacement contracts.
+Phase 8's approved `BLOCKED` result, Phase 2-7 contracts and AGENTS.md remain
+authoritative. This phase investigates only Phase 8's four identified gaps. It neither
+broadens the JRA supported profile nor changes NAR or the shared daily-target domain.
 
-## Objective, boundary, and outcome
+## Purpose and stop result
 
-Qualify only the eight Phase 7 implementation blockers against exact official source
-responses. Research used public JRA responses and repository inspection; no production,
-test, fixture, dependency, schema, database, archive, NAR, or shared-domain file changed.
-Research response bytes and PDF render/text diagnostics remain outside the repository.
+The intended outcome is only `IMPLEMENTATION_CONTRACT_FROZEN` or `BLOCKED`.
+Research resolves substantially more of the accessS actual-history side, but does not
+resolve deterministic PDF extraction/layout. It also exposes an approved-Phase-7
+capture-kind/authority gap for accessS root-to-month navigation. Therefore this PREPARE
+stops as `BLOCKED`. No implementation contract is inferred from a partial result.
 
-The source families are usable research candidates, but an implementation-safe composite
-contract is NOT frozen. Strict PDF decoding/layout remains unqualified, and the supplied
-accessS search/month navigation reveals an explicit Phase 7 capture-contract gap.
-The phase stops for ChatGPT review rather than modifying that approved contract.
-
-| Qualification target | Finding at this stop | Freeze state |
+| Priority | Result | State |
 | --- | --- | --- |
-| Year-program HTML/source/link | Exact year, panel, label and supplied href structure identified in 2020/2024 bytes | Candidate lexical structure documented; not a universal grammar |
-| OFFICIAL_YEAR_PROGRAM_SCHEDULE_VERSION | Unique ordinary label in 2024; explicit April 6 revised label in 2020 | Approved unique-label rule unchanged; concrete spellings recorded |
-| Nittei PDF | Calendar visually legible; deterministic text identity/font mapping and cell grammar unresolved | BLOCKED |
-| Bangumi PDF | Explicit year/meeting/day/race columns visible; strict all-cell, annotation and multi-page grammar incomplete | BLOCKED |
-| accessS month selection | Official select values plus source-owned JavaScript expression/tail table, not a literal historical-month CNAME link | Review required; not frozen |
-| accessS meeting/race selection | Exact dated meeting links and complete table structure identified in four meeting responses | Candidate all-row grammar documented |
-| Exact displayed start | Unique result-header selector and Japanese time lexeme identified for four 1R pages | Narrow selector/meaning documented; not a complete-day fixture contract |
-| Official-byte fixtures/provenance | 21 research responses hashed; 19 partial candidates and 2 off-target controls | No complete acceptance/failure fixture set frozen; repository fixtures 0 |
+| 1. nittei/bangumi PDF text extraction/layout | Available deterministic libraries fail to produce identity-safe text; no approved font/CMap/layout contract | BLOCKED |
+| 2. accessS root/month capture/request | Exact parent relation observed, but root/search response is not in Phase 7's closed daily page-kind set and month selection is a supplied expression, not literal href | REVIEW GATE |
+| 3. accessS meeting/race selection | Full all-row evidence validated for four ordinary meetings | Candidate grammar recorded; dependent on priority 2 |
+| 4. scheduled-start selector | Full all-row result set validates one strict selector and header/date/identity relationship | Candidate grammar recorded; dependent on composite |
+| 5. official-byte candidate set | 65 unique proposed paths / 69 capture records, including 48 full ordinary result pages | Not materialized; planned/PDF and fail-closed fixture gates remain |
 
-No `IMPLEMENTATION_CONTRACT_FROZEN` outcome is claimed. There is no support expansion
-for zero, cancellation, substitute, or partial dates.
+Research responses are parser research material only, not formal historical replay
+evidence. Honest research timestamps are never backdated and never become a bundle
+`observed_at`, provider availability, scheduled start, prediction, snapshot, or
+settlement causal field.
 
-## Official sources and representative scope
+## PDF extraction and layout result
 
-Primary pages inspected were [2024 year program](https://www.jra.go.jp/keiba/program/2024/)
-and [2020 year program](https://www.jra.go.jp/keiba/program/2020/). Their own links supplied
-the nittei and first Nakayama/Kyoto bangumi PDFs, and the official accessS search entry.
-No PDF path or race identity was derived from its filename.
+Exact supplied 2020/2024 nittei and first Nakayama/Kyoto bangumi PDF bytes from Phase 8
+were retained outside the repository and rendered visually without OCR. The PDFs visibly
+contain the expected calendar and program tables, but visual appearance cannot supply a
+normalization grammar.
 
-Ordinary-date research sampled 2024-01-06 and 2020-01-05, each with exact first-day
-Nakayama and Kyoto meeting responses and their supplied first-race result links.
-The month responses and PDFs were inspected, but only 1R result pages were acquired
-for these four meetings. This is NOT a complete ordinary-day acceptance fixture bundle.
+The bundled runtime was tested with pypdf 6.10.0 and pdfplumber 0.11.9. Pypdf's nittei
+output contains mojibake in identity-bearing Japanese text. Pdfplumber output renders
+many relevant values as `(cid:...)`. The nittei font resources lack usable ToUnicode
+maps for those CIDs; the observed PDFs contain Adobe Identity/Adobe Japan1 font
+families. The installed Poppler bundle supplies `pdfinfo` and rendering, not
+`pdftotext`. No deterministic mapping from all such CIDs to identity characters was
+established. Bangumi text is likewise not consistently usable for strict cell semantics.
 
-Two additional response bytes are for Kokura 2024-01-28, not 2024-01-06. A research
-substring-date filter initially admitted the meeting because its meeting-day fields
-contained similar digits. Exact anchored date-field validation identified the error.
-Those bytes are retained only as off-target negative controls, with their real
-request/date identities in the inventory; they never contribute to the candidate
-2024-01-06 set. The temporary source filenames retain the original misleading date;
-proposed fixture names reflect their true request date. Filenames never confer identity.
+The following cannot be approved from the sampled bytes:
 
-The exact official request and parent-navigation records are listed below. Search
-snippets, third-party pages, PDF totals, and visually contiguous numbers are not evidence
-of completeness.
+- versioned nittei calendar coordinate/cell grammar that binds target date to exact
+  planned meeting identities;
+- a bangumi all-page/all-cell grammar that binds each day column to every planned race
+  tuple without race-count, filename, or row-order inference;
+- a parser/library version plus required embedded/external CMap/font resource contract;
+- treatment of any alternate/revised/split-meeting PDF layout.
 
-## Year-program HTML and schedule-version candidate grammar
+Future work must first select a deterministic extraction mechanism and freeze its
+version, resource inputs, byte handling, structural selectors, expected page roles and
+fail-closed ambiguity rules against reviewed bytes. OCR, manual glyph replacement,
+filename identity, global digit matching, printed totals, and table/race continuity
+remain forbidden. This is a contract gap, not permission to add a library or parser.
 
-Both acquired HTML pages decode strictly as CP932. A future grammar must validate
-charset/source agreement; replacement decoding and guessed alternate encodings are
-not allowed. HTTP supplied `text/html`, without a charset parameter.
+## accessS root-to-month candidate relation
 
-Observed selectors and lexical contexts:
-
-- `#contentsBody > div.about_program`: unique year heading under
-  `div.contents_header > h2`, e.g. `2024年度　競馬番組について`.
-- `#main_program`: unique `h3.sub_header` with `開催日割・競馬番組等`;
-  its `div.content > ul.link_list.multi.div2.center > li > a[href]` contains
-  `span.inner > span.txt`. The child PDF-size `span.opt` is separate from
-  the formal label.
-- Exact schedule-label core: `開催日割表` (2024), or
-  `開催日割表（2020年4月6日変更版）` (2020). The observed revised label
-  uniquely identifies the supplied schedule version; acquisition time, HTTP
-  Last-Modified, filename, and link position do not choose an operative version.
-- `#seasons_program > div.panel > h3.sub_header` supplies season context;
-  its link-list anchor text supplies meeting context such as `1回中山` or
-  `1回京都`. The raw href is the locator authority.
-- Other actual labels split a meeting by explicit day ranges. A parser cannot assume
-  one season link or one PDF covers a whole meeting without reading that context.
-
-The existing unique formal label/version rule is preserved. No arbitrary revision
-ordering or fallback label is introduced. Full strict validation of duplicate sections,
-unknown link variants and split-meeting coverage is not implemented or globally frozen.
-
-## PDF findings and unresolved lexical/layout grammar
-
-Research downloaded six exact PDFs, rendered them without OCR, and examined extracted
-text/character geometry. The 2024 nittei and Nakayama/Kyoto bangumi first pages and the
-2020 nittei were visually inspected alongside text diagnostics. Visual reading establishes
-research observations, not a machine-normalization contract.
-
-Nittei specifics:
-
-- 2020 is one 595 x 842 point page; 2024 is one approximately 668.97 x 915.6 point
-  page. Both have a month/day calendar grid, abbreviated venues, meeting numbers,
-  and annotations. Blank cells and printed totals cannot prove a supported zero day.
-- The inspected embedded CID fonts lack ToUnicode mappings. Text extraction with
-  available pdfplumber/pdfminer, pypdf, and PDFium leaves CID tokens or incorrect
-  characters in relevant content. `(cid:16093)` is one observed unresolved token.
-- Font resources include Adobe Identity and Adobe Japan1 families; a deterministic,
-  reviewed mapping/resource contract for every identity-bearing glyph is missing.
-  This is not a claim that decoding is impossible. It is a concrete absence of a
-  verified decoding contract in this phase.
-- Cross-year calendar geometry, annotation ownership, and exact meeting/day
-  association are not frozen. The page cannot be normalized by recognizing its
-  filename or by reconstructing meeting-day sequence from dates.
-
-Bangumi specifics:
-
-- The sampled PDFs each have two pages: a race-program table and conditions/notes.
-  The first-page heading explicitly binds year, meeting number and venue; day columns
-  explicitly bind meeting-day labels and calendar dates.
-- Race-number cells are interleaved with race-condition cells, not sorted race order.
-  In the 2024 Nakayama first-day column the displayed race-number sequence is
-  3, 4, 1, 2, 5, 7, 10, 6, 8, 12, 9, 11. Printed totals cannot replace reading these cells.
-- The candidate parser must distinguish the actual race-number columns from money,
-  distances, category counts, annotations and footers, and positively account for
-  every page and relevant cell. A global digit regex or automatic table extraction
-  without structural validation is insufficient.
-- A versioned geometry/text grammar across the acquired layouts, including note-page
-  recognition and split-day PDF coverage, has not been frozen.
-
-Research tools included pdfplumber 0.11.9, pypdf 6.10.0 and PDFium rendering from the
-bundled workspace runtime. Repository dependency requirements do not currently provide
-a reviewed PDF extraction stack. No dependency was installed or changed for production.
-A future review must select/pin the parser, font resources and layout-version rules
-before implementation. OCR and manual glyph guesses are not alternatives.
-
-## accessS source observations and contract review gate
-
-The year page supplies the exact root action:
+Exact official byte observations establish this parent chain:
 
 ```text
-doAction('/JRADB/accessS.html', 'pw01skl00999999/B3');return false
+year-program HTML supplied onclick
+  -> POST /JRADB/accessS.html, form cname=pw01skl00999999/B3
+  -> CP932 search/root response
+     -> selected #kaisaiY_list/#kaisaiM_list values
+     + literal setParameter source expression
+     + exact objParam year-month tail
+  -> POST /JRADB/accessS.html, form cname=<source-owned derived selection>
+  -> CP932 month response
+     -> exact parent-day meeting onclicks
+  -> POST /JRADB/accessS.html, form cname=<exact supplied meeting token>
+  -> meeting response
+     -> exact direct-row result hrefs
+  -> GET exact supplied accessS result href
 ```
 
-The actual form submission uses POST to
-`https://www.jra.go.jp/JRADB/accessS.html` with the lower-case field `cname`.
-The response contains `select#kaisaiY_list`, `select#kaisaiM_list`,
-a `setParameter` function, and an exact `objParam` tail table.
+The observed 2024-01 and 2020-01 values are
+`pw01skl10202401/B3` and `pw01skl10202001/83`. They were read from each captured
+search response's `setParameter` and `objParam` source; they were not generated from
+a date by an application rule. The source's `yearMonth` branch discriminator is
+navigation material only and has no historical/causal meaning.
 
-For historical month selection, the supplied source expression combines the selected
-year/month with its literal prefix and its own table tail. The two observed selections
-were `pw01skl10202401/B3` and `pw01skl10202001/83`; the tail values were read
-from the response, never predicted. The source also contains a `yearMonth` branch
-discriminator. That value is navigation metadata, not historical availability,
-prediction time, or snapshot causality. Research followed the source expression without
-executing arbitrary JavaScript; this does NOT authorize a production date-to-CNAME builder.
+This resolves the factual relation but not the contract conflict. Phase 7 requires
+captured root/search evidence while its approved exact page-kind list has no root/search
+kind. Further, a raw supplied selection expression has different authority semantics
+from a raw literal href/CNAME. Phase 9 cannot silently (a) add a page kind, (b) call the
+response an `accesss_month` capture, (c) hard-code a prefix/tail formula, or
+(d) allow a current date/time to select a branch. ChatGPT must approve a precise
+capture-kind and source-owned-expression boundary before a later implementation phase.
 
-There are two linked review questions:
+If that review admits this chain, it must define exact raw request fields, parent
+capture/reference identity, source lexical representation, selection inputs, branch
+and table lookup uniqueness, CP932 validation, and canonical-byte fields. It must still
+reject missing/duplicate/changed script/table/selectors and never synthesize an opaque
+tail/CNAME. No SQLite/archive/migration/API is proposed or changed here.
 
-1. Phase 7 explicitly requires captured accessS root/search evidence but its exact
-   closed page-kind list omits a root/search kind. This phase does not silently add a
-   kind, relabel that response as a month, or widen an existing capture repository.
-2. The historical month is not supplied as one literal full CNAME link in the search
-   response. Admitting a strict source-owned expression requires an explicitly reviewed
-   authority/provenance contract consistent with Phase 7's no-manufactured-CNAME rule.
-   Hard-coding the observed prefix/tail formula is not that contract.
+## accessS meeting/race strict candidate grammar
 
-Consequently capture/request canonical-byte identity is not frozen around an invented
-root kind. These conflicts are returned to ChatGPT review.
+The four captured meeting pages were decoded CP932 strictly. Each has one
+`#race_list` with one direct header row whose ordered classes are:
 
-### Candidate month-to-meeting and meeting-to-race structure
+```text
+race_num, race_name, mov, dist, course, num, odds, win5
+```
 
-Observed month structure is `#past_result > ul.past_result_line > li >
-div.past_result_line_unit`. Each `.head > h3.sub_header` binds the exact day text;
-`.cell.kaisai` supplies meeting anchors. Adjacent graded-race cells are not the meeting
-denominator. Empty layout slots are not automatically missing meetings.
+Each direct `tbody > tr` must have one `th.race_num[scope=row] > a[href]` that
+matches the official accessS result grammar and one race-number image. The exact raw
+href, not a separately navigated known-race locator, is the result request authority.
+The accessO odds link is a different field and cannot be accepted as a target row.
 
-Each raw meeting `onclick` must match one exact supplied accessS action; its full final
-date field, year, venue, meeting and meeting-day fields must agree with the parent day
-and visible label. Substring/date containment is forbidden. Exact observed tokens and
-labels are preserved in the request inventory.
+The candidate normalizer must read all direct rows, validate the supplied URL through
+the existing `parse_jra_result_url_identity`, reject unknown/malformed/missing/
+duplicate/contradictory rows, and validate the calendar date from the result header
+against the exact result CNAME date. It may not accept only a known race or use
+twelve/contiguous race numbers as a completeness premise.
 
-A meeting response has `div.race_select > table#race_list`. Its unique direct header
-row has eight columns in order: `race_num, race_name, mov, dist, course, num, odds, win5`.
-Every direct body row has a `th.race_num[scope=row]` with one supplied result href
-and a race-number image alt, followed by the corresponding seven data cells.
-The raw href is an accessS result request, not the separate accessO odds request.
-Every row must be classified/validated; unknown, missing, duplicate or contradictory
-rows reject the date. Each inspected ordinary meeting had twelve body rows; this
-observation is NOT a fixed-count completeness rule.
+Research validation covered every direct row for:
 
-Existing `JRAExternalRaceIdentity`/resolved accessS result-URL parsing remains reusable
-to validate supplied identities. Existing accessD known-race discovery does not replace
-this month/day coverage boundary.
+| Historical day | Meeting | Validated supplied result rows |
+| --- | --- | ---: |
+| 2024-01-06 | 1回中山1日 | 12 |
+| 2024-01-06 | 1回京都1日 | 12 |
+| 2020-01-05 | 1回中山1日 | 12 |
+| 2020-01-05 | 1回京都1日 | 12 |
 
-## Exact displayed-start selector and semantics
+The 48 result URLs are distinct, and their decoded parent headers/identities were
+unique. This provides a full actual-result-page candidate set for those four meetings,
+not provider-day completeness and not proof of planned/actual equality until the PDF
+contract is resolved.
 
-The candidate selector is the unique `#race_result .race_header > .left >
-.date_line > .inner`. Its `.cell.date` binds the actual calendar date and meeting;
-its sibling `.cell.time` contains the literal `発走時刻：` and one
-`strong` time value. The same header's race-number image alt must agree with the
-supplied external race identity.
+## Scheduled-start candidate selector
 
-Observed lexical examples are `10時05分`, `9時50分`, `9時55分`,
-and `10時10分`. The bounded candidate time lexeme is:
+All 48 acquired result bytes contain exactly one candidate header relationship:
+
+```text
+#race_result .race_header > .left > .date_line > .inner
+  .cell.date                    -> exact displayed historical calendar date
+  .cell.time > strong           -> one displayed start value
+#race_result .race_header .race_number img[alt]
+                               -> race-number agreement with the supplied result identity
+```
+
+The candidate time lexical domain is:
 
 ```text
 (?:[0-9]|1[0-9]|2[0-3])時[0-5][0-9]分
 ```
 
-The date must come from the independently validated result header, with aware JST
-conversion. Duplicate time cells, absent/ambiguous date or race, extra semantic time
-text, and identity disagreement are not accepted by the candidate grammar.
+All 48 values passed that lexical check, and each header date agreed with the exact
+calendar-date field in its supplied result CNAME. The existing formal
+`JRAExternalRaceIdentity` parser accepted every result request identity. The candidate
+meaning remains only the official historical **displayed** start: it is converted to an
+aware JST time only after all selector, identity and date checks pass. It is not
+inferred from a PDF, source observation time, current clock, or actual running time.
+Research does not establish an unchanged original announcement or support exceptional
+delays/cancellations.
 
-| Ordinary source sample | Official historical displayed start |
-| --- | --- |
-| 2024-01-06, 1回中山1日, 1R | 10:05 JST |
-| 2024-01-06, 1回京都1日, 1R | 09:50 JST |
-| 2020-01-05, 1回中山1日, 1R | 09:55 JST |
-| 2020-01-05, 1回京都1日, 1R | 10:10 JST |
+This selector is not frozen as a production API because the composite source and fixture
+gates remain incomplete. Future tests must include zero, missing, duplicate, ambiguous,
+malformed, identity/date disagreement and unsupported exceptional cases; no relaxed
+fallback is allowed.
 
-This is precisely Phase 7's official historical displayed-start meaning. Research does
-not prove it is an unchanged original pre-race announcement or actual off-time.
-The [official result-page help](https://www.jra.go.jp/JRADB/mikata/result.html) did not
-supply that stronger guarantee. No stronger semantics, planned PDF time substitution,
-delay/exception support, or time-availability claim is introduced. Only four sampled
-1R pages were checked; the all-race fixture/selector gate is still open.
+## Candidate evidence and provenance
 
-## Research byte inventory and provenance
-
-Research root, outside both repositories:
+All research material is outside the repository:
 
 ```text
 C:\Users\garim\AppData\Local\Temp\keiba-phase8-jra-24517bdcf7524eedb5bf7c7f2db7cc95
 ```
 
-The sanitized `candidate-provenance.json` in that directory has SHA-256:
+Phase 8's original sanitized 21-record provenance manifest remains
+`bff17dec9bb3f65b5265adf000eeeed956283b52f83029f135840789ef666ad8`.
+It includes the year program, six PDFs, root/search, two months, four meetings, four
+1R results, and two 2024-01-28 off-target negative controls. Its 19 partial candidates
+and two controls remain unchanged. Phase 9 re-acquired the 48 exact direct-row result
+pages and verified each byte length/SHA-256. Its manifest SHA-256 is:
 
 ```text
-bff17dec9bb3f65b5265adf000eeeed956283b52f83029f135840789ef666ad8
+3894ba1c608f052c47bf396ab3091d7227f432f4b2c079f52369517cca71e996
 ```
 
-It records exact method/URL/form, parent source/href/action, raw byte length and digest,
-honest requested/observed timestamps, response media/encoding metadata, and proposed
-paths. All 21 response lengths and SHA-256 values were checked against that inventory.
-No provider_available_at was established; HTTP Date/Last-Modified are not substitutes.
+The four re-acquired 1R bytes equal their Phase 8 byte digests exactly. Thus there are
+69 capture records but 65 unique proposed fixture paths (63 ordinary partial candidates
+plus two off-target controls). No path has been materialized in the repository and none
+is an approved formal replay evidence artifact.
 
-The following names are only proposed basenames under
-`tests/fixtures/historical_daily_targets/official/jra/`; NONE was materialized there.
-The two 20240128 controls are not acceptance-day evidence. All timestamps below are
-2026-09-03 UTC; they are honest research acquisition times, not the historical target
-date. These timestamps cannot be reused as formal bundle observed_at or enter
-prediction/snapshot/settlement causality. Raw research bytes are not formal replay
-dataset evidence, and no later materialization is authorized by this document.
+Every following candidate records official raw href/request identity, byte length,
+SHA-256 and honest requested/observed time. All times are UTC on 2026-09-03. This table
+is an audit index only; it does not authorize replay use, backdating, materialization,
+or a fresh network acquisition in tests.
 
-| Proposed basename | Bytes | SHA-256 | Requested / observed time (UTC) |
-| --- | ---: | --- | --- |
-| `year_program_2024.html` | 79156 | `7b73fff9e0873fe1f056a50ccb49d1f85d742c16175b8bfe955eacc059e23b62` | `11:22:50.260905+00:00` / `11:22:50.600172+00:00` |
-| `nittei_2024.pdf` | 443138 | `bc4a22849b33215bc9f1c127735654080c69b886b41b82d24f969197b4c553d1` | `11:23:06.973583+00:00` / `11:23:07.288932+00:00` |
-| `bangumi_nakayama1_2024.pdf` | 117394 | `2cf7cba2265a00d1cdabb7f7ccdfc1682a7c033525a33c3d5882b249d509bd3a` | `11:23:07.292003+00:00` / `11:23:07.610101+00:00` |
-| `bangumi_kyoto1_2024.pdf` | 127671 | `6149a6e4cb96554b142b2e2800eef46238a7321ff034ff2ff1829038e81a9139` | `11:23:07.612927+00:00` / `11:23:07.931729+00:00` |
-| `accesss_search.cp932.html` | 75284 | `2af30f0f2dc1799ed8c2008c95e4550410669e178396dfea67dd2d341809a8fb` | `11:23:07.940612+00:00` / `11:23:08.184216+00:00` |
-| `year_program_2020.html` | 79807 | `5373bb6574b97713c215cab16fbc8686e3794d06f4e13fc15e609b7ee77fdb53` | `11:23:08.186372+00:00` / `11:23:08.480770+00:00` |
-| `nittei_2020.pdf` | 46902 | `2a4d09505de286a574f760b9a4b386baf65734fa273d621f279ed7330bacc139` | `11:23:08.526533+00:00` / `11:23:08.826077+00:00` |
-| `bangumi_nakayama1_2020.pdf` | 508250 | `fa7ab3e6a38c7d3ab1de717af85594b44f4be02c17e143a32bc8dc7d4201928d` | `11:23:08.828955+00:00` / `11:23:09.105556+00:00` |
-| `bangumi_kyoto1_2020.pdf` | 523275 | `301752db3d02846b29f9b87bb643edf499ccb0a02785e95313063ea06ed50f4c` | `11:23:09.108409+00:00` / `11:23:09.411964+00:00` |
-| `accesss_month_202401.cp932.html` | 87662 | `7abbc350e7f16226304ba5b8f22e154f4b3edcba7b08247a0047f1da256eb359` | `11:24:57.604354+00:00` / `11:24:57.936977+00:00` |
-| `accesss_meeting_20240106_06.cp932.html` | 79722 | `56a472cae9ba88d924167e1402d11c52146488fbeae230fc061d25d68c00fb88` | `11:24:57.984261+00:00` / `11:24:59.080405+00:00` |
-| `accesss_result_20240106_06_01.cp932.html` | 97048 | `01fa8c6674d47aef7291145430fcbf0e2ffae15fcdb11a32f96443908c06e9b5` | `11:24:59.121160+00:00` / `11:24:59.613348+00:00` |
-| `accesss_meeting_20240106_08.cp932.html` | 79397 | `5981dada3867a9d6e3d977324c8aadb9cdda9f71e657e7f6f09fc58a96815be6` | `11:24:59.667356+00:00` / `11:25:00.037908+00:00` |
-| `accesss_result_20240106_08_01.cp932.html` | 97867 | `bfe8e52f47e2a6003e6821feb5b3175c8bafd1dfeba08b616fcd8422db650a83` | `11:25:00.078568+00:00` / `11:25:00.626587+00:00` |
-| `accesss_meeting_20240128_10.cp932.html` | 78169 | `579b23a5386cccd3cafbb2c0475bc7e08382dd7d110a1afe1fadb9790d7668b1` | `11:25:01.009760+00:00` / `11:25:01.383585+00:00` |
-| `accesss_result_20240128_10_01.cp932.html` | 91454 | `fac28498c34a3a7ea86593a672b988e7961cd011d62ca30e7ea932bff0a6557b` | `11:25:01.425562+00:00` / `11:25:01.996585+00:00` |
-| `accesss_month_202001.cp932.html` | 86652 | `80c8e6c96224597cc3fb2702a4dd29e37eed4a65f5825e735007b25240442270` | `11:25:02.193237+00:00` / `11:25:02.922895+00:00` |
-| `accesss_meeting_20200105_06.cp932.html` | 77576 | `0a739fcd965f74bd64592e1e4bbf25bc1c5593c2ebdf5b456e55b8ffbc2ce1f0` | `11:25:02.967325+00:00` / `11:25:03.900307+00:00` |
-| `accesss_result_20200105_06_01.cp932.html` | 94243 | `0ca56ade1accc552f6244c4bbdc17d9bd31c206a63233b50ad1252658137eeac` | `11:25:03.943863+00:00` / `11:25:04.463082+00:00` |
-| `accesss_meeting_20200105_08.cp932.html` | 77771 | `d928143492d2b413d457626cfa9a75ff89273dac9248abeea261f36e2453b5fe` | `11:25:04.519491+00:00` / `11:25:05.623671+00:00` |
-| `accesss_result_20200105_08_01.cp932.html` | 94893 | `2e12cfef5b2597450806a502c53c55eb8ed66e8cd7ee6dc1224c40a5ff298df9` | `11:25:05.671817+00:00` / `11:25:06.443384+00:00` |
+| Proposed basename | Exact supplied raw href | Bytes | SHA-256 | Requested / observed UTC |
+| --- | --- | ---: | --- | --- |
+| `accesss_result_20240106_06_01.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202401010120240106/21` | 97048 | `01fa8c6674d47aef7291145430fcbf0e2ffae15fcdb11a32f96443908c06e9b5` | `2026-09-03T11:40:01.673482+00:00` / `2026-09-03T11:40:02.224952+00:00` |
+| `accesss_result_20240106_06_02.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202401010220240106/D6` | 98485 | `e9a2a5ad20a2e081b213389f72b1aa1dd0de9bafa5696f032db8fe28564257d7` | `2026-09-03T11:40:02.226143+00:00` / `2026-09-03T11:40:02.485351+00:00` |
+| `accesss_result_20240106_06_03.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202401010320240106/8B` | 96814 | `05d492ef8be994e5327354210909e274e8a7fdcb824b29cf82c7002aeda71782` | `2026-09-03T11:40:02.486443+00:00` / `2026-09-03T11:40:02.743922+00:00` |
+| `accesss_result_20240106_06_04.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202401010420240106/40` | 98124 | `0258612c2967da36d2006e75267dfcd50d7743b8855209c3a9176d602c8bccea` | `2026-09-03T11:40:02.744748+00:00` / `2026-09-03T11:40:03.015634+00:00` |
+| `accesss_result_20240106_06_05.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202401010520240106/F5` | 99748 | `9094464732f4542c5b2b2b3371d0065fbe3503a5f653180bc119e8a27ec68e91` | `2026-09-03T11:40:03.016491+00:00` / `2026-09-03T11:40:03.290753+00:00` |
+| `accesss_result_20240106_06_06.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202401010620240106/AA` | 98976 | `134f2f013dd1f9b19bee9df1f9dcc44b41a1eabb79e27304bd50fa8ffa7173db` | `2026-09-03T11:40:03.291697+00:00` / `2026-09-03T11:40:03.566825+00:00` |
+| `accesss_result_20240106_06_07.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202401010720240106/5F` | 93976 | `e483f18b53f0eb81ee4c8a33f96f39f3ac024b710eea3c87fff0c1234b035a3e` | `2026-09-03T11:40:03.567741+00:00` / `2026-09-03T11:40:03.827132+00:00` |
+| `accesss_result_20240106_06_08.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202401010820240106/14` | 98868 | `327c2ab5f0ebdf53d449c60dbec37a7e7899f13beb56093d477e51cbe079efb9` | `2026-09-03T11:40:03.828044+00:00` / `2026-09-03T11:40:04.103108+00:00` |
+| `accesss_result_20240106_06_09.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202401010920240106/C9` | 89644 | `c7b8425c37df8ba2afef72966580609a891acbbcda6f16317064e47bf90cea6d` | `2026-09-03T11:40:04.104051+00:00` / `2026-09-03T11:40:04.455174+00:00` |
+| `accesss_result_20240106_06_10.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202401011020240106/BE` | 90897 | `9b5e0e327bf57c3e9ef04da787535f75b3236ea43bbd0cdf5084c5d4225e5d8b` | `2026-09-03T11:40:04.456116+00:00` / `2026-09-03T11:40:04.700106+00:00` |
+| `accesss_result_20240106_06_11.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202401011120240106/73` | 101211 | `471e5c20233ac2ac185e3969c154b74c5f4a5b672e73f62e374054089410e79d` | `2026-09-03T11:40:04.701103+00:00` / `2026-09-03T11:40:05.053983+00:00` |
+| `accesss_result_20240106_06_12.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202401011220240106/28` | 99737 | `4dca43803141d04fd4bc67bb6b1548abd2c57a1901fe934f281a2465eba2d414` | `2026-09-03T11:40:05.054991+00:00` / `2026-09-03T11:40:05.304611+00:00` |
+| `accesss_result_20240106_08_01.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202401010120240106/B5` | 97867 | `bfe8e52f47e2a6003e6821feb5b3175c8bafd1dfeba08b616fcd8422db650a83` | `2026-09-03T11:40:05.342319+00:00` / `2026-09-03T11:40:05.603995+00:00` |
+| `accesss_result_20240106_08_02.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202401010220240106/6A` | 98750 | `71582c309c1e0b0236556e34221a17c5daff9d3539ac727a59ecdcd10227d58c` | `2026-09-03T11:40:05.604928+00:00` / `2026-09-03T11:40:05.904495+00:00` |
+| `accesss_result_20240106_08_03.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202401010320240106/1F` | 96590 | `11f9a142e1d8ec61630e46357ad1a86e80d3b637f37e6807e488c60948f90799` | `2026-09-03T11:40:05.905557+00:00` / `2026-09-03T11:40:06.205982+00:00` |
+| `accesss_result_20240106_08_04.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202401010420240106/D4` | 98319 | `81983ff15cff8180630656b63135b4b6d771e3b40aaac6e5e29ce110e4c5d9b3` | `2026-09-03T11:40:06.207016+00:00` / `2026-09-03T11:40:06.447197+00:00` |
+| `accesss_result_20240106_08_05.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202401010520240106/89` | 98736 | `04f74189915c1ced0e6fcf530d73fef0ef1d369fa8270f2b36fbca9df3394ddd` | `2026-09-03T11:40:06.448334+00:00` / `2026-09-03T11:40:06.697271+00:00` |
+| `accesss_result_20240106_08_06.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202401010620240106/3E` | 89654 | `acd474bccb5e9b71a8c535d44200a2ed8763d7707b4b887906a28ca8393330ed` | `2026-09-03T11:40:06.698391+00:00` / `2026-09-03T11:40:06.999334+00:00` |
+| `accesss_result_20240106_08_07.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202401010720240106/F3` | 92494 | `b9e6f3da341bb4da8f06288c8f3612e6c345ab40bf12316ad3adabec8ed8e204` | `2026-09-03T11:40:07.000339+00:00` / `2026-09-03T11:40:07.271237+00:00` |
+| `accesss_result_20240106_08_08.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202401010820240106/A8` | 97032 | `0aeebf2f0d3aa4d5bac79e63d26910899ab90b4e010d7caa16a724c17c7ad4bc` | `2026-09-03T11:40:07.272200+00:00` / `2026-09-03T11:40:07.592171+00:00` |
+| `accesss_result_20240106_08_09.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202401010920240106/5D` | 93106 | `08a80c8425d6822b16e0733b80922005c87a05e21664d639eae3d85d144251ec` | `2026-09-03T11:40:07.593091+00:00` / `2026-09-03T11:40:07.862439+00:00` |
+| `accesss_result_20240106_08_10.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202401011020240106/52` | 95927 | `d6e737bcfe2595803c08e472463505d0ad7e528a2cc3e6ab37ee781d463afd9f` | `2026-09-03T11:40:07.863417+00:00` / `2026-09-03T11:40:08.125838+00:00` |
+| `accesss_result_20240106_08_11.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202401011120240106/07` | 100108 | `326d97d6ccf53b5c263d5badb24df6f2e9232397ef64282ae3d2641dc99e8609` | `2026-09-03T11:40:08.126757+00:00` / `2026-09-03T11:40:08.367428+00:00` |
+| `accesss_result_20240106_08_12.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202401011220240106/BC` | 97475 | `cb11196385b0cb29b6a1cf06401393f6cab10fa910cf88c5e330eb0920d30491` | `2026-09-03T11:40:08.368454+00:00` / `2026-09-03T11:40:08.630481+00:00` |
+| `accesss_result_20200105_06_01.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202001010120200105/48` | 94243 | `0ca56ade1accc552f6244c4bbdc17d9bd31c206a63233b50ad1252658137eeac` | `2026-09-03T11:40:08.667397+00:00` / `2026-09-03T11:40:08.924508+00:00` |
+| `accesss_result_20200105_06_02.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202001010220200105/FD` | 96690 | `c730b2d6f373ec1befbe8377521c4df32854714a0ab2d047d82b1de5e763288c` | `2026-09-03T11:40:08.925337+00:00` / `2026-09-03T11:40:09.142082+00:00` |
+| `accesss_result_20200105_06_03.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202001010320200105/B2` | 94955 | `fa571beeebc443fe306b08543d13e1bdc856d8017d8402de4f5d23b882629818` | `2026-09-03T11:40:09.143296+00:00` / `2026-09-03T11:40:09.389340+00:00` |
+| `accesss_result_20200105_06_04.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202001010420200105/67` | 96524 | `21c331ce3891dc0f18e0495c04b2f122f9acf623f1041f078b24cb54fe0f65a2` | `2026-09-03T11:40:09.390252+00:00` / `2026-09-03T11:40:09.633049+00:00` |
+| `accesss_result_20200105_06_05.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202001010520200105/1C` | 88912 | `ad76cd683dcd32fb52e51c0f286510ca90d6d2915061e86031c44ea485d9a612` | `2026-09-03T11:40:09.633972+00:00` / `2026-09-03T11:40:09.908097+00:00` |
+| `accesss_result_20200105_06_06.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202001010620200105/D1` | 95133 | `a52951c9088c467829b3e28919a180982553d9ced4becbff9ea3396319aa7a22` | `2026-09-03T11:40:09.909050+00:00` / `2026-09-03T11:40:10.149074+00:00` |
+| `accesss_result_20200105_06_07.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202001010720200105/86` | 97601 | `5f02911c59f943b79242bc75c9dd1deb5623241c6408fdd0997340c124bf6007` | `2026-09-03T11:40:10.150496+00:00` / `2026-09-03T11:40:10.270169+00:00` |
+| `accesss_result_20200105_06_08.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202001010820200105/3B` | 95086 | `4c3756d289107384a440e400bfeb2b6e04749956c3f143102a33345b1e48c47b` | `2026-09-03T11:40:10.271039+00:00` / `2026-09-03T11:40:10.512446+00:00` |
+| `accesss_result_20200105_06_09.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202001010920200105/F0` | 97389 | `c53b2e5d5534b8ac6f6e50020054bd0bc0ea17cca636cfa6ad76b03af81c6f88` | `2026-09-03T11:40:10.513341+00:00` / `2026-09-03T11:40:10.754990+00:00` |
+| `accesss_result_20200105_06_10.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202001011020200105/E5` | 96152 | `b0cec1e5fd673036f756d9f85e9136cf9643f8dca43e49919d7c0ea3777618fd` | `2026-09-03T11:40:10.755918+00:00` / `2026-09-03T11:40:11.009799+00:00` |
+| `accesss_result_20200105_06_11.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202001011120200105/9A` | 98762 | `4a0d815f1bcce7d8714492a3956e9ce7d1a25579671eda23e71c3cf6c9fc1d5f` | `2026-09-03T11:40:11.010680+00:00` / `2026-09-03T11:40:11.300083+00:00` |
+| `accesss_result_20200105_06_12.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1006202001011220200105/4F` | 94519 | `2f759b8e26e8f173012548a8673fff83cf33210cbfe9f697932a8a82e1c66253` | `2026-09-03T11:40:11.301068+00:00` / `2026-09-03T11:40:11.518800+00:00` |
+| `accesss_result_20200105_08_01.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202001010120200105/DC` | 94893 | `2e12cfef5b2597450806a502c53c55eb8ed66e8cd7ee6dc1224c40a5ff298df9` | `2026-09-03T11:40:11.558726+00:00` / `2026-09-03T11:40:11.797748+00:00` |
+| `accesss_result_20200105_08_02.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202001010220200105/91` | 96730 | `c17860cef05ef835ee05ddc362ef2516428231c837081206b5e744ea1b4d9650` | `2026-09-03T11:40:11.798653+00:00` / `2026-09-03T11:40:12.043155+00:00` |
+| `accesss_result_20200105_08_03.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202001010320200105/46` | 94118 | `49d2e9b3020891751a6a4b54e5eaff243c02968bf92a5fa1ed2d6dca9aefc94f` | `2026-09-03T11:40:12.044032+00:00` / `2026-09-03T11:40:12.300256+00:00` |
+| `accesss_result_20200105_08_04.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202001010420200105/FB` | 92514 | `ec78860251b2c8ab38c0f0684237dc06de87778fbf7b4cff25a9954ad60b6fe2` | `2026-09-03T11:40:12.301232+00:00` / `2026-09-03T11:40:12.576076+00:00` |
+| `accesss_result_20200105_08_05.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202001010520200105/B0` | 94559 | `33ee8e1905c93f282e3e402e13e0c879a96d866922e7bf7a1cb5387541160489` | `2026-09-03T11:40:12.577019+00:00` / `2026-09-03T11:40:12.848981+00:00` |
+| `accesss_result_20200105_08_06.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202001010620200105/65` | 94444 | `3e753dfb04879c5b4cb6f376b1019da019a3d9acb1a5f7bfe96503e285c4c54e` | `2026-09-03T11:40:12.850528+00:00` / `2026-09-03T11:40:13.119440+00:00` |
+| `accesss_result_20200105_08_07.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202001010720200105/1A` | 95529 | `01d70b768b55b6c74b32dbbef7357f33f0116f0aafcf7a1cc90ab08c077507a0` | `2026-09-03T11:40:13.120324+00:00` / `2026-09-03T11:40:13.371597+00:00` |
+| `accesss_result_20200105_08_08.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202001010820200105/CF` | 97062 | `63863e6a84a34edcf1681a5d911201aecbd900b31ad63e302597406ea42a5c5d` | `2026-09-03T11:40:13.372668+00:00` / `2026-09-03T11:40:13.592402+00:00` |
+| `accesss_result_20200105_08_09.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202001010920200105/84` | 86147 | `2239fbeb23be593a303eed2b1211a708b7f960be4fbf34a60426a50a25a781ee` | `2026-09-03T11:40:13.593325+00:00` / `2026-09-03T11:40:13.813071+00:00` |
+| `accesss_result_20200105_08_10.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202001011020200105/79` | 94993 | `f3e3e58004a8d027af137e46a643aba9883f2f896305638a309011be8f0cc43e` | `2026-09-03T11:40:13.813969+00:00` / `2026-09-03T11:40:14.074830+00:00` |
+| `accesss_result_20200105_08_11.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202001011120200105/2E` | 98076 | `5302a8890f1af91875afe6d2d491c4149fecaac2a50a4ad898c184749f95c100` | `2026-09-03T11:40:14.075682+00:00` / `2026-09-03T11:40:14.320754+00:00` |
+| `accesss_result_20200105_08_12.cp932.html` | `/JRADB/accessS.html?CNAME=pw01sde1008202001011220200105/E3` | 94361 | `8a6ce90045e7c4de0512efe70d18c1e8eaef457f76f1e50f20173f47ba5a28bb` | `2026-09-03T11:40:14.321656+00:00` / `2026-09-03T11:40:14.556035+00:00` |
 
-### Exact request / parent-reference inventory
+The inherited Phase 8 21-record manifest retains the same fields for its year/PDF/root/
+month/meeting/1R/control candidates. The four overlapping result records match the
+corresponding rows above; use only their byte digest, not either acquisition time, for
+that equality. HTTP `Date`/Last-Modified are not provider availability fields.
 
-This documents acquired source identity, not a recipe for rebuilding locators from
-filenames or historical dates. A response's supplier reference traces to the exact
-parent bytes above. Candidate monthly expression records describe research only and
-remain subject to the root/month review gate.
+## Remaining blockers and required review
 
-| Proposed basename | Actual request | Source supplier |
-| --- | --- | --- |
-| `year_program_2024.html` | GET `https://www.jra.go.jp/keiba/program/2024/` | official historical year-program page identified in Phase 4 research |
-| `nittei_2024.pdf` | GET `https://www.jra.go.jp/keiba/program/2024/pdf/nittei.pdf` | {"label":"開催日割表（PDF：433KB）","name":"year_program_2024.html","raw_href":"/keiba/program/2024/pdf/nittei.pdf"} |
-| `bangumi_nakayama1_2024.pdf` | GET `https://www.jra.go.jp/keiba/program/2024/pdf/bangumi/nakayama1.pdf` | {"label":"1回中山（PDF：115KB）","name":"year_program_2024.html","raw_href":"/keiba/program/2024/pdf/bangumi/nakayama1.pdf"} |
-| `bangumi_kyoto1_2024.pdf` | GET `https://www.jra.go.jp/keiba/program/2024/pdf/bangumi/kyoto1.pdf` | {"label":"1回京都（PDF：125KB）","name":"year_program_2024.html","raw_href":"/keiba/program/2024/pdf/bangumi/kyoto1.pdf"} |
-| `accesss_search.cp932.html` | POST `https://www.jra.go.jp/JRADB/accessS.html`; form {"cname":"pw01skl00999999/B3"} | {"name":"year_program_2024.html","onclick":"doAction('/JRADB/accessS.html', 'pw01skl00999999/B3');return false"} |
-| `year_program_2020.html` | GET `https://www.jra.go.jp/keiba/program/2020/` | official historical year-program page identified in Phase 4 research |
-| `nittei_2020.pdf` | GET `https://www.jra.go.jp/keiba/program/2020/pdf/nittei.pdf` | {"label":"開催日割表（2020年4月6日変更版）（PDF：46KB）","name":"year_program_2020.html","raw_href":"/keiba/program/2020/pdf/nittei.pdf"} |
-| `bangumi_nakayama1_2020.pdf` | GET `https://www.jra.go.jp/keiba/program/2020/pdf/bangumi/nakayama1.pdf` | {"label":"1回中山（PDF：497KB）","name":"year_program_2020.html","raw_href":"/keiba/program/2020/pdf/bangumi/nakayama1.pdf"} |
-| `bangumi_kyoto1_2020.pdf` | GET `https://www.jra.go.jp/keiba/program/2020/pdf/bangumi/kyoto1.pdf` | {"label":"1回京都（PDF：512KB）","name":"year_program_2020.html","raw_href":"/keiba/program/2020/pdf/bangumi/kyoto1.pdf"} |
-| `accesss_month_202401.cp932.html` | POST `https://www.jra.go.jp/JRADB/accessS.html`; form {"cname":"pw01skl10202401/B3"} | {"expression":"pw01skl10 + selected year/month + / + supplied table tail","name":"accesss_search.cp932.html","selector":"#kaisaiY_list/#kaisaiM_list + setParameter + exact objParam entry"} |
-| `accesss_meeting_20240106_06.cp932.html` | POST `https://www.jra.go.jp/JRADB/accessS.html`; form {"cname":"pw01srl10062024010120240106/90"} | {"label":"1回中山1日","name":"accesss_month_202401.cp932.html","onclick":"return doAction('/JRADB/accessS.html', 'pw01srl10062024010120240106/90');"} |
-| `accesss_result_20240106_06_01.cp932.html` | GET `https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde1006202401010120240106/21` | {"href":"/JRADB/accessS.html?CNAME=pw01sde1006202401010120240106/21","name":"accesss_meeting_20240106_06.cp932.html"} |
-| `accesss_meeting_20240106_08.cp932.html` | POST `https://www.jra.go.jp/JRADB/accessS.html`; form {"cname":"pw01srl10082024010120240106/24"} | {"label":"1回京都1日","name":"accesss_month_202401.cp932.html","onclick":"return doAction('/JRADB/accessS.html', 'pw01srl10082024010120240106/24');"} |
-| `accesss_result_20240106_08_01.cp932.html` | GET `https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde1008202401010120240106/B5` | {"href":"/JRADB/accessS.html?CNAME=pw01sde1008202401010120240106/B5","name":"accesss_meeting_20240106_08.cp932.html"} |
-| `accesss_meeting_20240128_10.cp932.html` | POST `https://www.jra.go.jp/JRADB/accessS.html`; form {"cname":"pw01srl10102024010620240128/62"} | {"label":"1回小倉6日","name":"accesss_month_202401.cp932.html","onclick":"return doAction('/JRADB/accessS.html', 'pw01srl10102024010620240128/62');"} |
-| `accesss_result_20240128_10_01.cp932.html` | GET `https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde1010202401060120240128/FB` | {"href":"/JRADB/accessS.html?CNAME=pw01sde1010202401060120240128/FB","name":"accesss_meeting_20240106_10.cp932.html"} |
-| `accesss_month_202001.cp932.html` | POST `https://www.jra.go.jp/JRADB/accessS.html`; form {"cname":"pw01skl10202001/83"} | {"expression":"pw01skl10 + selected year/month + / + supplied table tail","name":"accesss_search.cp932.html","selector":"#kaisaiY_list/#kaisaiM_list + setParameter + exact objParam entry"} |
-| `accesss_meeting_20200105_06.cp932.html` | POST `https://www.jra.go.jp/JRADB/accessS.html`; form {"cname":"pw01srl10062020010120200105/01"} | {"label":"1回中山1日","name":"accesss_month_202001.cp932.html","onclick":"return doAction('/JRADB/accessS.html', 'pw01srl10062020010120200105/01');"} |
-| `accesss_result_20200105_06_01.cp932.html` | GET `https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde1006202001010120200105/48` | {"href":"/JRADB/accessS.html?CNAME=pw01sde1006202001010120200105/48","name":"accesss_meeting_20200105_06.cp932.html"} |
-| `accesss_meeting_20200105_08.cp932.html` | POST `https://www.jra.go.jp/JRADB/accessS.html`; form {"cname":"pw01srl10082020010120200105/95"} | {"label":"1回京都1日","name":"accesss_month_202001.cp932.html","onclick":"return doAction('/JRADB/accessS.html', 'pw01srl10082020010120200105/95');"} |
-| `accesss_result_20200105_08_01.cp932.html` | GET `https://www.jra.go.jp/JRADB/accessS.html?CNAME=pw01sde1008202001010120200105/DC` | {"href":"/JRADB/accessS.html?CNAME=pw01sde1008202001010120200105/DC","name":"accesss_meeting_20200105_08.cp932.html"} |
+1. Establish and independently review a deterministic, complete, non-OCR PDF
+   extraction/layout contract; otherwise nittei/bangumi planned evidence is unusable.
+2. Resolve the exact accessS root/search page-kind and source-expression request/capture
+   contract without weakening raw supplied-token authority.
+3. Materialize and review the complete fixture/provenance set only after 1 and 2:
+   one ordinary composite requires all selected PDF/root/month/meeting/result bytes,
+   exact parser grammar and planned/actual equality. Required fail-closed fixture cases
+   for zero, cancellation, substitute, partial and malformed/ambiguous layouts are
+   still absent.
+4. Freeze only after the above the canonical-byte/capture identity representation,
+   including schema version, ordered fields, UTF-8/CP932 handling, raw request form
+   representation, parent-reference identity, timestamps and response digest. The
+   existing shared target-set digest stays unchanged.
 
-The external inventory is temporary research material, not a durable archive contract.
-Its hash and the records above preserve the audit facts, but a later reviewed fixture
-materialization still needs available matching bytes. Reacquisition is not assumed
-byte-identical. A changed response SHA cannot silently replace a reviewed candidate.
-
-## Remaining blockers and stop condition
-
-1. Resolve deterministic nittei glyph decoding and strict versioned calendar layout;
-   freeze bangumi all-cell/page/day binding and a reviewed extraction dependency/resource
-   contract. Do not infer PDF identities or use OCR.
-2. Obtain review of the root/search capture-kind gap and exact source-owned month
-   selection semantics. No unilateral change to Phase 7 page kinds or CNAME authority.
-3. After those gates, complete and independently review one whole ordinary composite
-   fixture set, all-race start validation, and required fail-closed case fixtures.
-   The current partial samples do not satisfy the implementation fixture gate.
-4. Freeze future request/capture canonical bytes only against the resolved request
-   contract: version, fixed fields/order, exact raw request and parent-reference
-   representation, datetime/UTF-8 rules and response digest. Reuse the unchanged shared
-   target-set digest; no accidental serialization or implementation is approved here.
-
-Stop now with `Outcome: BLOCKED`, `Status: DRAFT_FOR_REVIEW`, and no
-implementation authorization. Future `SUPPORTED_COMPLETE_DAY` cannot be returned
-for this unqualified composite. Existing whole-day failure remains
-`TARGET_DISCOVERY_INCOMPLETE`. No next phase starts.
+This PREPARE stops. The prospective behavior for any unresolved date remains whole-day
+`TARGET_DISCOVERY_INCOMPLETE`; no partial actual result sample can be reported as
+a supported complete day.
 
 ## Allowed Files
 
@@ -349,10 +289,10 @@ docs/LATEST_CODEX_REPORT.md
 
 ## Forbidden Files and actions
 
-All other repository files, including production, NAR/shared domains, tests, fixtures,
-requirements, SQLite/migrations/schema/database, logs, archives, CLI and release/tag
-history. No implementation, fixture materialization, stage, commit, push, or execution
-phase during this PREPARE. The old KeibaAI repository remains untouched.
+All other repository files, including production, tests, fixtures, requirements,
+NAR/shared domains, SQLite/migrations/schema/database, logs, archives, CLI and
+release/tag history. No implementation, fixture materialization, dependency change,
+stage, commit, push, execution phase or next phase is authorized during PREPARE.
 
 ## Required PREPARE verification
 
@@ -363,5 +303,5 @@ git status --short
 git diff --cached --name-only
 ```
 
-Verify exactly the two Allowed Files changed and the index is empty. No unit or full
-suite is required/run for this research/docs-only PREPARE; no code/test file changed.
+Verify exactly the two Allowed Files changed and the index is empty. No test suite is
+required/run for this research/docs-only PREPARE.

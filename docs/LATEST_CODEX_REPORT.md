@@ -7915,3 +7915,53 @@ No Phase 8 staging, commit, push, implementation, or next-phase transition is au
 
 ChatGPT approved Phase 8's `BLOCKED` outcome for commit. The unresolved PDF and accessS
 contract gates remain explicit; no implementation readiness is implied.
+
++## POST_V0_8_DAILY_REPLAY_9 Preparation Report
+
+Phase 8 was committed as `58750303a5fca21c2e2fcea7dd13b74b1aa76b93` with message
+`docs: qualify JRA daily target source contracts`, pushed normally, fetched, and verified
+equal to `origin/feature/post-v0.8-daily-replay`. The worktree was clean before Phase 9.
+
+Phase 9 is `RESEARCH_AND_DESIGN_ONLY`, status `DRAFT_FOR_REVIEW`, outcome `BLOCKED`.
+It investigated only the approved JRA PDF/accessS/start-time/fixture gaps. Read-only
+official JRA research and PDF visual inspection were performed outside the repository;
+research responses are not historical replay evidence and no response, fixture,
+dependency, production, test, NAR/shared, schema, migration, archive, database, or CLI
+file changed.
+
+The bundled pypdf 6.10.0 and pdfplumber 0.11.9 fail to produce identity-safe nittei and
+bangumi text from the sampled exact PDFs: identity-bearing content is mojibake or CID
+tokens, and the PDFs lack a reviewed usable ToUnicode/CMap/layout contract. OCR, manual
+glyph replacement, filename identity and inferred table semantics remain prohibited.
+This prevents freezing the planned-PDF side of the composite contract.
+
+The official accessS root/search response supplies the year/month selects, the
+source-owned `setParameter` expression and exact tail table, followed by exact
+month-to-meeting and meeting-to-result navigation. It confirms the parent relation but
+also confirms the Phase 7 capture-kind gap: root/search evidence is required but absent
+from its closed page-kind list, and a supplied expression is not a raw literal month
+href. No page kind or token-synthesis rule was added; the issue is returned for review.
+
+Phase 9 acquired and verified 48 exact supplied result pages covering every direct row
+of the first Nakayama/Kyoto meetings on 2024-01-06 and 2020-01-05. Strict CP932 parsing,
+existing JRA result identity validation, result-header date/CNAME-date agreement and one
+displayed-start lexical value passed for all 48. This strengthens the actual-history
+candidate only; it cannot prove a complete day without the unresolved planned PDF side.
+
+The 48-result research manifest has SHA-256
+`3894ba1c608f052c47bf396ab3091d7227f432f4b2c079f52369517cca71e996`; every byte
+length/SHA matched. Its four overlapping 1R bytes match the original Phase 8 records.
+Together there are 69 capture records and 65 unique proposed fixture paths, all outside
+the repository. Exact URL/request, length, SHA-256 and honest timestamps are recorded
+in CURRENT_PHASE. No materialization or causal reuse of timestamps is authorized.
+
+Only `docs/CURRENT_PHASE.md` and this report changed. Phase 9 requires review of the
+PDF extraction/layout and accessS root/month capture boundary before any implementation
+or fixture phase can be prepared. No stage, commit, push, test-suite run, or next phase
+was performed.
+
+## POST_V0_8_DAILY_REPLAY_9 Final Approval
+
+ChatGPT approved Phase 9's `BLOCKED` gap-resolution result for commit. The PDF parser
+and accessS root/month authority remain unresolved; implementation readiness is not
+implied.
