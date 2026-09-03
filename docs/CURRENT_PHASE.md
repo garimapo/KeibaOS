@@ -4,529 +4,722 @@ Status: `APPROVED_FOR_COMMIT`
 
 ## Identity and authority
 
-- Phase: `POST_V0_8_DAILY_REPLAY_4`
-- Name: `Historical Daily Supported Coverage Contract Design`
-- Base Commit: `6b7b153cab518538ee0f2c9c5682ce79b6ebf7a2`
+- Phase: `POST_V0_8_DAILY_REPLAY_5`
+- Name: `NAR Supported Daily Target Source Implementation Design`
+- Base Commit: `ac3b95cd43626ff6643134715a7f5c4207849225`
 - Branch: `feature/post-v0.8-daily-replay`
 - Release baseline: `v0.8.0` at `c08bedb5421b44d63a8bac017699efffca2a4b73`
-- Phase type: `RESEARCH_AND_DESIGN_ONLY`
-- Overall research/design outcome: `IMPLEMENTABLE_SUPPORTED_PROFILE`
+- Phase type: `DESIGN_ONLY`
 - Production implementation: `NOT_AUTHORIZED`
-- Test implementation: `NOT_AUTHORIZED`
-- Migration / schema / database change: `NOT_AUTHORIZED`
+- Test / fixture implementation: `NOT_AUTHORIZED`
+- Migration / schema / database / archive change: `NOT_AUTHORIZED`
 - Stage / commit / push during PREPARE: `NOT_AUTHORIZED`
 - `EXECUTE_APPROVED_PHASE`: `NOT_AUTHORIZED`
+- JRA implementation: `OUT_OF_SCOPE`
+- Evidence Resolver / manifest / replay runner: `OUT_OF_SCOPE`
 - Release/tag/history mutation: `FORBIDDEN`
 
-This phase is prepared in the fresh clone
-`C:\Users\garim\Desktop\KeibaOS-post-v0.8`. The old Ver0.8 working repository is
-outside this work and must not be changed.
+This phase uses the Phase 1 through Phase 4 approved contracts without restating or
+changing their authority. It is prepared only in the fresh clone
+`C:\Users\garim\Desktop\KeibaOS-post-v0.8`; the old Ver0.8 repository remains untouched.
 
-## Objective and decision
+## Objective
 
-Define the smallest historical-day support profile which can construct the Phase 2
-audited complete denominator without claiming universal historical coverage. A
-requested provider/date is accepted only as `SUPPORTED_COMPLETE_DAY`; every other
-case is `TARGET_DISCOVERY_INCOMPLETE`. There is no partial-day result, reduced venue
-set, reduced race list, best-effort fallback, or hidden skip.
+Translate only the Phase 4 NAR initial supported profile into exact future production
+file, API, responsibility, failure, digest, and test contracts. The future implementation
+will accept exact immutable official captures for one NAR historical date, strictly
+normalize the MonthlyConveneInfo envelope and every envelope-supplied RaceList fragment,
+prove the complete supported denominator, and return either one shared
+`HistoricalDailyTargetEvidenceBundle` plus its audited
+`DailyHistoricalReplayTargetSet`, or fail closed as `TARGET_DISCOVERY_INCOMPLETE`.
 
-The Phase 3 universal conclusions remain unchanged:
+The bundle and target-set builders are pure no-network functions. They consume only
+already captured immutable evidence and cannot acquire, discover, or repair a missing
+MonthlyConveneInfo or RaceList response.
 
-```text
-JRA universal qualification: UNPROVEN
-NAR universal qualification: UNPROVEN
+No network response is acquired or frozen during this PREPARE. No parser, capture,
+repository, migration, schema, fixture, test, or production code is implemented.
+
+## Baseline findings and reuse decision
+
+The repository has no daily-target domain, provider-day completeness model, or formal
+MonthlyConveneInfo/RaceList capture family. The existing
+`scripts/simulation/nar_official_response_capture.py` is intentionally closed to
+`deba_table`, `horse_mark_info`, and `race_mark_table`. Its URL function parses and
+re-emits a fixed canonical race query order. The v001 archive schema has the same closed
+page-kind constraint. Widening either contract would mutate Ver0.8 behavior and require
+a separately reviewed migration.
+
+Neither MonthlyConveneInfo nor RaceList may pass through that existing URL canonicalizer.
+Their request authority is the exact official-supplied locator material, including raw
+href parameter order and encoding.
+
+Therefore Phase 5 proposes new daily-target-specific source/capture domains. Existing
+NAR capture code may be copied only for generic validation patterns such as exact bytes,
+strict UTF-8, aware UTC timestamps, content digest, no redirects, size bounds,
+insert-before-return archive composition, and exact-ID loading. Its closed page kinds,
+URL canonicalizer, schema, repository, and capture IDs are not reused or modified.
+
+Reusable formal facts are limited to:
+
+- exact provider pair `NAR/nar_official`;
+- positive canonical ASCII decimal identity tokens;
+- external race identity `nar:{YYYYMMDD}:{babaCode}:{raceNo}`;
+- strict aware datetime and UTC serialization conventions; and
+- existing repository error principles: validation is distinct from immutable conflict
+  and stored-data integrity failure.
+
+Legacy `scripts/providers/nar_provider.py` and `scripts/parsers/nar_parser.py` remain
+forbidden as formal boundaries. They are live/current-oriented and allow behavior such
+as inferred encoding, mutable results, empty fallback, logging, and skipped rows.
+
+## Proposed future production files and ownership
+
+### `scripts/simulation/historical_daily_targets.py`
+
+Owns only the provider-neutral immutable contracts approved in Phase 2:
+
+```python
+HistoricalDailyProviderIdentity
+DailyHistoricalReplayProviderScope
+ProviderNativeDispositionEvidenceReference
+DailyHistoricalReplayCompletenessEvidence
+DailyHistoricalReplayTarget
+HistoricalDailyTargetEvidenceBundle
+DailyHistoricalReplayTargetSet
+DailyTargetDiscoveryFailureCode
+DailyHistoricalTargetValidationError
+DailyHistoricalTargetIntegrityError
+TargetDiscoveryIncompleteError
+
+build_daily_historical_replay_target_set(
+    *,
+    target_date: date,
+    provider_scope: DailyHistoricalReplayProviderScope,
+    evidence_bundles: tuple[HistoricalDailyTargetEvidenceBundle, ...],
+) -> DailyHistoricalReplayTargetSet
 ```
 
-Phase 4 nevertheless finds an implementable date-specific supported profile. The
-profile is a conjunction of positive, machine-checkable predicates over exact official
-evidence. It does not accept a day merely because it looks ordinary, and it does not
-turn source or normalization feasibility into proof of provider-day completeness.
+The file contains no JRA or NAR parsing, HTTP, SQLite, snapshot, settlement, manifest,
+replay, ROI, or current-clock logic. Provider scope and target ordering remain exactly
+the approved `(organization, source_system)` and
+`(organization, source_system, external_race_id)` orders.
 
-## Governing invariants
+This shared module validates only provider-neutral value shape, immutability, exact
+scope-to-bundle coverage, uniqueness, deterministic ordering, and canonical digest
+construction. It does not know NAR envelope/fragment/navigation equality, NAR URL or
+race-ID grammar, supported NAR marks/statuses, the NAR historical floor, or any JRA
+source rule. Those predicates are established before projection by the NAR builder.
 
-- `NO FUTURE LEAKAGE`
-- `NO HINDSIGHT`
-- `FAIL CLOSED`
-- `NO SILENT FALLBACK`
-- `NO HIDDEN SKIP`
-- `NO CURRENT-CLOCK CAUSALITY`
-- exact provider, partition, meeting, and race identity
-- deterministic ordering independent of SQLite row order or acquisition order
-- no invented race number, meeting, venue, date, or status
-- no current/live page backdating
-- exact raw bytes, digest, request identity, and honest acquisition observation
-- acquisition/preparation remains separate from no-network historical replay
-- no prediction, bet generation, normalizer, settlement, or replay reimplementation
-- no Ver0.8 contract, tag, or release-history mutation
+### `scripts/simulation/nar_historical_daily_target_capture.py`
 
-## Research boundary
+Owns exact official request/capture identity without reconstructing a locator:
 
-Only read-only official public-source research was performed. Responses observed in
-this phase are research material, not formal replay evidence, were not archived or
-inserted into a repository database, and acquire no historical `observed_at` merely
-because their target dates are old. A future authorized acquisition must record its
-own exact retrieval time and must not backdate it.
-
-Search/navigation may locate official material, but only official `jra.go.jp` and
-`keiba.go.jp` responses support the conclusions below. The research material was kept
-outside the repository. No fixture or provider archive was created.
-
-## Historical replay race-target definition
-
-The candidate formal definition is:
-
-> A historical replay race target is one exact provider-native race identity which
-> official historical target-list evidence positively enumerates for `target_date`,
-> whether the race was ultimately conducted or is formally preserved as non-run.
-
-Consequences:
-
-- an ordinary enumerated race is a target;
-- a race cancelled after identity publication is a target only when the official
-  historical evidence still preserves that exact identity;
-- a whole meeting cancelled before exact race identities are available does not
-  authorize hypothetical race targets;
-- absence of identities in that case also does not prove a zero-race denominator;
-- a substitute meeting is a target only when official evidence supplies its exact
-  target-date identity and the original/replacement relation is not contradictory;
-- an original scheduled meeting contributes races only when their exact identities
-  remain positively preserved; and
-- meeting existence, a likely 1-to-12 program, display venue, or race-number continuity
-  must never synthesize a race identity.
-
-This definition does not weaken Phase 2. When a partition is proven but its individual
-race identities cannot be recovered, Phase 4 chooses **Option 1**: the whole requested
-provider/date is `TARGET_DISCOVERY_INCOMPLETE`. Option 2, a partition-level non-run with
-zero canonical race targets, is rejected because it cannot prove a complete race
-denominator.
-
-## Exact `SUPPORTED_COMPLETE_DAY` contract
-
-For every provider in the requested closed provider scope, all of the following must
-be true. One failure makes the whole application `TARGET_DISCOVERY_INCOMPLETE`.
-
-1. `target_date` is an exact calendar date and the provider identity is the exact
-   closed identity `JRA` or `NAR`; aliases and display-name matching are forbidden.
-2. The date satisfies the initial historical-floor gate and every required official
-   source family is still addressable at acquisition time.
-3. One exact provider-day envelope and every required subordinate fragment are
-   captured as immutable raw bytes with canonical request identity, source URL or POST
-   locator, response digest, response metadata, and honest `observed_at`.
-4. Each response strictly decodes under its own fragment-family contract. HTML, PDF,
-   and other binary fragments are not assigned one provider-wide charset.
-5. The envelope yields exactly one target-date provider partition set; date, provider,
-   and partition identities must agree visibly and lexically.
-6. Every partition has exactly one required race-list fragment. No fragment is missing,
-   duplicated, selected by arbitrary latest time, or silently discarded.
-7. Every structural row in every fragment must normalize exactly once. A malformed,
-   unknown, duplicate, or contradictory row is a whole-day failure, never a skip.
-8. The provider-specific positive coverage relations below hold exactly. Set equality,
-   not count equality or contiguous race numbers, is required.
-9. Every replay-candidate target has an exact aware `scheduled_start_at` supplied by
-   formal official evidence. A native exceptional target may retain `None` only under
-   the approved Phase 2 rule. Display timetables are never guessed.
-10. No unresolved cancellation, substitute, postponement, abandonment, status, request
-    identity, or original/replacement identity can affect denominator membership.
-11. The normalized target tuple is unique. Duplicate or contradictory evidence has no
-    tie-break and fails the whole day.
-12. Targets are ordered only by the Phase 2 canonical key
-    `(organization, source_system, external_race_id)` and are frozen into the shared
-    provider-neutral `HistoricalDailyTargetEvidenceBundle` and audited immutable
-    `DailyHistoricalReplayTargetSet` projection.
-
-A proven complete positive non-zero target set may be `SUPPORTED_COMPLETE_DAY`. A
-zero-row result is never accepted by absence: the approved positive-zero contract is
-still unavailable, so initial zero days fail closed.
-
-## JRA initial supported profile
-
-### Official composite
-
-The proposed ordinary-day composite is:
-
-```text
-exact historical year program page (exact canonical request/reference and bytes)
-  -> unique formally recognized 開催日割表 link, including an explicitly labeled
-     revised version when that is the uniquely resolvable official schedule version
-  -> exact OFFICIAL_YEAR_PROGRAM_SCHEDULE_VERSION PDF: official schedule meeting set
-  -> exact per-meeting bangumi PDF: official program race-identity tuple
-
-exact accessS past-result-search POST response for target year/month
-  -> actual-history target-date meeting-selection locator set
-  -> one exact accessS race-selection POST response per meeting
-  -> exact actual-history race-identity tuple per meeting
-  -> one exact supplied accessS race-result href per race for official displayed
-     target date/identity/start-time facts
+```python
+NARHistoricalDailyTargetPageKind
+NARHistoricalDailyTargetRequestIdentity
+NARHistoricalDailyTargetResponseCapture
+NARHistoricalDailyTargetCaptureSource
+NARHistoricalDailyTargetCaptureArchive
+NARHistoricalDailyTargetCaptureError
+NARHistoricalDailyTargetCaptureValidationError
+NARHistoricalDailyTargetCaptureUnsupportedError
+NARHistoricalDailyTargetCaptureMissingError
 ```
 
-JRA is supported initially only when:
-
-- the selected official schedule version's meeting identity set equals the accessS
-  actual-history meeting identity set for the exact date;
-- every official schedule meeting has exactly one official bangumi fragment and exactly one
-  accessS race-selection fragment;
-- for each meeting, the exact official program race identities enumerated by the
-  bangumi fragment equal those enumerated by the accessS actual-history race-selection
-  fragment;
-- every race-selection href parses to the same year, venue code, meeting number,
-  meeting day, race number, and target date;
-- each exact accessS race page visibly agrees with that identity and supplies an exact
-  official displayed start time that a future strict normalizer can convert to an
-  aware `scheduled_start_at` without current-clock input; and
-- no fragment exposes an exceptional or contradictory state which the initial profile
-  has not explicitly approved.
-
-The per-meeting bangumi equality is essential. Annual meeting schedules alone cannot
-detect a missing race, and accessS result rows alone cannot prove that a cancelled race
-was never silently removed.
-
-`OFFICIAL_YEAR_PROGRAM_SCHEDULE_VERSION` means only that the exact historical year
-program page formally supplies the selected official schedule table. It may be an
-explicitly labeled revised version. It is not asserted to be the original pre-race
-plan, a prediction-time schedule, or a prediction information cutoff. It is
-later-acquired completeness/audit evidence and must never flow into
-`PredictionPipeline`, snapshot selection, or settlement causality.
-
-The 2020 official year program page is a concrete reason for this distinction: research
-observed multiple change documents and a schedule labeled
-`開催日割表（2020年4月6日変更版）`. Its existence does not prove an original pre-event
-schedule; it proves that schedule-version semantics and unique official selection must
-be part of the source contract.
-
-### JRA request, schedule-version, and byte contract
-
-- Program entry: the exact historical year program page reached through a frozen
-  canonical official URL or exact official navigation link. The future source contract
-  must freeze redirect/canonical behavior; `/YYYY/` and `/YYYY/index.html` are not
-  equivalent aliases by assumption.
-- Official schedule meeting envelope: identify on the captured year page the unique
-  formally recognized `開催日割表` schedule link. Retain its exact visible label/title
-  and exact href, and allow an explicitly labeled revised version when the source
-  semantics resolve it uniquely as the official schedule version. Capture the exact
-  PDF bytes and digest and bind the selected evidence version to the year-page
-  reference and digest. Zero matching schedule links fails closed. Multiple potentially
-  operative schedule links whose semantics cannot be resolved uniquely fail closed and
-  return for ChatGPT review.
-- Selection by guessed filename, a hard-coded `nittei` name alone, first PDF, link
-  position, filesystem/download time, or current clock is forbidden.
-- Official program race fragments: take each exact per-meeting bangumi href from the
-  captured year page. Its visible label/context must bind it to one exact normalized
-  meeting identity; filename alone is never identity. Capture opaque exact PDF bytes
-  plus digest. A future strict grammar must recognize every required day/race row;
-  malformed or unrecognized layout fails the provider/date, and OCR or guessed race
-  numbers are forbidden.
-- Historical actual envelope: POST to exact
-  `https://www.jra.go.jp/JRADB/accessS.html` using the exact `cname` request grammar and
-  year/month token supplied by the official accessS past-search response. Tokens are
-  not guessed or recomputed independently of that response.
-- Meeting fragments: exact accessS race-selection `cname` locators supplied by the
-  historical month response.
-- Race fragments: exact accessS race-result hrefs supplied by each meeting fragment;
-  the existing JRA lexical race identity and canonical result-URL rules are reused.
-- The official-schedule/accessS equality compares exact meeting identities and exact
-  race identities, never counts, display labels, or inferred race-number continuity.
-- JRA program and accessS HTML are strict CP932/Shift_JIS-family fragments when their
-  formal response metadata/body declaration agrees. The PDFs are opaque exact binary
-  bytes and have no HTML charset contract.
-
-Research confirmed the accessS past-search page itself supplies selectable years back
-to 1986, a deterministic year/month token table, and exact meeting-selection locators.
-This is source navigation evidence, not permission to synthesize an unknown CNAME.
-
-### JRA exceptional-state decisions
-
-| Case | Initial decision | Reason |
-|---|---|---|
-| ordinary official-schedule=actual-history day, with exact race-set equality | `SUPPORTED_INITIAL_PROFILE` | both meeting and race denominators are positively cross-checked |
-| official schedule meeting absent from actual history | `DEFERRED_FAIL_CLOSED` | official-schedule/actual-history meeting sets disagree; exact status/identity contract is not universally qualified |
-| substitute meeting later conducted | `DEFERRED_FAIL_CLOSED` | additional/moved actual meeting creates an unresolved original/replacement relation |
-| partial or race-level cancellation | `DEFERRED_FAIL_CLOSED` | no reviewed universal native row-status mapping proves preservation; a race-set mismatch fails closed |
-| zero-racing date | `DEFERRED_FAIL_CLOSED` | official schedule absence plus accessS absence is not a positive actual-zero assertion |
-
-No reduced meeting set is rerun. A JRA disagreement rejects the provider/date in full.
-
-## NAR initial supported profile
-
-### Official composite
+The initial page-kind vocabulary is exactly `monthly_convene_info` and `race_list`.
+`NARHistoricalDailyTargetRequestIdentity` freezes:
 
 ```text
-MonthlyConveneInfo historical year/month envelope
-  -> exact marked venue set for target_date
-  -> one exact date-qualified RaceList link supplied by the envelope per marked venue
-  -> strict all-row race identity/time normalization per RaceList
-  -> same-day RaceList navigation venue set used only as consistency evidence
-  -> exact provider-native non-run text/status retained when formally present
+schema/version identifier
+GET method
+exact approved official origin
+exact official-supplied request material
+exact resolved request URL
+exact supplier evidence/reference identity
+derived request_identity_sha256
 ```
 
-NAR is supported initially only when:
+For a RaceList request, the supplied material is the exact lexical `href` attribute from
+one accepted target-date mark cell in the captured MonthlyConveneInfo bytes. The domain
+retains the raw lexeme and its supplier capture/reference. Only HTML character-reference
+decoding and resolution against the exact approved official base/origin may derive the
+resolved URL. The validator checks exact allowed host/path and the raw supplied query
+parameter names, order, spelling, percent encoding, date, and `babaCode` spelling. It
+does not sort, decode/re-encode, pad, rebuild, or manufacture a URL from date/venue.
 
-- the MonthlyConveneInfo target-date marked venue set is non-empty and has no `△`
-  substitute marker or unknown mark;
-- each marked cell supplies exactly one official RaceList locator for the same exact
-  date and venue;
-- exactly one RaceList fragment is captured for every marked venue;
-- each RaceList visibly agrees with its date and active venue identity;
-- every RaceList same-day navigation set equals the MonthlyConveneInfo marked venue
-  set and equals the union of captured RaceList venue identities;
-- each structural race row yields exactly one canonical NAR external identity and an
-  exact official displayed start time, with no skip or guessed value;
-- duplicate race identities, malformed rows, status ambiguity, or contradictory
-  navigation fail the whole day; and
-- any accepted non-run case retains every exact race row and exact provider-native
-  disposition evidence without normal-race fallback.
+For MonthlyConveneInfo, the capture boundary accepts one exact supplied Monthly locator
+and its official supplier reference. Phase 5 provides no function which accepts
+`target_date`, year, or month and creates that locator. The implementation must not
+promote a hand-written `?k_year=...&k_month=...` ordering into identity. Discovery of the
+official Monthly locator/bootstrap chain belongs to another reviewed phase. Unsupported
+cross-year request grammar requires an explicitly reviewed source-family version or
+fails closed.
 
-RaceList same-day navigation is consistency evidence only. It cannot replace or expand
-the MonthlyConveneInfo envelope. A navigation-only venue, envelope-only venue, missing
-fragment, or unequal set is `TARGET_DISCOVERY_INCOMPLETE`.
+`NARHistoricalDailyTargetResponseCapture` retains exact response bytes, request identity,
+strict `utf-8`, honest requested/observed times, response metadata, response SHA-256,
+and derived capture ID. Observation time is acquisition audit metadata only. It is never
+backdated or used as scheduled start, prediction cutoff, snapshot upper bound, provider
+availability, or settlement cutoff.
 
-### NAR canonical request identity
+The read/write Protocols expose only exact capture-ID load and append-only save. They
+expose no list, latest, nearby, URL-reconstruction, delete, update, or fallback API.
 
-The canonical RaceList request is the exact raw locator supplied by the captured
-official MonthlyConveneInfo envelope, not a URL reconstructed from known date and venue
-facts:
+### `scripts/simulation/nar_historical_daily_target_live_capture.py`
 
-1. Capture exact MonthlyConveneInfo raw response bytes under a separately versioned
-   source-family contract. Until official navigation, form material, or a raw official
-   href proves one exact ordering, its request identity is the exact endpoint/path,
-   required year/month parameter set, and exact official-supplied request material; a
-   manually ordered `?k_year=YYYY&k_month=M` string is not authoritative by itself.
-2. From each accepted marked target-date cell, take the exact raw RaceList `href`
-   attribute supplied by that captured envelope.
-3. Apply HTML entity decoding only, resolve the result against the exact approved
-   official base/origin, and validate the allowed official host and exact path
-   `/KeibaWeb/TodayRaceInfo/RaceList`.
-4. Freeze the official-envelope-supplied raw href request material, including parameter
-   names, order, spelling, percent encoding, and `babaCode` spelling exactly as supplied.
-   Do not reorder, rebuild, pad, decode/re-encode, or canonicalize it from known
-   `babaCode` and date facts.
-5. Do not accept `www2`, literal-slash dates, reversed query order, zero-padded
-   babaCode, or any other alternate as an alias merely because a current server
-   redirects or returns semantically similar bytes.
+Owns optional network-capable acquisition for an already constructed exact
+`NARHistoricalDailyTargetRequestIdentity`:
 
-Research showed that current responses often tolerate reverse query order and literal
-slashes, `www2` redirects to `www`, and `03` can return a different byte representation
-from `3`. Those observations justify using the exact envelope-supplied locator rather
-than normalizing alternates by assumption. If raw official href spelling or ordering
-varies across supported years, a future source contract must preserve or explicitly
-version that behavior; it must not normalize it speculatively and must stop for review
-when the contract cannot account for the variation.
+```python
+NARHistoricalDailyTargetHTTPTransport
+NARHistoricalDailyTargetLiveCaptureService
+NARHistoricalDailyTargetCaptureTransportError
 
-NAR MonthlyConveneInfo and RaceList HTML are separate strict UTF-8 fragment families.
-Any future binary supplemental evidence remains opaque exact bytes plus digest.
+NARHistoricalDailyTargetLiveCaptureService.capture_supplied_response(
+    *,
+    request_identity: NARHistoricalDailyTargetRequestIdentity,
+) -> NARHistoricalDailyTargetResponseCapture
+```
 
-### NAR exceptional-state decisions
+The service receives an injected transport, archive Protocol, and UTC clock. It performs
+one exact GET with redirects disabled and identity content encoding, validates the
+effective URL against the supplied request identity, reads bounded exact bytes, creates
+the immutable capture, saves it through the archive, and only then returns it. It does
+not accept `target_date` as locator input and does not discover or construct a Monthly or
+RaceList request. RaceList acquisition can begin only after the strict envelope
+normalizer returns the exact envelope-supplied request identities.
 
-| Case | Initial decision | Reason |
-|---|---|---|
-| ordinary day satisfying all equality and strict-row predicates | `SUPPORTED_INITIAL_PROFILE` | positive venue envelope and complete per-venue target rows agree |
-| partial race cancellation with exact preserved row | `DEFERRED_FAIL_CLOSED` | no reviewed row-level native status example yet proves a safe normalized contract |
-| whole meeting cancellation with exact preserved race rows and exact native no-substitute text | `SUPPORTED_INITIAL_PROFILE` | the denominator remains exact; all rows stay targets and later execution classification remains separate |
-| substitute date marked `△` | `DEFERRED_FAIL_CLOSED` | original/replacement identity relation is not qualified |
-| original cancelled date without exact race identities | `DEFERRED_FAIL_CLOSED` | partition-level evidence cannot replace exact race identities |
-| all-blank or apparent zero date | `DEFERRED_FAIL_CLOSED` | blank semantics are not a positive zero contract |
+### `scripts/simulation/nar_historical_daily_target_source.py`
 
-The tested 2025-12-26 Kanazawa page is the narrow whole-meeting-cancellation example:
-MonthlyConveneInfo includes Kanazawa, RaceList states that the meeting was cancelled
-with no substitute, and the page preserves exact race rows 1 through 12. The support
-decision depends on those exact retained rows and native statement, not on numerical
-continuity. A different cancellation page without retained identities fails closed.
+Owns pure strict normalization and NAR-only composition:
 
-## Initial historical support floor
+```python
+NARHistoricalVenueIdentity
+NARMonthlyConveneInfoVenueLocator
+NARMonthlyConveneInfoEnvelope
+NARRaceListTargetFragment
+NARNativeDispositionEvidence
+NARHistoricalDailyTargetSourceError
+NARHistoricalDailyTargetSourceValidationError
+NARHistoricalDailyTargetSourceUnsupportedError
 
-Result: `SUPPORTED_FLOOR_PROPOSAL`
+normalize_nar_monthly_convene_info(
+    *,
+    target_date: date,
+    capture: NARHistoricalDailyTargetResponseCapture,
+) -> NARMonthlyConveneInfoEnvelope
+
+normalize_nar_race_list(
+    *,
+    target_date: date,
+    expected_venue: NARHistoricalVenueIdentity,
+    expected_request: NARHistoricalDailyTargetRequestIdentity,
+    capture: NARHistoricalDailyTargetResponseCapture,
+) -> NARRaceListTargetFragment
+
+build_nar_historical_daily_target_evidence_bundle(
+    *,
+    target_date: date,
+    envelope_capture: NARHistoricalDailyTargetResponseCapture,
+    race_list_captures: tuple[NARHistoricalDailyTargetResponseCapture, ...],
+) -> HistoricalDailyTargetEvidenceBundle
+
+build_nar_historical_daily_replay_target_set(
+    *,
+    target_date: date,
+    envelope_capture: NARHistoricalDailyTargetResponseCapture,
+    race_list_captures: tuple[NARHistoricalDailyTargetResponseCapture, ...],
+) -> DailyHistoricalReplayTargetSet
+```
+
+The final convenience function fixes the closed provider scope to exact
+`NAR/nar_official`, delegates bundle construction, and delegates provider-neutral set
+construction. It does not implement replay orchestration.
+
+Both builder functions are pure over the supplied capture values. This module must not
+import the live capture service, HTTP clients/transports, clocks, SQLite repositories, or
+legacy providers/parsers. Missing capture evidence is a fail-closed input, never a signal
+to fetch it.
+
+## Strict normalization contract
+
+### MonthlyConveneInfo envelope
+
+The normalizer must operate on exact strict-UTF-8 capture bytes and prove:
+
+1. page kind, exact historical year/month request identity, and requested
+   `target_date` agree;
+2. exactly one accepted target-date calendar column/cell context exists;
+3. the marked venue set is non-empty;
+4. every accepted mark is a qualified ordinary/night/grade mark and none is blank,
+   `△`, unknown, duplicated, or structurally malformed;
+5. each marked venue cell contains exactly one lexical RaceList href attribute;
+6. the raw href is extracted from source lexical material without DOM reserialization;
+7. only HTML character-reference decoding and exact official-base resolution occur;
+8. the href validates to the same target date and one positive canonical `babaCode`;
+9. duplicate venue identity, duplicate locator, or contradictory display/identity fails;
+   and
+10. every accepted locator retains its envelope capture ID, response digest, structural
+    source locator, raw href lexeme, resolved request identity, and official mark
+    evidence.
+
+No venue is inferred from a known venue list, navigation, database row, display place,
+or caller request. Blank output never means proven zero.
+
+### RaceList all-row fragment
+
+For each envelope locator, exactly one capture must match the exact derived request
+identity. The normalizer must prove:
+
+1. capture kind, request identity, exact date, and exact venue agree;
+2. every structural race row is recognized; a malformed or partially populated row is
+   an error, not a skip;
+3. every row yields exact positive canonical `raceNo`, exact external identity
+   `nar:{YYYYMMDD}:{babaCode}:{raceNo}`, and an exact aware start time when the row is a
+   normal replay candidate;
+4. no identity comes from row count, position, continuity, display venue, or SQLite;
+5. duplicate race number/identity or contradictory time/status fails the whole date;
+6. the same-day navigation venue set is parsed independently as consistency evidence;
+7. every unrecognized exceptional marker/text fails rather than falling back to normal;
+   and
+8. provider-native disposition evidence retains exact capture/reference identity,
+   response digest, structural locator, and exact native text/code evidence.
+
+The parser must use a lexical start-tag boundary capable of retaining the raw href
+attribute. A parser which returns only a normalized/reordered DOM URL is insufficient.
+Existing formal NAR identity helpers may be reused only after their positive-decimal and
+date semantics are shown identical; the existing URL canonicalizer must not be called
+for MonthlyConveneInfo or RaceList locators.
+
+### Exact coverage relation
+
+Let:
 
 ```text
-initial floor: 2020-01-01 (inclusive)
+E = exact marked venue identities from MonthlyConveneInfo
+F = exact venue identities of supplied RaceList captures/fragments
+N_i = same-day navigation venue identities parsed from RaceList fragment i
 ```
 
-This is a conservative admission gate, not a claim of permanent retention and not a
-replacement for per-date source predicates. Research observed:
-
-- JRA year program pages, annual nittei PDFs, and first-meeting bangumi PDFs for every
-  year 2020 through 2025;
-- JRA accessS historical January month responses and first-day race-selection
-  fragments for every year 2020 through 2025;
-- NAR January MonthlyConveneInfo and exact RaceList fragments for every year 2020
-  through 2025; and
-- stable provider-native identity shapes across those tested years.
-
-The JRA January first dates yielded two meetings and 12 exact accessS race identities
-per meeting for 2020-01-05, 2021-01-05, 2022-01-05, 2023-01-05, 2024-01-06, and
-2025-01-05. NAR 1 January envelope/navigation equality was observed for 2020 through
-2025. These cases support a 2020 floor proposal, but every runtime preparation still
-fails closed if any required family is unavailable or contradictory. Dates before the
-floor are unsupported even if one fragment happens to remain reachable. Expansion
-requires another reviewed phase.
-
-## Source-support predicate matrix
-
-`SATISFIED` below means the initial profile has a positive source predicate; it does
-not mean universal provider history is qualified.
-
-| Source-support predicate | JRA initial profile | NAR initial profile |
-|---|---|---|
-| exact historical date addressable | `SATISFIED` by year program + accessS month | `SATISFIED` by year/month envelope + date-qualified links |
-| positive official-schedule/provider-day partition envelope | `SATISFIED` by selected official schedule version PDF | `SATISFIED` by MonthlyConveneInfo marked set for accepted non-zero/non-`△` dates |
-| positive actual partition set | `SATISFIED` by accessS month meeting locators | `SATISFIED` by exact captured RaceList identities, with navigation as consistency only |
-| official-schedule/actual-history partition equality | `REQUIRED_EXACT` | `REQUIRED_EXACT` across envelope, fragments, and navigation |
-| exact official program race tuple per partition | `SATISFIED` by exact bangumi PDF rows | `NOT_SEPARATE`; qualified RaceList is the formal partition target list |
-| exact historical race-list tuple | `SATISFIED` by accessS meeting fragment | `SATISFIED` by strict RaceList all-row normalization |
-| official-program/actual-history race-tuple equality | `REQUIRED_EXACT` | `NOT_APPLICABLE`; no inferred second list |
-| exact scheduled start for replay candidate | `REQUIRED` from exact accessS race fragment | `REQUIRED` from exact RaceList row |
-| canonical official request identity | `SATISFIED` by supplied program hrefs and supplied accessS POST locators | `SATISFIED` by exact MonthlyConveneInfo-supplied RaceList href rule |
-| exact response bytes and digest | `SATISFIED` per HTML/PDF family | `SATISFIED` per HTML family |
-| positive zero | `UNSUPPORTED` | `UNSUPPORTED` |
-| whole-meeting cancellation | `UNSUPPORTED_INITIAL` | `SUPPORTED_ONLY_IF_EXACT_ROWS_AND_NATIVE_NO-SUBSTITUTE_EVIDENCE` |
-| substitute/original relation | `UNSUPPORTED` | `UNSUPPORTED` |
-| partial/race-level cancellation | `UNSUPPORTED_INITIAL` | `UNSUPPORTED_INITIAL` |
-| no silent skip | `REQUIRED_EXACT` | `REQUIRED_EXACT` |
-| missing/duplicate/contradictory behavior | whole-day fail closed | whole-day fail closed |
-| observed availability at 2020 floor | `SATISFIED_IN_RESEARCH` | `SATISFIED_IN_RESEARCH` |
-
-## Implementation and audit feasibility matrix
-
-These rows describe whether later work can build and audit the contract. They do not
-qualify source completeness and authorize no code in this phase.
-
-| Feasibility concern | JRA | NAR |
-|---|---|---|
-| exact raw byte capture and SHA-256 | feasible for CP932 HTML and opaque PDFs | feasible for UTF-8 HTML |
-| honest aware `observed_at` | feasible; future acquisition time only | feasible; future acquisition time only |
-| exact request fingerprint | feasible from endpoint, method, exact official-supplied `cname`/href, and version | feasible from exact official-supplied envelope request material/raw href and version |
-| exact provider/race identity reuse | reuse `JRAExternalRaceIdentity` and strict accessS URL parsing | reuse `nar:YYYYMMDD:babaCode:raceNo` grammar and positive decimal tokens |
-| existing capture repository reuse | exact accessS result loads are reusable; month/selection/PDF families need separately reviewed capture design | exact NAR capture primitives inform the design; Monthly/RaceList kinds need separately reviewed capture design |
-| existing normalizer reuse | existing accessS identity/header domains can be reused where they own facts; strict month/PDF/list normalizers are new future work | legacy `NARParser` is forbidden; exact NAR URL/identity primitives are reusable; strict envelope/list normalizers are new future work |
-| PDF normalization | new versioned strict layout contract required; extraction failure is whole-day failure | not required for the initial composite |
-| strict no-skip normalization | feasible but not implemented | feasible but not implemented |
-| acquisition/no-network replay separation | feasible through immutable prepared evidence bundle | feasible through immutable prepared evidence bundle |
-| deterministic bundle/target-set digest | feasible after a later phase freezes versioned canonical bytes | feasible after a later phase freezes versioned canonical bytes |
-| durable storage/migration | not designed or authorized here | not designed or authorized here |
-
-Existing repositories must not be bypassed merely to reconstruct a formal domain from
-raw rows. Conversely, existing accessD target-input normalization cannot be reused on a
-newly observed historical card when its formal causal contract requires observation no
-later than scheduled start. A future implementation must stop for review rather than
-weaken that invariant.
-
-## Coverage construction and failure boundary
-
-The future preparation boundary is conceptually:
+The supported contract requires a non-empty set and exact equality:
 
 ```text
-exact requested target_date + closed provider scope
-  -> acquire/freeze every profile-required official fragment
-  -> strict provider-specific normalization
-  -> exact coverage-relation checks
-  -> SUPPORTED_COMPLETE_DAY or TARGET_DISCOVERY_INCOMPLETE
-  -> only on support: shared HistoricalDailyTargetEvidenceBundle
-  -> audited immutable DailyHistoricalReplayTargetSet
+E = F = N_i  for every i
 ```
 
-No evidence resolver, snapshot selection, manifest builder, replay runner, persistence,
-or reporting work occurs in this phase. Later replay remains no-network. For a mixed
-closed scope such as `{JRA, NAR}`, both provider-day profiles must pass; one provider
-failure rejects the complete requested scope.
+There must be exactly one fragment per envelope locator and no extra fragment. Navigation
+is consistency evidence only and never creates, replaces, or expands the envelope.
+Missing/extra/duplicate fragments, unequal navigation sets, or ambiguous identity make
+the whole NAR date `TARGET_DISCOVERY_INCOMPLETE`. No reduced venue or race list is
+returned.
 
-## Digest boundary
+## Supported and fail-closed native states
 
-Phase 2 still owns `content_sha256` as the sole target-set content identity. Phase 4
-does not implement serialization. A later implementation design must version and
-freeze canonical bytes, including schema identifier, exact field ordering, canonical
-datetime representation, canonical Unicode/string rules, canonical tuple ordering,
-and exact byte encoding. Python `repr`, unordered mappings, locale formatting,
-filesystem metadata, SQLite row IDs/order, redirects, and current time are forbidden
-digest material.
+The initial NAR adapter supports only:
 
-## Existing repository domains to reuse
+- an ordinary date satisfying every strict envelope, row, request, and three-set
+  equality predicate; and
+- the Phase 4 narrow whole-meeting cancellation shape exemplified by 2025-12-26
+  Kanazawa: the envelope retains the venue, every exact race row remains present, all
+  venue sets agree, and the RaceList supplies the exact reviewed native
+  whole-meeting-cancelled/no-substitute statement.
 
-- `scripts/simulation/jra_official_identity.py` for exact JRA race identity and strict
-  supplied accessS/accessD URL identity rules.
-- `scripts/simulation/jra_target_race_card_locator.py` and
-  `jra_target_race_card_discovery.py` as examples of supplied-navigation, exact POST
-  request fingerprints, unique table/row requirements, and no arbitrary choice. They
-  do not themselves prove an historical daily denominator.
-- `scripts/simulation/jra_official_response_capture.py` and its SQLite repository for
-  immutable exact-byte/digest/observation patterns and exact accessS result loads.
-- `scripts/simulation/jra_historical_past_race_source.py` only for formal accessS facts
-  it already owns; it is not a daily discovery source.
-- `scripts/simulation/nar_official_response_capture.py` and its repository for strict
-  host/path/query, byte, digest, and provenance patterns.
-- `scripts/simulation/nar_historical_input_source.py` for canonical positive-decimal
-  NAR identity grammar and formal facts it already owns.
-- `scripts/providers/nar_provider.py` and `scripts/parsers/nar_parser.py` must not be
-  reused as the historical completeness boundary: they are mutable/live-oriented,
-  write logs, infer encoding, and silently skip malformed rows.
+That second rule is evidence-shape based, not permission to infer identities from the
+observed 1-through-12 sequence. A page without retained exact rows, a different or
+ambiguous native statement, an original/replacement ambiguity, or an unequal venue set
+fails closed. The provider-specific normalizer may recognize a versioned native evidence
+shape, but it must not create a provider-neutral disposition enum. Shared targets retain
+only exact provider-native evidence/reference.
 
-No existing formal API is broadened for convenience in this phase.
+The following remain unsupported and fail closed without partial output:
 
-## Unresolved blockers deferred to implementation or expansion review
+- date before `2020-01-01`;
+- apparent/blank/zero day;
+- `△` substitute date;
+- original cancelled date without exact target identities;
+- partial or race-level cancellation;
+- unknown/contradictory native status;
+- missing exact start time for a normal replay candidate; and
+- any missing, duplicate, malformed, contradictory, or unqualified evidence.
 
-The supported profile is implementable as a contract, but none of these items may be
-guessed during implementation:
+The 2020 floor is only an admission gate. Every accepted date must still satisfy every
+evidence predicate.
 
-1. A strict versioned JRA year-program HTML source contract must freeze its canonical
-   request/reference, redirect behavior, recognized schedule label semantics, revised
-   version selection, exact supplied hrefs, and ambiguity failure.
-2. A versioned strict JRA nittei PDF normalization grammar and layout-version
-   recognition must be designed and tested. Opaque PDF capture alone is not a
-   normalized meeting denominator.
-3. A versioned strict JRA bangumi PDF grammar must bind exact year-page link context to
-   an exact meeting and recognize every required day/race row without OCR, filename
-   identity, or guessed race numbers.
-4. A strict accessS month and meeting-selection normalizer must prove unique structural
-   rows and preserve supplied POST locators without inventing tails.
-5. The exact accessS selector and semantics used for the displayed start time must be
-   frozen. If it cannot support Phase 2 `scheduled_start_at` without ambiguity, JRA
-   dates remain fail closed and the design returns for ChatGPT review.
-6. A versioned strict NAR MonthlyConveneInfo raw-href grammar must preserve official
-   parameter spelling, order, and encoding and must reject unsupported variation rather
-   than reconstruct a locator.
-7. A versioned strict NAR RaceList all-row grammar must reject every malformed,
-   duplicate, silently skipped, or unrecognized target row.
-8. NAR row-level partial cancellation semantics remain unqualified. Only the exact
-   preserved whole-meeting/no-substitute case is admitted initially.
-9. Provider-neutral disposition enum/mapping remains deferred; native evidence is
-   preserved exactly as Phase 2 requires.
-10. No positive zero-day source contract exists for either provider.
-11. A future artifact/persistence phase must freeze canonical serialization and new
-   capture kinds before any migration is proposed.
+## Provider-neutral projection contract
 
-None of these blockers authorizes weakening the predicates. If a later implementation
-cannot satisfy one, the affected provider/date is `TARGET_DISCOVERY_INCOMPLETE` or the
-phase stops for ChatGPT review.
+The NAR source produces the shared Phase 2 values; it does not introduce NAR-specific
+bundle or target-set subclasses.
 
-## Phase gates
+Each `DailyHistoricalReplayTarget` contains exact `NAR/nar_official` provider identity,
+canonical external race identity, exact aware UTC `scheduled_start_at` for a normal
+candidate, and a provider-native disposition evidence/reference. Exceptional targets
+retain an exact official original start only when the source supplies it; otherwise
+`scheduled_start_at` is `None` and the target remains in the denominator.
 
-Phase 4 is research and design only. `IMPLEMENTABLE_SUPPORTED_PROFILE` means a later
-phase has a sufficiently precise contract against which it may separately propose and
-test implementation. It does not mean the source parsers or normalizers are ready, and
-it does not authorize implementation now. Every production, test, schema, migration,
-acquisition/archive, persistence, and CLI change requires a separate `PREPARE_PHASE`,
-independent ChatGPT review, and `APPROVE_PHASE`.
+Each `DailyHistoricalReplayCompletenessEvidence` traces one envelope or RaceList
+coverage fact to exact request identity, capture ID, response digest, honest
+`observed_at`, optional formally supplied provider availability, versioned evidence kind,
+and date/provider/partition coverage identity. Raw official captures remain primary
+evidence; the bundle is only their audited immutable projection.
 
-## Current phase Allowed Files
+Bundle construction rejects target/partition/evidence duplication and disagreement. The
+target-set builder validates exact closed-scope coverage and canonicalizes targets by
+`(organization, source_system, external_race_id)`. Nullable start time, display place,
+race number alone, SQLite IDs/order, caller order, capture order/time, archive filename,
+and current clock never determine target-set order.
+
+## Deterministic digest boundary
+
+Digest construction remains in the proposed Phase 5 implementation, so this design
+freezes its canonical byte contract. All digest payloads use exact UTF-8 bytes from:
+
+```python
+json.dumps(
+    payload,
+    ensure_ascii=False,
+    allow_nan=False,
+    sort_keys=True,
+    separators=(",", ":"),
+).encode("utf-8")
+```
+
+There are no optional or additional object keys. Exact raw official request material is
+represented as lowercase hex of its exact strict-UTF-8 bytes; it is never Unicode-
+normalized, URL-decoded, reordered, or re-encoded before that conversion.
+
+The request-identity digest payload is exactly:
+
+```json
+{
+  "method": "GET",
+  "official_origin": "https://www.keiba.go.jp",
+  "official_supplied_request_material_utf8_hex": "<lowercase hex>",
+  "page_kind": "monthly_convene_info|race_list",
+  "resolved_request_url": "<exact validated resolved URL>",
+  "schema_version": 1,
+  "supplier_evidence_identity": "<exact non-empty reference>"
+}
+```
+
+`request_identity_sha256` is SHA-256 of those canonical bytes. The formal request
+identity string is exactly `nar-daily-target-request-v1:<request_identity_sha256>`.
+
+The response capture ID payload is exactly:
+
+```json
+{
+  "observed_at_utc": "<UTC ISO-8601 microseconds +00:00>",
+  "page_kind": "monthly_convene_info|race_list",
+  "request_identity_sha256": "<64 lowercase hex>",
+  "response_sha256": "<64 lowercase hex>",
+  "schema_version": 1
+}
+```
+
+Its identity is exactly `nar-daily-target-capture-v1:<sha256 of canonical payload>`.
+
+The target-set `content_sha256` payload is exactly:
+
+```json
+{
+  "completeness_evidence": [
+    {
+      "canonical_source_or_request_identity": "<exact request identity string>",
+      "content_sha256": "<exact response SHA-256>",
+      "coverage_identity": "<exact coverage identity>",
+      "evidence_kind_and_version": "<exact kind/version>",
+      "exact_capture_or_reference_identity": "<exact capture ID>",
+      "observed_at_utc": "<UTC ISO-8601 microseconds +00:00>",
+      "organization": "<exact organization>",
+      "provider_available_at_utc": null,
+      "source_system": "<exact source system>"
+    }
+  ],
+  "provider_scope": [
+    {"organization": "<exact organization>", "source_system": "<exact source system>"}
+  ],
+  "schema_version": 1,
+  "target_date": "YYYY-MM-DD",
+  "target_races": [
+    {
+      "external_race_id": "<exact provider race identity>",
+      "organization": "<exact organization>",
+      "provider_disposition_evidence": {
+        "content_sha256": "<exact response SHA-256>",
+        "evidence_kind_and_version": "<exact provider-native kind/version>",
+        "exact_capture_or_reference_identity": "<exact capture ID>",
+        "native_value_sha256": "<SHA-256 of exact native UTF-8 lexical value>",
+        "structural_locator": "<exact versioned source locator>"
+      },
+      "scheduled_start_at_utc": null,
+      "source_system": "<exact source system>"
+    }
+  ]
+}
+```
+
+Provider scope, targets, and completeness evidence use the approved canonical orders.
+The provider-neutral field `provider_available_at_utc` is either JSON `null` or the
+canonical UTC datetime string when formal source evidence supplies it. For the Phase 5
+NAR source it is exactly `null` because neither approved source supplies it. Aware
+datetimes use UTC ISO-8601 with exactly six fractional digits and `+00:00`; dates use
+exact `YYYY-MM-DD`. `native_value_sha256` hashes the exact strict-UTF-8 lexical native
+value without text normalization.
+
+In the exact target payload, `scheduled_start_at_utc` is JSON `null` when absent and is
+replaced by the canonical UTC datetime string when present; no other representation is
+valid.
+
+Python `repr`, unordered mappings, locale formatting, filesystem metadata, SQLite row or
+order, acquisition order, and current time are forbidden digest material.
+`DailyHistoricalReplayTargetSet.content_sha256` is SHA-256 of the exact target-set bytes
+and is the sole target-set content identity. No durable ID, storage key, row ID, or
+target-set persistence is introduced here.
+
+## Failure taxonomy and propagation
+
+API misuse or invalid exact value types raise `DailyHistoricalTargetValidationError` or
+the NAR source/capture validation subtype. Corrupt exact-loaded capture content,
+impossible derived identity, digest mismatch, or unsafe source attribution raises
+`DailyHistoricalTargetIntegrityError` and is propagated as a global integrity failure;
+it is not relabeled as an ordinary unsupported date.
+
+An otherwise valid request whose complete denominator cannot be positively proven raises
+one `TargetDiscoveryIncompleteError` carrying exactly one stable primary
+`DailyTargetDiscoveryFailureCode`:
+
+```text
+UNSUPPORTED_TARGET_DATE
+MISSING_ENVELOPE_EVIDENCE
+INVALID_OFFICIAL_REQUEST_IDENTITY
+UNSUPPORTED_ENVELOPE_STATE
+MISSING_PARTITION_EVIDENCE
+DUPLICATE_EVIDENCE
+MALFORMED_OFFICIAL_EVIDENCE
+CONTRADICTORY_EVIDENCE
+COVERAGE_SET_MISMATCH
+UNSUPPORTED_NATIVE_DISPOSITION
+MISSING_SCHEDULED_START
+```
+
+The error may retain deterministic ordered evidence references for audit, but never a
+partial bundle, partial target set, reduced denominator, or SimulationSummary. No code
+selects a different capture, retries, reconstructs a URL, drops a race, or converts a
+failure into a proven zero.
+
+Transport errors and exact archive-missing errors retain their capture-layer types until
+the preparation boundary maps a safely attributable missing required fragment to
+`MISSING_ENVELOPE_EVIDENCE` or `MISSING_PARTITION_EVIDENCE`. Unexpected storage integrity
+errors always propagate globally.
+
+## Source/capture repository boundary
+
+The later Phase 5 implementation defines immutable capture values and exact-ID
+Source/Archive Protocols, but no SQLite repository. An in-memory fake may be used only in
+tests. A production caller must supply exact locators and captures from independently
+approved bootstrap/acquisition/archive implementations.
+
+The existing v001 NAR capture archive cannot store the new page kinds and must not be
+widened. If durable MonthlyConveneInfo/RaceList storage is required, a later separately
+reviewed phase must design new capture kinds, DDL, migration runner ownership, immutable
+save/load semantics, and corruption tests. That phase must not change raw href or target-
+set digest semantics. Main replay migration application remains outside discovery.
+
+## Core future execution flow
+
+```text
+separate bootstrap/acquisition responsibility
+  -> exact supplied MonthlyConveneInfo locator
+  -> optional exact-byte capture and archive-before-return
+  -> pure MonthlyConveneInfo normalization yields exact envelope-supplied RaceList locators
+  -> optional exact-byte RaceList capture for every supplied locator
+  -> frozen MonthlyConveneInfo + RaceList captures
+
+Phase 5 no-network bundle/target-set construction
+  -> consume captured evidence only
+  -> strict MonthlyConveneInfo normalization
+  -> non-empty marked venue envelope + exact raw RaceList request identities
+  -> require exactly one already captured RaceList for every envelope locator
+  -> strict all-row RaceList normalization per venue
+  -> require E = F = every N_i
+  -> validate ordinary or exact retained-row whole-meeting-cancellation profile
+  -> build shared HistoricalDailyTargetEvidenceBundle
+  -> build audited DailyHistoricalReplayTargetSet
+  -> SUPPORTED_COMPLETE_DAY
+
+any unsupported/missing/malformed/duplicate/contradictory predicate
+  -> TARGET_DISCOVERY_INCOMPLETE
+  -> no partial bundle or target set
+```
+
+Monthly locator discovery/bootstrap is not implemented in Phase 5. The optional capture
+service accepts only an exact supplied request identity. Bundle and target-set builders
+are no-network consumers of immutable captures and never call that service. Snapshot
+evidence resolution, manifest construction, replay, settlement, persistence, and
+reporting are never called by this flow.
+
+## Proposed later EXECUTE Allowed Files
+
+Production:
+
+```text
+scripts/simulation/historical_daily_targets.py
+scripts/simulation/nar_historical_daily_target_capture.py
+scripts/simulation/nar_historical_daily_target_live_capture.py
+scripts/simulation/nar_historical_daily_target_source.py
+```
+
+Tests:
+
+```text
+tests/test_historical_daily_targets.py
+tests/test_nar_historical_daily_target_capture.py
+tests/test_nar_historical_daily_target_live_capture.py
+tests/test_nar_historical_daily_target_source.py
+```
+
+Exact future fixture candidates:
+
+```text
+tests/fixtures/nar_daily_targets/provenance.json
+tests/fixtures/nar_daily_targets/monthly_convene_info_2025_01.utf8.html
+tests/fixtures/nar_daily_targets/race_list_2025_01_01_kawasaki.utf8.html
+tests/fixtures/nar_daily_targets/race_list_2025_01_01_nagoya.utf8.html
+tests/fixtures/nar_daily_targets/race_list_2025_01_01_kochi.utf8.html
+tests/fixtures/nar_daily_targets/monthly_convene_info_2025_12.utf8.html
+tests/fixtures/nar_daily_targets/race_list_2025_12_26_kanazawa.utf8.html
+tests/fixtures/nar_daily_targets/monthly_convene_info_2020_03.utf8.html
+tests/fixtures/nar_daily_targets/monthly_convene_info_2017_12.utf8.html
+tests/fixtures/nar_daily_targets/monthly_convene_info_2025_08.utf8.html
+tests/fixtures/nar_daily_targets/race_list_2025_08_30_funabashi.utf8.html
+```
+
+The exact fixture bytes and provenance must be independently reviewed before later
+EXECUTE approval. They must record honest acquisition metadata and must not be backdated.
+Synthetic mutations may test malformed/duplicate/missing rows, but cannot replace the
+ordinary and cancellation official-byte acceptance fixtures.
+
+## Later EXECUTE Forbidden Files and scope
+
+Every file not named above remains forbidden, including existing NAR capture/source
+modules, repositories, migrations, schemas, database, provider archives, CLI,
+`database/keiba.db`, `logs/**`, JRA modules/tests, HistoricalInputSnapshot resolution,
+schema-v1 manifest code, replay application/runner, settlement, persistence, reporting,
+and release/tag/history files.
+
+If implementation requires a change outside the exact future Allowed Files, especially
+a migration, existing capture widening, fixture provenance guess, or dependency change,
+it must stop and return for a new design review.
+
+## Required future tests
+
+### Shared domain and digest
+
+- exact types, immutability, provider-neutral scope/bundle coverage, uniqueness,
+  canonical order, and absence of JRA/NAR-specific coverage assumptions;
+- aware datetime validation and nullable exceptional start semantics;
+- evidence/bundle/target-set traceability and exact scope coverage;
+- duplicate/contradictory target and evidence rejection;
+- canonical payload byte stability and known `content_sha256` vectors;
+- caller/capture/dictionary order permutations produce identical target sets; and
+- raw request material, nullable time, and evidence changes alter the digest while
+  current clock and storage metadata never enter it.
+
+### Request/capture and transport
+
+- exact Monthly request material/reference and exact envelope-supplied RaceList raw href;
+- raw parameter spelling/order/percent encoding is retained, not reconstructed;
+- no API accepts `target_date`, year/month, date/`babaCode`, or venue identity to
+  bootstrap/manufacture a MonthlyConveneInfo or RaceList URL;
+- reversed parameters, literal slash, padded `babaCode`, host/path alias, duplicate or
+  unknown parameter, malformed percent encoding, and redirect are rejected;
+- strict UTF-8, exact bytes/digest/capture ID, bounded response, identity encoding, and
+  honest UTC timestamp order;
+- archive save occurs before return and save/transport failure returns no capture; and
+- exact capture-ID load only, with no latest/nearby fallback.
+
+### Ordinary and exceptional normalization
+
+- the exact 2025-01-01 ordinary envelope and Kawasaki/Nagoya/Kochi fragments produce
+  exact venue equality, exact canonical NAR target identities, exact start times,
+  deterministic order, bundle, and target set;
+- the exact 2025-12-26 Kanazawa case retains every exact race row and exact native
+  whole-meeting-cancelled/no-substitute evidence without normal fallback;
+- blank/apparent-zero 2020-03-09 and `△` substitute 2017-12 evidence fail closed;
+- partial-cancellation 2025-08-30 Funabashi remains unsupported even with retained rows;
+- missing/extra fragment, navigation-only/envelope-only venue, unequal navigation set,
+  wrong date/venue/request identity, malformed/missing/duplicate row, duplicate race
+  identity, unknown mark/status, and missing normal start time each reject the whole
+  date; and
+- no case silently skips a row, manufactures a URL/race, or returns a partial bundle;
+  and
+- a trap transport/live-capture dependency proves both bundle builders perform no
+  network call and consume only supplied immutable captures.
+
+### Future verification commands
+
+```text
+python -m unittest tests.test_historical_daily_targets
+python -m unittest tests.test_nar_historical_daily_target_capture
+python -m unittest tests.test_nar_historical_daily_target_live_capture
+python -m unittest tests.test_nar_historical_daily_target_source
+python -m unittest discover -s tests -p "test_*.py"
+git diff --check
+git status --short
+```
+
+Search checks must also prove no imports from legacy `NARProvider`/`NARParser`, no JRA,
+snapshot, manifest, replay, settlement, SQLite, migration, current-clock causal, URL-
+manufacturing, row-skip, or `target_race_count` path was introduced.
+
+## Unresolved blockers for review
+
+1. The exact official-byte fixtures and their request/provenance manifest are not yet in
+   the repository; later EXECUTE must not invent source bytes or backdate observations.
+2. The exact lexical selectors/grammar for MonthlyConveneInfo accepted marks, target-date
+   cell, raw href, and RaceList row/navigation/native-status structures must be frozen by
+   the reviewed fixtures. A layout not recognized by that version fails closed.
+3. The exact native no-substitute statement grammar for the 2025-12-26 shape must be
+   reviewed; no broader cancellation mapping is authorized.
+4. MonthlyConveneInfo locator discovery/bootstrap remains a separate future phase.
+   Phase 5 accepts only an exact supplied official locator/reference; a target date or
+   manually assembled query cannot unblock acquisition.
+5. No concrete archive repository exists for the new capture kinds. Durable storage and
+   migration remain a separate future phase.
+
+None of these blockers may be resolved by weakening the Phase 4 predicates. If review
+cannot freeze an exact implementable source grammar within the proposed files, Phase 5
+must remain design-only or return to ChatGPT before any execution.
+
+## Stop condition
+
+This PREPARE stops with only the two documentation files modified, status
+`DRAFT_FOR_REVIEW`, no staged files, and no implementation. A later EXECUTE may finish
+only when every exact Allowed File restriction is satisfied, all dedicated and full
+tests pass, all failure paths are whole-date fail-closed, and no request/race/evidence is
+inferred. Any source-contract conflict, missing official fixture authority, need for
+storage/migration, out-of-scope file, or unexpected dirty state requires an immediate
+stop for ChatGPT review.
+
+## Current PREPARE Allowed Files
 
 Only:
 
-- `docs/CURRENT_PHASE.md`
-- `docs/LATEST_CODEX_REPORT.md`
+```text
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+```
 
-## Forbidden Files and actions
+## Current PREPARE Forbidden Files and actions
 
-- all production code
-- all tests and fixtures
-- all migrations and schemas
-- `database/**`, including `database/keiba.db`
-- `logs/**`
-- provider archives or captured research responses
-- CLI, manifests, persistence, reporting, and replay artifacts
-- stage, commit, push, tag, release, and history mutation during PREPARE
-- `EXECUTE_APPROVED_PHASE`
-- `POST_V0_8_DAILY_REPLAY_5`
+All production code, tests, fixtures, migrations, schemas, CLI, database, archives,
+provider responses, manifests, reports, release/tag/history files, and every file outside
+the two current Allowed Files are forbidden. Implementation, network evidence freezing,
+stage, commit, push, Phase 6, and `EXECUTE_APPROVED_PHASE` are forbidden.
 
-## Required verification
+## Required PREPARE verification
 
-PREPARE completion requires:
+No tests are run because no production or test code is changed. Required checks are:
 
 ```text
 git diff --check
@@ -534,13 +727,3 @@ git diff --name-only
 git status --short
 git diff --cached --name-only
 ```
-
-Expected changed files are exactly the two Allowed Files and the cached diff is empty.
-No production or test suite is required or authorized for this document-only phase.
-
-## Stop condition
-
-Stop with `DRAFT_FOR_REVIEW` after updating the two Allowed Files and reporting the
-research/design result, matrices, blockers, verification, and complete Phase 4
-`docs/CURRENT_PHASE.md` diff. Do not implement, stage, commit, push, start Phase 5, or
-acquire/freeze formal provider evidence.

@@ -7692,3 +7692,69 @@ ChatGPT completed the final independent review and approved Phase 4 for commit. 
 approved `RESEARCH_AND_DESIGN_ONLY` contract and
 `IMPLEMENTABLE_SUPPORTED_PROFILE` outcome are unchanged; production implementation
 remains unauthorized.
+
+## POST_V0_8_DAILY_REPLAY_5 Preparation Report
+
+Phase 4 was committed as `ac3b95cd43626ff6643134715a7f5c4207849225` with message
+`docs: design supported historical daily coverage`, pushed normally, fetched, and
+verified equal to `origin/feature/post-v0.8-daily-replay`. The worktree was clean before
+Phase 5 PREPARE began.
+
+Phase 5 is `DESIGN_ONLY`, status `DRAFT_FOR_REVIEW`. It translates only the approved NAR
+initial supported profile into a later implementation contract. The existing Ver0.8 NAR
+capture domain/repository cannot be widened: its page kinds and URL canonicalization are
+closed and incompatible with authoritative envelope-supplied raw RaceList href identity.
+The proposal therefore introduces separate daily-target request/capture values and
+Source/Archive Protocols, a separate optional exact-request live capture service, strict
+MonthlyConveneInfo and RaceList normalizers, and the shared provider-neutral bundle and
+target-set models. No concrete SQLite archive or migration is proposed for execution;
+durable storage remains separately gated.
+
+The future pure composition requires exact non-empty MonthlyConveneInfo venue coverage,
+one exact envelope-supplied RaceList capture per venue, strict no-skip row normalization,
+and exact equality of envelope venues, fragment venues, and every usable same-day
+navigation set. It supports ordinary dates and only the Phase 4 exact retained-row,
+native no-substitute whole-meeting cancellation shape. Zero/blank, `△`, original identity
+ambiguity, partial cancellation, unknown status, missing normal start time, and every
+missing/duplicate/malformed/contradictory state remain whole-date
+`TARGET_DISCOVERY_INCOMPLETE`.
+
+The design names exact future production/test files, exact request/capture and normalizer
+APIs, stable outward failure codes, canonical ordering and versioned UTF-8 digest bytes,
+official-byte fixture candidates for 2025-01-01, 2025-12-26, blank, substitute, and
+partial-cancellation cases, dedicated/full-suite tests, and fail-closed stop conditions.
+JRA, Evidence Resolver, manifests, replay, settlement, persistence, migrations, schemas,
+database, archives, CLI, and Phase 6 remain out of scope. Only
+`docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` were changed; nothing was
+implemented, staged, committed, pushed, acquired, archived, or backdated.
+
+## POST_V0_8_DAILY_REPLAY_5 Design Review Corrections
+
+ChatGPT required a narrower bootstrap and responsibility boundary while keeping Phase 5
+`DRAFT_FOR_REVIEW` and `DESIGN_ONLY`. MonthlyConveneInfo and RaceList now explicitly
+bypass the existing NAR URL canonicalizer. Exact official-supplied locator material,
+including raw href order and encoding, is authoritative; neither URL may be reconstructed
+from target date, year/month, venue, or `babaCode`.
+
+Phase 5 accepts an exact supplied Monthly locator only. Discovery of that locator and
+its official bootstrap chain is deferred to another reviewed phase. The optional capture
+service accepts one already constructed exact request identity, while both NAR bundle
+and target-set builders are pure no-network consumers of immutable captured evidence.
+The daily-target capture values and Source/Archive Protocols remain proposed, but SQLite
+repository, migration, schema, and durable storage stay out of scope.
+
+The shared `historical_daily_targets.py` responsibility is now limited to provider-
+neutral value invariants, exact scope/bundle coverage, ordering, and digest construction.
+Every NAR envelope/fragment/navigation/status/floor predicate remains owned by the NAR
+builder. Because digest implementation remains proposed for Phase 5, the request,
+capture-ID, and target-set canonical UTF-8 JSON byte contracts are now fully frozen,
+including exact key sets, datetime forms, ordering, raw request material representation,
+and SHA-256 identity prefixes. Required tests explicitly cover raw href preservation,
+URL reconstruction prohibition, no-network builders, ordinary and Kanazawa cases, and
+all requested fail-closed classes. No implementation, stage, commit, push, storage,
+migration, schema, acquisition, or next phase was performed.
+
+## POST_V0_8_DAILY_REPLAY_5 Final Approval
+
+ChatGPT completed the final independent review and approved the unchanged Phase 5
+`DESIGN_ONLY` contract for commit. Production implementation remains unauthorized.
