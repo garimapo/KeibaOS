@@ -7960,8 +7960,51 @@ PDF extraction/layout and accessS root/month capture boundary before any impleme
 or fixture phase can be prepared. No stage, commit, push, test-suite run, or next phase
 was performed.
 
+## POST_V0_8_DAILY_REPLAY_10 Final Approval
+
+ChatGPT approved Phase 10's `BLOCKED` alternative-profile qualification result for commit.
+The daily-locator, completeness, and identity-binding gates remain unresolved.
+
 ## POST_V0_8_DAILY_REPLAY_9 Final Approval
 
 ChatGPT approved Phase 9's `BLOCKED` gap-resolution result for commit. The PDF parser
 and accessS root/month authority remain unresolved; implementation readiness is not
 implied.
+
++## POST_V0_8_DAILY_REPLAY_10 Preparation Report
+
+Phase 9 was committed as `adfac3946475d19058f9d24f15a1ae6588824fa7` with message
+`docs: investigate JRA daily target source gaps`, pushed normally, fetched, and verified
+equal to `origin/feature/post-v0.8-daily-replay`. The worktree was clean before Phase 10.
+
+Phase 10 is `RESEARCH_AND_DESIGN_ONLY`, status `DRAFT_FOR_REVIEW`, outcome
+`BLOCKED`. It evaluated only a parallel JRA daily-calendar HTML planned-side profile.
+The existing PDF profile was not deleted or altered, and no Phase 4/7 contract amendment,
+production, test, fixture, NAR/shared, dependency, schema, migration, archive, database
+or CLI change was made.
+
+Official raw root pages for 2020, 2021, 2024 and 2025 each supplied one `jan.html`
+month locator. All four corresponding month responses supplied zero daily HTML locators.
+The calendar daily candidate family was therefore directly requested only as the
+user-supplied research lead, never adopted as a source-owned or developer-generated
+authority. Those bytes do not qualify a future target-date request contract.
+
+The direct daily HTML pages for 2020-01-05, 2021-01-05, 2024-01-06 and 2025-01-05
+each had two regular 12-race meeting tables. Their visible meeting/race sets matched
+the source-owned accessS actual result sets exactly (24 races per date), while planned
+versus actual displayed start times differed by 4, 2, 1 and 1 races respectively. This
+confirms planned start is not actual start. The 2019-10-12 page explicitly retained
+Tokyo cancellation/substitute material plus Kyoto's normal program; accessS contained
+only Kyoto on the 12th and Tokyo on the 15th. The abnormal/mismatched date remains
+whole-day fail-closed `TARGET_DISCOVERY_INCOMPLETE`.
+
+All Phase 10 research bytes remain outside the repository. The calendar, ordinary
+accessS and exception accessS manifests comprise 14, 55 and 4 records respectively;
+all length/SHA checks passed and their manifest digests are recorded in CURRENT_PHASE.
+They are not formal replay evidence or approved fixtures, and their honest acquisition
+timestamps are never causal fields. The lack of an official daily locator relation,
+complete provider-day/zero semantics, and an exact calendar-to-external-identity binding
+blocks qualification. PDF dependency therefore cannot be removed.
+
+Only `docs/CURRENT_PHASE.md` and this report changed. No tests were required or run;
+no stage, commit, push, implementation, materialization or next phase was performed.
