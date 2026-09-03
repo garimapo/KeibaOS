@@ -8053,3 +8053,78 @@ run during this research/design-only PREPARE.
 ChatGPT completed the final independent review and approved Phase 11 for commit.
 Status is APPROVED_FOR_COMMIT. The approved BLOCKED research outcome and all
 existing contracts remain unchanged; no implementation readiness is implied.
+
+## POST_V0_8_DAILY_REPLAY_12 Preparation and Final Initial-Scope Decision
+
+Phase 11 was committed as `b94277432d3e0a805efb721f53f78c5e124728e1` with message
+`docs: qualify JRA calendar identity binding`, pushed normally, fetched, and verified
+equal to origin/feature/post-v0.8-daily-replay. Exactly the two documentation files
+were committed, both whitespace checks passed, and the worktree was clean before
+Phase 12. That verified SHA is the Phase 12 Base Commit.
+
+Phase 12 is RESEARCH_AND_DESIGN_ONLY, status DRAFT_FOR_REVIEW. Its single final outcome
+is `JRA_INITIAL_SUPPORT_DEFERRED`; this completes the initial-source decision instead
+of passing another BLOCKED research task forward. Only the PDF composite and accessS-led
+candidate were evaluated using existing research. The calendar HTML locator inquiry
+was not repeated, and no official response was acquired.
+
+Candidate A has exact supplied PDF locators and intact bodies, but no frozen complete
+non-OCR identity/geometry contract. The saved 2020/2024 nittei page-1 diagnostics contain
+2,724/2,722 unresolved CID tokens. The recorded pypdf 6.10.0/pdfplumber 0.11.9 research
+versions do not constitute a qualified extraction/resource pin. Some bangumi text is
+readable, including Nakayama headings/day labels; that is not an all-page/all-cell
+tuple grammar and does not resolve nittei. Existing diagnostics were inspected without
+re-running extraction, rendering or OCR. The PDF skill reinforced the distinction
+between visual readability and a machine-checkable layout contract. No library,
+resource mapping, parser, or fixture was added.
+
+Candidate B can validate represented accessS identities, dates, direct race rows and
+historical displayed start values. It cannot prove that unrepresented target meetings
+or races did not exist. The existing 2019-10-12 month unit exposes only Kyoto and its
+12 result rows, while the independently established cancelled Tokyo belongs to the
+original-target question. Tokyo's October 15 substitute cannot be backdated. Although
+2019 lies outside the initial floor, this is a source-semantics counterexample; no
+positive accessS-only exclusion/completeness predicate establishes that a normal-looking
+admitted day avoids that omission. Counts, contiguous numbers or comparing descendants
+of the same result source cannot repair this. The separate root/search capture-kind
+and source-expression gate also remains unapproved, but resolving it would not resolve
+the denominator failure.
+
+The chosen v0.9 initial daily-target capability is explicitly NAR-only under the already
+approved narrow profile. Static inspection confirms the shared scope accepts one NAR
+provider, the NAR target-set builder already uses that singleton, and the shared builder
+requires exact provider-bundle coverage. Mixed JRA+NAR requests must fail instead of
+silently dropping JRA; no dummy empty JRA evidence is permitted. The source decision
+requires no shared/NAR code, digest, schema, or v0.8 known-race JRA replay change. It is
+not a declaration that all NAR dates or the complete daily replay workflow are ready.
+
+Later-acquired historical completeness evidence is not inherently prediction leakage.
+Its membership semantics must be proven, observation must stay honest, and it cannot
+provide prediction inputs or substitute missing causal timestamps. Research material
+remains non-replay evidence. PDF and accessS extension routes are retained, but JRA
+reopens only with new demonstrated decoding/layout or positive completeness evidence
+and separate review; the initial decision has no pending qualification work.
+
+The original Phase 8 manifest and all 21 body length/SHA pairs passed read-only audit,
+including all six PDFs. Its manifest SHA is
+`bff17dec9bb3f65b5265adf000eeeed956283b52f83029f135840789ef666ad8`. The Phase 10
+exception manifest and all four bodies also passed; its SHA is
+`b8c0f8283d5f090b19361220f7560551e3c787174524d0135814e846eee644e3`. Source bytes,
+original acquisition times and previous diagnostics were not changed. No evidence was
+materialized into the repository. A read-only audit helper stayed in external temporary
+storage and performed no network or PDF extraction.
+
+Recommended next work, not started: NAR Daily Historical Evidence Resolver Design,
+consuming an already audited NAR target set and retaining separately gated Monthly
+bootstrap, storage, manifest and orchestration responsibilities. It requires a new
+PREPARE instruction and independent approval. Phase 12 changes only CURRENT_PHASE.md
+and this report. Dedicated/full tests were not run for this docs-only decision; existing
+scope-validation tests were inspected. No Phase 12 staging, commit, push, implementation
+or further phase transition was performed.
+
+## POST_V0_8_DAILY_REPLAY_12 Final Approval
+
+ChatGPT completed the final independent review and approved Phase 12 for commit.
+Status is APPROVED_FOR_COMMIT. JRA_INITIAL_SUPPORT_DEFERRED is the approved final
+decision: v0.9 initial daily-target scope is NAR-only; JRA remains a later extension
+requiring new positive completeness evidence. Existing contracts remain unchanged.
