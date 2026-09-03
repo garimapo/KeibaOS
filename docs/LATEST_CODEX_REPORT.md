@@ -7826,3 +7826,41 @@ source builders. Nothing is staged, committed, or pushed.
 
 ChatGPT completed the independent code, test, and fixture review and approved Phase 6
 for commit with no blocking issue. The phase status is `APPROVED_FOR_COMMIT`.
+
+## POST_V0_8_DAILY_REPLAY_7 Preparation Report
+
+Phase 6 was committed as `d1c70a3d6006e18cce4a49aba000125b6f531bed` with message
+`feat: add NAR historical daily target source`, pushed normally, fetched, and verified
+equal to `origin/feature/post-v0.8-daily-replay`. The pre-commit whitespace exception
+was confined to the approved fifteen byte-exact official fixture files; the non-fixture
+cached check passed, all fifteen frozen lengths/SHA-256 values matched, the dedicated
+27 tests and full 2,933-test suite passed, and the worktree was clean before Phase 7.
+
+Phase 7 is `DESIGN_ONLY`, status `DRAFT_FOR_REVIEW`. It translates only the Phase 4
+narrow JRA ordinary-day composite into a future implementation boundary. The design
+proposes separate immutable daily-target capture/live-capture, program/PDF parser,
+accessS parser, and JRA composition modules while reusing the committed provider-neutral
+target-set module unchanged. Existing JRA capture/SQLite contracts remain closed and
+cannot be widened for the new source families.
+
+The proposed composite preserves exact supplied year-program/nittei/bangumi/accessS
+navigation, opaque PDF bytes, full external JRA identity, exact result-page displayed
+start, and planned-to-actual equality at meeting and race-tuple levels. It prohibits PDF
+filename identity, OCR, accessS CNAME/tail synthesis, inferred schedule/time/race
+membership, reduced-day fallback, and builder network access. Zero, cancellation,
+substitute, partial, ambiguous, missing, duplicate, malformed, and contradictory cases
+remain whole-day `TARGET_DISCOVERY_INCOMPLETE`.
+
+The repository has no reviewed exact-byte JRA year-program/PDF/accessS fixture set and
+no frozen PDF, accessS month/meeting, or displayed-start lexical grammar. These are
+explicit blockers to a future implementation PREPARE and require a separately reviewed
+materialization/grammar-freeze gate; they must not be guessed from accessD code or Phase
+4 research. Phase 7 PREPARE changed only `docs/CURRENT_PHASE.md` and this report. No
+production/test/fixture/network acquisition/archive/migration/schema/database/CLI work,
+stage, commit, or push was performed.
+
+## POST_V0_8_DAILY_REPLAY_7 Final Approval
+
+ChatGPT completed the final independent review and approved Phase 7 for commit.
+The approved design and implementation blockers are unchanged; the status is
+`APPROVED_FOR_COMMIT` and the phase remains `DESIGN_ONLY`.
