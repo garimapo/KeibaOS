@@ -1,244 +1,183 @@
 # Current Phase
 
-Status: `APPROVED_FOR_COMMIT`
+Status: APPROVED_FOR_COMMIT
 
 ## Identity and authority
 
-- Phase: `POST_V0_8_DAILY_REPLAY_10`
-- Name: `JRA Daily Calendar HTML Alternative Profile Qualification`
-- Phase type: `RESEARCH_AND_DESIGN_ONLY`
-- Base Commit: `adfac3946475d19058f9d24f15a1ae6588824fa7`
-- Branch: `feature/post-v0.8-daily-replay`
-- Outcome: `BLOCKED`
-- Production/test/fixture implementation or materialization: `NOT_AUTHORIZED`
-- Stage/commit/push and `EXECUTE_APPROVED_PHASE`: `NOT_AUTHORIZED`
+- Phase: POST_V0_8_DAILY_REPLAY_11
+- Name: JRA Calendar Locator and Identity Binding Qualification
+- Phase type: RESEARCH_AND_DESIGN_ONLY
+- Base Commit: 2445a997d6614bb4406548243a777c152599edfc
+- Branch: feature/post-v0.8-daily-replay
+- Outcome: BLOCKED
+- Production/test/fixture implementation or materialization: NOT_AUTHORIZED
+- Stage/commit/push and EXECUTE_APPROVED_PHASE: NOT_AUTHORIZED
 
-Phase 9's approved `BLOCKED` conclusion and all Phase 2-7 contracts remain
-authoritative. This is a parallel qualification of a possible planned-side HTML
-profile only. It does not remove, relax, or replace the existing PDF profile, accessS
-research, NAR implementation, or the provider-neutral target-set domain.
+Phase 10's approved BLOCKED conclusion and all prior approved contracts remain
+authoritative. This phase investigates only the specified calendar-profile predicates:
+source-owned daily locator authority, planned provider-day meeting completeness, and
+calendar-to-accessS exact identity binding. It does not amend the PDF profile, accessS
+contracts, Phase 4 supported profile, or NAR/shared code.
 
 ## Decision
 
-The only permitted outcomes were `HTML_ALTERNATIVE_PROFILE_QUALIFIED` or
-`BLOCKED`. This phase concludes `BLOCKED`.
+The only permitted outcomes were HTML_PROFILE_BINDING_QUALIFIED or BLOCKED. This phase
+concludes BLOCKED.
 
-The exact daily calendar HTML bytes are rich enough to be valuable research material:
-sampled ordinary pages have a formal-looking date heading, meeting captions, all-row
-race tables and planned start fields; sampled normal-day meeting/race membership agrees
-with accessS actual history. However, the official annual/calendar root and its
-source-supplied month links do not supply any daily-page locator for the tested
-2020, 2021, 2024 or 2025 pages. The candidate daily URLs were supplied to this phase
-as a research lead and directly inspected only as such. Their availability and content
-cannot turn a developer-generated pattern into a formal locator authority.
+A JRA-owned calendar asset provides a source-owned month JSON request relation, but not
+a source-owned historical daily calendar HTML locator. The JSON only supplies displayed
+planned meeting names. It does not provide daily HTML hrefs, meeting day, JRA venue code,
+all race rows, start time, or a complete-provider-day statement. The 2019-10-12 response
+also demonstrates cancellation-adjusted content. It cannot prove an original planned
+denominator or non-run membership.
 
-The daily page also describes itself as a pre-announced program whose content can
-change. It is not a complete actual-day source. The ordinary samples and the explicit
-2019 cancellation/substitute case prove the required planned/actual separation, not a
-general complete-denominator contract. Consequently the profile cannot amend Phase 4
-or Phase 7 and cannot remove PDF dependency.
+The four ordinary samples preserve Phase 10's visible calendar/accessS agreement, but
+visible Japanese meeting text and race number cannot replace exact identity fields.
+Calendar data has no accessS CNAME, venue code, meeting day, or reviewed official
+cross-reference. No predicate is promoted from sample observation to an implementation
+contract.
 
-## Official locator research
+## A. Source-owned locator authority
 
-The following exact root relation was positively observed from raw JRA HTML bytes for
-each year:
+### Observed, narrow month-JSON relation
 
-```text
-https://www.jra.go.jp/keiba/calendarYYYY/
-  -- supplied href "jan.html" -->
-https://www.jra.go.jp/keiba/calendarYYYY/jan.html
-```
+~~~text
+/calendarYYYY/
+  -- supplied raw href "jan.html" -->
+/calendarYYYY/jan.html
+  -- supplied script src "/keiba/common/calendar/cal.js?version=…" -->
+cal.js
+  -- source-owned setJSON() -->
+/keiba/common/calendar/json/YYYYMM.json
+~~~
 
-The root-side month anchor is source-owned and was unique after strict NFKC display
-normalization to `1月`; its raw href was exactly `jan.html` in all four samples.
-Every fetched root and January page decoded strictly as CP932. No redirect was followed.
+The inspected JRA JavaScript takes YYYY from the source page's calendarYYYY path
+segment and MM from the supplied month path, then calls $.getJSON(targetJSON). The two
+recorded asset versions are byte-identical:
 
-The decisive negative result is equally exact: each sampled January page contained
-zero anchors whose supplied href identified a `calendarYYYY/YYYY/M/MMDD.html`
-daily page. No equivalent daily locator was found in the supplied HTML. This is not
-a claim that no official daily pages exist; it means this inspected official navigation
-does not establish their request identity.
+| Asset | Bytes | SHA-256 |
+| --- | ---: | --- |
+| /keiba/common/calendar/cal.js?version=2021 | 86,673 | 1c6e46c8bda0f75d548a95ca1be9af8ca5b2acf58d7b36ed9a46f869d07e4961 |
+| /keiba/common/calendar/cal.js?version=2026 | 86,673 | 1c6e46c8bda0f75d548a95ca1be9af8ca5b2acf58d7b36ed9a46f869d07e4961 |
 
-The six direct requests below use the Phase 10 candidate-family lead for diagnostic
-research only. Their provenance parent is explicitly
-`RESEARCH_LEAD_NOT_OFFICIAL_SUPPLIED_LOCATOR`. A future implementation must not
-construct, derive, or cache a target-date URL from this pattern, nor treat a successful
-response as proof that the locator was supplied by an authoritative official relation.
+This is not authorization for developer-generated historical requests. The asset has
+current-date UI branches, which cannot select historical identity, evidence time, or a
+locator.
 
-| Case | Direct research-lead page | Result |
-| --- | --- | --- |
-| ordinary | 2020-01-05 | HTTP 200, CP932 daily program |
-| ordinary | 2021-01-05 | HTTP 200, CP932 daily program |
-| ordinary | 2024-01-06 | HTTP 200, CP932 daily program |
-| ordinary | 2025-01-05 | HTTP 200, CP932 daily program |
-| cancellation original | 2019-10-12 | HTTP 200, explicit Tokyo cancellation / October 15 substitute notice |
-| substitute conduct | 2019-10-15 | HTTP 200, Tokyo replacement program |
+### Daily locator remains unqualified
 
-No missing daily page was tested or interpreted as a zero-race date.
+Neither the four supplied January HTML responses nor either cal.js byte carries a daily
+program locator, a YYYY/M/MMDD.html output grammar, or a JSON field with one. The script
+only copies an already-present div.date_line … a[href] to a program link. The sampled
+historical month pages contain no such day anchors.
 
-## Candidate daily-page grammar, not an implementation contract
+The six direct daily pages therefore remain Phase 10 research-lead requests, not
+source-owned locators. HTTP success cannot turn the suggested path pattern into
+authority. Predicate A is unqualified.
 
-All six direct research-lead bytes have one nonempty `h1` matching the visible
-historical target-date form:
+## B. Planned provider-day meeting completeness
 
-```text
-YYYY年M月D日（weekday）　競馬番組
-```
-
-For a normal meeting, the candidate direct table shape is:
-
-```text
-table.basic.narrow-xy
-  caption                         -> exact visible meeting descriptor
-  thead > tr > th                 -> レース番号 / レース名・条件 / 発走時刻
-  tbody > tr (one row per planned race)
-    first cell                    -> Nレース
-    second cell                   -> conditions (not identity authority)
-    third cell                    -> H時MM分
-```
-
-A candidate regular table must have one caption, exactly the three direct headings
-above, and every row must have three cells, a unique bounded race number and a bounded
-planned time. Duplicate, missing, malformed or extra structural rows fail closed.
-The caption and date are visible provider text, not an internal identity reconstructed
-from a filename, SQLite ID, race count or race sequence.
-
-This grammar is **not frozen** because the daily locator/coverage predicates are
-unqualified. It must not be implemented or used to infer an external JRA race identity.
-If a future source-qualified relation is adopted, each calendar row can only bind to an
-accessS-originated exact identity after an explicit, one-to-one, same-date visible
-meeting/race equality check. The calendar does not independently create a JRA external
-identity.
-
-The pages state that their information is a previously announced seasonal program
-(`予定`) and that race number/order, course, distance, planned start, cancellation or
-postponement can change. Calendar planned time is therefore never an actual start time,
-a snapshot cutoff, a settlement cutoff, current-clock substitute, or causal input.
-Actual result-header displayed start remains an independent accessS responsibility.
-
-## Ordinary-date and accessS equality research
-
-Each normal daily page contained two regular meetings with twelve valid planned race
-rows each. Exact visible meeting descriptors and race-number sets were compared to
-accessS actual meeting/result evidence. The actual side used source-owned accessS
-root/month/meeting/result navigation, strict CP932 decoding, existing
-`parse_jra_result_url_identity`, and result-header date/race checks. The relation
-compares meeting captions and each supplied race number; exact provider external race
-identity originates only from the validated accessS result locator.
-
-| Date | Calendar planned tables/races | accessS actual tables/races | Visible meeting/race set | Planned vs actual displayed-start differences |
-| --- | ---: | ---: | --- | ---: |
-| 2020-01-05 | 2 / 24 | 2 / 24 | exact equality | 4 |
-| 2021-01-05 | 2 / 24 | 2 / 24 | exact equality | 2 |
-| 2024-01-06 | 2 / 24 | 2 / 24 | exact equality | 1 |
-| 2025-01-05 | 2 / 24 | 2 / 24 | exact equality | 1 |
-
-The time differences are expected evidence that calendar start fields are planned values,
-not a replacement for actual historical accessS displayed start. These four successes
-do not establish provider-day completeness for untested dates, zero-day semantics, or
-the missing locator relation.
-
-## Exception research and fail-closed result
-
-The 2019-10-12 calendar page contains:
-
-- a non-regular Tokyo table saying Tokyo racing was cancelled due to the typhoon and
-  substitute racing would occur on 2019-10-15; and
-- one regular Kyoto table with twelve planned race rows.
-
-The corresponding accessS October envelope supplied exactly one 2019-10-12 actual
-meeting, `4回京都3日`, with twelve direct result rows. It supplied exactly one
-2019-10-15 actual meeting, `4回東京3日`, with twelve direct result rows. The
-2019-10-15 calendar page separately contains the Tokyo replacement program.
-
-This is a concrete planned/actual difference. The candidate profile must reject
-2019-10-12 as `TARGET_DISCOVERY_INCOMPLETE`: its abnormal cancellation table,
-planned Tokyo membership, original/substitute identity question and non-ordinary status
-are outside the supported ordinary profile. It must not discard Tokyo and call Kyoto a
-complete ordinary day, move Tokyo races to October 15, or equate planned and actual
-start fields. The sample demonstrates fail-closed handling; it does not qualify a
-general cancellation mapping.
-
-## Research byte provenance
-
-All material remains outside the repository at:
-
-```text
-C:\Users\garim\AppData\Local\Temp\keiba-phase10-jra-calendar-1f75d8f9f6c84f9d915b5b88494cfa38
-```
-
-Three immutable-on-disk-for-research-only manifest digests were verified against every
-listed byte length/SHA-256:
-
-| Manifest | Records | SHA-256 | Contents |
+| JSON resource | Bytes | SHA-256 | Examined date / displayed meeting names |
 | --- | ---: | --- | --- |
-| `provenance.json` | 14 | `57720c11fd073dceebbabd89605cd8f4bc3a375825bf263ea79a6e7a1b56b353` | roots, January pages, six direct research-lead calendar pages |
-| `accesss-2021-2025/provenance.json` | 55 | `9d1579624409dbedf65e5e17f31e51ac4dc70da2c851d6af0ccc9f307f8bc854` | official root/search, 2021/2025 months, meetings and 48 result pages |
-| `accesss-exception-2019/provenance.json` | 4 | `b8c0f8283d5f090b19361220f7560551e3c787174524d0135814e846eee644e3` | official root/search, October month and 2019 exception meeting fragments |
+| 202001.json | 9,639 | 97c080a12ea8436eafe1ff26e5ab99adb685385cc55d49312d9c5038fb9ca552 | 2020-01-05: 1回中山, 1回京都 |
+| 202101.json | 10,303 | 076c9049cf38db8c9bbbbcccab030fc055a69491f2f5e204c3defcd7bc5138e6 | 2021-01-05: 1回中山, 1回中京 |
+| 202401.json | 10,359 | f34c865d381cc0e904f046901340b4abdd0b40c93e1bb46c81c4975cb6068f66 | 2024-01-06: 1回中山, 1回京都 |
+| 202501.json | 10,302 | 4d1a0c4745ed53d1ff4519f6ee1aaf4a30d85dc13a83703685d04689e5381ced | 2025-01-05: 1回中山, 1回中京 |
+| 201910.json | 12,680 | a0f78f2a632e7e28e30a2afebb6dc55f84f829da57fa94d96f1ef9c70d9782c1 | 2019-10-12: 4回京都; 2019-10-15: 4回東京 |
 
-All requests have honest 2026-09-03 UTC requested/observed timestamps in their
-external manifests, together with exact method, URL/form, parent relation, media
-metadata, byte length and SHA-256. The total Phase 10 candidate record count is 73.
-These are research material only: none is a repository fixture, durable capture, formal
-bundle evidence, or authorization to reacquire in a test. A fixture/provenance adoption
-would require the locator issue and profile qualification to be resolved first.
+The source asset loops every data entry and info[0].race item. That proves the UI
+rendering procedure, not that the response is a complete provider-day target set. Its
+schema has only month-local day number and display names such as 1回中山; it lacks
+meeting day, individual race rows, start fields, and a complete-set assertion.
+
+On 2019-10-12, the JSON has only 4回京都 plus the official notice 東京競馬開催を中止;
+it cannot establish whether cancelled Tokyo remains in the original denominator. The
+2019-10-15 substitute entry cannot be joined by inference. The ordinary JSON/daily-page
+meeting-name agreement drops the latter's meeting-day suffix and is therefore not exact
+identity equality. Predicate B is unproven; absence and zero-day remain fail-closed.
+
+## C. Calendar to accessS actual-identity binding
+
+Existing parse_jra_result_url_identity validates a supplied accessS result CNAME into
+year, JRA venue code, meeting number, meeting day, and race number. It remains the only
+origin of exact external race identity.
+
+Calendar sources provide visible Japanese meeting text and candidate daily race numbers;
+month JSON provides even less. Neither provides the accessS venue code, CNAME, meeting
+day, or an official cross-reference. A local venue-name map, inferred meeting day, or
+matching display text would violate the exact-identity contract.
+
+For 2020-01-05, 2021-01-05, 2024-01-06 and 2025-01-05, Phase 10 observed two calendar
+meetings and 24 race numbers visibly matching the source-owned accessS actual set. This
+is sampled consistency only. Calendar planned start differed from actual accessS
+displayed start in 4, 2, 1 and 1 rows respectively. The 2019-10-12 discrepancy remains
+whole-day TARGET_DISCOVERY_INCOMPLETE, not a mapping rule. Predicate C is unqualified.
+
+## Research material and audit boundary
+
+All seven Phase 11 request bytes remain outside the repository:
+
+~~~text
+C:\Users\garim\AppData\Local\Temp\keiba-phase11-jra-calendar-assets-3efab61dc96d44cb9ea811991eb8d697
+~~~
+
+The asset manifest SHA-256 is
+b8329e0d84926e7ffa0eaa754bc1e7f5dfe6b5842eacae4f441e5e9c12da89fd; the five-JSON
+manifest SHA-256 is a5e5ce68979ae037cafdd769a580d6dc7f3758c72e4fe9d900d0125dbf2dd68b.
+Every recorded byte length/SHA-256 was reverified. External manifests retain exact URL,
+response metadata, and honest 2026-09-03 UTC request/observation times. These bytes
+are research material only: never fixtures, captures/archives, formal replay evidence,
+HistoricalDailyTargetEvidenceBundle.observed_at, causal input, or authorization to
+materialize.
 
 ## Qualification matrix
 
-| Predicate | Result | Reason |
+| Required predicate | Result | Evidence / limit |
 | --- | --- | --- |
-| Year/calendar root to month locator | observed | unique official `jan.html` relation in four years |
-| Official source-owned daily locator | unqualified | no day-page href/reference in all four supplied month pages |
-| Exact target-date HTML grammar | candidate observed | one strict visible h1 in six research-lead pages; source locator missing |
-| Planned meeting grammar | candidate observed | regular caption/table shape in four ordinary pages |
-| Planned all-row race grammar | candidate observed | two 12-row tables on four ordinary samples |
-| Planned start grammar | candidate observed | bounded time in regular table, explicitly planned only |
-| Provider-day complete meeting/race enumeration | unqualified | daily locator absent; no formal all-meeting guarantee or zero semantics |
-| accessS actual meeting/race equality | sampled positive only | 4 ordinary 24-race dates match visibly; no universal proof |
-| Exception difference fail closed | observed | 2019-10-12 cancellation/substitute mismatch must reject |
-| PDF dependency removable | no | alternative profile is not qualified |
-| Phase 4/7 amendment | none | predicates above do not meet qualification threshold |
+| A. Source-owned historical daily HTML locator | unqualified | no supplied day href/output grammar in month pages or asset |
+| Source-owned month-JSON locator | observed, narrow | root/month + cal.js setJSON() yields YYYYMM.json |
+| B. Complete planned provider-day meeting set | unproven | display-name list has no complete-set semantics or full identity |
+| Candidate daily all-row race table | observed only | four research-lead normal pages; locator remains unqualified |
+| C. Exact calendar ↔ accessS identity binding | unqualified | no shared venue code, meeting day, CNAME, or official cross-reference |
+| Visible calendar/accessS membership | observed only | four normal 2-meeting/24-race dates |
+| Exceptional cancellation behavior | observed fail-closed | 2019-10-12 cannot produce a safe original target set |
+| Zero-day semantics | unsupported | absence/missing never means no racing |
+| Overall outcome | BLOCKED | A, B and C are all required |
 
 ## Blockers and stop condition
 
-1. Obtain a formal official source-owned locator relation to a historical daily program
-   page. A documented, unique parent page/link/navigation contract must be evidence,
-   not URL construction from `target_date`.
-2. Prove that the admitted daily page is a complete provider-day planned meeting/race
-   enumeration for the narrow ordinary profile, and separately prove no-race/missing
-   behavior. Page existence and sampled 12-row tables are insufficient.
-3. Establish a reviewed exact binding from calendar visible meeting/race tuples to
-   accessS-originated external identities without display-name ambiguity.
-4. Maintain the existing planned/actual and exceptional fail-closed boundaries.
-   Planned time cannot become actual time; cancellation/substitute/partial/zero cases
-   remain unsupported absent a separately qualified source contract.
+1. A source-owned locator relation must yield each historical daily program without
+   target-date path synthesis. A month JSON locator is insufficient.
+2. A formal source must express a complete planned provider-day meeting set with exact
+   identity, zero/absence semantics, and preserved exceptional membership.
+3. An official cross-reference or shared exact tuple must bind calendar records to
+   accessS CNAME-originated actual identity.
 
-Until every blocker is resolved, the future result for this candidate profile remains
-whole-day `TARGET_DISCOVERY_INCOMPLETE`. No Phase 4 or 7 amendment, PDF removal,
-production implementation, test/fixture materialization, or next phase is authorized.
+Until all three are resolved, this profile is TARGET_DISCOVERY_INCOMPLETE. Do not
+implement a calendar source/parser, alter the PDF profile, construct calendar URLs,
+introduce a name mapping, materialize fixtures, or amend prior phases.
 
 ## Allowed Files
 
-```text
+~~~text
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
-```
+~~~
 
 ## Forbidden Files and actions
 
 All other repository files, including production, tests, fixtures, dependencies,
-NAR/shared domains, SQLite/migrations/schema/database, logs, archives, CLI and
-release/tag history. No implementation, materialization, staging, commit, push,
-execution phase or phase advance occurs during this PREPARE.
+NAR/shared domains, SQLite/migrations/schema/database, logs, archives, CLI, and release
+history. No implementation, fixture materialization, staging, commit, push, execution
+phase, or further phase advance is authorized during this PREPARE.
 
 ## Required PREPARE verification
 
-```text
+~~~text
 git diff --check
 git diff --name-only
 git status --short
 git diff --cached --name-only
-```
+~~~
 
-Require exactly the two documentation paths and an empty index. No tests are required
-or run for this research/docs-only PREPARE.
+No tests are required or run for this research/design-only PREPARE.

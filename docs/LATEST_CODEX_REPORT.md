@@ -8008,3 +8008,48 @@ blocks qualification. PDF dependency therefore cannot be removed.
 
 Only `docs/CURRENT_PHASE.md` and this report changed. No tests were required or run;
 no stage, commit, push, implementation, materialization or next phase was performed.
+
+## POST_V0_8_DAILY_REPLAY_11 Preparation Report
+
+Phase 10 was committed as 2445a997d6614bb4406548243a777c152599edfc with message
+docs: qualify JRA daily calendar HTML profile, pushed normally, fetched, and verified
+equal to origin/feature/post-v0.8-daily-replay. The worktree was clean before Phase 11
+research.
+
+Phase 11 is RESEARCH_AND_DESIGN_ONLY, status DRAFT_FOR_REVIEW, outcome BLOCKED. It
+examined only the calendar daily-locator, planned provider-day completeness, and accessS
+identity-binding blockers. Official JRA calendar month bytes supplied JRA-owned cal.js;
+its setJSON() gives a source-owned root/month-to-YYYYMM.json relation. The two inspected
+script versions are byte-identical and the five month JSON responses were captured and
+SHA-256 verified outside the repository.
+
+That finding does not qualify the profile. Neither supplied month HTML nor source-owned
+JavaScript supplies a daily calendar HTML href or daily-path output grammar. The JSON
+has only day-of-month and displayed meeting names, not meeting day, venue code, race
+rows, start time or an explicit complete-provider-day contract. On 2019-10-12 it lists
+Kyoto while carrying a Tokyo cancellation notice; it cannot establish original
+membership or connect the October 15 substitute by inference. Absence and zero-day
+semantics remain fail-closed.
+
+The existing accessS result parser remains the only exact external-identity origin.
+The four ordinary calendar/accessS visible 24-race matches are sampled consistency, not
+an exact binding: the calendar data exposes no CNAME, venue code, meeting-day field, or
+official cross-reference. Planned calendar start remains distinct from accessS actual
+displayed start. The outcome is therefore BLOCKED; no source parser, URL synthesis,
+name mapping, fixture materialization, production/test change, phase-contract amendment,
+stage, commit, or push is authorized.
+
+All seven new response bytes and their honest 2026-09-03 UTC request/observation
+metadata remain in external research storage only. The asset manifest SHA-256 is
+b8329e0d84926e7ffa0eaa754bc1e7f5dfe6b5842eacae4f441e5e9c12da89fd, and the
+month-JSON manifest SHA-256 is
+a5e5ce68979ae037cafdd769a580d6dc7f3758c72e4fe9d900d0125dbf2dd68b. They are not
+fixtures, archives, formal replay evidence, causal timestamps, or materialization
+authority. Only docs/CURRENT_PHASE.md and this report changed; no tests were required or
+run during this research/design-only PREPARE.
+
+## POST_V0_8_DAILY_REPLAY_11 Final Approval
+
+ChatGPT completed the final independent review and approved Phase 11 for commit.
+Status is APPROVED_FOR_COMMIT. The approved BLOCKED research outcome and all
+existing contracts remain unchanged; no implementation readiness is implied.
