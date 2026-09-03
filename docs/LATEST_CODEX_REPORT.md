@@ -7758,3 +7758,71 @@ migration, schema, acquisition, or next phase was performed.
 
 ChatGPT completed the final independent review and approved the unchanged Phase 5
 `DESIGN_ONLY` contract for commit. Production implementation remains unauthorized.
+
+## POST_V0_8_DAILY_REPLAY_6 Preparation Report
+
+Phase 5 was committed as `bb9461490e59b2bfc370fb27183ac4e2f202aa8b` with message
+`docs: design NAR supported daily target source`, pushed normally, fetched, and verified
+equal to `origin/feature/post-v0.8-daily-replay`. The worktree was clean before Phase 6
+PREPARE began.
+
+Phase 6 is `IMPLEMENTATION`, status `DRAFT_FOR_REVIEW`; PREPARE itself changed docs only.
+Read-only official-source research froze fifteen exact strict-UTF-8 candidate byte files,
+their paths, requested/effective URLs, honest 2026-09-03 UTC observations, byte lengths,
+SHA-256 values, and an exact provenance-manifest contract. The official
+`monthltconveninfo.js?t=20260130_1` response supplies the reviewed Monthly locator query
+grammar for fixture provenance, but production Monthly bootstrap remains out of scope.
+
+The implementation contract now freezes the Monthly calendar/table/mark and raw href
+grammar, the exact RaceList navigation/main-table/all-row grammar, and the narrow
+2025-12-26 Kanazawa two-line whole-meeting-cancelled/no-substitute grammar. Fixture
+coverage includes the complete ordinary 2025-01-01 three-venue set, complete
+2025-12-26 three-venue set, blank, substitute, and complete 2025-08-30 partial-
+cancellation evidence. The exact four production files, four test files, sixteen fixture
+and provenance paths, dedicated/full-suite tests, failure precedence, and execution stop
+gate are fixed. No production code, test, fixture, migration, schema, database, archive,
+CLI, stage, commit, push, replay action, or next phase was performed.
+
+## POST_V0_8_DAILY_REPLAY_6 Independent Review Correction
+
+ChatGPT approved Phase 6 with one fixture-boundary correction. The phase is now
+`APPROVED_FOR_CODEX`. Frozen official bytes are parser/source-contract test evidence,
+not formal replay dataset evidence. Their real acquisition timestamps remain honest and
+must not be backdated, projected into bundle observation time, or used for prediction,
+snapshot, or settlement causality. Fixture materialization is permitted only during an
+explicitly authorized EXECUTE, must match every frozen SHA-256, and all unit/integration
+tests remain strictly offline over the materialized bytes. No production code, test,
+fixture, stage, commit, push, or EXECUTE action was performed.
+
+## POST_V0_8_DAILY_REPLAY_6 Implementation Report
+
+The approved implementation is complete and the phase is `READY_FOR_REVIEW`. Four new
+production modules implement the provider-neutral immutable daily-target contracts,
+NAR exact supplied-request/response captures, one-request archive-before-return live
+capture, strict MonthlyConveneInfo and RaceList normalization, and fail-closed NAR
+bundle/target-set construction. No SQLite, migration, durable archive, bootstrap, JRA,
+Evidence Resolver, manifest, replay, settlement, or CLI path was added or changed.
+
+The fifteen explicitly materialized official byte fixtures matched every frozen byte
+length and SHA-256 before repository use. `provenance.json` records the honest 2026-09-03
+acquisition metadata and labels the material solely as parser/source-contract test
+evidence. Tests construct separate synthetic 2030 observation times for normalized
+bundles, so fixture acquisition time is not projected into replay evidence or causal
+fields. All tests are offline; live-capture behavior is exercised through an injected
+transport and archive.
+
+The four dedicated modules passed 27 tests. They cover exact raw `&amp;` href authority,
+URL reconstruction rejection, deterministic digest vectors and ordering, strict all-row
+parsing, the 33-target ordinary day, the 33-target Kanazawa whole-meeting cancellation
+case, no-network builders, and whole-day failures for blank, `△`, partial cancellation,
+missing/extra/duplicate/malformed/contradictory evidence, navigation mismatch, unknown
+marks/warnings, and corrupt loaded capture identity. The full unittest suite passed all
+2,933 tests; existing out-of-scope `ResourceWarning` messages were emitted but caused no
+failure. Search review found no forbidden provider/parser/canonicalizer, JRA, snapshot,
+manifest, settlement, SQLite, migration, or network dependency in the pure shared/NAR
+source builders. Nothing is staged, committed, or pushed.
+
+## POST_V0_8_DAILY_REPLAY_6 Final Approval
+
+ChatGPT completed the independent code, test, and fixture review and approved Phase 6
+for commit with no blocking issue. The phase status is `APPROVED_FOR_COMMIT`.
