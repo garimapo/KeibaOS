@@ -7864,3 +7864,54 @@ stage, commit, or push was performed.
 ChatGPT completed the final independent review and approved Phase 7 for commit.
 The approved design and implementation blockers are unchanged; the status is
 `APPROVED_FOR_COMMIT` and the phase remains `DESIGN_ONLY`.
+
+## POST_V0_8_DAILY_REPLAY_8 Preparation Report
+
+Phase 7 was committed as `57c78dc486e715535ea1f30e7c31db0f77597969` with the approved
+message `docs: design JRA supported daily target source`, pushed normally, and fetched.
+Local HEAD and `origin/feature/post-v0.8-daily-replay` both equal that exact SHA. Only
+the two allowed documentation files were staged/committed, their cached whitespace
+check passed, and the worktree was clean before Phase 8 research.
+
+Phase 8 is `RESEARCH_AND_DESIGN_ONLY`, status `DRAFT_FOR_REVIEW`, outcome `BLOCKED`.
+The approved Phase 7 contract remains unchanged. Public official JRA research inspected
+the 2020/2024 year-program pages, six supplied nittei/bangumi PDFs, and supplied accessS
+search/month/meeting/result navigation for ordinary 2020-01-05 and 2024-01-06 samples.
+The PDF skill guided non-OCR rendering and text/geometry inspection. Its inspection did
+not establish a strict parser contract: nittei identity-bearing CID glyph decoding and
+cross-layout calendar binding remain unresolved, as does bangumi all-cell/page grammar.
+No production PDF dependency was added or selected by implication.
+
+Year/link/revision labels, meeting-table structure and a unique historical displayed
+start selector were documented from exact bytes. The result-header time was verified
+for the four sampled 1R pages, not for a full-day result set. The source-owned accessS
+month selector uses supplied select values, an explicit expression and a tail table;
+it is not a literal complete historical-month CNAME link. The approved Phase 7 parser
+requires captured root/search evidence but its exact page-kind list omits that kind.
+This conflict is returned for review; no kind, repository, or navigation-authority
+contract was changed, and the expression was not approved as production synthesis.
+
+Twenty-one exact responses (19 partial qualification candidates and two off-target
+Kokura 2024-01-28 negative controls) remain in repository-external temporary research
+storage. An initial research substring-date selection admitted those two controls;
+anchored full date-field verification identified their actual date and excluded them
+from 2024-01-06. Source bytes were not relabelled as that day's evidence. CURRENT_PHASE
+records their actual requests, honest 2026-09-03 requested/observed times, byte lengths,
+SHA-256 values, parent references and proposed fixture names. All 21 length/SHA checks
+passed. The sanitized external `candidate-provenance.json` SHA-256 is
+`bff17dec9bb3f65b5265adf000eeeed956283b52f83029f135840789ef666ad8`.
+Research material is not formal replay evidence; no fixture was added to the repository,
+no timestamp was backdated or projected into causal fields, and fixture materialization
+is not authorized. A complete acceptance/failure fixture set is still not frozen.
+
+Only `docs/CURRENT_PHASE.md` and this report changed during Phase 8 PREPARE. No
+production/tests/NAR/shared domains/dependencies/schema/migrations/database/archive/CLI
+files changed. No tests were run for this docs/research-only phase. Final verification
+passed: exactly the two allowed paths changed, `git diff --check` exited 0, and the index
+was empty. Git emitted only its LF-to-CRLF working-copy notice, not whitespace errors.
+No Phase 8 staging, commit, push, implementation, or next-phase transition is authorized.
+
+## POST_V0_8_DAILY_REPLAY_8 Final Approval
+
+ChatGPT approved Phase 8's `BLOCKED` outcome for commit. The unresolved PDF and accessS
+contract gates remain explicit; no implementation readiness is implied.
