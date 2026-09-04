@@ -8128,3 +8128,142 @@ ChatGPT completed the final independent review and approved Phase 12 for commit.
 Status is APPROVED_FOR_COMMIT. JRA_INITIAL_SUPPORT_DEFERRED is the approved final
 decision: v0.9 initial daily-target scope is NAR-only; JRA remains a later extension
 requiring new positive completeness evidence. Existing contracts remain unchanged.
+
+## POST_V0_8_DAILY_REPLAY_13 Preparation
+
+Phase 12 finalization completed with exact documentation staging and commit
+`7febf5af9cfd8f738dc9e3b4513c073c9db877dd`, message
+`docs: defer initial JRA daily target support`. The pre-commit/staged whitespace and
+exact-file checks passed. Normal push and fetch succeeded; local HEAD and
+origin/feature/post-v0.8-daily-replay both equal that SHA. The worktree was clean before
+this PREPARE. That verified SHA is the Phase 13 Base Commit; no further staging, commit
+or push is authorized or performed during Phase 13.
+
+Phase 13 is DESIGN_ONLY, Status DRAFT_FOR_REVIEW, Outcome CHANGES_REQUIRED. The draft
+defines a read-only NAR evidence resolver over the Phase 6 audited target set, one exact
+dataset and one explicit settlement cutoff. It preserves every target and its native
+disposition, rather than reconstructing the denominator from stored snapshots/results.
+JRA remains outside initial daily scope; no prior profile was re-investigated.
+
+The concrete review gate R1 is prediction availability, not a missing migration or
+archive feature. HistoricalInputEvidenceReference.available_at is formally nullable;
+the NAR source explicitly supplies None and its existing test asserts None. The formal
+snapshot enforces observation/capture/cutoff causality without requiring a provider
+availability instant. The newly requested unconditional available_at <= observed_at
+chain cannot be certified for these valid snapshots. No timestamp was fabricated and
+no source/domain contract was changed. CURRENT_PHASE records the two review choices:
+explicit nullable-availability daily semantics, or a stricter known-availability
+eligibility rule with an approved missing-evidence classification and latest-selection
+interaction. Neither choice is silently adopted. In particular, valid None is not
+storage corruption, and an older snapshot cannot be chosen by an unapproved fallback.
+Implementation must wait for ChatGPT to resolve this gate.
+
+Read-only repository investigation established:
+
+- Phase 6 and the v0.8 NAR source share exact NAR/nar_official and
+  nar:YYYYMMDD:babaCode:raceNo identity. historical_input_external_races provides the
+  exact unique internal mapping; display names and legacy race counts are not identity
+  or completeness authority.
+- SQLiteHistoricalInputSnapshotRepository already supports bounded load_latest_snapshot
+  and load_snapshot_by_identity. The v010 unique natural key makes a legal equal-latest
+  snapshot tie impossible; metadata/schema checks plus exact load can reject corruption
+  without changing LIMIT 1 behavior. Missing day/date lookup and mapping enumeration
+  require only private read-only SQL glue, not a new snapshot domain/repository API.
+- Snapshot upper bound remains the audited scheduled_start_at, with both captured_at
+  and snapshot information_cutoff bounded inclusively. Full domains and their digests
+  come from existing exact-load reconstruction, not raw-row reconstruction. A selected
+  corrupt snapshot cannot trigger an older-snapshot retry.
+- NAROfficialResponseCaptureArchive and SQLiteNAROfficialResponseCaptureRepository
+  supply exact capture/evidence loads, but no latest-by-race enumeration. The v001
+  capture metadata/body schema is sufficient for read-only selection followed by
+  exact load and byte-length/digest/capture-ID integrity checks. No new archive
+  Protocol, schema or migration is justified.
+- Metadata-only settlement selection reuses canonicalize_nar_official_capture_url
+  for RaceMarkTable, then exact date/babaCode/raceNo binding and unique greatest
+  observed_at at/before the explicit settlement cutoff. Same-time different captures
+  are ambiguous. Stored unique-evidence duplication or corruption is a global failure.
+  Phase 6 raw Monthly/RaceList href identity remains untouched.
+- One exact RaceMarkTable capture may serve result and the four existing supported
+  payout catalog keys. Body validity/finality, actual purchased types and unsupported
+  settlement semantics remain owned by official_settlement_acquisition and the existing
+  NAR normalizers. EXECUTABLE is reference readiness, not guaranteed settlement success.
+  Differing body hashes at different observation times do not by themselves establish
+  semantic contradiction; no cross-version HTML reconciliation is invented.
+- The actual SQLite replay application is run_sqlite_historical_replay, not a class.
+  It retains migration, prediction, bet generation, normalizer/persistence and settlement
+  ownership. The resolver never calls it or creates a synthetic request document.
+
+Proposed later files are historical_daily_evidence_resolution.py and
+sqlite_nar_daily_evidence_resolver.py under scripts/simulation, with matching two test
+modules. The first holds minimal provider-neutral immutable reference/outcome/day
+values, justified because existing executable requests cannot represent missing targets.
+The second owns NAR eligibility plus read-only selection glue. Existing target-set,
+snapshot, archive and normalizer modules need no changes under this proposal.
+
+The output keeps exact original targets, stable reason codes, partial resolved references
+and the complete canonical outcome tuple. Its derived ALL_TARGETS_RESOLVED,
+PARTIALLY_RESOLVED and NO_EXECUTABLE_TARGETS states describe resolution only. Neither
+partial evidence nor an all-resolved preflight is called a successful full-day replay.
+Global integrity failures return no partial result. No executable target means no future
+manifest/runner; a later nonempty projection uses the real unchanged schema-v1 artifact
+and exactly one multi-race call, with runner exceptions propagated and no retry/drop.
+SimulationSummary.race_count and target-set content_sha256 remain unchanged; no new
+resolver digest, target_race_count, daily persistence or ROI aggregation is introduced.
+
+The future test plan covers exact identity, causal/latest boundaries including pending
+R1, missing targets retained, snapshot/capture ambiguity and corruption, separate
+prediction/settlement time domains, native non-run retention, deterministic order,
+read-only/no-network/no-clock behavior and partial-day classification. Existing related
+tests and schemas were inspected, not executed. No dedicated or full suite was run for
+this docs-only PREPARE, and no production/test/fixture/database/archive file was changed.
+
+PREPARE verification: git diff --check passes; git diff --name-only and git status
+--short contain only docs/CURRENT_PHASE.md and docs/LATEST_CODEX_REPORT.md; git diff
+--cached --name-only is empty. HEAD remains the verified Phase 12 SHA. Stop for review
+with R1 unresolved; no implementation or next phase has started.
+
+## POST_V0_8_DAILY_REPLAY_13 Nullable Causality Review Correction
+
+ChatGPT resolved R1: available_at=None is formally permitted as unknown provider
+availability. No known-availability-required eligibility is introduced. This correction
+supersedes the open alternatives in the preparation report above. Status remains
+DRAFT_FOR_REVIEW, Phase type DESIGN_ONLY; Outcome is now IMPLEMENTABLE as a design
+assessment, not authorization to implement or advance phases. No blockers remain from R1.
+
+CURRENT_PHASE now freezes conditional causal eligibility for every prediction evidence
+reference, using the snapshot's own information_cutoff and audited target scheduled time:
+
+- Known available_at: available_at <= observed_at <= captured_at <= information_cutoff
+  <= scheduled_start_at.
+- available_at=None: observed_at <= captured_at <= information_cutoff <= scheduled_start_at.
+
+None is retained as unknown and alone creates no missing/invalid-evidence reason.
+It cannot be replaced with observed_at, current time or inferred/backdated availability.
+observed_at remains the honest evidence observation instant. observed_at > captured_at,
+captured_at > information_cutoff (future evidence), information_cutoff > the audited
+scheduled_start_at, or known available_at > observed_at cannot satisfy eligibility.
+Existing v0.8 evidence/snapshot validation is reused without a looser resolver rule;
+existing global integrity and target-scoped failure boundaries are preserved.
+
+LATEST_CAUSAL_IN_DATASET, inclusive audited scheduled-start selection bounds, unique
+latest selection and existing latest/exact repository loads are unchanged. A valid
+latest None-availability snapshot is not rejected or replaced with an older known-
+availability snapshot. The related design-test obligations now cover both branches,
+mandatory timestamp violations and prohibited availability substitution/fallback.
+Settlement selection, full denominator retention, proposed files/APIs and all unrelated
+Phase 13 design remain unchanged. Prior R1-pending references in CURRENT_PHASE were
+updated consistently; no new reason code, availability filter or repository API was added.
+
+Only docs/CURRENT_PHASE.md and docs/LATEST_CODEX_REPORT.md changed. git diff --check
+passes (LF/CRLF conversion notices only); git diff --name-only and git status --short
+show exactly those two documentation files; git diff --cached --name-only is empty.
+No production/test/fixture changes, test execution, staging, commit, push or next-phase
+transition was performed. Stop for independent design review.
+
+## POST_V0_8_DAILY_REPLAY_13 Final Approval
+
+ChatGPT completed the final independent review and approved Phase 13 for commit,
+including the nullable available_at correction. Status is APPROVED_FOR_COMMIT;
+Outcome remains IMPLEMENTABLE with no blocking issue. Existing approved contracts
+are unchanged. Production implementation remains unauthorized until a separately
+prepared and approved implementation phase is explicitly executed.
