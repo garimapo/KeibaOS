@@ -8267,3 +8267,147 @@ including the nullable available_at correction. Status is APPROVED_FOR_COMMIT;
 Outcome remains IMPLEMENTABLE with no blocking issue. Existing approved contracts
 are unchanged. Production implementation remains unauthorized until a separately
 prepared and approved implementation phase is explicitly executed.
+
+## POST_V0_8_DAILY_REPLAY_14 Preparation
+
+Phase 13 was finalized and committed as
+`0e48e7c795cfec4a10563a1f85234822b8b09c3f` with the exact message
+`docs: design NAR daily historical evidence resolver`. Only CURRENT_PHASE.md and this
+report were staged/committed. Unstaged and staged whitespace checks passed, normal push
+and fetch succeeded, and local HEAD equals origin/feature/post-v0.8-daily-replay at that
+SHA. The worktree was clean before Phase 14, whose Base Commit is that verified SHA.
+
+PREPARE_PHASE POST_V0_8_DAILY_REPLAY_14 is complete as DRAFT_FOR_REVIEW, phase type
+IMPLEMENTATION, preparation assessment IMPLEMENTABLE. It does not authorize code/test
+changes until independent approval and a separate EXECUTE_APPROVED_PHASE. The approved
+Phase 13 nullable causality decision and other existing contracts remain unchanged.
+
+The implementation contract freezes the three provider-neutral immutable reference/
+outcome/day values, DailyHistoricalReplayEvidenceDisposition and the derived
+DailyHistoricalReplayResolutionState. The NAR adapter has one public entry:
+resolve_sqlite_nar_daily_evidence(target_set, dataset_id, settlement_information_cutoff,
+snapshot_connection, capture_connection), with all parameters keyword-only. Private
+metadata helpers do not become new archive/repository APIs. ALL_TARGETS_RESOLVED,
+PARTIALLY_RESOLVED and NO_EXECUTABLE_TARGETS retain the complete nonempty denominator
+and describe resolution, never replay/ROI success.
+
+Read-only inspection reconfirmed existing load_latest_snapshot plus
+load_snapshot_by_identity, exact NAR load_capture and canonicalize_nar_official_capture_url
+as the reuse points. Snapshot digest must be compared explicitly because its dataclass
+field excludes equality comparison. The schema preflight is specified against actual
+Base Commit repository dependencies: v010 tables with existing v011-v014 evolution,
+especially v012 provenance evidence and v014 request_identity_sha256, plus the separate
+NAR v001 capture/body schema. No migration, new schema, archive Protocol or existing
+production edit is needed. Existing constructors must run before resolver-owned read
+transactions; query-only connections and exact reloads share stable per-database views.
+No cross-database atomicity or clock-derived causal context is claimed.
+
+The draft freezes exact local reason mapping/precedence, global integrity raise-without-
+partial-result semantics, approved native non-run/unknown handling, deterministic order,
+nullable causality and metadata-only settlement readiness. No body normalizer, manifest,
+runner, acquisition or prediction logic moves into the resolver. The public shared
+module stays provider-neutral and does not encode NAR grammar or native dispositions.
+
+Future EXECUTE allows exactly the two new production modules and two matching new test
+modules named by the user, plus the two phase/report docs. Existing files are read/reuse
+only. The 17 required test categories are mapped in CURRENT_PHASE, with exact dedicated,
+related regression and full unittest commands, no-network/no-clock/read-only checks and
+a static boundary search. Tests use isolated synthetic formal values/temp databases,
+not new official fixtures or formal replay datasets. Missing evidence is retained;
+global corruption cannot return an earlier successful prefix. Failure or a need to
+expand Allowed Files requires stopping, not a speculative fix.
+
+No blockers remain at PREPARE. Required future EXECUTE success state is READY_FOR_REVIEW;
+staging, commit, push and another phase remain unauthorized. This PREPARE has not run
+dedicated/related/full tests or created production/tests/fixtures. Only CURRENT_PHASE.md
+and this report changed. git diff --check passes (LF/CRLF conversion notices only);
+git diff --name-only and git status --short show exactly those two docs; git diff
+--cached --name-only is empty. Stop at DRAFT_FOR_REVIEW for independent review.
+
+## POST_V0_8_DAILY_REPLAY_14 Execution Report
+
+The user approved execution, including the mandatory day-state, snapshot, settlement
+ambiguity and nullable-causality clarifications. CURRENT_PHASE was set to
+APPROVED_FOR_CODEX before production edits. Branch feature/post-v0.8-daily-replay and
+HEAD/Base 0e48e7c795cfec4a10563a1f85234822b8b09c3f matched; only the two existing phase
+docs were dirty, and the index was empty. No old KeibaAI repository changes were made.
+
+Final Status: READY_FOR_REVIEW. Implemented exact Allowed Files:
+
+- scripts/simulation/historical_daily_evidence_resolution.py
+- scripts/simulation/sqlite_nar_daily_evidence_resolver.py
+- tests/test_historical_daily_evidence_resolution.py
+- tests/test_sqlite_nar_daily_evidence_resolver.py
+- docs/CURRENT_PHASE.md
+- docs/LATEST_CODEX_REPORT.md
+
+The provider-neutral module exports exactly the three immutable reference/outcome/day
+dataclasses and two frozen-contract enums. It validates full denominator coverage,
+original target content, canonical lexical ordering, snapshot/reference completeness
+and day context. ALL_TARGETS_RESOLVED requires a nonempty original target set with every
+outcome EXECUTABLE; presence of an outcome alone does not satisfy the predicate.
+PARTIALLY_RESOLVED and NO_EXECUTABLE_TARGETS retain all original members and make no
+replay/ROI success claim. No resolver digest or new summary count field was added.
+
+The SQLite module exports only resolve_sqlite_nar_daily_evidence, with the approved
+keyword-only inputs. Its private schema preflight checks current columns, primary/
+unique keys and foreign-key relations, including v012 evidence/v014 request identity
+and the existing NAR v001 archive. It enables query-only/FK connections, initializes
+existing repositories before resolver-owned read views, never commits/closes caller
+connections, and releases its reads on success/failure. No persistent write, schema
+application, network, parser, clock, archive Protocol or existing repository edit exists.
+
+Prediction metadata selects unique greatest eligible captured_at under both audited
+scheduled-start bounds. The existing load_latest_snapshot must agree, then existing
+load_snapshot_by_identity reconstructs the exact domain. Full identity/content/date/
+start/internal linkage and explicit digest comparisons are checked. Stored duplicate,
+corrupt or disappearing evidence raises RepositoryDataIntegrityError without older
+fallback or partial day. A safely target-bound audited date/start mismatch retains an
+INVALID_EVIDENCE outcome. Nullable availability uses existing v0.8 causal validation:
+None stays unknown and does not filter, rank, fill or replace the latest snapshot.
+
+Settlement metadata reuses the stored URL's existing canonicalizer and query identity;
+no acquisition URL is rebuilt. Only observed_at ranks eligible exact RaceMarkTable
+captures. Same-greatest different captures retain INVALID_EVIDENCE with
+SETTLEMENT_CAPTURE_AMBIGUOUS; duplicate persisted evidence identity and storage
+corruption raise globally. A unique winner is exact-loaded and supplies the same
+immutable reference for result and payout. Deliberately non-semantic synthetic test
+bodies still resolve as references, proving that this layer does not claim or parse
+final result/payout semantics. Existing runner/normalizer responsibility is unchanged.
+
+Verification on Python 3.14, using the exact CURRENT_PHASE commands:
+
+| Suite | Result |
+| --- | --- |
+| Dedicated: tests.test_historical_daily_evidence_resolution + tests.test_sqlite_nar_daily_evidence_resolver | 34 PASS |
+| Related shared daily/snapshot/NAR source/capture/repository group | 90 PASS |
+| Related NAR result/payout/settlement/request/application group | 86 PASS |
+| python -m unittest discover -s tests -p "test_*.py" | 2,967 PASS |
+
+All 17 frozen acceptance categories are covered, including real same-instant settlement
+ambiguity, corrupt duplicate snapshot/capture storage, late global failure with no day
+result construction, no fallback, None causality, mandatory timestamp violations,
+missing references retained, all three day states, insertion-order independence and
+read-only execution. Test-only corruption setup initially hit the existing protective
+triggers; those tests were corrected to remove the relevant guards only in their own
+isolated databases. Assertions and production integrity contracts were not weakened.
+No test was skipped. No official fixtures or formal dataset evidence were acquired.
+
+The two new modules' frozen forbidden-dependency search returned no matches (rg exit 1,
+expected). Tests also use AST inspection, network/time/migration/save/normalizer/runner
+call traps, SQLite authorizer and total_changes checks, and real mode=ro temporary
+databases whose bytes remain identical. Caller transactions are not rolled back;
+resolver-owned reads are released, and connections remain open.
+
+Existing tests emit ResourceWarning for unclosed SQLite connections. The related-only
+90-test process reproduces them without running the new Phase 14 tests; full suite also
+emits them, whereas dedicated 34 tests emit none. No suppression or out-of-scope fix was
+made. These are warnings, not failing tests.
+
+Final git diff --check succeeds (LF/CRLF conversion notices only). git diff --name-only
+lists the two docs; git status --short additionally lists the four new Allowed files.
+No unexpected path exists, and git diff --cached --name-only is empty. New untracked
+files were checked with git diff --no-index --check against NUL without staging: no
+whitespace diagnostics, only expected new-file differences/line-ending notices.
+No existing production/tests, migrations/schema/database/archive/CLI files changed.
+No staging, commit, push or next-phase transition. No blockers; stop for review.
