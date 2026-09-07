@@ -1,443 +1,333 @@
 # Current Phase
 
-Status: `READY_FOR_REVIEW`
+Status: `APPROVED_FOR_COMMIT`
 
 ## Identity, authority and authorization
 
-- Phase: `POST_V0_8_DAILY_REPLAY_14`
-- Name: `NAR Daily Historical Evidence Resolver Implementation`
-- Phase type: `IMPLEMENTATION`
-- Base Commit: `0e48e7c795cfec4a10563a1f85234822b8b09c3f`
+- Phase: `POST_V0_8_DAILY_REPLAY_15`
+- Name: `Daily Replay Schema-v1 Manifest Projection Design`
+- Phase type: `DESIGN_ONLY`
+- Base Commit: `40268c75bfd2ede8f4d64811e5a72db06fc8a9c3`
 - Branch: `feature/post-v0.8-daily-replay`
-- Preparation assessment: `IMPLEMENTABLE`
-- Current authorization: approved EXECUTE completed; review pending, no staging/commit/push.
+- Preparation outcome: `IMPLEMENTABLE`
+- Current authorization: design review only; no implementation, staging, commit or push.
 
-AGENTS.md, docs/VER0.8_SIMULATOR_DESIGN.md's applicable authoritative contracts and
-the approved Phase 13 design at the Base Commit govern this implementation contract.
-Phase 13 includes the final nullable available_at decision. Its exact documentation
-commit was pushed normally, fetched and verified equal to the remote branch before
-this PREPARE. Earlier phase contracts are not rewritten or broadened here.
-
-This phase implements only the approved immutable resolution boundary and read-only
-NAR lookup adapter after a later APPROVE_PHASE and EXECUTE_APPROVED_PHASE. The
-IMPLEMENTATION phase type is not permission to implement during PREPARE.
-No unresolved design blocker was found. Any later conflict requires stopping.
+AGENTS.md, the applicable existing Ver0.8 contracts, the approved Phase 1 manifest
+artifact boundary and the committed Phase 13/14 resolution contracts are authority.
+This phase does not amend them. The Base Commit was normally pushed, fetched and
+verified equal to origin/feature/post-v0.8-daily-replay before this PREPARE.
 
 ## Exact Allowed Files
 
-### During PREPARE
+During this DESIGN_ONLY phase:
 
 ```text
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-### Only after explicit approved EXECUTE
+The following are future implementation candidates only and are not Allowed Files in
+this phase:
 
 ```text
-scripts/simulation/historical_daily_evidence_resolution.py
-scripts/simulation/sqlite_nar_daily_evidence_resolver.py
-tests/test_historical_daily_evidence_resolution.py
-tests/test_sqlite_nar_daily_evidence_resolver.py
-docs/CURRENT_PHASE.md
-docs/LATEST_CODEX_REPORT.md
+scripts/simulation/historical_daily_replay_manifest_projection.py
+tests/test_historical_daily_replay_manifest_projection.py
 ```
 
-The four production/test paths are new files. Existing production/test files are
-read/reuse only. No package re-export or __init__.py modification is required.
-Private test helpers belong in the two new test modules, not in another helper file.
+No existing request-document, request-application, runner or package export needs a
+change. A later implementation phase must separately PREPARE, receive ChatGPT review,
+APPROVE and EXECUTE authorization before those two candidate files become writable.
 
 ## Forbidden Files and actions
 
-Every path outside the applicable Allowed Files, including existing shared/NAR/JRA
-production, tests, fixtures, AGENTS.md, detailed Ver0.8 design, dependencies, CLI,
-schema/migrations, database/**, logs/** and provider archives. database/keiba.db and
-logs/ must never be staged or committed. Tags/release history remain unchanged.
+Every path other than the two documentation files is forbidden in Phase 15, including
+production, tests, fixtures, schema/migrations, database/**, logs/**, archives, CLI,
+AGENTS.md and release history. database/keiba.db and logs/ must never be staged.
 
-No new archive Protocol, migration, schema, durable archive, live acquisition,
-fixture materialization, HTML parsing, manifest builder, daily orchestrator, reporting,
-ROI aggregation, prediction/bet/settlement logic or JRA support. No stage, commit, push
-or next-phase transition is authorized by PREPARE or the future EXECUTE.
+No implementation, fixture acquisition, network access, database access, migration,
+runner call, stage, commit, push or next-phase transition. No new replay schema,
+schema-v1 field, target count, prediction/bet/settlement logic, JRA support, daily
+result persistence, reporting, ROI aggregation or CLI is designed or implemented here.
 
-## Public API: provider-neutral immutable values
+## Existing boundary findings
 
-Only the following public definitions belong in
-scripts/simulation/historical_daily_evidence_resolution.py. Imports/helpers are private.
-Use frozen, slotted dataclasses for the three values and StrEnum for the two enums.
-No public builder, serializer, repository, clock or prediction callback is needed.
+The existing `HistoricalReplayRequestDocument` is already the exact immutable domain
+for schema version 1. Its root JSON keys are exactly:
 
-| Public name | Exact fields / values |
-| --- | --- |
-| DailyHistoricalReplayEvidenceDisposition | EXECUTABLE, MISSING_PREDICTION_EVIDENCE, MISSING_SETTLEMENT_EVIDENCE, UNSUPPORTED, INVALID_EVIDENCE; string values equal their names |
-| DailyHistoricalReplayResolutionState | ALL_TARGETS_RESOLVED, PARTIALLY_RESOLVED, NO_EXECUTABLE_TARGETS; string values equal their names |
-| DailyHistoricalReplayCaptureReference | capture_id: str; canonical_source_url: str; response_sha256: str; observed_at: datetime |
-| DailyHistoricalReplayTargetOutcome | target: DailyHistoricalReplayTarget; disposition: DailyHistoricalReplayEvidenceDisposition; reason_codes: tuple[str, ...]; internal_race_id: int \| None; snapshot_identity: HistoricalInputSnapshotIdentity \| None; snapshot_content_sha256: str \| None; result_capture_reference: DailyHistoricalReplayCaptureReference \| None; payout_capture_reference: DailyHistoricalReplayCaptureReference \| None |
-| DailyHistoricalReplayEvidenceResolution | target_set: DailyHistoricalReplayTargetSet; dataset_id: str; selection_policy: str; settlement_information_cutoff: datetime; outcomes: tuple[DailyHistoricalReplayTargetOutcome, ...] |
+```text
+schema_version
+database_path
+capture_archives
+run_context
+strategy
+budgets_by_race_id
+races
+```
 
-DailyHistoricalReplayEvidenceResolution.day_state is a derived read-only property of
-type DailyHistoricalReplayResolutionState, not an independently supplied field.
-selection_policy must equal LATEST_CAUSAL_IN_DATASET; do not add a policy registry.
+`load_historical_replay_request_document(request_path=...)` is the authority for UTF-8
+decoding, duplicate-key rejection, finite JSON numbers, exact nested key sets, enum/
+strategy reconstruction, canonical positive budget IDs and request-domain validation.
+It sets `source_path` to the real supplied request path and resolves relative database/
+archive paths against that path. `HistoricalReplayRequestDocument` requires a nonempty
+race tuple; therefore it cannot and must not represent a zero-executable day.
 
-Construction invariants:
+Each existing `HistoricalReplayRaceRequest` already carries the required exact snapshot
+identity, internal race ID, settlement cutoff, result capture ID and payout capture
+catalog. The document already proves unique snapshot/internal identities, exact budget
+coverage, dataset agreement and archive coverage for represented providers. The
+existing `run_historical_replay_request` loads the file and invokes the existing
+multi-race SQLite runner exactly once; neither it nor the runner is called in this phase
+or moved into the future manifest projection module.
 
-- Exact existing domain/reference/enum types; reject malformed inputs with ValueError.
-  No bool-as-int; internal IDs when present are positive integers. Text must be nonempty
-  and already NFC without surrounding whitespace. Digests are lowercase 64-hex strings.
-  Datetimes must be aware and normalize to UTC without using current time.
-- Capture reference URL validation is provider-neutral HTTPS/no credentials/fragment;
-  no NAR URL grammar, capture-ID prefix, native-state or venue assumption in this module.
-  Provider-specific binding remains the adapter's responsibility.
-- Snapshot identity and snapshot digest are both present or both None. A snapshot
-  reference requires internal_race_id and exact provider/external identity agreement
-  with the target. Do not invent a snapshot or linkage to fill missing evidence.
-- EXECUTABLE requires all resolved references, an exact scheduled_start_at and no
-  reason codes. Every non-executable disposition requires at least one reason.
-  Valid partial references may remain; a rejected candidate is not a resolved snapshot.
-- reason_codes is a tuple of unique nonempty strings, canonicalized lexically;
-  reject duplicates rather than silently discarding them. The shared class does not
-  encode NAR-specific reason-to-disposition rules.
-- Outcomes must cover the original target set exactly once, with matching target
-  content. Reject missing, extra, duplicate or contradictory targets. Canonicalize
-  outcome order to the original target set's (organization, source_system,
-  external_race_id) ordering, not numeric race number or internal ID.
-- The resolver forwards each original target object; no target content is rewritten.
-  The day result retains the original target_set and its existing content_sha256.
-- Require a nonempty target set for this resolution result. An empty set cannot satisfy
-  ALL_TARGETS_RESOLVED vacuously or imply a newly supported zero day.
-- Cross-check every snapshot's dataset/provider/external identity against the day
-  context; any reference observed_at later than settlement_information_cutoff is
-  invalid in the day result. Full snapshot causality and capture integrity are checked
-  through existing repositories by the adapter, not reconstructed in these values.
+The schema's strategy object is configuration-shaped rather than an independently
+serialized strategy ID/hash. Loading rebuilds the existing `StrategyIdentity`. The
+projection must therefore serialize the exact caller-supplied identity's config and
+prove round-trip identity equality; it must not invent, weaken or separately override
+strategy identity/configuration.
 
-No new digest/serialization format is implemented. Retain existing target-set,
-snapshot and capture digests, not Python repr/hash, row order, current time or file
-metadata. Do not add target_race_count or alter SimulationSummary.race_count.
+## Proposed public API and ownership
 
-## Public API: read-only NAR adapter
-
-The sole public definition in scripts/simulation/sqlite_nar_daily_evidence_resolver.py:
+The single future production module owns only deterministic executable projection and
+one real file artifact. Its proposed public surface is:
 
 ```python
-def resolve_sqlite_nar_daily_evidence(
+@dataclass(frozen=True, slots=True)
+class DailyHistoricalReplayManifestProjection:
+    resolution: DailyHistoricalReplayEvidenceResolution
+    document: HistoricalReplayRequestDocument | None
+
+
+def write_daily_historical_replay_manifest(
     *,
-    target_set: DailyHistoricalReplayTargetSet,
-    dataset_id: str,
-    settlement_information_cutoff: datetime,
-    snapshot_connection: sqlite3.Connection,
-    capture_connection: sqlite3.Connection,
-) -> DailyHistoricalReplayEvidenceResolution:
+    resolution: DailyHistoricalReplayEvidenceResolution,
+    database_path: Path,
+    nar_capture_archive_path: Path,
+    run_context: SimulationRunContext,
+    strategy_identity: StrategyIdentity,
+    race_budget: BetStakeBudget,
+    manifest_source_path: Path,
+) -> DailyHistoricalReplayManifestProjection:
     ...
 ```
 
-All metadata/schema/identity helpers are private. Reuse the existing concrete
-repositories directly; do not add an archive Protocol or expose SQL helpers for tests.
+`strategy_identity` is the sole strategy authority. No separate StrategyConfig argument
+is accepted. Serialization reads only `strategy_identity.strategy_config`; require
+`strategy_identity.strategy_name == "RuleBasedBetStrategy"` and all existing
+StrategyIdentity invariants. The writer must reuse the existing domain and
+`build_strategy_identity` contract through loader reconstruction; it must not calculate
+or maintain an independent strategy config/hash/ID authority. Reloaded StrategyIdentity
+must equal the exact caller-supplied value. No clock, repository, connection, provider
+client, loader callback or runner is injected. Helpers remain private. Existing ValueError/domain validation,
+`HistoricalReplayRequestValidationError`, `FileExistsError` and ordinary I/O errors
+propagate; no broad catch-and-success or new error hierarchy is needed.
 
-Input and connection boundary:
+The immutable return value is the audit join between the complete denominator and its
+executable artifact. Its construction requires the exact Phase 14 resolution type.
+When `document` exists it must be the exact object reloaded from `manifest_source_path`; when it
+does not, the resolution state must be `NO_EXECUTABLE_TARGETS`. A document is mandatory
+for the other two states. It exposes no replay-success boolean and introduces no new
+day-state enum: `resolution.day_state` remains authoritative.
 
-- Require the already audited Phase 6 NAR target set; exact singleton scope
-  {HistoricalDailyProviderIdentity("NAR", "nar_official")}. Generic value construction
-  alone does not prove source completeness. Do not rediscover or reacquire evidence.
-- Reject mixed/JRA scope or an unsupported empty discovery set as whole-request
-  TargetDiscoveryIncompleteError with existing UNSUPPORTED_ENVELOPE_STATE code.
-  Malformed API values use ValueError; unusable connections/active caller transactions
-  use existing RepositoryValidationError. Do not fabricate a new discovery enum.
-- dataset_id is exact and settlement_information_cutoff is caller-supplied aware time.
-  No budget, strategy, network client, current clock or acquisition fallback.
-- Require two distinct usable caller-owned SQLite connections with no active
-  transaction. Caller opens disk databases with mode=ro; isolated in-memory databases
-  may be used by tests. Enforce/verify query_only and foreign_keys on both connections.
-- Initialize existing repositories before starting read transactions (the NAR
-  repository rejects construction during an active transaction). Use explicit
-  resolver-owned read views; metadata and exact loads share each database's view.
-- Release only resolver-owned read transactions in finally, on success and failure.
-  Do not close connections, commit caller work or roll back a transaction present
-  before entry. query_only/foreign_keys remain enabled; no persistent write is allowed.
-- No cross-database atomicity promise. No file opens, ATTACH, DDL, migration/save calls,
-  raw official response acquisition, parser execution or replay execution.
+## Explicit caller inputs and validation
 
-## Required existing schema and exact reuse points
+All context is explicit. The projection must not derive any input from current time,
+SQLite row order, environment variables, repository state or output-file metadata.
 
-Read/reuse these unchanged modules at the Base Commit:
+- `resolution` supplies the complete audited denominator, dataset ID, exact uniform
+  settlement_information_cutoff and all target outcomes/references.
+- `database_path` is the future runner's main database path.
+- `nar_capture_archive_path` is the sole `NAR/nar_official` capture archive path.
+- `run_context` supplies run_id, dataset_id, caller-chosen aware started_at and target
+  commit ID. In particular, started_at is never generated with a clock.
+- `strategy_identity` supplies the exact supported RuleBasedBetStrategy configuration,
+  including its fixed-stake allocation policy, and its derived identity/hash.
+- `race_budget` is one exact BetStakeBudget projected unchanged to every executable
+  internal race ID.
+- `manifest_source_path` is the exact real manifest output path and becomes the loaded
+  document's source_path. It is not a synthetic/nonexistent placeholder on success.
 
-| Module / symbol | Responsibility retained |
+Require exact domain types, `resolution.dataset_id == run_context.dataset_id`, exact
+singleton NAR provider identity `NAR/nar_official`, and absolute Path values for
+`manifest_source_path`, `database_path` and `nar_capture_archive_path`. Relative paths
+are rejected rather than interpreted through the process current directory. The writer
+must not call Path.resolve(), use cwd, or otherwise rewrite caller path intent. Exact
+caller-supplied absolute database/archive path text is serialized; after reload the
+source, database and archive Paths must equal the caller inputs exactly. The builder
+does not open or inspect the database/archive or use filesystem metadata to derive any
+path. `manifest_source_path.parent` must already be a directory; the writer never calls
+mkdir or creates parent directories.
+
+The supplied strategy must be exactly reconstructible by the current schema-v1 loader:
+RuleBasedBetStrategy, the loader-supported enums and finite score, unique supported bet
+types, and fixed_stake_per_recommendation policy version 1 with exactly positive
+100-yen-multiple `stake_amount`. Any config the existing loader cannot round-trip is a
+projection error, not a reason to change the loader/schema or silently substitute a
+default. Zero budget remains valid because existing BetStakeBudget/schema-v1 permits it.
+
+Validate all caller inputs before the zero-executable branch, but do not inspect or
+create `manifest_source_path` in that branch. Parent-directory creation is never performed.
+
+## Exact projection contract
+
+Only outcomes whose disposition is exactly `EXECUTABLE` enter the schema-v1 `races`
+array. Iterate the already canonical Phase 14 outcome order and filter without sorting
+by scheduled time, internal ID, capture time or database insertion order. This preserves
+the target-set ordering `(organization, source_system, external_race_id)`.
+
+For every executable outcome, fail closed unless all Phase 14 invariants remain true:
+
+- snapshot identity and positive internal race ID exist; snapshot provider/external
+  race and dataset agree exactly with target/resolution/run context;
+- snapshot identities and internal race IDs are unique across the executable projection;
+- result and payout references both exist and are the same exact selected settlement
+  capture reference; no capture ID or URL is generated or looked up;
+- the exact resolution `settlement_information_cutoff` is copied to the race request;
+- the result capture ID is that selected capture's exact capture_id;
+- payout catalog keys are exactly `単勝`, `馬連`, `ワイド`, `3連複`, each mapped to
+  that same capture_id in deterministic lexical-key order;
+- the same caller-supplied `race_budget` is mapped to every executable internal race
+  ID, and no budget is synthesized for a non-executable denominator member.
+
+The projection does not parse capture HTML or guarantee body-level result/payout
+semantics. The existing runner/normalizers retain that responsibility and their
+exceptions later propagate without partial summary, retry or reduced-manifest rerun.
+
+The resulting document must have exactly schema_version 1, only the NAR archive key,
+the explicit run/strategy/path inputs, budget keys exactly equal to race IDs, and the
+canonical executable race order. It must satisfy the existing
+`HistoricalReplayRaceRequest` and `HistoricalReplayRequestDocument` constructors before
+bytes are written. No target, resolution outcome, reference or caller-owned mapping is
+mutated.
+
+## Day-state and denominator boundary
+
+| Resolution state | Artifact rule | Audit meaning |
+| --- | --- | --- |
+| ALL_TARGETS_RESOLVED | Project every target; write one nonempty manifest | Full denominator is executable; this is still readiness, not replay/ROI success |
+| PARTIALLY_RESOLVED | Project only EXECUTABLE outcomes; write one nonempty manifest | Resolution remains the full denominator; manifest is explicitly a subset and can never establish full-day success |
+| NO_EXECUTABLE_TARGETS | Return `document=None`; do not create/read the output path | No manifest and no later runner invocation |
+
+The return value retains the exact original Phase 14 resolution in all states. The
+schema-v1 artifact is never denominator/completeness authority and receives no new
+fields for missing/unsupported/invalid targets. A future orchestrator must retain the
+projection result while passing only its non-None document to the existing runner.
+It may call the runner at most once. It must not drop another race, retry per race,
+reduce and rerun, or report partial execution as full-day replay/ROI success.
+
+## Deterministic schema-v1 serialization
+
+The future writer freezes the following canonical byte contract without adding a
+manifest digest or schema field:
+
+- Build only the existing schema-v1 JSON tree; object keys are lexically sorted at
+  every level by `json.dumps(sort_keys=True)`.
+- Use `ensure_ascii=False`, `allow_nan=False`, separators `(',', ':')`, append exactly
+  one LF, and encode UTF-8 without BOM. Python repr, locale, platform newline, file
+  timestamps and unordered mapping/set iteration are forbidden.
+- Datetimes serialize after UTC conversion as ISO-8601 with six fractional digits and
+  `+00:00`. This preserves the exact instant and uses no current clock.
+- `races` retains canonical executable target order. `allowed_bet_types` and payout
+  catalog keys are lexically ordered. Budget object keys are canonical decimal positive
+  integer strings; deterministic JSON object-key ordering applies.
+- Absolute database/archive paths use their exact caller-supplied text. source_path
+  is not a JSON field; it is the exact Path passed to the loader after publication.
+
+Construct and validate the complete expected HistoricalReplayRequestDocument domain
+before serialization or filesystem mutation. The caller must supply a fresh output path
+whose parent already exists. The writer uses exclusive binary creation of the final
+path and writes the canonical bytes once; it never overwrites, appends, edits, replaces,
+merges or silently accepts an existing file. Any pre-existing target or write/flush/
+close error fails closed. A path is accepted as the frozen manifest artifact only after
+the complete bytes are closed and reload validation succeeds. This design makes no
+durable artifact repository or transaction claim and never writes a temporary file into
+database/archive/fixture locations.
+
+After writing, call the existing
+`load_historical_replay_request_document(request_path=manifest_source_path)` directly. Require
+exact equality of the loaded document against the prevalidated expected domain,
+including source/database/archive paths, run context, reconstructed strategy identity,
+budgets, canonical race tuple, snapshot identities, cutoff and capture catalogs. Also
+require the file bytes still equal the canonical bytes just written. A mismatch raises;
+no document or replay-ready result is returned, the runner is not called and no schema/
+loader fallback is attempted. If reload or equality validation fails, remove only the
+manifest final path that this invocation exclusively created, then re-raise the original
+exception fail closed. Never delete, replace or modify a pre-existing file or any other
+path. A cleanup failure must also stop and must not turn the invalid artifact into a
+successful result. Re-execution of a frozen valid artifact uses the existing loader/
+application directly, not a builder overwrite.
+
+## Failure semantics and responsibility boundaries
+
+Malformed/mismatched caller domains, provider/dataset/reference inconsistency,
+duplicate identity/ID, unsupported strategy round-trip and projection contradiction
+fail before publication. Output-path collision and I/O/reload mismatch fail without a
+success value. There is no silent target skip beyond the explicit EXECUTABLE filter,
+fallback capture, default context/budget, current-clock value, file overwrite or partial
+document return.
+
+This builder has no network, SQLite connection, migration, source discovery, evidence
+resolution, archive lookup, capture parsing, prediction, bet generation, settlement,
+runner or reporting responsibility. Existing schema-v1 loader and runner remain
+unchanged. Manifest file creation is the only authorized future side effect.
+
+## Required tests for a later implementation phase
+
+All tests belong in the single proposed test module; production implementation and
+tests require a separate approved phase.
+
+| # | Required behavior |
 | --- | --- |
-| historical_daily_targets.py | Audited target/domain identity, ordering, digest and native reference |
-| historical_input_snapshots.py / historical_input_evidence.py | Formal identity, snapshot, complete child/provenance validation and nullable causal invariants |
-| SQLiteHistoricalInputSnapshotRepository.load_latest_snapshot | Inclusive upper-bounded exact dataset/provider/external/internal selection and full-domain reconstruction |
-| SQLiteHistoricalInputSnapshotRepository.load_snapshot_by_identity | Exact identity reload and digest/integrity verification |
-| canonicalize_nar_official_capture_url / NAROfficialPageKind | Formal v0.8 capture URL/page identity; not a Phase 6 raw-locator canonicalizer |
-| SQLiteNAROfficialResponseCaptureRepository.load_capture | Exact capture/body length/SHA/ID reconstruction |
-| Existing NAR result/payout normalizers / official_settlement_acquisition.py | Body interpretation/finality/purchased bet types and settlement-fact persistence, called only by the future existing runner |
-| HistoricalReplayRaceRequest / schema-v1 loader / run_sqlite_historical_replay | Later projection/real-artifact loading and execution, never called by this adapter |
+| 1 | ALL_TARGETS_RESOLVED writes all executable targets in canonical target order |
+| 2 | PARTIALLY_RESOLVED writes only executable subset and retains exact full resolution |
+| 3 | Partial projection exposes no full-day success claim and cannot turn manifest races into denominator |
+| 4 | NO_EXECUTABLE_TARGETS returns None and neither creates nor reads manifest_source_path |
+| 5 | Exact snapshot identity/internal race projection and uniqueness enforcement |
+| 6 | Exact shared result/payout capture ID and four-key payout catalog projection; distinct/missing references fail |
+| 7 | One uniform race budget projected to all and only manifest race IDs |
+| 8 | Budget keys exactly equal manifest race IDs after existing-loader round trip |
+| 9 | resolution/run-context dataset mismatch fails before file creation |
+| 10 | provider mismatch or mixed/JRA scope fails before file creation |
+| 11 | duplicate internal race or snapshot identity fails before file creation |
+| 12 | malformed EXECUTABLE reference/identity contradiction fails closed without hidden skip |
+| 13 | shuffled non-authoritative inputs cannot alter canonical race ordering/output bytes |
+| 14 | exact compact UTF-8/LF schema-v1 bytes, sorted objects/sets/catalog, canonical paths/times, no repr/nonfinite/current-time material |
+| 15 | reload through existing loader yields exact expected document and exact real source/database/archive Paths; reload/equality failure removes only this-call-created manifest and returns no success |
+| 16 | explicit fixed run_context.started_at; clock functions trapped and unused |
+| 17 | network/acquisition functions trapped and unused |
+| 18 | SQLite/migration/runner functions trapped and unused; only exclusive manifest file write occurs |
+| 19 | original resolution/target denominator and outcome identities remain unchanged in full/partial/none cases |
+| 20 | existing output path is never overwritten; relative manifest/database/archive paths, cwd-dependent resolution and missing parent fail closed without mkdir |
+| 21 | existing request loader/application/SQLite runner regressions remain unchanged |
+| 22 | StrategyIdentity is the sole strategy input; exact loader round trip succeeds and unsupported/mismatched identity fails without an independent config/hash/ID authority |
 
-Schema inspection must reflect current repositories, not just the original v010 header
-schema. Main dependencies are existing v010 snapshot/mapping tables plus the existing
-v011-v014 evolution: in particular v012 historical_input_snapshot_provenance_evidence
-and v014 request_identity_sha256. Requiring these existing columns is not a migration
-proposal. v015 JRA seed functionality is not used. NAR archive uses its existing v001
-capture/body schema. Do not run migration discovery/application as a side effect.
-
-Private preflight uses read-only table/column/key/index/FK inspection against the
-consumed Base Commit contracts. Required relations include races/horse linkage,
-historical_input_source_identities, historical_input_external_races,
-historical_input_external_entries, historical_input_snapshots and its race/entry/
-past-race/provenance/evidence children, plus nar_official_response_captures and
-nar_official_response_bodies. Missing/incompatible schema raises
-RepositoryDataIntegrityError, even if no target would produce an executable snapshot.
-No automatic repair or fallback to legacy columns.
-
-Validate the existing unique snapshot natural key and external/internal mapping
-constraints; archive uniqueness is (canonical_source_url, response_sha256,
-observed_at_utc). Stored UTC selection timestamps must be real canonical microsecond
-ISO instants with +00:00, not merely strings accepted by a coarse SQLite CHECK.
-Metadata decoding is allowed; rebuilding a snapshot from raw rows is forbidden.
-
-## Exact target and prediction resolution
-
-1. Process all targets in the canonical target order. Validate the provider/external
-   tuple against the approved nar:YYYYMMDD:babaCode:raceNo grammar and target date.
-   No display-place matching or URL generation. Safely target-bound malformed identity
-   is INVALID_EVIDENCE / TARGET_EVIDENCE_IDENTITY_MISMATCH.
-2. Preserve native membership. The existing nar-race-list-target-row-v1 kind is the
-   normal replay-candidate boundary; missing exact time is INVALID_EVIDENCE with
-   SCHEDULED_START_UNAVAILABLE. The approved
-   nar-race-list-whole-meeting-cancelled-no-substitute-v1 kind is UNSUPPORTED with
-   NATIVE_NON_RUN, even when a time is present. Unknown native kind is UNSUPPORTED with
-   UNKNOWN_NATIVE_DISPOSITION. None time never gets a replacement bound.
-   For targets blocked by native eligibility, retain the outcome without pretending
-   that evidence lookup ran or adding unestablished missing-evidence reasons.
-3. For an otherwise normal target, reconcile exact organization/source/external
-   identity through historical_input_external_races. Missing mapping adds
-   INTERNAL_RACE_MAPPING_MISSING. Duplicate/conflicting mappings, missing referenced
-   internal race or persisted linkage corruption raise globally.
-4. Read snapshot metadata for the exact dataset/provider/external identity, validate
-   internal mapping and timestamp fields, then retain candidates satisfying BOTH
-   captured_at <= target.scheduled_start_at and
-   information_cutoff <= target.scheduled_start_at.
-   No rows gives SNAPSHOT_MISSING; only out-of-bound rows gives
-   SNAPSHOT_AFTER_SELECTION_BOUND. With missing mapping do not invent an internal ID.
-5. Select unique greatest captured_at. Natural-key duplication or incompatible UNIQUE
-   schema is global integrity failure, not a row-ID tie-break. Call
-   load_latest_snapshot(dataset_id=..., race_id=..., source_identity=exact
-   HistoricalExternalRaceIdentity(...), information_cutoff=target.scheduled_start_at).
-   Require agreement with metadata, including not-found agreement.
-6. For a candidate, call load_snapshot_by_identity(identity=latest.identity). Require
-   matching formal domain and explicitly matching content_sha256, identity/linkage,
-   dataset, target date and audited scheduled instant. Never rely on dataclass equality
-   alone for digest comparison (the existing snapshot digest excludes comparison).
-7. Repository reconstruction/invariant/digest failure or a selected identity disappearing
-   raises globally. A valid loaded snapshot contradicting audited date/start yields
-   SNAPSHOT_TARGET_MISMATCH / INVALID_EVIDENCE with no resolved snapshot reference.
-   Neither case retries an older snapshot.
-
-The policy name remains LATEST_CAUSAL_IN_DATASET. For each exact-loaded evidence
-reference the approved causal rules are:
+Future verification must include:
 
 ```text
-known available_at:
-  available_at <= observed_at <= captured_at <= information_cutoff <= audited scheduled_start_at
-available_at=None:
-  observed_at <= captured_at <= information_cutoff <= audited scheduled_start_at
-```
-
-Use the existing full snapshot/evidence validation, not a weaker local reconstruction.
-None is legitimate unknown availability and does not create a failure reason, filter
-or ranking preference. No substitution, inference, backdating or current-clock usage.
-The latest eligible None snapshot wins over an older known-availability snapshot.
-Records beyond selection bounds cannot execute; formal stored causal violations are
-global integrity errors. No fixed lead-time policy is introduced.
-
-## Exact settlement resolution
-
-For otherwise normal targets, perform this independent lookup even if prediction
-mapping/snapshot is missing, so all established shortages and partial references survive.
-
-1. Read formal NAR capture metadata, validate kind/canonical URL/selection fields, and
-   derive exact date/babaCode/raceNo only from the query validated by the existing
-   canonicalizer. No raw HTML parsing, generated capture URL or reused RaceList body.
-   Only RACE_MARK_TABLE is eligible. Valid unrelated records are not candidates;
-   malformed/unattributable stored metadata is a global integrity error, not skipped.
-2. Apply observed_at <= explicit settlement_information_cutoff inclusively, and choose
-   unique greatest observed_at for the exact target. requested_at/stored_at must meet
-   capture invariants but never rank candidates. Different captures at the greatest
-   instant produce SETTLEMENT_CAPTURE_AMBIGUOUS / INVALID_EVIDENCE.
-   A duplicate persisted unique evidence identity is global storage corruption.
-3. Exact-load the chosen capture through load_capture(capture_id=...). Verify formal
-   capture type, page, URL/race, ID/digest/time and agreement with selected metadata;
-   existing repository validates exact bytes/length/digest/ID. Missing selected
-   body/capture, corrupt digest or read-view disagreement raises globally.
-4. No eligible capture gives both RESULT_CAPTURE_MISSING and PAYOUT_CAPTURE_MISSING.
-   Retain the target, prediction reference if available and MISSING_SETTLEMENT_EVIDENCE.
-5. Use the same immutable selected reference for result and payout. A later schema-v1
-   projection may reuse that ID for the existing four payout catalog keys. Do not
-   predict purchased types or guarantee body-level payout completeness here.
-
-Different observation instants remain archive history; differing digests alone do not
-establish semantic contradiction or agreement. No arbitrary same-instant tie-break,
-latest-body reconciliation, current-page fallback or prediction cutoff substitution.
-Honest post-race settlement observation is allowed within the explicit settlement cutoff.
-Neither settlement nor completeness/fixture provenance flows into prediction.
-
-EXECUTABLE is pre-resolution reference readiness, not validated successful settlement.
-Existing NAR normalizers own body-level identity/duplicate/malformed/unsupported checks
-during later execution. They are not invoked by this read-only resolver. The future
-runner must propagate their errors without partial success, retry or reduced replay.
-
-## Exact failure and whole-day result semantics
-
-Adapter reason mapping is closed to the approved vocabulary:
-
-| Primary disposition | Reasons |
-| --- | --- |
-| INVALID_EVIDENCE | SNAPSHOT_TARGET_MISMATCH, SETTLEMENT_CAPTURE_AMBIGUOUS, TARGET_EVIDENCE_IDENTITY_MISMATCH; SCHEDULED_START_UNAVAILABLE for a normal row |
-| UNSUPPORTED | NATIVE_NON_RUN, UNKNOWN_NATIVE_DISPOSITION; SCHEDULED_START_UNAVAILABLE may accompany an exceptional/unknown target |
-| MISSING_PREDICTION_EVIDENCE | INTERNAL_RACE_MAPPING_MISSING, SNAPSHOT_MISSING, SNAPSHOT_AFTER_SELECTION_BOUND |
-| MISSING_SETTLEMENT_EVIDENCE | RESULT_CAPTURE_MISSING, PAYOUT_CAPTURE_MISSING |
-| EXECUTABLE | Empty reason tuple, all required references validated |
-
-Retain all established reasons, sorted lexically. If several categories occur, primary
-precedence is INVALID_EVIDENCE > UNSUPPORTED > MISSING_PREDICTION_EVIDENCE >
-MISSING_SETTLEMENT_EVIDENCE; never suppress a second established shortage.
-
-Global RepositoryDataIntegrityError (including existing repository errors) returns
-no partial resolution result and is never translated into a local disposition.
-Private SQL/read failures use that existing exception with the cause retained.
-API ValueError/RepositoryValidationError and existing discovery failures also propagate.
-No new broad catch-and-continue or generic success sentinel. Failure while resolving
-a later race cannot return the earlier outcomes as a successful day.
-
-Day state is derived exactly:
-
-| State | Predicate |
-| --- | --- |
-| ALL_TARGETS_RESOLVED | Nonempty denominator; every outcome EXECUTABLE |
-| PARTIALLY_RESOLVED | At least one EXECUTABLE and at least one non-executable |
-| NO_EXECUTABLE_TARGETS | Nonempty denominator; no outcome EXECUTABLE |
-
-No state is a full-day replay-success/ROI assertion. In particular PARTIALLY_RESOLVED
-is never complete replay. No executable means no future manifest/runner; this phase
-never calls either in any state. All targets, including non-run/missing/invalid, remain
-one-for-one in the result. Canonical order is unchanged and no count field is added.
-
-## Required tests during EXECUTE
-
-The following acceptance matrix is mandatory; tests belong only in the two Allowed
-test files. Do not freeze a test count in place of these behaviors.
-
-| # | Required case / assertion |
-| --- | --- |
-| 1 | Exact target -> dataset/provider/external/internal mapping -> selected snapshot; mismatched identity/date/start cannot match |
-| 2 | Unique latest causal selection, both inclusive cutoff boundaries, metadata/latest/exact loader agreement |
-| 3 | Future captured/cutoff candidates excluded; no backdating and no malformed-selected-candidate fallback |
-| 4 | Ambiguous latest snapshot or removed uniqueness constraint raises global integrity error |
-| 5 | available_at=None eligible under all mandatory timestamps; latest None not replaced by older known availability |
-| 6 | Known available_at > observed_at rejected; also observation/capture/cutoff/start violations and no timestamp substitution |
-| 7 | Missing mapping/snapshot stays in denominator with correct reason; valid settlement reference retained |
-| 8 | Exact RaceMarkTable selection and result/payout reference reuse; wrong race/provider/page cannot match |
-| 9 | Settlement cutoff inclusive equality and exclusion of later captures; requested/stored times never rank |
-| 10 | Missing settlement retained with both result/payout missing reasons; both-side missing preserves all reasons |
-| 11 | Same-time ambiguous settlement is INVALID_EVIDENCE; duplicate stored identity or corrupt capture ID/digest/bytes/body linkage raises globally |
-| 12 | Settlement after race/prediction cutoff allowed within settlement cutoff; prediction/completeness/fixture timestamps kept separate |
-| 13 | Immutable values, exact public surface, canonical tuple/reason ordering, timezone-equivalent equality, shuffled insertion order; duplicate/missing/extra outcomes rejected |
-| 14 | No network/acquisition/parser/runner calls; read-only views and connection ownership; no writes, schema application or repairs |
-| 15 | No current-clock dependency: fixed inputs, static source inspection and call traps; no availability/current-time fallback |
-| 16 | All three day states, partial != complete, retained non-run/None/unknown targets, no executable != empty denominator |
-| 17 | Late global failure raises without returning partial result; missing/incompatible schema and corrupt selected children fail closed |
-
-Test setup may construct formal snapshots/captures with fixed synthetic bytes and
-honest test constants, seed isolated temporary databases using existing migrations/save
-APIs, then reopen mode=ro before invoking the resolver. Such writes belong only to
-setup, never the resolver. No official fixture, external response or formal dataset is
-created. Deliberately corrupt copies for negative cases; never mutate repository DBs.
-Reuse existing test patterns by reading them, not changing/importing TestCase subclasses
-to inflate test discovery. New private helper functions live in the two new test files.
-
-No-network/no-clock tests must fail if those dependencies are called, not merely assert
-that a result exists. Inspect new production source for forbidden imports/calls and
-use mocks/SQLite trace or authorizer checks around the actual resolver. Allow its
-read transactions and connection-only query_only/foreign_keys PRAGMAs; reject DML/DDL,
-migration, save, normalizer or runner execution. Every test remains offline.
-
-### Exact verification commands (only during EXECUTE)
-
-Dedicated:
-
-```text
-python -m unittest tests.test_historical_daily_evidence_resolution tests.test_sqlite_nar_daily_evidence_resolver
-```
-
-Related regression checks:
-
-```text
-python -m unittest tests.test_historical_daily_targets tests.test_nar_historical_daily_target_source tests.test_historical_input_snapshots tests.test_sqlite_historical_input_snapshot_repository tests.test_nar_historical_input_source tests.test_nar_official_response_capture tests.test_sqlite_nar_official_response_capture_repository
-python -m unittest tests.test_nar_target_race_result_persistence tests.test_nar_target_race_payout_persistence tests.test_official_settlement_acquisition tests.test_historical_replay_request_document tests.test_historical_replay_request_application tests.test_sqlite_historical_replay_application
-```
-
-Full suite:
-
-```text
+python -m unittest tests.test_historical_daily_replay_manifest_projection
+python -m unittest tests.test_historical_daily_evidence_resolution tests.test_historical_replay_request_document tests.test_historical_replay_request_application tests.test_sqlite_historical_replay_application
 python -m unittest discover -s tests -p "test_*.py"
-```
-
-Static boundary search (inspect every hit; a no-match exit from rg is expected):
-
-```text
-rg -n "requests|httpx|urllib.request|socket|datetime.now|datetime.today|utcnow|time.time|apply_migrations|apply_capture_schema_migrations|save_snapshot|save_capture|run_sqlite_historical_replay|normalize_and_persist|BeautifulSoup|target_race_count" scripts/simulation/historical_daily_evidence_resolution.py scripts/simulation/sqlite_nar_daily_evidence_resolver.py
-```
-
-Required Git checks at PREPARE and EXECUTE completion:
-
-```text
+rg -n "datetime\.now|datetime\.today|utcnow|time\.time|requests|httpx|urllib\.request|socket|sqlite3|apply_migrations|run_sqlite_historical_replay|target_race_count" scripts/simulation/historical_daily_replay_manifest_projection.py
 git diff --check
 git diff --name-only
 git status --short
 git diff --cached --name-only
 ```
 
-Account for untracked files in git status: git diff --name-only alone does not cover
-new production/tests. Do not stage to make them visible to diff. Report dedicated,
-related and full suite results separately; no skipped/relaxed failing assertions or
-out-of-scope regression fixes. Warnings must be reported with evidence, not dismissed.
+The static search's expected hits from imported type/module names, if any, must be
+individually justified; network, current-clock, SQLite/migration and runner calls are
+forbidden. Tests use temporary output directories and synthetic immutable domains only,
+never database/keiba.db, logs, provider archives or network. No failing test may be
+skipped or relaxed.
 
-## EXECUTE_APPROVED_PHASE gate and stop condition
+## Stop condition
 
-Before any implementation, verify Status APPROVED_FOR_CODEX, exact Phase/Branch/Base,
-no unexpected tracked/untracked changes, empty index and the Allowed/Forbidden/
-Required Tests/Stop Condition above. User requests GPT-5.6 Sol for the later EXECUTE;
-this PREPARE does not execute or initiate that separate instruction.
+Phase 15 completes only as a reviewed design. No implementation begins from this draft.
+Any conflict with the existing loader/schema-v1, need to edit an existing production/
+test/schema file, inability to round-trip the exact strategy identity, or unresolved
+artifact publication ambiguity changes the outcome to CHANGES_REQUIRED and stops for
+ChatGPT review rather than broadening scope.
 
-On authorized implementation success only: all dedicated/related/full tests pass,
-all boundary searches are reviewed, only the six exact EXECUTE paths changed,
-git diff --check succeeds and cached is empty. Update Status to READY_FOR_REVIEW and
-append implementation/test/check results to LATEST_CODEX_REPORT; then stop.
-Do not stage, commit, push or advance phases.
-
-On failure, contract conflict, need to edit any existing production/test module,
-migration/archive Protocol requirement, unexpected file or unresolved ambiguity:
-stop and report without guessing, repairing storage, adding a fallback or weakening
-tests. Do not claim READY_FOR_REVIEW.
-
-PREPARE completed at DRAFT_FOR_REVIEW with docs-only changes. The user subsequently
-approved execution, including the explicit all-executable day predicate, metadata/latest/
-exact snapshot agreement and distinct settlement ambiguity/storage-integrity semantics.
-Status was set to APPROVED_FOR_CODEX and the exact Base/Branch/Allowed Files gate passed
-before implementation.
-
-## Execution completion
-
-Implemented only the four new production/test paths above and updated the two docs.
-Dedicated: 34 tests PASS. Related: 90 + 86 tests PASS. Full suite: 2,967 tests PASS.
-No tests were skipped or assertions relaxed. Initial negative-test setup was corrected
-to disable protective triggers only in deliberately corrupted isolated test databases;
-production storage/validation was not changed to accommodate those tests.
-
-The frozen static boundary search has no matches. Runtime no-network/clock/dependency
-traps, SQLite authorizer/write checks, mode=ro byte-preservation checks and caller
-connection-ownership tests pass. Existing unrelated tests emit unclosed-SQLite
-ResourceWarnings, including when run in the related-only process; the new dedicated
-process emits none. No warning suppression or existing-test modification was added.
-
-git diff --check passes; all six changed/untracked paths are exactly Allowed Files and
-the index is empty. The four untracked files were additionally whitespace-checked
-without staging. No fixture/schema/migration/archive or existing production changes.
-READY_FOR_REVIEW; no blockers, staging, commit, push or phase advancement.
+Current outcome is IMPLEMENTABLE: one new production module and one new test module are
+sufficient; no existing schema/loader/runner, database migration or archive protocol
+change is required. Stop at DRAFT_FOR_REVIEW. Stage, commit, push, runner execution and
+POST_V0_8_DAILY_REPLAY_16 are not authorized.

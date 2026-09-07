@@ -8411,3 +8411,61 @@ files were checked with git diff --no-index --check against NUL without staging:
 whitespace diagnostics, only expected new-file differences/line-ending notices.
 No existing production/tests, migrations/schema/database/archive/CLI files changed.
 No staging, commit, push or next-phase transition. No blockers; stop for review.
+
+## POST_V0_8_DAILY_REPLAY_14 Finalization and POST_V0_8_DAILY_REPLAY_15 Preparation
+
+ChatGPT independently approved Phase 14 for commit. The exact six Allowed Files were
+staged individually; unstaged/cached whitespace and cached-name checks passed. Dedicated
+34, related 90 + 86 and full 2,967-test results remained accepted, with no ResourceWarning
+from the new dedicated tests. The exact approved commit message was used. Normal push and
+fetch succeeded; local HEAD and origin/feature/post-v0.8-daily-replay are both
+`40268c75bfd2ede8f4d64811e5a72db06fc8a9c3`. The worktree and index were clean before
+Phase 15 PREPARE.
+
+PREPARE_PHASE POST_V0_8_DAILY_REPLAY_15 is complete at DRAFT_FOR_REVIEW, DESIGN_ONLY,
+with outcome IMPLEMENTABLE and the verified Phase 14 SHA as Base Commit. Inspection of
+the existing schema-v1 loader, immutable request document, request application and
+multi-race SQLite runner found no need for a new schema or any existing-file change.
+
+The proposed implementation is one new manifest-projection module and one matching test
+module. Its exact caller inputs are the complete Phase 14 resolution, database and NAR
+archive Paths, SimulationRunContext, StrategyIdentity (whose config remains authority),
+one BetStakeBudget and a real output/source Path. It filters only EXECUTABLE outcomes in
+canonical target order, projects the same budget to their exact internal IDs, preserves
+the exact settlement cutoff, and maps the one selected settlement capture ID to result
+plus all four existing payout catalog keys. It performs no HTML parsing or evidence
+lookup.
+
+The returned immutable projection retains the original full resolution alongside the
+reloaded document or None. Thus a partial schema-v1 artifact is never denominator or
+full-day-success authority, and NO_EXECUTABLE_TARGETS creates no manifest and cannot
+lead to a runner call. No new day state or schema field is introduced.
+
+The draft freezes compact sorted-key UTF-8 schema-v1 bytes with one LF, explicit UTC
+microsecond timestamps, deterministic array/set/catalog ordering and absolute canonical
+path strings. The output is exclusively created at a fresh caller path, never
+overwritten, then reloaded through the unchanged existing loader and compared against
+the expected exact domain and written bytes. No current clock, network, SQLite,
+migration, runner, file metadata or repr participates. The current schema loader's
+strategy reconstruction must equal the supplied StrategyIdentity or publication fails.
+
+Twenty-two future test behaviors cover all full/partial/none states, exact identity and
+capture projection, uniform budgets, dataset/provider/duplicate failures, deterministic
+bytes/order, real source_path round trip, collision/path failures, denominator
+preservation and no clock/network/DB/runner side effects, plus existing loader/application
+regressions and the full suite. Phase 15 itself changed only CURRENT_PHASE.md and this
+report; it did not implement, test, stage, commit, push or start another phase.
+
+## POST_V0_8_DAILY_REPLAY_15 Final Independent Review
+
+ChatGPT approved the IMPLEMENTABLE design for commit with three exact clarifications,
+now incorporated without broader redesign. StrategyIdentity is the sole strategy
+authority and supplies its own StrategyConfig; no separate config/hash/ID authority is
+permitted, and existing loader reconstruction must equal the caller identity. The
+manifest, database and NAR archive inputs are explicit absolute Paths; relative/cwd-
+resolved paths, Path.resolve() rewriting and automatic parent creation are forbidden,
+and the loaded paths must equal the caller inputs. Publication constructs the expected
+domain before mutation, exclusively creates the final path, and on reload/equality
+failure removes only the file exclusively created by that invocation before re-raising
+fail closed. Existing files and other paths remain untouched. Status is
+APPROVED_FOR_COMMIT; production/test implementation remains unauthorized.
