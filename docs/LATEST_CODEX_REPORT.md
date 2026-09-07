@@ -8469,3 +8469,98 @@ domain before mutation, exclusively creates the final path, and on reload/equali
 failure removes only the file exclusively created by that invocation before re-raising
 fail closed. Existing files and other paths remain untouched. Status is
 APPROVED_FOR_COMMIT; production/test implementation remains unauthorized.
+
+## POST_V0_8_DAILY_REPLAY_15 Finalization and POST_V0_8_DAILY_REPLAY_16 Preparation
+
+The three final review clarifications were incorporated and ChatGPT approved the Phase
+15 IMPLEMENTABLE design for commit. Only CURRENT_PHASE.md and this report were staged
+individually after clean unstaged/cached checks. Commit
+`6d14a9bb8b0103d7c053c3d9a7dc7c75289bef08` used the exact message
+`docs: design daily replay manifest projection`. Normal push and fetch succeeded;
+local HEAD equals origin/feature/post-v0.8-daily-replay at that SHA, and the worktree/
+index were clean before Phase 16 PREPARE.
+
+PREPARE_PHASE POST_V0_8_DAILY_REPLAY_16 is complete at DRAFT_FOR_REVIEW, phase type
+IMPLEMENTATION, outcome IMPLEMENTABLE. No production/test work is authorized by this
+PREPARE. A future approved EXECUTE is limited to one new manifest-projection module,
+one new matching test module and the two phase docs. Existing schema-v1 loader/model/
+application/runner and Phase 14 files remain read/reuse only.
+
+The public contract is frozen as immutable
+DailyHistoricalReplayManifestProjection(resolution, document) plus keyword-only
+write_daily_historical_replay_manifest. Inputs are the exact Phase 14 resolution,
+absolute database/NAR archive/manifest Paths, SimulationRunContext, sole-authority
+StrategyIdentity and one BetStakeBudget. The strategy config comes only from the
+identity, is checked through the existing build/loader contracts and must round-trip to
+the same identity. Relative/cwd-resolved paths, Path.resolve rewriting, mkdir and any
+implicit clock are forbidden; exact caller path text/equality is required.
+
+Only EXECUTABLE outcomes are projected in existing canonical target order. Exact
+snapshot/internal/capture/cutoff values are retained, the same budget covers every
+manifest race, and all four existing payout keys use the approved selected payout
+capture. The original resolution remains attached for full/partial/none audit semantics;
+partial is never full-day success and none creates no file or runner-callable document.
+No settlement body parsing or runner invocation occurs.
+
+Serialization is the existing schema-v1 tree as compact sorted-key UTF-8 JSON with one
+LF, explicit UTC microseconds and no environment/metadata-dependent material. The
+expected request domain is validated before exclusive final-path creation. The exact
+written file is reloaded through the existing loader and compared byte/domain/path-
+exactly. Failure after creation removes only the same proven file created by that call;
+pre-existing, replaced and adjacent files are never deleted or overwritten. No durable
+repository or multi-file atomicity is claimed.
+
+Twenty-two required behavior groups cover Phase 15 requirements plus the path/strategy/
+cleanup clarifications. Future EXECUTE must run the dedicated module, the exact Phase
+14/request/loader/application/runner related group, full unittest discovery, the frozen
+boundary search and Git checks; actual test counts must be reported rather than fixed in
+advance. No blocker was found. This PREPARE changes only the two docs, runs no tests,
+and performs no production/test edit, stage, commit, push or next-phase transition.
+
+## POST_V0_8_DAILY_REPLAY_16 Execution Report
+
+The user approved EXECUTE_APPROVED_PHASE. Branch and Base both matched
+`6d14a9bb8b0103d7c053c3d9a7dc7c75289bef08`; only the two PREPARE docs were dirty and
+the index was empty. Status was set to APPROVED_FOR_CODEX before implementation.
+
+Implemented exactly the new production and test files frozen by Phase 16, plus these two
+docs. DailyHistoricalReplayManifestProjection retains the original Phase 14 resolution
+and either the exact reloaded request document or None. The writer takes only explicit
+keyword inputs, with StrategyIdentity as sole strategy authority and all three Paths
+absolute. It rejects relative/cwd-derived intent, never calls Path.resolve or mkdir, and
+does not inspect database/archive contents.
+
+Only EXECUTABLE outcomes enter existing schema-v1 races in canonical target order.
+Exact snapshot/internal/cutoff/result/payout references are projected; all four catalog
+keys use the approved selected payout capture and one BetStakeBudget covers exactly the
+manifest IDs. Full, partial and zero behavior retains the original denominator; zero
+creates no manifest and partial exposes no full-day-success field. No body parsing or
+runner call was added.
+
+The writer constructs the expected HistoricalReplayRequestDocument before mutation,
+serializes deterministic compact sorted-key UTF-8 JSON with one LF and UTC microseconds,
+exclusively creates the final path, fsyncs/closes, then reloads through the unchanged
+loader. Exact bytes and complete document/path/strategy equality are required. Failure
+removes only a still-identical file created by that call; changed/pre-existing/adjacent
+paths remain untouched and cleanup failure preserves the original exception as the
+fail-closed result.
+
+Final verification on Python 3.14: dedicated 20 PASS, related request/resolution/loader/
+application/runner group 51 PASS, and full unittest discovery 2,987 PASS. The exact
+static boundary search returns no matches after a private helper rename removed a
+false-positive substring. Dedicated tests emit no ResourceWarning. Full-suite warnings
+are the same existing unclosed SQLite-connection class already reproduced without this
+new dedicated module; no suppression or out-of-scope fix was made. No tests were skipped
+or weakened.
+
+Status is READY_FOR_REVIEW. Git scope/check results show only the two new production/
+test paths plus the two docs, with no staged files. No existing loader/model/runner,
+schema/migration/database/archive/CLI file changed. No stage, commit, push or next-phase
+transition was performed; no blocker remains.
+
+## POST_V0_8_DAILY_REPLAY_16 Final Independent Review
+
+ChatGPT approved the completed Phase 16 implementation for commit after independently
+accepting the dedicated 20, related 51 and full 2,987 passing tests, clean static
+boundary, deterministic schema-v1 round trip, exclusive publication/cleanup contract,
+exact Allowed Files scope and absence of blockers. Status is APPROVED_FOR_COMMIT.

@@ -4,91 +4,56 @@ Status: `APPROVED_FOR_COMMIT`
 
 ## Identity, authority and authorization
 
-- Phase: `POST_V0_8_DAILY_REPLAY_15`
-- Name: `Daily Replay Schema-v1 Manifest Projection Design`
-- Phase type: `DESIGN_ONLY`
-- Base Commit: `40268c75bfd2ede8f4d64811e5a72db06fc8a9c3`
+- Phase: `POST_V0_8_DAILY_REPLAY_16`
+- Name: `Daily Replay Schema-v1 Manifest Projection Implementation`
+- Phase type: `IMPLEMENTATION`
+- Base Commit: `6d14a9bb8b0103d7c053c3d9a7dc7c75289bef08`
 - Branch: `feature/post-v0.8-daily-replay`
 - Preparation outcome: `IMPLEMENTABLE`
-- Current authorization: design review only; no implementation, staging, commit or push.
+- Current authorization: final independent review approved the completed implementation for exact staging, commit and normal push.
 
-AGENTS.md, the applicable existing Ver0.8 contracts, the approved Phase 1 manifest
-artifact boundary and the committed Phase 13/14 resolution contracts are authority.
-This phase does not amend them. The Base Commit was normally pushed, fetched and
-verified equal to origin/feature/post-v0.8-daily-replay before this PREPARE.
+AGENTS.md, the committed Phase 15 contract and the existing v0.8 schema-v1 request
+domain/loader are authority. Phase 14 resolution remains the complete denominator.
+Phase 15 was normally pushed and fetched; local and remote branch heads were verified
+equal to this Base Commit before PREPARE. This phase implements the frozen projection
+contract only after a separate APPROVE_PHASE and EXECUTE_APPROVED_PHASE.
 
 ## Exact Allowed Files
 
-During this DESIGN_ONLY phase:
+During PREPARE:
 
 ```text
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-The following are future implementation candidates only and are not Allowed Files in
-this phase:
+Only after explicit approved EXECUTE:
 
 ```text
 scripts/simulation/historical_daily_replay_manifest_projection.py
 tests/test_historical_daily_replay_manifest_projection.py
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
 ```
 
-No existing request-document, request-application, runner or package export needs a
-change. A later implementation phase must separately PREPARE, receive ChatGPT review,
-APPROVE and EXECUTE authorization before those two candidate files become writable.
+The production and test modules are new. Existing modules are read/reuse only. No
+package re-export or helper file is needed; private helpers/tests remain in these files.
 
 ## Forbidden Files and actions
 
-Every path other than the two documentation files is forbidden in Phase 15, including
-production, tests, fixtures, schema/migrations, database/**, logs/**, archives, CLI,
-AGENTS.md and release history. database/keiba.db and logs/ must never be staged.
+Every path outside the applicable Allowed Files, including the existing schema-v1
+loader/model/application/runner, Phase 14 modules/tests, shared/NAR/JRA source code,
+fixtures, schema/migrations, database/**, logs/**, archives, CLI, dependencies,
+AGENTS.md and release history. Never stage database/keiba.db or logs/.
 
-No implementation, fixture acquisition, network access, database access, migration,
-runner call, stage, commit, push or next-phase transition. No new replay schema,
-schema-v1 field, target count, prediction/bet/settlement logic, JRA support, daily
-result persistence, reporting, ROI aggregation or CLI is designed or implemented here.
+No schema-v1 change, migration, database/archive write or read, network, runner
+execution, orchestration, result persistence, ROI/reporting, JRA support, evidence
+resolution, settlement parsing, implicit clock/path default, stage, commit, push or
+next-phase transition is authorized by PREPARE or the future EXECUTE.
 
-## Existing boundary findings
+## Exact public API
 
-The existing `HistoricalReplayRequestDocument` is already the exact immutable domain
-for schema version 1. Its root JSON keys are exactly:
-
-```text
-schema_version
-database_path
-capture_archives
-run_context
-strategy
-budgets_by_race_id
-races
-```
-
-`load_historical_replay_request_document(request_path=...)` is the authority for UTF-8
-decoding, duplicate-key rejection, finite JSON numbers, exact nested key sets, enum/
-strategy reconstruction, canonical positive budget IDs and request-domain validation.
-It sets `source_path` to the real supplied request path and resolves relative database/
-archive paths against that path. `HistoricalReplayRequestDocument` requires a nonempty
-race tuple; therefore it cannot and must not represent a zero-executable day.
-
-Each existing `HistoricalReplayRaceRequest` already carries the required exact snapshot
-identity, internal race ID, settlement cutoff, result capture ID and payout capture
-catalog. The document already proves unique snapshot/internal identities, exact budget
-coverage, dataset agreement and archive coverage for represented providers. The
-existing `run_historical_replay_request` loads the file and invokes the existing
-multi-race SQLite runner exactly once; neither it nor the runner is called in this phase
-or moved into the future manifest projection module.
-
-The schema's strategy object is configuration-shaped rather than an independently
-serialized strategy ID/hash. Loading rebuilds the existing `StrategyIdentity`. The
-projection must therefore serialize the exact caller-supplied identity's config and
-prove round-trip identity equality; it must not invent, weaken or separately override
-strategy identity/configuration.
-
-## Proposed public API and ownership
-
-The single future production module owns only deterministic executable projection and
-one real file artifact. Its proposed public surface is:
+The new production module exports exactly these two definitions:
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -110,224 +75,282 @@ def write_daily_historical_replay_manifest(
     ...
 ```
 
-`strategy_identity` is the sole strategy authority. No separate StrategyConfig argument
-is accepted. Serialization reads only `strategy_identity.strategy_config`; require
-`strategy_identity.strategy_name == "RuleBasedBetStrategy"` and all existing
-StrategyIdentity invariants. The writer must reuse the existing domain and
-`build_strategy_identity` contract through loader reconstruction; it must not calculate
-or maintain an independent strategy config/hash/ID authority. Reloaded StrategyIdentity
-must equal the exact caller-supplied value. No clock, repository, connection, provider
-client, loader callback or runner is injected. Helpers remain private. Existing ValueError/domain validation,
-`HistoricalReplayRequestValidationError`, `FileExistsError` and ordinary I/O errors
-propagate; no broad catch-and-success or new error hierarchy is needed.
+All parameters are keyword-only. Exact existing types are required; strings are not
+accepted as Paths and bool is never accepted as an integer through projection. There
+is no separate StrategyConfig, dataset, cutoff, payout-catalog, clock, repository,
+connection, loader callback or runner argument. Helpers remain private and no new
+exception class is exported.
 
-The immutable return value is the audit join between the complete denominator and its
-executable artifact. Its construction requires the exact Phase 14 resolution type.
-When `document` exists it must be the exact object reloaded from `manifest_source_path`; when it
-does not, the resolution state must be `NO_EXECUTABLE_TARGETS`. A document is mandatory
-for the other two states. It exposes no replay-success boolean and introduces no new
-day-state enum: `resolution.day_state` remains authoritative.
+The result stores the exact supplied resolution object. `document` is either the exact
+successfully reloaded schema-v1 document or None. Its invariants are:
 
-## Explicit caller inputs and validation
+- NO_EXECUTABLE_TARGETS requires document None.
+- ALL_TARGETS_RESOLVED and PARTIALLY_RESOLVED require a document.
+- A document's ordered race tuple and budget keys must correspond exactly to the
+  resolution's EXECUTABLE outcomes and no others.
+- The value has no full-day-success flag and creates no alternative day-state enum;
+  `resolution.day_state` is authority.
 
-All context is explicit. The projection must not derive any input from current time,
-SQLite row order, environment variables, repository state or output-file metadata.
+## Input validation and sole authorities
 
-- `resolution` supplies the complete audited denominator, dataset ID, exact uniform
-  settlement_information_cutoff and all target outcomes/references.
-- `database_path` is the future runner's main database path.
-- `nar_capture_archive_path` is the sole `NAR/nar_official` capture archive path.
-- `run_context` supplies run_id, dataset_id, caller-chosen aware started_at and target
-  commit ID. In particular, started_at is never generated with a clock.
-- `strategy_identity` supplies the exact supported RuleBasedBetStrategy configuration,
-  including its fixed-stake allocation policy, and its derived identity/hash.
-- `race_budget` is one exact BetStakeBudget projected unchanged to every executable
-  internal race ID.
-- `manifest_source_path` is the exact real manifest output path and becomes the loaded
-  document's source_path. It is not a synthetic/nonexistent placeholder on success.
+Validate all exact input domains before any filesystem mutation. Require
+`resolution.dataset_id == run_context.dataset_id`, exact singleton target provider
+scope `NAR/nar_official`, and the existing Phase 14 canonical denominator/outcome
+invariants. Do not rediscover, repair or copy a replacement resolution.
 
-Require exact domain types, `resolution.dataset_id == run_context.dataset_id`, exact
-singleton NAR provider identity `NAR/nar_official`, and absolute Path values for
-`manifest_source_path`, `database_path` and `nar_capture_archive_path`. Relative paths
-are rejected rather than interpreted through the process current directory. The writer
-must not call Path.resolve(), use cwd, or otherwise rewrite caller path intent. Exact
-caller-supplied absolute database/archive path text is serialized; after reload the
-source, database and archive Paths must equal the caller inputs exactly. The builder
-does not open or inspect the database/archive or use filesystem metadata to derive any
-path. `manifest_source_path.parent` must already be a directory; the writer never calls
-mkdir or creates parent directories.
+`strategy_identity` is the only strategy authority. Require exact StrategyIdentity,
+`strategy_name == "RuleBasedBetStrategy"`, and equality with the result of the existing
+`build_strategy_identity(strategy_name, strategy_config)` contract. Serialization reads
+only `strategy_identity.strategy_config`. Do not accept another StrategyConfig or
+independently calculate/store a second config/hash/ID authority.
 
-The supplied strategy must be exactly reconstructible by the current schema-v1 loader:
-RuleBasedBetStrategy, the loader-supported enums and finite score, unique supported bet
-types, and fixed_stake_per_recommendation policy version 1 with exactly positive
-100-yen-multiple `stake_amount`. Any config the existing loader cannot round-trip is a
-projection error, not a reason to change the loader/schema or silently substitute a
-default. Zero budget remains valid because existing BetStakeBudget/schema-v1 permits it.
+The strategy config must be exactly representable by the current schema-v1 loader:
 
-Validate all caller inputs before the zero-executable branch, but do not inspect or
-create `manifest_source_path` in that branch. Parent-directory creation is never performed.
+- allowed_bet_types is the existing frozenset containing only supported types;
+- max_bet_count and max_candidates are nonnegative non-bool integers;
+- selection_style and sort_condition are exact existing enums;
+- min_combination_score is a finite float that reloads exactly;
+- allocation_policy is exact AllocationPolicyConfig with name
+  fixed_stake_per_recommendation, version `1`, and exactly one `stake_amount` parameter,
+  a positive non-bool 100-yen multiple.
 
-## Exact projection contract
+Unsupported or non-round-trippable strategy content fails before file creation. The
+existing domain/build function remains the validation authority; private serialization
+checks only enforce the narrower existing loader shape.
 
-Only outcomes whose disposition is exactly `EXECUTABLE` enter the schema-v1 `races`
-array. Iterate the already canonical Phase 14 outcome order and filter without sorting
-by scheduled time, internal ID, capture time or database insertion order. This preserves
-the target-set ordering `(organization, source_system, external_race_id)`.
+`database_path`, `nar_capture_archive_path` and `manifest_source_path` must each be an
+absolute Path. Reject relative values; never call Path.resolve(), consult cwd, prepend
+the manifest directory or otherwise normalize/rewrite caller intent. Reject NUL. Use
+`str(path)` as the exact absolute JSON text for database/archive. The source path is not
+a JSON field and is passed to the loader unchanged. Require exact loaded Path equality
+with all three caller inputs. Only for a nonempty executable projection, require
+`manifest_source_path.parent.is_dir()`; never mkdir. Do not require/open/stat the
+database or archive paths.
 
-For every executable outcome, fail closed unless all Phase 14 invariants remain true:
+`run_context.started_at` is the exact caller-supplied aware datetime. No current time,
+run-start default or environment value is generated. `race_budget` is one exact
+BetStakeBudget and remains the sole budget input.
 
-- snapshot identity and positive internal race ID exist; snapshot provider/external
-  race and dataset agree exactly with target/resolution/run context;
-- snapshot identities and internal race IDs are unique across the executable projection;
-- result and payout references both exist and are the same exact selected settlement
-  capture reference; no capture ID or URL is generated or looked up;
-- the exact resolution `settlement_information_cutoff` is copied to the race request;
-- the result capture ID is that selected capture's exact capture_id;
-- payout catalog keys are exactly `単勝`, `馬連`, `ワイド`, `3連複`, each mapped to
-  that same capture_id in deterministic lexical-key order;
-- the same caller-supplied `race_budget` is mapped to every executable internal race
-  ID, and no budget is synthesized for a non-executable denominator member.
+## Exact projection
 
-The projection does not parse capture HTML or guarantee body-level result/payout
-semantics. The existing runner/normalizers retain that responsibility and their
-exceptions later propagate without partial summary, retry or reduced-manifest rerun.
+Filter only outcomes with disposition exactly EXECUTABLE while traversing the existing
+Phase 14 outcome tuple. Because that tuple is already aligned to the target-set order,
+the manifest race array preserves canonical
+`(organization, source_system, external_race_id)` order. Do not resort by race number,
+scheduled time, internal ID, capture time or storage order.
 
-The resulting document must have exactly schema_version 1, only the NAR archive key,
-the explicit run/strategy/path inputs, budget keys exactly equal to race IDs, and the
-canonical executable race order. It must satisfy the existing
-`HistoricalReplayRaceRequest` and `HistoricalReplayRequestDocument` constructors before
-bytes are written. No target, resolution outcome, reference or caller-owned mapping is
-mutated.
+Before constructing a race request, require:
 
-## Day-state and denominator boundary
+- exact snapshot_identity, positive internal_race_id and both capture references;
+- snapshot dataset/provider/external race identity exact agreement with the resolution,
+  NAR target and run context;
+- unique snapshot identities and unique internal race IDs across executable outcomes;
+- result and payout references are the same exact Phase 14 selected settlement capture;
+- capture IDs are retained verbatim and never generated from URL/body/target;
+- resolution settlement_information_cutoff is retained exactly for every race.
 
-| Resolution state | Artifact rule | Audit meaning |
-| --- | --- | --- |
-| ALL_TARGETS_RESOLVED | Project every target; write one nonempty manifest | Full denominator is executable; this is still readiness, not replay/ROI success |
-| PARTIALLY_RESOLVED | Project only EXECUTABLE outcomes; write one nonempty manifest | Resolution remains the full denominator; manifest is explicitly a subset and can never establish full-day success |
-| NO_EXECUTABLE_TARGETS | Return `document=None`; do not create/read the output path | No manifest and no later runner invocation |
+Construct one existing `HistoricalReplayRaceRequest` per executable outcome. Its
+`result_capture_id` is the selected result reference's exact capture_id. Its payout
+catalog has exactly the keys `単勝`, `馬連`, `ワイド`, `3連複`, each mapped to the
+selected payout reference's exact capture_id. Populate in lexical key order even though
+the canonical JSON serializer also sorts object keys. Do not inspect or parse body bytes
+or claim that a purchased bet type is present; existing normalizer/runner semantics are
+unchanged.
 
-The return value retains the exact original Phase 14 resolution in all states. The
-schema-v1 artifact is never denominator/completeness authority and receives no new
-fields for missing/unsupported/invalid targets. A future orchestrator must retain the
-projection result while passing only its non-None document to the existing runner.
-It may call the runner at most once. It must not drop another race, retry per race,
-reduce and rerun, or report partial execution as full-day replay/ROI success.
+Project the same exact `race_budget` value to every executable internal race ID and no
+other target. Budget keys after construction and reload must equal manifest race IDs
+exactly. The expected `HistoricalReplayRequestDocument` uses schema_version 1, exact
+`manifest_source_path`, exact database path, only capture archive key
+`NAR/nar_official`, exact caller run/strategy, ordered races and budgets. Construct and
+fully validate this expected domain before serialization/write.
 
-## Deterministic schema-v1 serialization
+## Day-state and audit boundary
 
-The future writer freezes the following canonical byte contract without adding a
-manifest digest or schema field:
+| Phase 14 state | Exact behavior |
+| --- | --- |
+| ALL_TARGETS_RESOLVED | Every target must be EXECUTABLE and projected; create one manifest |
+| PARTIALLY_RESOLVED | Project only EXECUTABLE subset; retain the original complete resolution; never describe it as full-day replay/ROI success |
+| NO_EXECUTABLE_TARGETS | Return projection with the original resolution and document None; do not inspect/create/read manifest_source_path and produce no runner-callable request |
 
-- Build only the existing schema-v1 JSON tree; object keys are lexically sorted at
-  every level by `json.dumps(sort_keys=True)`.
-- Use `ensure_ascii=False`, `allow_nan=False`, separators `(',', ':')`, append exactly
-  one LF, and encode UTF-8 without BOM. Python repr, locale, platform newline, file
-  timestamps and unordered mapping/set iteration are forbidden.
-- Datetimes serialize after UTC conversion as ISO-8601 with six fractional digits and
-  `+00:00`. This preserves the exact instant and uses no current clock.
-- `races` retains canonical executable target order. `allowed_bet_types` and payout
-  catalog keys are lexically ordered. Budget object keys are canonical decimal positive
-  integer strings; deterministic JSON object-key ordering applies.
-- Absolute database/archive paths use their exact caller-supplied text. source_path
-  is not a JSON field; it is the exact Path passed to the loader after publication.
+The schema-v1 manifest never becomes daily denominator/completeness authority and gains
+no day-state/non-executable fields. Filtering is not target deletion: the returned
+resolution retains every missing/unsupported/invalid target. This module never invokes
+the runner. A future orchestrator may pass a non-None document to exactly one multi-race
+run while retaining the projection result; it may not retry, reduce and rerun or promote
+partial execution to full-day success.
 
-Construct and validate the complete expected HistoricalReplayRequestDocument domain
-before serialization or filesystem mutation. The caller must supply a fresh output path
-whose parent already exists. The writer uses exclusive binary creation of the final
-path and writes the canonical bytes once; it never overwrites, appends, edits, replaces,
-merges or silently accepts an existing file. Any pre-existing target or write/flush/
-close error fails closed. A path is accepted as the frozen manifest artifact only after
-the complete bytes are closed and reload validation succeeds. This design makes no
-durable artifact repository or transaction claim and never writes a temporary file into
-database/archive/fixture locations.
+## Canonical schema-v1 bytes
 
-After writing, call the existing
-`load_historical_replay_request_document(request_path=manifest_source_path)` directly. Require
-exact equality of the loaded document against the prevalidated expected domain,
-including source/database/archive paths, run context, reconstructed strategy identity,
-budgets, canonical race tuple, snapshot identities, cutoff and capture catalogs. Also
-require the file bytes still equal the canonical bytes just written. A mismatch raises;
-no document or replay-ready result is returned, the runner is not called and no schema/
-loader fallback is attempted. If reload or equality validation fails, remove only the
-manifest final path that this invocation exclusively created, then re-raise the original
-exception fail closed. Never delete, replace or modify a pre-existing file or any other
-path. A cleanup failure must also stop and must not turn the invalid artifact into a
-successful result. Re-execution of a frozen valid artifact uses the existing loader/
-application directly, not a builder overwrite.
+Build only the existing exact root/nested schema. The byte contract is:
 
-## Failure semantics and responsibility boundaries
+```python
+(json.dumps(
+    payload,
+    sort_keys=True,
+    ensure_ascii=False,
+    allow_nan=False,
+    separators=(",", ":"),
+) + "\n").encode("utf-8")
+```
 
-Malformed/mismatched caller domains, provider/dataset/reference inconsistency,
-duplicate identity/ID, unsupported strategy round-trip and projection contradiction
-fail before publication. Output-path collision and I/O/reload mismatch fail without a
-success value. There is no silent target skip beyond the explicit EXECUTABLE filter,
-fallback capture, default context/budget, current-clock value, file overwrite or partial
-document return.
+This yields compact UTF-8 without BOM and exactly one final LF. Object keys are sorted
+lexically. `races` preserves canonical executable order. Strategy allowed_bet_types is
+serialized as a lexical list; payout keys are lexical; budget keys are canonical
+positive decimal strings. No repr, Python hash, unordered set/mapping iteration,
+locale, platform newline, filesystem time/order or current time participates.
 
-This builder has no network, SQLite connection, migration, source discovery, evidence
-resolution, archive lookup, capture parsing, prediction, bet generation, settlement,
-runner or reporting responsibility. Existing schema-v1 loader and runner remain
-unchanged. Manifest file creation is the only authorized future side effect.
+Serialize every datetime after `astimezone(timezone.utc)` using
+`isoformat(timespec="microseconds")`, yielding an explicit `+00:00` offset. Instant
+semantics are preserved and the existing loader reconstructs equal datetimes. Serialize
+database/archive paths with exact `str(caller_path)` text; no slash conversion or
+filesystem canonicalization is permitted. `manifest_source_path` is represented only by
+the exact loader argument/domain field, never a synthetic JSON field.
 
-## Required tests for a later implementation phase
+## Exclusive publication, reload and cleanup
 
-All tests belong in the single proposed test module; production implementation and
-tests require a separate approved phase.
+The expected document and canonical bytes must exist and validate in memory before any
+file operation. For an executable projection:
+
+1. Verify the supplied parent exists as a directory without creating it.
+2. Open the exact final `manifest_source_path` in exclusive binary creation mode (`xb`).
+   A pre-existing path raises and is never opened for write, deleted or replaced.
+3. Write all bytes, verify the full byte count, flush, fsync and close. Do not use a
+   temporary/rename overwrite path and do not append or edit.
+4. Call the unchanged
+   `load_historical_replay_request_document(request_path=manifest_source_path)`.
+5. Read the artifact bytes and require byte-for-byte equality with the canonical bytes.
+   Require the loaded document equals the expected document field-by-field: schema,
+   exact source/database/archive Paths, run context, strategy identity, budgets and
+   ordered races.
+6. Return the projection only after all checks pass.
+
+Track whether this invocation won exclusive creation and the created file identity.
+On any write/flush/close/reload/byte/equality failure after creation, delete the final
+path only when it can still be proven to be the exact file created by this call, then
+re-raise the original exception. File identity metadata may be used only for safe
+cleanup, never serialization/digest/ordering. If identity cannot be proven or cleanup
+fails, do not delete a possibly foreign file; retain the original failure with cleanup
+context and return no success. Never touch a pre-existing target or adjacent path.
+
+This is an exclusive no-overwrite publication boundary, not a durable repository or a
+multi-file transaction. A concurrently visible incomplete file is never runner-callable
+through this API because only the successfully validated returned document is eligible.
+Reusing a frozen valid artifact goes directly through the existing loader/application;
+the writer never overwrites it.
+
+## Required tests during EXECUTE
+
+All Phase 15 acceptance behaviors remain mandatory, including its review clarification.
+Do not replace behavioral coverage with a fixed unittest-method count.
 
 | # | Required behavior |
 | --- | --- |
-| 1 | ALL_TARGETS_RESOLVED writes all executable targets in canonical target order |
-| 2 | PARTIALLY_RESOLVED writes only executable subset and retains exact full resolution |
-| 3 | Partial projection exposes no full-day success claim and cannot turn manifest races into denominator |
-| 4 | NO_EXECUTABLE_TARGETS returns None and neither creates nor reads manifest_source_path |
-| 5 | Exact snapshot identity/internal race projection and uniqueness enforcement |
-| 6 | Exact shared result/payout capture ID and four-key payout catalog projection; distinct/missing references fail |
-| 7 | One uniform race budget projected to all and only manifest race IDs |
-| 8 | Budget keys exactly equal manifest race IDs after existing-loader round trip |
-| 9 | resolution/run-context dataset mismatch fails before file creation |
-| 10 | provider mismatch or mixed/JRA scope fails before file creation |
-| 11 | duplicate internal race or snapshot identity fails before file creation |
-| 12 | malformed EXECUTABLE reference/identity contradiction fails closed without hidden skip |
-| 13 | shuffled non-authoritative inputs cannot alter canonical race ordering/output bytes |
-| 14 | exact compact UTF-8/LF schema-v1 bytes, sorted objects/sets/catalog, canonical paths/times, no repr/nonfinite/current-time material |
-| 15 | reload through existing loader yields exact expected document and exact real source/database/archive Paths; reload/equality failure removes only this-call-created manifest and returns no success |
-| 16 | explicit fixed run_context.started_at; clock functions trapped and unused |
-| 17 | network/acquisition functions trapped and unused |
-| 18 | SQLite/migration/runner functions trapped and unused; only exclusive manifest file write occurs |
-| 19 | original resolution/target denominator and outcome identities remain unchanged in full/partial/none cases |
-| 20 | existing output path is never overwritten; relative manifest/database/archive paths, cwd-dependent resolution and missing parent fail closed without mkdir |
-| 21 | existing request loader/application/SQLite runner regressions remain unchanged |
-| 22 | StrategyIdentity is the sole strategy input; exact loader round trip succeeds and unsupported/mismatched identity fails without an independent config/hash/ID authority |
+| 1 | ALL_TARGETS_RESOLVED projects every target in canonical target order |
+| 2 | PARTIALLY_RESOLVED projects executable subset while retaining exact original resolution and no full-day-success signal |
+| 3 | NO_EXECUTABLE_TARGETS returns None without inspecting/creating/reading source path |
+| 4 | Exact snapshot/internal/result/payout/cutoff projection; all four payout keys use the selected payout capture ID without parsing body |
+| 5 | Same BetStakeBudget covers exactly all manifest race IDs and no non-executable target |
+| 6 | Dataset, provider, snapshot/external/internal identity and missing-reference contradictions fail before publication |
+| 7 | Duplicate snapshot identity or internal race ID fails without hidden skip |
+| 8 | Canonical race/catalog/set/object ordering and deterministic identical bytes under shuffled non-authoritative inputs |
+| 9 | StrategyIdentity is the sole strategy argument/authority; exact loader round trip; unsupported or altered config/hash/ID fails |
+| 10 | Relative manifest, database and archive Paths rejected; no cwd or Path.resolve dependency |
+| 11 | Exact absolute source/database/archive Path text and Path equality after reload |
+| 12 | Missing parent fails without mkdir or artifact; existing output is byte-preserved and never overwritten/deleted |
+| 13 | Expected document validation completes before exclusive filesystem creation |
+| 14 | Exact compact sorted-key UTF-8 bytes, one final LF, UTC microseconds/offset and no repr/nonfinite/implicit value |
+| 15 | Existing loader reload and complete document equality; byte mismatch returns no success |
+| 16 | Reload/equality failure deletes only the new same-identity file; adjacent/pre-existing/replaced file is preserved; cleanup failure stays fail closed |
+| 17 | Explicit run_context.started_at; current-clock calls trapped and unused |
+| 18 | Network/acquisition calls trapped and unused |
+| 19 | SQLite/migration/runner/body-normalizer calls trapped and unused; no database/archive write/read |
+| 20 | Original resolution/target/outcome object identities and denominator remain unchanged in all states |
+| 21 | Exact frozen public exports, keyword-only signature, immutable result and state/document invariants |
+| 22 | Existing schema-v1 loader/request application/SQLite runner and Phase 14 resolution regressions remain unchanged |
 
-Future verification must include:
+Use synthetic immutable values and temporary output directories only. Tests must not
+touch database/keiba.db, logs, official fixtures/archives or network. Patch clock,
+network, SQLite/migration/runner/normalizer entry points to fail if invoked. File tests
+must compare bytes before/after and cover safe-cleanup identity behavior. Do not skip or
+relax a failure.
+
+### Exact verification commands during EXECUTE
+
+Dedicated:
 
 ```text
 python -m unittest tests.test_historical_daily_replay_manifest_projection
+```
+
+Related:
+
+```text
 python -m unittest tests.test_historical_daily_evidence_resolution tests.test_historical_replay_request_document tests.test_historical_replay_request_application tests.test_sqlite_historical_replay_application
+```
+
+Full suite:
+
+```text
 python -m unittest discover -s tests -p "test_*.py"
-rg -n "datetime\.now|datetime\.today|utcnow|time\.time|requests|httpx|urllib\.request|socket|sqlite3|apply_migrations|run_sqlite_historical_replay|target_race_count" scripts/simulation/historical_daily_replay_manifest_projection.py
+```
+
+Static boundary search; inspect every hit, with no-match exit acceptable:
+
+```text
+rg -n "datetime\.now|datetime\.today|utcnow|time\.time|requests|httpx|urllib\.request|socket|sqlite3|apply_migrations|run_sqlite_historical_replay|target_race_count|Path\.resolve" scripts/simulation/historical_daily_replay_manifest_projection.py
+```
+
+Git checks:
+
+```text
 git diff --check
 git diff --name-only
 git status --short
 git diff --cached --name-only
 ```
 
-The static search's expected hits from imported type/module names, if any, must be
-individually justified; network, current-clock, SQLite/migration and runner calls are
-forbidden. Tests use temporary output directories and synthetic immutable domains only,
-never database/keiba.db, logs, provider archives or network. No failing test may be
-skipped or relaxed.
+No fixed passing-test count is a substitute for the 22 behavior groups. Report the
+actual dedicated, related and full counts separately. Account for both untracked new
+files in status and whitespace-check them without staging. Cached output must remain
+empty. Any warning or static-search hit is reported with evidence.
 
-## Stop condition
+## EXECUTE_APPROVED_PHASE gate and stop condition
 
-Phase 15 completes only as a reviewed design. No implementation begins from this draft.
-Any conflict with the existing loader/schema-v1, need to edit an existing production/
-test/schema file, inability to round-trip the exact strategy identity, or unresolved
-artifact publication ambiguity changes the outcome to CHANGES_REQUIRED and stops for
-ChatGPT review rather than broadening scope.
+Before implementation verify Status APPROVED_FOR_CODEX, exact Phase/Branch/Base, only
+the two PREPARE docs dirty, empty index, and the Allowed/Forbidden/Required Tests/Stop
+Condition above. The user requests GPT-5.6 Sol for actual EXECUTE; PREPARE does not
+initiate implementation.
 
-Current outcome is IMPLEMENTABLE: one new production module and one new test module are
-sufficient; no existing schema/loader/runner, database migration or archive protocol
-change is required. Stop at DRAFT_FOR_REVIEW. Stage, commit, push, runner execution and
-POST_V0_8_DAILY_REPLAY_16 are not authorized.
+On authorized EXECUTE success only: implement the two new production/test paths, run
+dedicated/related/full suites and static/Git checks, keep every change within the four
+exact EXECUTE Allowed Files, update Status to READY_FOR_REVIEW and append the result to
+LATEST_CODEX_REPORT; then stop without stage/commit/push or a next phase.
+
+On any contract conflict, need to edit an existing file, strategy/path round-trip
+ambiguity, inability to prove safe own-file cleanup, failing test, unexpected path,
+schema/migration/database/archive requirement or other blocker, stop without guessing,
+fallback, path rewrite, overwrite or weakened assertion. Current preparation outcome is
+IMPLEMENTABLE with no blocker.
+
+## Execution completion
+
+EXECUTE_APPROVED_PHASE completed within the four exact Allowed Files. The new production
+module exports only the frozen immutable projection and keyword-only writer. It validates
+the sole-authority StrategyIdentity, exact NAR resolution/provider/dataset/reference
+relations and absolute caller Paths before publication. It projects only EXECUTABLE
+outcomes in canonical target order, uses one uniform budget, preserves the exact cutoff
+and selected capture IDs, and retains the complete original resolution in all day states.
+
+Canonical existing schema-v1 JSON is written as compact sorted-key UTF-8 with exactly one
+LF and UTC microsecond offsets. Publication exclusively creates the final path, then
+performs exact byte and existing-loader domain/path/strategy round-trip checks. Failure
+cleanup verifies the created file identity before unlinking; pre-existing, replaced and
+adjacent paths are preserved. The implementation has no clock, network, SQLite,
+migration, runner or body-parser dependency.
+
+Verification: dedicated 20 tests PASS; related 51 tests PASS; full suite 2,987 tests
+PASS. The frozen static boundary search has no matches. Dedicated tests emit no
+ResourceWarning; full-suite warnings reproduce existing unclosed SQLite connections in
+pre-existing tests/modules. No test was skipped or relaxed. Final Git checks and scope
+are recorded in LATEST_CODEX_REPORT. Status is READY_FOR_REVIEW; stop without staging,
+commit, push or another phase.
