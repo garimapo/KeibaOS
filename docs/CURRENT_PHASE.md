@@ -4,303 +4,289 @@ Status: `APPROVED_FOR_COMMIT`
 
 ## Identity, authority and authorization
 
-- Phase: `POST_V0_8_DAILY_REPLAY_16`
-- Name: `Daily Replay Schema-v1 Manifest Projection Implementation`
-- Phase type: `IMPLEMENTATION`
-- Base Commit: `6d14a9bb8b0103d7c053c3d9a7dc7c75289bef08`
+- Phase: `POST_V0_8_DAILY_REPLAY_17`
+- Name: `NAR MonthlyConveneInfo Bootstrap Qualification`
+- Phase type: `RESEARCH_AND_DESIGN_ONLY`
+- Base Commit: `23278208c24b7c34aad4f4525aba5d429f510c5b`
 - Branch: `feature/post-v0.8-daily-replay`
-- Preparation outcome: `IMPLEMENTABLE`
-- Current authorization: final independent review approved the completed implementation for exact staging, commit and normal push.
+- Qualification outcome: `BOOTSTRAP_PROFILE_IMPLEMENTABLE`
+- Production/test/fixture implementation: `NOT_AUTHORIZED`
+- Stage/commit/push: `AUTHORIZED_FOR_EXACT_PHASE_DOCS`
 
-AGENTS.md, the committed Phase 15 contract and the existing v0.8 schema-v1 request
-domain/loader are authority. Phase 14 resolution remains the complete denominator.
-Phase 15 was normally pushed and fetched; local and remote branch heads were verified
-equal to this Base Commit before PREPARE. This phase implements the frozen projection
-contract only after a separate APPROVE_PHASE and EXECUTE_APPROVED_PHASE.
+AGENTS.md and the approved Phase 2 through Phase 6 NAR daily-target contracts are
+authority. Phase 16 was committed and normally pushed; fetch confirmed local HEAD and
+`origin/feature/post-v0.8-daily-replay` equal the Base Commit above before PREPARE.
+This phase qualifies only the missing MonthlyConveneInfo request-identity bootstrap.
+It does not change the existing Phase 6 request/capture/source domains.
 
-## Exact Allowed Files
+## Objective and decision
 
-During PREPARE:
-
-```text
-docs/CURRENT_PHASE.md
-docs/LATEST_CODEX_REPORT.md
-```
-
-Only after explicit approved EXECUTE:
+The initial supported bootstrap is a composite official-source relation:
 
 ```text
-scripts/simulation/historical_daily_replay_manifest_projection.py
-tests/test_historical_daily_replay_manifest_projection.py
-docs/CURRENT_PHASE.md
-docs/LATEST_CODEX_REPORT.md
+exact captured NAR homepage
+  -> one raw official MonthlyConveneInfo root href
+exact captured MonthlyConveneInfo root
+  -> one raw locator-script src + official year/month control tokens
+exact captured locator script
+  -> exact source-owned changePage(year, month) output grammar
+target_date selects an exact offered year token and exact month token
+  -> existing NARHistoricalDailyTargetRequestIdentity
 ```
 
-The production and test modules are new. Existing modules are read/reuse only. No
-package re-export or helper file is needed; private helpers/tests remain in these files.
+This relation is sufficient to construct the exact MonthlyConveneInfo request identity
+without deriving a URL from an undocumented convention. The target date only selects
+two exact values that the captured official DOM exposes; the official captured script
+owns the literal path, query names, parameter order, separators and concatenation
+order. Missing or ambiguous evidence never falls back to a developer template.
 
-## Forbidden Files and actions
+Automatic bootstrap is therefore qualified **only when all exact supplier captures and
+the complete relation above are supplied and valid**. A date alone remains insufficient.
+If any required capture or relation is absent, v0.9 operation must require the caller's
+already validated exact MonthlyConveneInfo locator/evidence or fail closed.
 
-Every path outside the applicable Allowed Files, including the existing schema-v1
-loader/model/application/runner, Phase 14 modules/tests, shared/NAR/JRA source code,
-fixtures, schema/migrations, database/**, logs/**, archives, CLI, dependencies,
-AGENTS.md and release history. Never stage database/keiba.db or logs/.
+## Official research boundary and observations
 
-No schema-v1 change, migration, database/archive write or read, network, runner
-execution, orchestration, result persistence, ROI/reporting, JRA support, evidence
-resolution, settlement parsing, implicit clock/path default, stage, commit, push or
-next-phase transition is authorized by PREPARE or the future EXECUTE.
+Research used read-only GET requests to `https://www.keiba.go.jp` only, with
+`User-Agent: Mozilla/5.0`, `Accept-Encoding: identity`, redirects disabled, and strict
+UTF-8 decoding. Bytes were held outside the repository/in memory and were not added to
+fixtures, archives or databases. The observations below are research material, not
+formal replay dataset evidence.
 
-## Exact public API
+| Role/date | Exact request URL | Requested/observed UTC | Bytes | SHA-256 |
+| --- | --- | --- | ---: | --- |
+| NAR homepage | `https://www.keiba.go.jp/` | `2026-09-07T13:02:28.320400+00:00` / `2026-09-07T13:02:28.575160+00:00` | 37,763 | `84c9d175fbb7e0c814639afda8fd414d62f5caf0cc625f6a1dec6ae6b8e379e4` |
+| Monthly root | `https://www.keiba.go.jp/KeibaWeb/MonthlyConveneInfo/MonthlyConveneInfoTop` | `2026-09-07T12:51:22.973023+00:00` / `2026-09-07T12:51:23.310186+00:00` | 194,872 | `7df5219922d696f040f6212d06c34b3c097c2b41b44a704da4b6b8ebfee79a4f` |
+| Locator script | `https://www.keiba.go.jp/KeibaWeb/resources/js/monthltconveninfo.js?t=20260130_1` | `2026-09-07T12:51:23.311512+00:00` / `2026-09-07T12:51:23.320740+00:00` | 438 | `bdf86457a9c917fc8259f8b87593c9bbece72d501a95fb5d3573a93b43532515` |
+| 2020-03 | `https://www.keiba.go.jp/KeibaWeb/MonthlyConveneInfo/MonthlyConveneInfoTop?k_year=2020&k_month=3` | `2026-09-07T12:51:23.320791+00:00` / `2026-09-07T12:51:23.802876+00:00` | 210,531 | `bedc55f4eb038794b8f728435507f4d2785ab42927bbc4e92f75cd1b9f4282f7` |
+| 2021-01 | `https://www.keiba.go.jp/KeibaWeb/MonthlyConveneInfo/MonthlyConveneInfoTop?k_year=2021&k_month=1` | `2026-09-07T12:51:23.803893+00:00` / `2026-09-07T12:51:24.280311+00:00` | 209,487 | `cc4e5f919241bbc04a4c7127f02b39e1e435beaba0d6821866825ef1d259e5eb` |
+| 2024-01 | `https://www.keiba.go.jp/KeibaWeb/MonthlyConveneInfo/MonthlyConveneInfoTop?k_year=2024&k_month=1` | `2026-09-07T12:51:24.281041+00:00` / `2026-09-07T12:51:24.770478+00:00` | 209,745 | `54d2a6e3b492680637eb7047d6faaa18d789a8dfdd9797e016a0113cfa9e0e4d` |
+| 2025-01 | `https://www.keiba.go.jp/KeibaWeb/MonthlyConveneInfo/MonthlyConveneInfoTop?k_year=2025&k_month=1` | `2026-09-07T12:51:24.771211+00:00` / `2026-09-07T12:51:24.923049+00:00` | 209,768 | `74a4c479b134a831121820a69815e8eb66db0f360c5433330bf7cf61fabdddef` |
+| 2026-01 | `https://www.keiba.go.jp/KeibaWeb/MonthlyConveneInfo/MonthlyConveneInfoTop?k_year=2026&k_month=1` | `2026-09-07T12:51:24.923767+00:00` / `2026-09-07T12:51:25.393956+00:00` | 208,198 | `59d7504b522bcd1da0e2bf8e35979f7827b3c43d46a92ed5cc0b75ed1e91a6c4` |
 
-The new production module exports exactly these two definitions:
+All responses were exact HTTP 200 responses with no effective-URL change. Homepage and
+TodayRaceInfo research both exposed the exact raw root href
+`/KeibaWeb/MonthlyConveneInfo/MonthlyConveneInfoTop`. The root exposed exactly one raw
+`monthltconveninfo.js` script src. Its strict bytes and digest exactly match the Phase 6
+offline parser/source-contract fixture; this observation does not promote that fixture
+to formal replay evidence.
+
+The root exposed unique year options from 2026 through 1998, including every required
+research year, and twelve exact month-tab tokens. Every tested historical response
+selected the requested year, activated the requested month, retained twelve month
+tokens, and referenced the same raw locator-script src. These checks qualify the
+navigation relation; they do not expand Phase 6 supported target-date, zero-day or
+exceptional-state semantics.
+
+## Frozen supplier evidence boundary
+
+The bootstrap resolver consumes an immutable, provider-specific supplier evidence
+value containing exactly three complete captures:
+
+1. an official NAR homepage HTML capture;
+2. the MonthlyConveneInfo root HTML capture addressed by the homepage's raw href; and
+3. the locator-script capture addressed by the Monthly root's raw script src.
+
+Each capture must retain its exact request identity/material, exact resolved/effective
+official URL, exact complete response bytes, response SHA-256, strict charset,
+requested_at, observed_at, stored_at, HTTP status and relevant response metadata. Each
+has a deterministic immutable capture identity. The aggregate evidence retains the
+ordered homepage-link -> root-script -> script relation and its own deterministic
+identity; it is not independent primary evidence.
+
+The Phase 17 research bytes and timestamps above are not automatically materialized as
+future fixtures. A later implementation PREPARE must freeze exact fixture paths,
+provenance and digests or use synthetic parser cases. No SQLite repository, migration,
+schema or durable archive is designed by this phase.
+
+The existing `NARHistoricalDailyTargetResponseCapture` is not widened: it remains
+closed to MonthlyConveneInfo and RaceList final source captures. The existing
+`NARHistoricalDailyTargetRequestIdentity` is not changed. Bootstrap supplier capture
+types are separate because the root HTML and JavaScript media type cannot truthfully be
+represented by its existing closed page-kind/content contract.
+
+## Frozen structural locator grammar
+
+### Homepage to Monthly root
+
+The strict homepage normalizer requires exactly one accepted navigation anchor whose
+raw UTF-8 href lexeme is exactly:
+
+```text
+/KeibaWeb/MonthlyConveneInfo/MonthlyConveneInfoTop
+```
+
+It resolves only that captured raw lexeme against exact origin
+`https://www.keiba.go.jp`. It does not hard-code a dated Monthly URL, follow a search
+result, infer a path from page existence, or accept host/path aliases. Duplicate,
+missing, malformed or contradictory anchors fail closed.
+
+### Monthly root controls and script relation
+
+The strict root normalizer requires:
+
+- one `select#selectedYear[name="k_year"]`;
+- one unique option whose exact canonical ASCII value and collapsed text equal
+  `str(target_date.year)`;
+- one `ul.monthTab` containing exactly one `li#monthTabN.tab[month="N"]` for every
+  canonical unpadded N in 1 through 12, with matching `N月` text;
+- exactly one script `src` whose captured raw lexeme addresses the accepted official
+  `monthltconveninfo.js` asset; and
+- exact request/effective official URL agreement for the supplied root capture.
+
+Selected/active current controls are not authorities. The resolver neither reads the
+current date nor adopts the root page's server-selected year/month. `target_date` only
+chooses the unique year and month values already exposed in the exact captured source.
+
+### Locator-script rule
+
+The accepted versioned JavaScript grammar must uniquely prove all of:
+
+```text
+function changePage(year, month)
+window.location.href =
+  "/KeibaWeb/MonthlyConveneInfo/MonthlyConveneInfoTop?k_year="
+  + year
+  + "&k_month="
+  + month
+selectedYear change supplies e.target.value and active li.tab month
+inactive month-tab click supplies selectedYear value and clicked month attribute
+```
+
+Parsing is lexical over exact strict-UTF-8 script bytes. It must reject extra competing
+assignment rules, reordered/renamed query parameters, changed path/origin behavior,
+implicit values, malformed concatenation and ambiguous event/control binding. It never
+executes arbitrary JavaScript or consults a browser/current clock.
+
+Given the exact official DOM tokens, evaluating only this frozen source-owned rule
+produces these exact UTF-8 request-material bytes:
+
+```text
+/KeibaWeb/MonthlyConveneInfo/MonthlyConveneInfoTop?k_year=<official year option>&k_month=<official month token>
+```
+
+The output path, `k_year`, `k_month`, `?`, `&`, `=`, parameter order and unpadded month
+are owned by the captured official script. No existing NAR URL canonicalizer is called;
+no decode/re-encode, sorting, padding, normalization or URL reconstruction from a local
+template is allowed.
+
+## Existing identity construction and verification
+
+The exact output bytes are passed unchanged as
+`official_supplied_request_material` to the existing
+`NARHistoricalDailyTargetRequestIdentity`, with exact resolved URL formed by the
+qualified official resolution rule and `supplier_evidence_identity` equal to the
+deterministic identity of the complete supplier evidence aggregate. The existing
+constructor remains final authority for official origin/path, exact query grammar,
+target year/month and request digest.
+
+After resolution, the existing
+`NARHistoricalDailyTargetLiveCaptureService.capture_supplied_response` performs the one
+exact MonthlyConveneInfo GET. The unchanged Phase 6 Monthly normalizer then requires
+the captured page's selected year, active month and request identity to agree with the
+requested target month. A mismatch is not retried with another URL.
+
+## Proposed minimal API
+
+The next implementation phase should freeze exact types/signatures around this pure
+boundary, conceptually:
 
 ```python
 @dataclass(frozen=True, slots=True)
-class DailyHistoricalReplayManifestProjection:
-    resolution: DailyHistoricalReplayEvidenceResolution
-    document: HistoricalReplayRequestDocument | None
+class NARMonthlyConveneInfoBootstrapEvidence:
+    homepage_capture: NARMonthlyBootstrapSupplierCapture
+    monthly_root_capture: NARMonthlyBootstrapSupplierCapture
+    locator_script_capture: NARMonthlyBootstrapSupplierCapture
+    # derived immutable supplier_evidence_identity
 
 
-def write_daily_historical_replay_manifest(
+def resolve_nar_monthly_convene_info_request_identity(
     *,
-    resolution: DailyHistoricalReplayEvidenceResolution,
-    database_path: Path,
-    nar_capture_archive_path: Path,
-    run_context: SimulationRunContext,
-    strategy_identity: StrategyIdentity,
-    race_budget: BetStakeBudget,
-    manifest_source_path: Path,
-) -> DailyHistoricalReplayManifestProjection:
+    target_date: date,
+    supplier_evidence: NARMonthlyConveneInfoBootstrapEvidence,
+) -> NARHistoricalDailyTargetRequestIdentity:
     ...
 ```
 
-All parameters are keyword-only. Exact existing types are required; strings are not
-accepted as Paths and bool is never accepted as an integer through projection. There
-is no separate StrategyConfig, dataset, cutoff, payout-catalog, clock, repository,
-connection, loader callback or runner argument. Helpers remain private and no new
-exception class is exported.
+The exact supplier-capture public type names, canonical capture-ID payload and whether
+capture acquisition needs a separately injected transport are deferred only to the
+next implementation PREPARE. That phase may not weaken the frozen three-capture graph,
+lexical grammar, honest timestamps, source-owned output or existing output type. The
+resolver itself is pure and no-network.
 
-The result stores the exact supplied resolution object. `document` is either the exact
-successfully reloaded schema-v1 document or None. Its invariants are:
+## Failure semantics
 
-- NO_EXECUTABLE_TARGETS requires document None.
-- ALL_TARGETS_RESOLVED and PARTIALLY_RESOLVED require a document.
-- A document's ordered race tuple and budget keys must correspond exactly to the
-  resolution's EXECUTABLE outcomes and no others.
-- The value has no full-day-success flag and creates no alternative day-state enum;
-  `resolution.day_state` is authority.
+Bootstrap returns exactly one existing request identity or raises; it never returns a
+partial/guessed locator. Fail closed on:
 
-## Input validation and sole authorities
+- missing, duplicate, malformed or digest-invalid supplier capture/evidence;
+- request/effective URL, host, path, media type, charset or status disagreement;
+- missing/duplicate/ambiguous raw homepage anchor or raw root script src;
+- target year absent or duplicated in official options;
+- incomplete, duplicated, noncanonical or contradictory month controls;
+- unrecognized or ambiguous locator-script grammar/control binding;
+- a generated byte sequence that the existing request identity rejects;
+- output target year/month disagreement; or
+- any attempt to use a search result, current clock, active current tab, index position,
+  undocumented convention or fallback.
 
-Validate all exact input domains before any filesystem mutation. Require
-`resolution.dataset_id == run_context.dataset_id`, exact singleton target provider
-scope `NAR/nar_official`, and the existing Phase 14 canonical denominator/outcome
-invariants. Do not rediscover, repair or copy a replacement resolution.
+A target month that cannot be resolved by this exact evidence requires an explicit
+caller-supplied already validated Monthly locator/evidence. It must not be treated as a
+zero-race month/day or as `SUPPORTED_COMPLETE_DAY`. Target discovery can begin only
+after the final Monthly response is captured and normalized under Phase 6.
 
-`strategy_identity` is the only strategy authority. Require exact StrategyIdentity,
-`strategy_name == "RuleBasedBetStrategy"`, and equality with the result of the existing
-`build_strategy_identity(strategy_name, strategy_config)` contract. Serialization reads
-only `strategy_identity.strategy_config`. Do not accept another StrategyConfig or
-independently calculate/store a second config/hash/ID authority.
+## Historical honesty and causality
 
-The strategy config must be exactly representable by the current schema-v1 loader:
+Every supplier capture records actual retrieval times. The 2026 observations above are
+not rewritten to 2020/2021/2024/2025. Bootstrap evidence proves the locator relation as
+observed; it is not prediction data, provider availability, scheduled start,
+information cutoff or settlement cutoff.
 
-- allowed_bet_types is the existing frozenset containing only supported types;
-- max_bet_count and max_candidates are nonnegative non-bool integers;
-- selection_style and sort_condition are exact existing enums;
-- min_combination_score is a finite float that reloads exactly;
-- allocation_policy is exact AllocationPolicyConfig with name
-  fixed_stake_per_recommendation, version `1`, and exactly one `stake_amount` parameter,
-  a positive non-bool 100-yen multiple.
+Supplier `observed_at` is never copied to
+`HistoricalDailyTargetEvidenceBundle.observed_at`. The latter remains the honest
+observation time of the final MonthlyConveneInfo/RaceList completeness response that
+the Phase 6 bundle references. No bootstrap timestamp or bytes enter PredictionPipeline,
+snapshot selection or settlement. Later acquisition of a historical Monthly response
+remains allowed only under the already approved Phase 2/4/6 historical-source semantics.
 
-Unsupported or non-round-trippable strategy content fails before file creation. The
-existing domain/build function remains the validation authority; private serialization
-checks only enforce the narrower existing loader shape.
+## Scope and non-goals
 
-`database_path`, `nar_capture_archive_path` and `manifest_source_path` must each be an
-absolute Path. Reject relative values; never call Path.resolve(), consult cwd, prepend
-the manifest directory or otherwise normalize/rewrite caller intent. Reject NUL. Use
-`str(path)` as the exact absolute JSON text for database/archive. The source path is not
-a JSON field and is passed to the loader unchanged. Require exact loaded Path equality
-with all three caller inputs. Only for a nonempty executable projection, require
-`manifest_source_path.parent.is_dir()`; never mkdir. Do not require/open/stat the
-database or archive paths.
+This phase does not implement or change daily orchestration, manifest projection,
+evidence resolution, replay runner, JRA, migration/schema/SQLite persistence, durable
+archive, ROI/reporting or CLI. It does not alter the Phase 6 supported ordinary and exact
+2025-12-26 Kanazawa profiles. Blank/zero, substitute, original-identity ambiguity,
+partial cancellation and every unqualified target-discovery state remain fail closed.
 
-`run_context.started_at` is the exact caller-supplied aware datetime. No current time,
-run-start default or environment value is generated. `race_budget` is one exact
-BetStakeBudget and remains the sole budget input.
+No production, tests, fixtures, provider archives, database or research bytes changed
+during PREPARE.
 
-## Exact projection
+## Recommended next phase
 
-Filter only outcomes with disposition exactly EXECUTABLE while traversing the existing
-Phase 14 outcome tuple. Because that tuple is already aligned to the target-set order,
-the manifest race array preserves canonical
-`(organization, source_system, external_race_id)` order. Do not resort by race number,
-scheduled time, internal ID, capture time or storage order.
+- Phase: `POST_V0_8_DAILY_REPLAY_18`
+- Name: `NAR MonthlyConveneInfo Bootstrap Implementation`
+- Type: `IMPLEMENTATION`
+- Purpose: freeze exact file/API/canonical supplier-capture identity/test contract and,
+  only after separate review and EXECUTE authorization, implement the qualified pure
+  bootstrap plus any explicitly approved injected acquisition boundary.
 
-Before constructing a race request, require:
+The next PREPARE must decide exact Allowed Files, supplier capture identity bytes,
+fixture policy and required tests. It must stop if exact official-byte provenance cannot
+be frozen without changing existing Phase 6 domains or introducing storage/migrations.
 
-- exact snapshot_identity, positive internal_race_id and both capture references;
-- snapshot dataset/provider/external race identity exact agreement with the resolution,
-  NAR target and run context;
-- unique snapshot identities and unique internal race IDs across executable outcomes;
-- result and payout references are the same exact Phase 14 selected settlement capture;
-- capture IDs are retained verbatim and never generated from URL/body/target;
-- resolution settlement_information_cutoff is retained exactly for every race.
-
-Construct one existing `HistoricalReplayRaceRequest` per executable outcome. Its
-`result_capture_id` is the selected result reference's exact capture_id. Its payout
-catalog has exactly the keys `単勝`, `馬連`, `ワイド`, `3連複`, each mapped to the
-selected payout reference's exact capture_id. Populate in lexical key order even though
-the canonical JSON serializer also sorts object keys. Do not inspect or parse body bytes
-or claim that a purchased bet type is present; existing normalizer/runner semantics are
-unchanged.
-
-Project the same exact `race_budget` value to every executable internal race ID and no
-other target. Budget keys after construction and reload must equal manifest race IDs
-exactly. The expected `HistoricalReplayRequestDocument` uses schema_version 1, exact
-`manifest_source_path`, exact database path, only capture archive key
-`NAR/nar_official`, exact caller run/strategy, ordered races and budgets. Construct and
-fully validate this expected domain before serialization/write.
-
-## Day-state and audit boundary
-
-| Phase 14 state | Exact behavior |
-| --- | --- |
-| ALL_TARGETS_RESOLVED | Every target must be EXECUTABLE and projected; create one manifest |
-| PARTIALLY_RESOLVED | Project only EXECUTABLE subset; retain the original complete resolution; never describe it as full-day replay/ROI success |
-| NO_EXECUTABLE_TARGETS | Return projection with the original resolution and document None; do not inspect/create/read manifest_source_path and produce no runner-callable request |
-
-The schema-v1 manifest never becomes daily denominator/completeness authority and gains
-no day-state/non-executable fields. Filtering is not target deletion: the returned
-resolution retains every missing/unsupported/invalid target. This module never invokes
-the runner. A future orchestrator may pass a non-None document to exactly one multi-race
-run while retaining the projection result; it may not retry, reduce and rerun or promote
-partial execution to full-day success.
-
-## Canonical schema-v1 bytes
-
-Build only the existing exact root/nested schema. The byte contract is:
-
-```python
-(json.dumps(
-    payload,
-    sort_keys=True,
-    ensure_ascii=False,
-    allow_nan=False,
-    separators=(",", ":"),
-) + "\n").encode("utf-8")
-```
-
-This yields compact UTF-8 without BOM and exactly one final LF. Object keys are sorted
-lexically. `races` preserves canonical executable order. Strategy allowed_bet_types is
-serialized as a lexical list; payout keys are lexical; budget keys are canonical
-positive decimal strings. No repr, Python hash, unordered set/mapping iteration,
-locale, platform newline, filesystem time/order or current time participates.
-
-Serialize every datetime after `astimezone(timezone.utc)` using
-`isoformat(timespec="microseconds")`, yielding an explicit `+00:00` offset. Instant
-semantics are preserved and the existing loader reconstructs equal datetimes. Serialize
-database/archive paths with exact `str(caller_path)` text; no slash conversion or
-filesystem canonicalization is permitted. `manifest_source_path` is represented only by
-the exact loader argument/domain field, never a synthetic JSON field.
-
-## Exclusive publication, reload and cleanup
-
-The expected document and canonical bytes must exist and validate in memory before any
-file operation. For an executable projection:
-
-1. Verify the supplied parent exists as a directory without creating it.
-2. Open the exact final `manifest_source_path` in exclusive binary creation mode (`xb`).
-   A pre-existing path raises and is never opened for write, deleted or replaced.
-3. Write all bytes, verify the full byte count, flush, fsync and close. Do not use a
-   temporary/rename overwrite path and do not append or edit.
-4. Call the unchanged
-   `load_historical_replay_request_document(request_path=manifest_source_path)`.
-5. Read the artifact bytes and require byte-for-byte equality with the canonical bytes.
-   Require the loaded document equals the expected document field-by-field: schema,
-   exact source/database/archive Paths, run context, strategy identity, budgets and
-   ordered races.
-6. Return the projection only after all checks pass.
-
-Track whether this invocation won exclusive creation and the created file identity.
-On any write/flush/close/reload/byte/equality failure after creation, delete the final
-path only when it can still be proven to be the exact file created by this call, then
-re-raise the original exception. File identity metadata may be used only for safe
-cleanup, never serialization/digest/ordering. If identity cannot be proven or cleanup
-fails, do not delete a possibly foreign file; retain the original failure with cleanup
-context and return no success. Never touch a pre-existing target or adjacent path.
-
-This is an exclusive no-overwrite publication boundary, not a durable repository or a
-multi-file transaction. A concurrently visible incomplete file is never runner-callable
-through this API because only the successfully validated returned document is eligible.
-Reusing a frozen valid artifact goes directly through the existing loader/application;
-the writer never overwrites it.
-
-## Required tests during EXECUTE
-
-All Phase 15 acceptance behaviors remain mandatory, including its review clarification.
-Do not replace behavioral coverage with a fixed unittest-method count.
-
-| # | Required behavior |
-| --- | --- |
-| 1 | ALL_TARGETS_RESOLVED projects every target in canonical target order |
-| 2 | PARTIALLY_RESOLVED projects executable subset while retaining exact original resolution and no full-day-success signal |
-| 3 | NO_EXECUTABLE_TARGETS returns None without inspecting/creating/reading source path |
-| 4 | Exact snapshot/internal/result/payout/cutoff projection; all four payout keys use the selected payout capture ID without parsing body |
-| 5 | Same BetStakeBudget covers exactly all manifest race IDs and no non-executable target |
-| 6 | Dataset, provider, snapshot/external/internal identity and missing-reference contradictions fail before publication |
-| 7 | Duplicate snapshot identity or internal race ID fails without hidden skip |
-| 8 | Canonical race/catalog/set/object ordering and deterministic identical bytes under shuffled non-authoritative inputs |
-| 9 | StrategyIdentity is the sole strategy argument/authority; exact loader round trip; unsupported or altered config/hash/ID fails |
-| 10 | Relative manifest, database and archive Paths rejected; no cwd or Path.resolve dependency |
-| 11 | Exact absolute source/database/archive Path text and Path equality after reload |
-| 12 | Missing parent fails without mkdir or artifact; existing output is byte-preserved and never overwritten/deleted |
-| 13 | Expected document validation completes before exclusive filesystem creation |
-| 14 | Exact compact sorted-key UTF-8 bytes, one final LF, UTC microseconds/offset and no repr/nonfinite/implicit value |
-| 15 | Existing loader reload and complete document equality; byte mismatch returns no success |
-| 16 | Reload/equality failure deletes only the new same-identity file; adjacent/pre-existing/replaced file is preserved; cleanup failure stays fail closed |
-| 17 | Explicit run_context.started_at; current-clock calls trapped and unused |
-| 18 | Network/acquisition calls trapped and unused |
-| 19 | SQLite/migration/runner/body-normalizer calls trapped and unused; no database/archive write/read |
-| 20 | Original resolution/target/outcome object identities and denominator remain unchanged in all states |
-| 21 | Exact frozen public exports, keyword-only signature, immutable result and state/document invariants |
-| 22 | Existing schema-v1 loader/request application/SQLite runner and Phase 14 resolution regressions remain unchanged |
-
-Use synthetic immutable values and temporary output directories only. Tests must not
-touch database/keiba.db, logs, official fixtures/archives or network. Patch clock,
-network, SQLite/migration/runner/normalizer entry points to fail if invoked. File tests
-must compare bytes before/after and cover safe-cleanup identity behavior. Do not skip or
-relax a failure.
-
-### Exact verification commands during EXECUTE
-
-Dedicated:
+## Current PREPARE Allowed Files
 
 ```text
-python -m unittest tests.test_historical_daily_replay_manifest_projection
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
 ```
 
-Related:
+## Current PREPARE Forbidden Files and actions
 
-```text
-python -m unittest tests.test_historical_daily_evidence_resolution tests.test_historical_replay_request_document tests.test_historical_replay_request_application tests.test_sqlite_historical_replay_application
-```
+Every other path and action, including production, tests, fixtures, schemas, migrations,
+database, archives, CLI, provider response storage, stage, commit, push,
+`EXECUTE_APPROVED_PHASE` and Phase 18 transition.
 
-Full suite:
-
-```text
-python -m unittest discover -s tests -p "test_*.py"
-```
-
-Static boundary search; inspect every hit, with no-match exit acceptable:
-
-```text
-rg -n "datetime\.now|datetime\.today|utcnow|time\.time|requests|httpx|urllib\.request|socket|sqlite3|apply_migrations|run_sqlite_historical_replay|target_race_count|Path\.resolve" scripts/simulation/historical_daily_replay_manifest_projection.py
-```
-
-Git checks:
+## Required PREPARE verification and stop condition
 
 ```text
 git diff --check
@@ -309,48 +295,6 @@ git status --short
 git diff --cached --name-only
 ```
 
-No fixed passing-test count is a substitute for the 22 behavior groups. Report the
-actual dedicated, related and full counts separately. Account for both untracked new
-files in status and whitespace-check them without staging. Cached output must remain
-empty. Any warning or static-search hit is reported with evidence.
-
-## EXECUTE_APPROVED_PHASE gate and stop condition
-
-Before implementation verify Status APPROVED_FOR_CODEX, exact Phase/Branch/Base, only
-the two PREPARE docs dirty, empty index, and the Allowed/Forbidden/Required Tests/Stop
-Condition above. The user requests GPT-5.6 Sol for actual EXECUTE; PREPARE does not
-initiate implementation.
-
-On authorized EXECUTE success only: implement the two new production/test paths, run
-dedicated/related/full suites and static/Git checks, keep every change within the four
-exact EXECUTE Allowed Files, update Status to READY_FOR_REVIEW and append the result to
-LATEST_CODEX_REPORT; then stop without stage/commit/push or a next phase.
-
-On any contract conflict, need to edit an existing file, strategy/path round-trip
-ambiguity, inability to prove safe own-file cleanup, failing test, unexpected path,
-schema/migration/database/archive requirement or other blocker, stop without guessing,
-fallback, path rewrite, overwrite or weakened assertion. Current preparation outcome is
-IMPLEMENTABLE with no blocker.
-
-## Execution completion
-
-EXECUTE_APPROVED_PHASE completed within the four exact Allowed Files. The new production
-module exports only the frozen immutable projection and keyword-only writer. It validates
-the sole-authority StrategyIdentity, exact NAR resolution/provider/dataset/reference
-relations and absolute caller Paths before publication. It projects only EXECUTABLE
-outcomes in canonical target order, uses one uniform budget, preserves the exact cutoff
-and selected capture IDs, and retains the complete original resolution in all day states.
-
-Canonical existing schema-v1 JSON is written as compact sorted-key UTF-8 with exactly one
-LF and UTC microsecond offsets. Publication exclusively creates the final path, then
-performs exact byte and existing-loader domain/path/strategy round-trip checks. Failure
-cleanup verifies the created file identity before unlinking; pre-existing, replaced and
-adjacent paths are preserved. The implementation has no clock, network, SQLite,
-migration, runner or body-parser dependency.
-
-Verification: dedicated 20 tests PASS; related 51 tests PASS; full suite 2,987 tests
-PASS. The frozen static boundary search has no matches. Dedicated tests emit no
-ResourceWarning; full-suite warnings reproduce existing unclosed SQLite connections in
-pre-existing tests/modules. No test was skipped or relaxed. Final Git checks and scope
-are recorded in LATEST_CODEX_REPORT. Status is READY_FOR_REVIEW; stop without staging,
-commit, push or another phase.
+Stop at `DRAFT_FOR_REVIEW` with exactly the two docs modified and an empty index. No
+test execution is required because no production/test file changes. Independent review
+and explicit approval are required before commit or any next phase.

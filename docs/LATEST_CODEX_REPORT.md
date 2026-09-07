@@ -8564,3 +8564,57 @@ ChatGPT approved the completed Phase 16 implementation for commit after independ
 accepting the dedicated 20, related 51 and full 2,987 passing tests, clean static
 boundary, deterministic schema-v1 round trip, exclusive publication/cleanup contract,
 exact Allowed Files scope and absence of blockers. Status is APPROVED_FOR_COMMIT.
+
+## POST_V0_8_DAILY_REPLAY_16 Finalization and POST_V0_8_DAILY_REPLAY_17 Preparation
+
+Phase 16 was staged using exactly its four Allowed Files and committed as
+`23278208c24b7c34aad4f4525aba5d429f510c5b` with message
+`feat: project daily replay schema-v1 manifest`. Unstaged/cached whitespace checks and
+the exact cached-name check passed. Normal push and fetch succeeded; local HEAD equals
+`origin/feature/post-v0.8-daily-replay` at that SHA, and the worktree/index were clean
+before Phase 17 PREPARE.
+
+PREPARE_PHASE POST_V0_8_DAILY_REPLAY_17 is complete at DRAFT_FOR_REVIEW,
+RESEARCH_AND_DESIGN_ONLY, with outcome BOOTSTRAP_PROFILE_IMPLEMENTABLE. Official-only
+read-only research found a complete source-owned chain: the NAR homepage supplies the
+raw MonthlyConveneInfo root href; the root supplies one raw locator-script src plus
+official year/month controls; and the exact official JavaScript supplies the literal
+path/query names/order and concatenation rule. The script bytes remain 438 bytes with
+SHA-256 `bdf86457a9c917fc8259f8b87593c9bbece72d501a95fb5d3573a93b43532515`,
+matching the existing offline Phase 6 research fixture without changing its evidence
+status.
+
+Historical Monthly responses for 2020-03, 2021-01, 2024-01, 2025-01 and 2026-01 were
+observed with exact 200/no-redirect request identity, the requested selected year and
+active month, twelve month tokens and the same source-owned script relation. Their exact
+research URLs, honest 2026-09-07 requested/observed times, byte lengths and SHA-256
+values are recorded in CURRENT_PHASE. Bytes were not saved in the repository, archive,
+database or fixtures and are not formal replay evidence.
+
+The proposed pure resolver accepts target_date plus one immutable supplier-evidence
+aggregate containing exact homepage, Monthly-root and script captures. It uses target
+date only to select source-exposed year/month tokens, evaluates only the strict captured
+official rule, preserves its exact output bytes and returns the unchanged existing
+NARHistoricalDailyTargetRequestIdentity with an exact supplier evidence identity. A
+date alone, developer URL template, search result, current clock, active-current-tab,
+first-link/index guess or fallback is insufficient.
+
+Existing Phase 6 request/capture/source contracts remain unchanged. Final Monthly HTTP
+capture continues through the existing validated-identity live capture service, while
+the bootstrap resolver is no-network. Honest supplier observations are locator audit
+metadata only and never become bundle observed_at, prediction, snapshot or settlement
+causality. Missing/ambiguous/malformed evidence requires an explicit caller-supplied
+already validated Monthly locator or fails closed; it never implies a zero day.
+
+The recommended next separately gated phase is POST_V0_8_DAILY_REPLAY_18, NAR
+MonthlyConveneInfo Bootstrap Implementation. Phase 17 changed only CURRENT_PHASE.md and
+this report; it performed no production/test/fixture implementation, stage, commit,
+push or Phase 18 transition.
+
+## POST_V0_8_DAILY_REPLAY_17 Final Independent Review
+
+ChatGPT approved the BOOTSTRAP_PROFILE_IMPLEMENTABLE qualification and its exact
+source-owned homepage -> Monthly root -> locator script -> changePage(year, month) ->
+existing request-identity chain for commit. Developer-generated year/month URLs remain
+forbidden. Status is APPROVED_FOR_COMMIT; no implementation is authorized by this
+approval.
