@@ -8941,3 +8941,68 @@ ChatGPT final independent review approved Phase 21 for commit with outcome
 `SUPPLIER_TRANSPORT_SPLIT_REQUIRED`. The staged supplier transport/relation phase and
 later all-day acquisition application remain separately gated; no production contract
 was changed by finalization.
+
+Phase 21 was committed as `e69781be682a447154b0cec3d2d3909b6d2eb86d` with message
+`docs: design NAR daily target live acquisition`. Normal push and fetch verification
+confirmed that the local and remote feature branch heads are identical.
+
+`PREPARE_PHASE POST_V0_8_DAILY_REPLAY_22` prepared **NAR Bootstrap Staged Locator and
+Supplier Live Capture Implementation** as `DRAFT_FOR_REVIEW`, type `IMPLEMENTATION`,
+with outcome `IMPLEMENTABLE`. The audit found that the Phase 18 strict grammar can be
+refactored into three immutable, source-capture-bound stages without changing the
+existing final resolver API, output or deterministic identity. A separate supplier
+transport/live service is required; the Phase 6 live capture service remains closed and
+read-only.
+
+The design freezes stage A homepage-to-root resolution, stage B root-to-pinned-script
+and target-token resolution, and stage C pinned-script-to-Monthly request-material
+resolution. Every stage carries and revalidates exact capture identity and digest, so a
+stage cannot authorize acquisition from substituted bytes or an arbitrary URL. The new
+supplier service accepts only the preceding capture and staged value, uses the frozen
+official HTTPS transport contract and injected clock, and saves each successful capture
+immediately through the existing Phase 20 supplier archive. It has no cache fallback,
+migration ownership or direct current-clock dependency.
+
+Phase 22 freezes exactly six future implementation files and 35 required behavior
+groups. PREPARE changed only CURRENT_PHASE.md and this report; it made no production,
+test, fixture, database or log change and did not stage, commit, push or start Phase 23.
+
+ChatGPT approved `POST_V0_8_DAILY_REPLAY_22` with outcome `IMPLEMENTABLE`. The Phase 22
+Status is now `APPROVED_FOR_CODEX`; its staged APIs, supplier transport/service,
+source-capture binding, compatibility guarantees, exact six-file scope and required
+tests remain unchanged. This approval step changed docs only and did not begin execution.
+
+`EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_22` implemented the approved staged
+bootstrap and supplier live-capture contract. The existing final resolver now composes
+the new immutable Stage A/B/C values and functions while retaining its exact signature,
+request material, resolved URL, supplier evidence identity and final request identity.
+Each staged value derives a deterministic canonical-JSON SHA-256 identity and binds the
+relevant upstream capture ID and response digest; reconstruction and equality checks
+reject corrupted or cross-capture values.
+
+The separate supplier HTTP module implements the frozen exact page-kind/URL/MIME pairs,
+zero-retry `requests.Session`, redirect-disabled verified HTTPS, identity encoding,
+explicit timeouts, strict status/effective URL/content length, a 4 MiB byte limit and
+unconditional response close. Its service takes only the fixed homepage trust anchor or
+source-bound staged values, samples the injected clock three times per request, validates
+the pinned script before publication, saves through the Phase 20 supplier archive before
+return and never loads cached evidence or invokes migration. The Phase 6 live module
+remained byte-identical to HEAD (`b9d99c91e624575eca22b02142d13fa65c6b8350`).
+
+Verification passed: 21 staged/bootstrap tests and 13 supplier-live tests passed with
+`ResourceWarning` treated as an error; the combined dedicated run passed 34 tests. Phase
+18 capture regression passed 9 tests, Phase 20 archive regression passed 28 tests, and
+Phase 6 capture/live/source regression passed 22 tests. The full unittest suite passed
+3,058 tests. The full suite continued to emit pre-existing unclosed-SQLite
+`ResourceWarning`s from unrelated historical snapshot/migration/repository tests; no new
+dedicated warning was emitted. Static inspection found none of the forbidden browser,
+eval/exec, direct-clock, redirect, cache-load, SQLite or alternate-network boundaries.
+
+Only the exact six Allowed Files changed, cached state remained empty, and no database or
+log path changed. Phase 22 is `READY_FOR_REVIEW`; nothing was staged, committed, pushed,
+or advanced to Phase 23.
+
+ChatGPT final review approved Phase 22 for commit. The reported 34 dedicated, 9 Phase 18,
+28 Phase 20, 22 Phase 6 and 3,058 full-suite passing tests, byte-identical Phase 6 live
+module, static-boundary result, exact six-file scope and empty cached state were accepted.
+Status is `APPROVED_FOR_COMMIT`; no implementation contract changed during finalization.

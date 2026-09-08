@@ -29,8 +29,17 @@ _SCRIPT_RAW = "/KeibaWeb/resources/js/monthltconveninfo.js?t=20260130_1"
 _SCRIPT_URL = _OFFICIAL_ORIGIN + _SCRIPT_RAW
 _SCRIPT_LENGTH = 438
 _SCRIPT_SHA256 = "bdf86457a9c917fc8259f8b87593c9bbece72d501a95fb5d3573a93b43532515"
+_REQUEST_PREFIX = b"/KeibaWeb/MonthlyConveneInfo/MonthlyConveneInfoTop?k_year="
+_REQUEST_SEPARATOR = b"&k_month="
+_CAPTURE_ID = _re.compile(r"nar-monthly-bootstrap-capture-v1:[0-9a-f]{64}\Z")
+_SHA256 = _re.compile(r"[0-9a-f]{64}\Z")
 _YEAR = _re.compile(r"[0-9]{4}\Z")
 _MONTH = _re.compile(r"(?:[1-9]|1[0-2])\Z")
+_ROOT_STRUCTURAL_LOCATOR = "li.gNaviitem2>a[href]"
+_SCRIPT_STRUCTURAL_LOCATOR = (
+    "head>script[src];article.monthlySchedule form "
+    "select#selectedYear[name=k_year];ul.monthTab>li.tab[month]"
+)
 _VOID = frozenset(
     {
         "area",
@@ -52,8 +61,11 @@ _VOID = frozenset(
 _JS_GRAMMAR = _re.compile(
     rb"\A\$\(function \(\) \{\n"
     rb"  function changePage\(year, month\) \{\n"
-    rb'    window\.location\.href = "(?P<prefix>/KeibaWeb/MonthlyConveneInfo/'
-    rb'MonthlyConveneInfoTop\?k_year=)" \+ year \+ "(?P<separator>&k_month=)" \+ month;\n'
+    rb'    window\.location\.href = "(?P<prefix>'
+    + _re.escape(_REQUEST_PREFIX)
+    + rb')" \+ year \+ "(?P<separator>'
+    + _re.escape(_REQUEST_SEPARATOR)
+    + rb')" \+ month;\n'
     rb"  \}\n"
     rb"  \$\('#selectedYear'\)\.on\('change', function\(e\) \{\n"
     rb"    changePage\(e\.target\.value, \$\('li\.tab\.active'\)\.attr\('month'\)\);\n"
@@ -90,6 +102,232 @@ def _canonical_bytes(payload: dict[str, object]) -> bytes:
         sort_keys=True,
         separators=(",", ":"),
     ).encode("utf-8")
+
+
+def _derived_identity(prefix: str, payload: dict[str, object]) -> tuple[str, str]:
+    digest = _hashlib.sha256(_canonical_bytes(payload)).hexdigest()
+    return digest, f"{prefix}{digest}"
+
+
+def _require_capture_id(value: object, name: str) -> str:
+    if type(value) is not str or _CAPTURE_ID.fullmatch(value) is None:
+        raise NARMonthlyConveneInfoBootstrapValidationError(f"{name} is invalid")
+    return value
+
+
+def _require_sha256(value: object, name: str) -> str:
+    if type(value) is not str or _SHA256.fullmatch(value) is None:
+        raise NARMonthlyConveneInfoBootstrapValidationError(f"{name} is invalid")
+    return value
+
+
+@_dataclass(frozen=True, slots=True)
+class NARMonthlyConveneInfoRootLocator:
+    homepage_capture_id: str
+    homepage_response_sha256: str
+    raw_href: bytes
+    resolved_url: str
+    structural_locator: str
+    schema_version: int = _field(init=False, default=1)
+    page_kind: _PageKind = _field(init=False, default=_PageKind.MONTHLY_ROOT)
+    locator_identity_sha256: str = _field(init=False)
+    locator_identity: str = _field(init=False)
+
+    def __post_init__(self) -> None:
+        _require_capture_id(self.homepage_capture_id, "homepage_capture_id")
+        _require_sha256(self.homepage_response_sha256, "homepage_response_sha256")
+        if type(self.raw_href) is not bytes or self.raw_href != _ROOT_RAW.encode("ascii"):
+            raise NARMonthlyConveneInfoBootstrapValidationError(
+                "raw_href is not the exact supplied Monthly root href"
+            )
+        if type(self.resolved_url) is not str or self.resolved_url != _OFFICIAL_ORIGIN + _ROOT_RAW:
+            raise NARMonthlyConveneInfoBootstrapValidationError(
+                "resolved_url is not the exact qualified Monthly root URL"
+            )
+        if type(self.structural_locator) is not str or self.structural_locator != _ROOT_STRUCTURAL_LOCATOR:
+            raise NARMonthlyConveneInfoBootstrapValidationError(
+                "structural_locator is not the qualified homepage relation"
+            )
+        digest, identity = _derived_identity(
+            "nar-monthly-bootstrap-root-locator-v1:",
+            {
+                "homepage_capture_id": self.homepage_capture_id,
+                "homepage_response_sha256": self.homepage_response_sha256,
+                "page_kind": self.page_kind.value,
+                "raw_href_hex": self.raw_href.hex(),
+                "resolved_url": self.resolved_url,
+                "schema_version": 1,
+                "structural_locator": self.structural_locator,
+            },
+        )
+        object.__setattr__(self, "locator_identity_sha256", digest)
+        object.__setattr__(self, "locator_identity", identity)
+
+
+@_dataclass(frozen=True, slots=True)
+class NARMonthlyConveneInfoLocatorScriptResolution:
+    root_locator: NARMonthlyConveneInfoRootLocator
+    monthly_root_capture_id: str
+    monthly_root_response_sha256: str
+    target_date: _date
+    raw_script_src: bytes
+    resolved_script_url: str
+    offered_year_token: bytes
+    offered_month_token: bytes
+    structural_locator: str
+    schema_version: int = _field(init=False, default=1)
+    page_kind: _PageKind = _field(init=False, default=_PageKind.LOCATOR_SCRIPT)
+    resolution_identity_sha256: str = _field(init=False)
+    resolution_identity: str = _field(init=False)
+
+    def __post_init__(self) -> None:
+        _require_root_locator(self.root_locator)
+        _require_capture_id(self.monthly_root_capture_id, "monthly_root_capture_id")
+        _require_sha256(self.monthly_root_response_sha256, "monthly_root_response_sha256")
+        if type(self.target_date) is not _date or self.target_date < _INITIAL_DATE:
+            raise NARMonthlyConveneInfoBootstrapValidationError(
+                "target_date is outside the qualified exact-date profile"
+            )
+        if type(self.raw_script_src) is not bytes or self.raw_script_src != _SCRIPT_RAW.encode("ascii"):
+            raise NARMonthlyConveneInfoBootstrapValidationError(
+                "raw_script_src is not the exact supplied locator-script src"
+            )
+        if type(self.resolved_script_url) is not str or self.resolved_script_url != _SCRIPT_URL:
+            raise NARMonthlyConveneInfoBootstrapValidationError(
+                "resolved_script_url is not the pinned locator-script URL"
+            )
+        expected_year = str(self.target_date.year).encode("ascii")
+        expected_month = str(self.target_date.month).encode("ascii")
+        if type(self.offered_year_token) is not bytes or self.offered_year_token != expected_year:
+            raise NARMonthlyConveneInfoBootstrapValidationError(
+                "offered_year_token does not exactly match target_date"
+            )
+        if type(self.offered_month_token) is not bytes or self.offered_month_token != expected_month:
+            raise NARMonthlyConveneInfoBootstrapValidationError(
+                "offered_month_token does not exactly match target_date"
+            )
+        if type(self.structural_locator) is not str or self.structural_locator != _SCRIPT_STRUCTURAL_LOCATOR:
+            raise NARMonthlyConveneInfoBootstrapValidationError(
+                "structural_locator is not the qualified Monthly root relation"
+            )
+        digest, identity = _derived_identity(
+            "nar-monthly-bootstrap-script-resolution-v1:",
+            {
+                "monthly_root_capture_id": self.monthly_root_capture_id,
+                "monthly_root_response_sha256": self.monthly_root_response_sha256,
+                "offered_month_token_hex": self.offered_month_token.hex(),
+                "offered_year_token_hex": self.offered_year_token.hex(),
+                "page_kind": self.page_kind.value,
+                "raw_script_src_hex": self.raw_script_src.hex(),
+                "resolved_script_url": self.resolved_script_url,
+                "root_locator_identity": self.root_locator.locator_identity,
+                "schema_version": 1,
+                "structural_locator": self.structural_locator,
+                "target_date": self.target_date.isoformat(),
+            },
+        )
+        object.__setattr__(self, "resolution_identity_sha256", digest)
+        object.__setattr__(self, "resolution_identity", identity)
+
+
+@_dataclass(frozen=True, slots=True)
+class NARMonthlyConveneInfoRequestMaterialResolution:
+    locator_script_resolution: NARMonthlyConveneInfoLocatorScriptResolution
+    locator_script_capture_id: str
+    locator_script_response_sha256: str
+    official_supplied_request_material: bytes
+    resolved_request_url: str
+    schema_version: int = _field(init=False, default=1)
+    resolution_identity_sha256: str = _field(init=False)
+    resolution_identity: str = _field(init=False)
+
+    def __post_init__(self) -> None:
+        _require_script_resolution(self.locator_script_resolution)
+        _require_capture_id(self.locator_script_capture_id, "locator_script_capture_id")
+        _require_sha256(self.locator_script_response_sha256, "locator_script_response_sha256")
+        expected_material = (
+            _REQUEST_PREFIX
+            + self.locator_script_resolution.offered_year_token
+            + _REQUEST_SEPARATOR
+            + self.locator_script_resolution.offered_month_token
+        )
+        if (
+            type(self.official_supplied_request_material) is not bytes
+            or self.official_supplied_request_material != expected_material
+        ):
+            raise NARMonthlyConveneInfoBootstrapValidationError(
+                "official_supplied_request_material is not the source-owned material"
+            )
+        expected_url = _OFFICIAL_ORIGIN + expected_material.decode("ascii")
+        if type(self.resolved_request_url) is not str or self.resolved_request_url != expected_url:
+            raise NARMonthlyConveneInfoBootstrapValidationError(
+                "resolved_request_url contradicts the supplied request material"
+            )
+        digest, identity = _derived_identity(
+            "nar-monthly-bootstrap-request-material-v1:",
+            {
+                "locator_script_capture_id": self.locator_script_capture_id,
+                "locator_script_resolution_identity": self.locator_script_resolution.resolution_identity,
+                "locator_script_response_sha256": self.locator_script_response_sha256,
+                "official_supplied_request_material_hex": self.official_supplied_request_material.hex(),
+                "resolved_request_url": self.resolved_request_url,
+                "schema_version": 1,
+            },
+        )
+        object.__setattr__(self, "resolution_identity_sha256", digest)
+        object.__setattr__(self, "resolution_identity", identity)
+
+
+def _require_root_locator(value: object) -> NARMonthlyConveneInfoRootLocator:
+    if type(value) is not NARMonthlyConveneInfoRootLocator:
+        raise NARMonthlyConveneInfoBootstrapValidationError(
+            "root_locator must be NARMonthlyConveneInfoRootLocator"
+        )
+    try:
+        rebuilt = NARMonthlyConveneInfoRootLocator(
+            homepage_capture_id=value.homepage_capture_id,
+            homepage_response_sha256=value.homepage_response_sha256,
+            raw_href=value.raw_href,
+            resolved_url=value.resolved_url,
+            structural_locator=value.structural_locator,
+        )
+    except NARMonthlyConveneInfoBootstrapValidationError as error:
+        raise NARMonthlyConveneInfoBootstrapIntegrityError(
+            "root_locator cannot be reconstructed exactly"
+        ) from error
+    if rebuilt != value:
+        raise NARMonthlyConveneInfoBootstrapIntegrityError(
+            "root_locator derived identity is corrupt"
+        )
+    return value
+
+
+def _require_script_resolution(value: object) -> NARMonthlyConveneInfoLocatorScriptResolution:
+    if type(value) is not NARMonthlyConveneInfoLocatorScriptResolution:
+        raise NARMonthlyConveneInfoBootstrapValidationError(
+            "locator_script_resolution must be NARMonthlyConveneInfoLocatorScriptResolution"
+        )
+    try:
+        rebuilt = NARMonthlyConveneInfoLocatorScriptResolution(
+            root_locator=value.root_locator,
+            monthly_root_capture_id=value.monthly_root_capture_id,
+            monthly_root_response_sha256=value.monthly_root_response_sha256,
+            target_date=value.target_date,
+            raw_script_src=value.raw_script_src,
+            resolved_script_url=value.resolved_script_url,
+            offered_year_token=value.offered_year_token,
+            offered_month_token=value.offered_month_token,
+            structural_locator=value.structural_locator,
+        )
+    except NARMonthlyConveneInfoBootstrapError as error:
+        raise NARMonthlyConveneInfoBootstrapIntegrityError(
+            "locator_script_resolution cannot be reconstructed exactly"
+        ) from error
+    if rebuilt != value:
+        raise NARMonthlyConveneInfoBootstrapIntegrityError(
+            "locator_script_resolution derived identity is corrupt"
+        )
+    return value
 
 
 def _evidence_identity(
@@ -298,8 +536,20 @@ def _validate_integrity(evidence: NARMonthlyConveneInfoBootstrapEvidence) -> Non
         )
 
 
-def _homepage_relation(evidence: NARMonthlyConveneInfoBootstrapEvidence) -> None:
-    root = _tree(evidence.homepage_capture.response_body, "homepage capture")
+def resolve_nar_monthly_convene_info_root_locator(
+    *,
+    homepage_capture: _SupplierCapture,
+) -> NARMonthlyConveneInfoRootLocator:
+    if type(homepage_capture) is not _SupplierCapture:
+        raise NARMonthlyConveneInfoBootstrapValidationError(
+            "homepage_capture must be NARMonthlyConveneInfoBootstrapSupplierCapture"
+        )
+    _reconstruct_capture(homepage_capture, "homepage_capture")
+    if homepage_capture.page_kind is not _PageKind.OFFICIAL_HOME:
+        raise NARMonthlyConveneInfoBootstrapValidationError(
+            "homepage_capture has the wrong page kind"
+        )
+    root = _tree(homepage_capture.response_body, "homepage capture")
     exact: list[_Node] = []
     for anchor in root.descendants("a"):
         try:
@@ -319,17 +569,44 @@ def _homepage_relation(evidence: NARMonthlyConveneInfoBootstrapEvidence) -> None
         raise NARMonthlyConveneInfoBootstrapUnsupportedError(
             "homepage does not contain one exact qualified Monthly root href"
         )
-    if _OFFICIAL_ORIGIN + _ROOT_RAW != evidence.monthly_root_capture.canonical_request_url:
-        raise NARMonthlyConveneInfoBootstrapUnsupportedError(
-            "homepage relation contradicts the supplied Monthly root capture"
-        )
+    return NARMonthlyConveneInfoRootLocator(
+        homepage_capture_id=homepage_capture.capture_id,
+        homepage_response_sha256=homepage_capture.response_sha256,
+        raw_href=_ROOT_RAW.encode("ascii"),
+        resolved_url=_OFFICIAL_ORIGIN + _ROOT_RAW,
+        structural_locator=_ROOT_STRUCTURAL_LOCATOR,
+    )
 
 
-def _root_tokens(
-    evidence: NARMonthlyConveneInfoBootstrapEvidence,
+def resolve_nar_monthly_convene_info_locator_script(
+    *,
     target_date: _date,
-) -> tuple[bytes, bytes]:
-    root = _tree(evidence.monthly_root_capture.response_body, "Monthly root capture")
+    root_locator: NARMonthlyConveneInfoRootLocator,
+    monthly_root_capture: _SupplierCapture,
+) -> NARMonthlyConveneInfoLocatorScriptResolution:
+    if type(target_date) is not _date:
+        raise NARMonthlyConveneInfoBootstrapValidationError(
+            "target_date must be exact date"
+        )
+    if target_date < _INITIAL_DATE:
+        raise NARMonthlyConveneInfoBootstrapUnsupportedError(
+            "target_date precedes the qualified initial profile"
+        )
+    _require_root_locator(root_locator)
+    if type(monthly_root_capture) is not _SupplierCapture:
+        raise NARMonthlyConveneInfoBootstrapValidationError(
+            "monthly_root_capture must be NARMonthlyConveneInfoBootstrapSupplierCapture"
+        )
+    _reconstruct_capture(monthly_root_capture, "monthly_root_capture")
+    if monthly_root_capture.page_kind is not _PageKind.MONTHLY_ROOT:
+        raise NARMonthlyConveneInfoBootstrapValidationError(
+            "monthly_root_capture has the wrong page kind"
+        )
+    if monthly_root_capture.canonical_request_url != root_locator.resolved_url:
+        raise NARMonthlyConveneInfoBootstrapIntegrityError(
+            "Monthly root capture contradicts the source-bound root locator"
+        )
+    root = _tree(monthly_root_capture.response_body, "Monthly root capture")
     exact_scripts: list[_Node] = []
     for script in root.descendants("script"):
         try:
@@ -349,7 +626,6 @@ def _root_tokens(
         len(exact_scripts) != 1
         or len(head_scripts) != 1
         or exact_scripts[0] is not head_scripts[0]
-        or evidence.locator_script_capture.canonical_request_url != _SCRIPT_URL
     ):
         raise NARMonthlyConveneInfoBootstrapUnsupportedError(
             "Monthly root does not contain one exact qualified locator-script src"
@@ -431,11 +707,20 @@ def _root_tokens(
         raise NARMonthlyConveneInfoBootstrapUnsupportedError(
             "target month is not offered by the supplied official root"
         )
-    return years[year_key], months[month_key]
+    return NARMonthlyConveneInfoLocatorScriptResolution(
+        root_locator=root_locator,
+        monthly_root_capture_id=monthly_root_capture.capture_id,
+        monthly_root_response_sha256=monthly_root_capture.response_sha256,
+        target_date=target_date,
+        raw_script_src=_SCRIPT_RAW.encode("ascii"),
+        resolved_script_url=_SCRIPT_URL,
+        offered_year_token=years[year_key],
+        offered_month_token=months[month_key],
+        structural_locator=_SCRIPT_STRUCTURAL_LOCATOR,
+    )
 
 
-def _script_literals(evidence: NARMonthlyConveneInfoBootstrapEvidence) -> tuple[bytes, bytes]:
-    capture = evidence.locator_script_capture
+def _script_literals(capture: _SupplierCapture) -> tuple[bytes, bytes]:
     if (
         capture.canonical_request_url != _SCRIPT_URL
         or len(capture.response_body) != _SCRIPT_LENGTH
@@ -451,6 +736,41 @@ def _script_literals(evidence: NARMonthlyConveneInfoBootstrapEvidence) -> tuple[
             "locator script grammar is outside the qualified profile"
         )
     return match.group("prefix"), match.group("separator")
+
+
+def resolve_nar_monthly_convene_info_request_material(
+    *,
+    locator_script_resolution: NARMonthlyConveneInfoLocatorScriptResolution,
+    locator_script_capture: _SupplierCapture,
+) -> NARMonthlyConveneInfoRequestMaterialResolution:
+    _require_script_resolution(locator_script_resolution)
+    if type(locator_script_capture) is not _SupplierCapture:
+        raise NARMonthlyConveneInfoBootstrapValidationError(
+            "locator_script_capture must be NARMonthlyConveneInfoBootstrapSupplierCapture"
+        )
+    _reconstruct_capture(locator_script_capture, "locator_script_capture")
+    if locator_script_capture.page_kind is not _PageKind.LOCATOR_SCRIPT:
+        raise NARMonthlyConveneInfoBootstrapValidationError(
+            "locator_script_capture has the wrong page kind"
+        )
+    if locator_script_capture.canonical_request_url != locator_script_resolution.resolved_script_url:
+        raise NARMonthlyConveneInfoBootstrapIntegrityError(
+            "locator script capture contradicts the source-bound script resolution"
+        )
+    prefix, separator = _script_literals(locator_script_capture)
+    request_material = (
+        prefix
+        + locator_script_resolution.offered_year_token
+        + separator
+        + locator_script_resolution.offered_month_token
+    )
+    return NARMonthlyConveneInfoRequestMaterialResolution(
+        locator_script_resolution=locator_script_resolution,
+        locator_script_capture_id=locator_script_capture.capture_id,
+        locator_script_response_sha256=locator_script_capture.response_sha256,
+        official_supplied_request_material=request_material,
+        resolved_request_url=_OFFICIAL_ORIGIN + request_material.decode("ascii"),
+    )
 
 
 def resolve_nar_monthly_convene_info_request_identity(
@@ -471,15 +791,24 @@ def resolve_nar_monthly_convene_info_request_identity(
             "supplier_evidence must be NARMonthlyConveneInfoBootstrapEvidence"
         )
     _validate_integrity(supplier_evidence)
-    _homepage_relation(supplier_evidence)
-    year_token, month_token = _root_tokens(supplier_evidence, target_date)
-    prefix, separator = _script_literals(supplier_evidence)
-    request_material = prefix + year_token + separator + month_token
+    root_locator = resolve_nar_monthly_convene_info_root_locator(
+        homepage_capture=supplier_evidence.homepage_capture
+    )
+    script_resolution = resolve_nar_monthly_convene_info_locator_script(
+        target_date=target_date,
+        root_locator=root_locator,
+        monthly_root_capture=supplier_evidence.monthly_root_capture,
+    )
+    material_resolution = resolve_nar_monthly_convene_info_request_material(
+        locator_script_resolution=script_resolution,
+        locator_script_capture=supplier_evidence.locator_script_capture,
+    )
+    request_material = material_resolution.official_supplied_request_material
     try:
         request = _DailyTargetRequestIdentity(
             _DailyTargetPageKind.MONTHLY_CONVENE_INFO,
             request_material,
-            _OFFICIAL_ORIGIN + request_material.decode("utf-8", errors="strict"),
+            material_resolution.resolved_request_url,
             supplier_evidence.supplier_evidence_identity,
         )
     except (UnicodeDecodeError, _DailyTargetCaptureError) as error:

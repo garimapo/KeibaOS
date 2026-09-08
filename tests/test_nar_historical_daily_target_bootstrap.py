@@ -10,9 +10,15 @@ import scripts.simulation.nar_historical_daily_target_bootstrap as bootstrap_mod
 from scripts.simulation.nar_historical_daily_target_bootstrap import (
     NARMonthlyConveneInfoBootstrapEvidence,
     NARMonthlyConveneInfoBootstrapIntegrityError,
+    NARMonthlyConveneInfoLocatorScriptResolution,
+    NARMonthlyConveneInfoRequestMaterialResolution,
+    NARMonthlyConveneInfoRootLocator,
     NARMonthlyConveneInfoBootstrapUnsupportedError,
     NARMonthlyConveneInfoBootstrapValidationError,
+    resolve_nar_monthly_convene_info_locator_script,
+    resolve_nar_monthly_convene_info_request_material,
     resolve_nar_monthly_convene_info_request_identity,
+    resolve_nar_monthly_convene_info_root_locator,
 )
 from scripts.simulation.nar_historical_daily_target_bootstrap_capture import (
     NARMonthlyConveneInfoBootstrapPageKind,
@@ -89,6 +95,94 @@ def _replace_once(body, old, new):
 
 
 class NARMonthlyConveneInfoBootstrapTests(unittest.TestCase):
+    def test_staged_relations_preserve_exact_source_material_and_capture_bindings(self):
+        evidence = _evidence()
+        root = resolve_nar_monthly_convene_info_root_locator(
+            homepage_capture=evidence.homepage_capture
+        )
+        script = resolve_nar_monthly_convene_info_locator_script(
+            target_date=date(2025, 12, 26),
+            root_locator=root,
+            monthly_root_capture=evidence.monthly_root_capture,
+        )
+        material = resolve_nar_monthly_convene_info_request_material(
+            locator_script_resolution=script,
+            locator_script_capture=evidence.locator_script_capture,
+        )
+        self.assertIs(type(root), NARMonthlyConveneInfoRootLocator)
+        self.assertEqual(root.homepage_capture_id, evidence.homepage_capture.capture_id)
+        self.assertEqual(root.homepage_response_sha256, evidence.homepage_capture.response_sha256)
+        self.assertEqual(root.raw_href, _ROOT_RAW)
+        self.assertEqual(script.root_locator, root)
+        self.assertEqual(script.monthly_root_capture_id, evidence.monthly_root_capture.capture_id)
+        self.assertEqual(script.raw_script_src, _SCRIPT_RAW)
+        self.assertEqual(script.offered_year_token, b"2025")
+        self.assertEqual(script.offered_month_token, b"12")
+        self.assertIs(type(material), NARMonthlyConveneInfoRequestMaterialResolution)
+        self.assertEqual(material.locator_script_capture_id, evidence.locator_script_capture.capture_id)
+        self.assertEqual(
+            material.official_supplied_request_material,
+            _ROOT_RAW + b"?k_year=2025&k_month=12",
+        )
+
+    def test_staged_values_are_frozen_slotted_and_deterministic(self):
+        evidence = _evidence()
+        root = resolve_nar_monthly_convene_info_root_locator(
+            homepage_capture=evidence.homepage_capture
+        )
+        again = resolve_nar_monthly_convene_info_root_locator(
+            homepage_capture=evidence.homepage_capture
+        )
+        self.assertEqual(root, again)
+        self.assertFalse(hasattr(root, "__dict__"))
+        self.assertRegex(root.locator_identity, r"^nar-monthly-bootstrap-root-locator-v1:[0-9a-f]{64}$")
+        with self.assertRaises(dataclasses.FrozenInstanceError):
+            root.resolved_url = "https://example.invalid/"
+
+    def test_staged_capture_and_derived_identity_corruption_fail_closed(self):
+        evidence = _evidence()
+        root = resolve_nar_monthly_convene_info_root_locator(
+            homepage_capture=evidence.homepage_capture
+        )
+        object.__setattr__(root, "homepage_capture_id", "nar-monthly-bootstrap-capture-v1:" + "0" * 64)
+        with self.assertRaises(NARMonthlyConveneInfoBootstrapIntegrityError):
+            resolve_nar_monthly_convene_info_locator_script(
+                target_date=date(2025, 1, 1),
+                root_locator=root,
+                monthly_root_capture=evidence.monthly_root_capture,
+            )
+
+        root = resolve_nar_monthly_convene_info_root_locator(
+            homepage_capture=evidence.homepage_capture
+        )
+        script = resolve_nar_monthly_convene_info_locator_script(
+            target_date=date(2025, 1, 1),
+            root_locator=root,
+            monthly_root_capture=evidence.monthly_root_capture,
+        )
+        object.__setattr__(script, "monthly_root_response_sha256", "0" * 64)
+        with self.assertRaises(NARMonthlyConveneInfoBootstrapIntegrityError):
+            resolve_nar_monthly_convene_info_request_material(
+                locator_script_resolution=script,
+                locator_script_capture=evidence.locator_script_capture,
+            )
+
+    def test_staged_wrong_capture_kinds_and_types_fail_closed(self):
+        evidence = _evidence()
+        with self.assertRaises(NARMonthlyConveneInfoBootstrapValidationError):
+            resolve_nar_monthly_convene_info_root_locator(
+                homepage_capture=evidence.monthly_root_capture
+            )
+        root = resolve_nar_monthly_convene_info_root_locator(
+            homepage_capture=evidence.homepage_capture
+        )
+        with self.assertRaises(NARMonthlyConveneInfoBootstrapValidationError):
+            resolve_nar_monthly_convene_info_locator_script(
+                target_date=date(2025, 1, 1),
+                root_locator=root,
+                monthly_root_capture=evidence.locator_script_capture,
+            )
+
     def test_qualified_chain_returns_existing_exact_request_identity(self):
         evidence = _evidence()
         request = resolve_nar_monthly_convene_info_request_identity(
@@ -374,8 +468,26 @@ class NARMonthlyConveneInfoBootstrapTests(unittest.TestCase):
                 "NARMonthlyConveneInfoBootstrapUnsupportedError",
                 "NARMonthlyConveneInfoBootstrapIntegrityError",
                 "NARMonthlyConveneInfoBootstrapEvidence",
+                "NARMonthlyConveneInfoRootLocator",
+                "NARMonthlyConveneInfoLocatorScriptResolution",
+                "NARMonthlyConveneInfoRequestMaterialResolution",
+                "resolve_nar_monthly_convene_info_root_locator",
+                "resolve_nar_monthly_convene_info_locator_script",
+                "resolve_nar_monthly_convene_info_request_material",
                 "resolve_nar_monthly_convene_info_request_identity",
             },
+        )
+        staged_functions = (
+            resolve_nar_monthly_convene_info_root_locator,
+            resolve_nar_monthly_convene_info_locator_script,
+            resolve_nar_monthly_convene_info_request_material,
+        )
+        self.assertTrue(
+            all(
+                value.kind is inspect.Parameter.KEYWORD_ONLY
+                for function in staged_functions
+                for value in inspect.signature(function).parameters.values()
+            )
         )
         parameters = inspect.signature(
             resolve_nar_monthly_convene_info_request_identity
