@@ -8787,3 +8787,52 @@ worktree/index byte equality at the frozen lengths and SHA-256 values for both f
 The full and non-fixture cached whitespace checks pass, the staged set is exactly the ten
 amended Allowed Files, and dedicated 26 plus related 22 tests pass again. Production and
 test bytes were unchanged after the previously passing 3,013-test full suite.
+
+## POST_V0_8_DAILY_REPLAY_18 Finalization and POST_V0_8_DAILY_REPLAY_19 Preparation
+
+The repository-native byte-preservation amendment passed every final gate. Both exact
+fixtures report `text: unset` and `diff: unset`; worktree and index bytes match their
+frozen lengths and SHA-256 values; full and non-fixture cached checks pass; and the
+staged set was exactly the amended ten Allowed Files. Phase 18 was committed as
+`1ff6a42d7c7370efedabe7c87f0c3eb3c5ecd96a` with message
+`feat: add NAR MonthlyConveneInfo bootstrap`. Normal push and fetch succeeded, local HEAD
+equals `origin/feature/post-v0.8-daily-replay` at that SHA, and the worktree/index were
+clean before Phase 19 PREPARE.
+
+PREPARE_PHASE POST_V0_8_DAILY_REPLAY_19 is complete at DRAFT_FOR_REVIEW, DESIGN_ONLY,
+with outcome DURABLE_ARCHIVE_REQUIRED. The read-only audit found that
+`NARHistoricalDailyTargetCaptureArchive` and its Source are Protocols only; no concrete
+production archive, schema, migration or repository stores MonthlyConveneInfo/RaceList
+daily-target captures. Phase 18 bootstrap supplier captures have no Source/Archive
+Protocol or concrete durable owner at all.
+
+The existing SQLite NAR official-response repository is not reusable for this purpose.
+Its capture type, `nar-capture-v1` identity, URL canonicalizer and v001 page-kind schema
+are closed to DEBA_TABLE, HORSE_MARK_INFO and RACE_MARK_TABLE. Widening or recasting that
+v0.8 archive would erase the distinct raw request/evidence identities and mutate an
+unrelated contract.
+
+The approved existing reuse chain remains substantial: the Phase 18 resolver creates
+the exact Monthly request identity; `NARHistoricalDailyTargetLiveCaptureService`
+captures one supplied Monthly/RaceList identity using strict transport and injected
+clock; `normalize_nar_monthly_convene_info` yields raw official RaceList identities; and
+the existing NAR bundle/target-set builders enforce complete envelope/fragment/navigation
+equality. Missing pieces are a separate append-only durable archive for both capture
+families, production supplier-chain acquisition, a deterministic acquisition application
+and an explicit archive setup/composition owner.
+
+The proposed sequence archives exact homepage/root/script captures, validates the Phase
+18 chain, archives the exact Monthly capture, enumerates only its supplied RaceList
+locators, captures every venue once in deterministic baba-code order and invokes the
+existing target-set builder only after the complete set exists. Any failure returns no
+target set; partial immutable captures may remain honestly archived but never become a
+partial/zero denominator or latest fallback. Migration application belongs to a separate
+archive setup boundary, not acquisition, normalization, replay or the main database.
+
+Phase 19 changed only CURRENT_PHASE.md and this report. It performed no production,
+test, fixture, schema, migration, repository, archive or database changes and did not
+stage, commit, push or start another phase.
+
+ChatGPT final independent review approved Phase 19 for commit with the formal outcome
+`DURABLE_ARCHIVE_REQUIRED`. The approved design remains docs-only and authorizes no
+production, test, schema, migration, database or archive implementation in Phase 19.
