@@ -8618,3 +8618,172 @@ source-owned homepage -> Monthly root -> locator script -> changePage(year, mont
 existing request-identity chain for commit. Developer-generated year/month URLs remain
 forbidden. Status is APPROVED_FOR_COMMIT; no implementation is authorized by this
 approval.
+
+## POST_V0_8_DAILY_REPLAY_17 Finalization and POST_V0_8_DAILY_REPLAY_18 Preparation
+
+Phase 17 was staged using exactly CURRENT_PHASE.md and this report, with passing
+unstaged/cached checks, and committed as
+`8d13983751dec3460d903a98d605c632700cc4b8` using the exact message
+`docs: qualify NAR MonthlyConveneInfo bootstrap`. Normal push and fetch succeeded;
+local HEAD and origin/feature/post-v0.8-daily-replay equal that SHA. The worktree and
+index were clean before Phase 18 PREPARE.
+
+PREPARE_PHASE POST_V0_8_DAILY_REPLAY_18 is complete at DRAFT_FOR_REVIEW,
+IMPLEMENTATION, with outcome IMPLEMENTABLE and network boundary SUPPLIED_CAPTURE_ONLY.
+This PREPARE changed docs only and does not authorize implementation.
+
+The proposed implementation separates a minimal bootstrap supplier-capture domain from
+the pure relation resolver. Three exact immutable capture kinds represent the official
+homepage, queryless Monthly root and qualified locator script without widening the
+existing Phase 6 closed capture/request domain. Capture IDs bind exact URL, body digest,
+honest observed_at and page kind; one aggregate evidence identity binds the exact three
+capture IDs. The resolver revalidates all digests/identities before parsing and returns
+only the existing NARHistoricalDailyTargetRequestIdentity.
+
+The strict chain requires one exact raw homepage href, one exact raw root script src,
+unique official year options, all twelve canonical month tokens and the qualified 438-
+byte JavaScript asset. The JavaScript must retain SHA-256
+`bdf86457a9c917fc8259f8b87593c9bbece72d501a95fb5d3573a93b43532515`
+and the single frozen changePage concatenation plus two event bindings. Output is formed
+only from literal byte slices parsed from that script and raw source-exposed year/month
+tokens. No developer URL template, eval/browser, current time or fallback is allowed.
+
+The exact future Allowed Files are two new production modules, two tests, two new full
+official HTML fixtures plus their provenance manifest, and the two docs. The existing
+Phase 6 JavaScript fixture and provenance are read-only dependencies. The two HTML
+fixtures may be materialized only during a future explicit EXECUTE from the exact Phase
+17 URLs and must match frozen byte lengths/SHA-256; mismatch stops before code changes.
+All fixtures remain offline parser/source-contract evidence, not formal replay evidence,
+and tests perform no network.
+
+The 22 required behavior groups cover immutable capture/evidence identities, exact
+homepage/root/script relations, malformed/duplicate/fuzzy rejection, exact JS grammar,
+2020/2021/2024/2025/2026 output identities, honest timestamps, deterministic behavior,
+existing Phase 6 regressions and no network/clock/eval/browser/storage/orchestration
+dependency. Live homepage/root/script acquisition remains unqualified and outside Phase
+18; a later source-acquisition qualification is needed before a networked date-only
+orchestrator can own that preparation. No source-contract blocker remains for supplied-
+capture-only implementation.
+
+No production/test/fixture work, stage, commit, push or next-phase transition was
+performed during Phase 18 PREPARE.
+
+## POST_V0_8_DAILY_REPLAY_18 Review Correction
+
+ChatGPT accepted the execution preflight stop and returned CHANGES_REQUIRED for the
+fixture/version boundary. Status remains DRAFT_FOR_REVIEW and outcome remains
+IMPLEMENTABLE after applying only the requested design correction; no production,
+tests or fixtures were changed.
+
+The homepage and Monthly-root response SHA values are no longer permanent version pins.
+Each dynamic supplied capture instead binds its own exact URL, complete bytes, digest,
+honest requested/observed/stored times, HTTP metadata and deterministic capture ID, and
+must independently satisfy the frozen structural source relation. Unrelated official
+body changes are acceptable only when every exact relation still validates. Arbitrary
+whole-page digest allowlists remain forbidden.
+
+The locator JavaScript remains the sole pinned asset: exact official URL, 438 bytes,
+SHA-256 `bdf86457a9c917fc8259f8b87593c9bbece72d501a95fb5d3573a93b43532515`
+and exact qualified function/event-binding grammar. Existing Phase 6 fixture/provenance
+remain unchanged and read-only.
+
+The preflight Monthly-root candidate with SHA-256
+`55648fea20ab88b481e4beae166a07c22f052807c5a8591a75d8fa61247510dd`
+has requested/observed and HTTP metadata but no honest stored_at. Its status is
+ROOT_FIXTURE_PROVENANCE_MISSING; it is not adopted, is not relabeled as Phase 17
+research material and is not formal replay evidence. The matching homepage candidate
+also lacks a complete stored_at-bearing fixture capture record.
+
+The corrected fixture policy authorizes one later EXECUTE-only controlled acquisition
+attempt for each of the two exact official HTML URLs, with fixed GET/User-Agent/identity
+encoding/no-redirect/TLS/bounds/no-retry rules and honest timestamps. Each exact capture
+must pass immutable integrity plus the strict homepage/root/script/year/month relations
+before exclusive fixture/provenance publication. Failure stops without a second attempt,
+alternate URL or fallback. Resulting HTML fixture digests are recorded in provenance,
+not promoted to production version pins. Tests remain offline and production remains
+SUPPLIED_CAPTURE_ONLY; live supplier acquisition is still outside scope.
+
+## POST_V0_8_DAILY_REPLAY_18 Execution
+
+EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_18 completed with Status
+READY_FOR_REVIEW and no blocker. The implementation is restricted to the exact two new
+production modules, two new test modules, three bootstrap fixture/provenance paths and
+these two docs. Existing Phase 6 production, tests, locator JavaScript and provenance
+remain unchanged.
+
+The one authorized controlled GET attempt for each dynamic HTML fixture succeeded with
+redirects and retries disabled, identity content encoding, unchanged official URLs,
+HTTP 200, strict UTF-8 and honest timestamps. The homepage fixture is 37,763 bytes with
+SHA-256 `84c9d175fbb7e0c814639afda8fd414d62f5caf0cc625f6a1dec6ae6b8e379e4`;
+the Monthly root is 194,872 bytes with SHA-256
+`55648fea20ab88b481e4beae166a07c22f052807c5a8591a75d8fa61247510dd`.
+The existing pinned locator script reverified at 438 bytes and SHA-256
+`bdf86457a9c917fc8259f8b87593c9bbece72d501a95fb5d3573a93b43532515`.
+All three passed the frozen relation chain before publication. The new provenance
+records the exact acquisition metadata and immutable capture/evidence identities; these
+fixtures remain offline parser/source-contract evidence and never formal replay evidence.
+
+The new immutable supplier-capture domain validates exact URLs, bytes, response metadata,
+honest UTC timestamp ordering, body digests and deterministic capture IDs. The pure
+resolver revalidates all capture and aggregate identities, strictly parses the one raw
+homepage root href, one raw root script src, exact offered year/month controls and the
+pinned JavaScript grammar, then returns the existing request-identity type using only
+source-extracted locator bytes. Dynamic unrelated homepage/root changes remain accepted
+only when all frozen relations survive; missing, duplicate, malformed, altered or corrupt
+evidence fails closed. Production contains no network, clock, eval/browser or storage
+boundary.
+
+Verification on Python 3.14: dedicated Phase 18 tests 26 PASS, related Phase 6 regression
+tests 22 PASS and full unittest discovery 3,013 PASS. The exact static boundary search
+is clean. ResourceWarning output occurred only in pre-existing SQLite full-suite paths,
+not the dedicated or related commands. No test was skipped or relaxed. The index remains
+empty; no stage, commit, push or next-phase transition was performed.
+
+## POST_V0_8_DAILY_REPLAY_18 Final Independent Review
+
+ChatGPT independently approved the corrected Phase 18 implementation for commit with
+no blocking issue. Status is APPROVED_FOR_COMMIT and authorization is limited to exact
+staging, commit and normal push of the nine Phase 18 Allowed Files.
+
+The exact nine files were staged, but the mandatory cached whitespace gate stopped
+finalization before commit. `git diff --cached --check` reports only the two newly
+captured byte-exact official HTML fixtures; the other seven staged paths, including
+provenance, production, tests and docs, pass an explicit non-fixture cached check. Both
+fixture worktree/index blob IDs match and their frozen byte lengths/SHA-256 remain
+unchanged, so formatting those official response bytes is forbidden. No Phase 18
+fixture-whitespace exception is currently authorized. No commit, push, fetch-dependent
+advance or Phase 19 PREPARE was performed.
+
+ChatGPT subsequently approved an explicit Phase 18-only exception for captured official-
+response trailing-whitespace bytes in exactly the new homepage and Monthly-root fixture
+paths. The exception requires full cached diagnostics to contain only those two paths and
+only that diagnostic type, all other staged paths to pass, and both worktree and index
+fixture bytes to retain their frozen lengths and SHA-256 values. It creates no global
+fixture or whitespace exception.
+
+The revised mandatory gate still fails closed. The Monthly-root worktree and index both
+match 194,872 bytes and the frozen SHA-256, but Git's active text conversion normalized
+the homepage index blob to 36,715 bytes/SHA-256
+`d2d59a61fa7171148badff66ed25077abe6407bdb1924ba48a8ba88c0e304d58` while its
+worktree retains the required 37,763 bytes/SHA-256. An exact-path re-stage with a local
+one-command autocrlf override did not change that index blob. In addition, the full
+cached check reports `space before tab in indent` as well as `trailing whitespace` in
+the homepage official bytes. The former is a distinct diagnostic type outside the
+approved trailing-whitespace-only exception. The seven non-fixture paths still pass and
+the cached name set remains the exact nine Allowed Files. No fixture was edited, and no
+commit, push or Phase 19 preparation was performed.
+
+ChatGPT then approved the repository-native commit-gate amendment adding
+`.gitattributes` as the sole tenth Allowed File. Two exact-path `-text -diff` rules
+preserve the homepage and Monthly-root official-response fixtures byte-for-byte across
+index and checkout. This rejects the prior homepage LF-normalized index blob and retains
+captured trailing-whitespace, space-before-tab and original line-ending bytes without
+creating a wildcard, global HTML, fixture or whitespace exception. Existing attribute
+rules remain unchanged.
+
+The amended gate now passes. Attribute inspection reports `text: unset` and `diff:
+unset` for both exact fixture paths. Exact-path attribute-aware re-staging produced
+worktree/index byte equality at the frozen lengths and SHA-256 values for both fixtures.
+The full and non-fixture cached whitespace checks pass, the staged set is exactly the ten
+amended Allowed Files, and dedicated 26 plus related 22 tests pass again. Production and
+test bytes were unchanged after the previously passing 3,013-test full suite.
