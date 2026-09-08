@@ -9006,3 +9006,71 @@ ChatGPT final review approved Phase 22 for commit. The reported 34 dedicated, 9 
 28 Phase 20, 22 Phase 6 and 3,058 full-suite passing tests, byte-identical Phase 6 live
 module, static-boundary result, exact six-file scope and empty cached state were accepted.
 Status is `APPROVED_FOR_COMMIT`; no implementation contract changed during finalization.
+
+Phase 22 was committed as `ecb962dcfd6639b9c44c64376db4d611222bcc58` with message
+`feat: add NAR bootstrap staged live capture`. Normal push and fetch completed, local and
+`origin/feature/post-v0.8-daily-replay` matched exactly, and the worktree/index were clean
+before Phase 23 PREPARE.
+
+`PREPARE_PHASE POST_V0_8_DAILY_REPLAY_23` prepared **NAR Daily Target Live Acquisition
+Application Implementation** as `DRAFT_FOR_REVIEW`, type `IMPLEMENTATION`, outcome
+`IMPLEMENTABLE`. Read-only inspection confirmed that the complete target-date flow can
+be composed from Phase 22 supplier capture/staged bootstrap, Phase 18 final identity,
+Phase 6 supplied-request capture, Phase 20 dual archive and the existing Monthly
+normalizer/target-set builder without changing any of them.
+
+The proposed public API consists only of immutable
+`NARDailyTargetLiveAcquisitionResult` and
+`NARDailyTargetLiveAcquisitionApplication.acquire(target_date=...)`. The constructor
+takes one already-migrated archive, the separate supplier and daily-target transports,
+and one injected clock, then composes both existing services with those same objects.
+The application performs the exact fresh supplier-to-Monthly-to-all-RaceList sequence,
+preserves envelope order and exact request objects, calls the builder only after every
+capture succeeds, and never parses, creates URLs, migrates, loads cache, calls a clock,
+or computes completeness/digests itself.
+
+Any failure returns neither result nor partial target set. Earlier independently archived
+captures remain audit evidence but never imply day success. Phase 23 freezes exactly four
+future implementation files and 44 behavior groups plus Phase 22/20/6 and full-suite
+regressions. PREPARE changed only CURRENT_PHASE.md and this report; no production/test,
+database or log file changed, and nothing was staged, committed, pushed or advanced to
+Phase 24.
+
+ChatGPT approved `POST_V0_8_DAILY_REPLAY_23` with outcome `IMPLEMENTABLE`. Status is now
+`APPROVED_FOR_CODEX`; the exact application/result API, single-archive and shared-clock
+composition, frozen acquisition order, no-partial/fresh-live rules, exact four-file scope
+and 44 required behavior groups remain unchanged. This approval step changed docs only
+and did not begin implementation.
+
+`EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_23` implemented the approved thin
+composition layer in `nar_daily_target_live_acquisition.py`. The public immutable result
+retains the exact supplier, Monthly and ordered RaceList capture IDs plus the exact
+builder-returned target set. The application constructs the existing Phase 22 supplier
+and Phase 6 daily-target services with one caller-supplied archive and one injected
+clock, then performs the frozen supplier, bootstrap, Monthly, all-RaceList and builder
+sequence without parsing, URL construction, database logic or another clock call.
+
+The implementation has no exception-to-success conversion. Supplier, staged relation,
+final bootstrap, Monthly, normalizer, first/middle/final RaceList, archive and builder
+failure tests all proved that no result or partial target set is returned. Earlier
+successfully archived captures remain immutable audit evidence. Five synthetic envelope
+locators were all passed by object identity and in order, and repeated acquisition made a
+fresh complete request chain with new observation identities.
+
+Verification passed: 13 dedicated tests passed with `ResourceWarning` treated as an
+error; Phase 22 regression passed 43 tests, Phase 20 migration/archive regression passed
+28 tests, and Phase 6 capture/live/source regression passed 22 tests. The full unittest
+suite passed 3,071 tests. Its warnings were the pre-existing unrelated unclosed-SQLite
+warnings; the dedicated run emitted none. Static inspection found no direct HTTP client,
+provider URL/regex, parser, SQL, migration, cache load, current clock, replay runner,
+prediction, evidence-resolution, settlement or manifest boundary in the new application.
+Git comparison confirmed the existing Phase 22/20/18/6 production files were unchanged.
+
+Only the exact four Allowed Files changed, cached state remained empty, and no database
+or log path changed. Phase 23 is `READY_FOR_REVIEW`; nothing was staged, committed,
+pushed or advanced to Phase 24.
+
+ChatGPT final review approved Phase 23 for commit. The reported 13 dedicated, 43 Phase
+22, 28 Phase 20, 22 Phase 6 and 3,071 full-suite passing tests, static-boundary result,
+unchanged prerequisite production files, exact four-file scope and empty cached state
+were accepted. Status is `APPROVED_FOR_COMMIT`; no implementation contract changed.
