@@ -8904,3 +8904,40 @@ accepted the 28 dedicated, 67 related and 3041 full-suite PASS results, strict s
 boundary result, exact six-file scope, empty index and absence of database/log changes.
 CURRENT_PHASE.md now records `APPROVED_FOR_COMMIT`; the implemented archive contract is
 unchanged.
+
+Phase 20 was committed as `6b412f515918c955a166edb6f7dd5fdbcdccd142` with message
+`feat: add NAR daily target evidence archive`. Normal push and fetch succeeded; local
+HEAD and `origin/feature/post-v0.8-daily-replay` matched that SHA, and the worktree/index
+were clean before Phase 21 PREPARE.
+
+PREPARE_PHASE POST_V0_8_DAILY_REPLAY_21 is complete at `DRAFT_FOR_REVIEW`, type
+`DESIGN_ONLY`, outcome `SUPPLIER_TRANSPORT_SPLIT_REQUIRED`. The read-only audit confirmed
+that the existing Phase 6 live service can be reused unchanged for Monthly and RaceList,
+including its supplied-identity-only, zero-retry, redirect-disabled, bounded exact-byte,
+injected-clock and archive-before-return semantics. Its closed HTML/request type cannot
+safely be widened for homepage/root/JavaScript supplier acquisition.
+
+Phase 18 owns the required strict source relations but exposes them only through the
+complete three-capture resolver. To avoid either copying its parser grammar or fetching a
+developer-literal root/script before the preceding official relation is proved, a small
+first implementation phase must refactor that same logic into staged public locator and
+pinned-script validation functions and add a separate supplier transport/live capture
+service. A second implementation phase then adds the sequencing-only all-day acquisition
+application.
+
+The planned live application always performs a fresh complete chain (Option A); it has no
+capture-ID input or implicit cache fallback. It uses one caller-supplied migrated Phase
+20 archive, explicit supplier/daily transports and injected clock, preserves every raw
+RaceList request identity, captures all locators in deterministic baba-code order, and
+calls the existing complete target-set builder only after every save succeeds. Earlier
+immutable captures may remain after a later failure, but no partial result or target set
+is returned.
+
+Phase 21 PREPARE changed only CURRENT_PHASE.md and this report. It made no production,
+test, fixture, schema, migration, database or archive change; ran no implementation
+tests; and did not stage, commit, push or start Phase 22.
+
+ChatGPT final independent review approved Phase 21 for commit with outcome
+`SUPPLIER_TRANSPORT_SPLIT_REQUIRED`. The staged supplier transport/relation phase and
+later all-day acquisition application remain separately gated; no production contract
+was changed by finalization.
