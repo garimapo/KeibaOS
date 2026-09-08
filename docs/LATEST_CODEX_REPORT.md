@@ -8836,3 +8836,71 @@ stage, commit, push or start another phase.
 ChatGPT final independent review approved Phase 19 for commit with the formal outcome
 `DURABLE_ARCHIVE_REQUIRED`. The approved design remains docs-only and authorizes no
 production, test, schema, migration, database or archive implementation in Phase 19.
+
+Phase 19 was committed as `ed09365df9b77505a2b36a3ad13b2c54efb30bd7` with message
+`docs: design NAR daily target evidence archive`. Normal push and fetch succeeded;
+local HEAD and `origin/feature/post-v0.8-daily-replay` matched that SHA and the worktree
+and index were clean before Phase 20 PREPARE.
+
+PREPARE_PHASE POST_V0_8_DAILY_REPLAY_20 is complete at `DRAFT_FOR_REVIEW`, type
+`IMPLEMENTATION`, outcome `IMPLEMENTABLE`. The read-only audit confirmed that the two
+existing capture domains can be losslessly reconstructed without changing Phase 6 or
+Phase 18, while the closed NAR settlement and JRA archives must remain separate.
+
+The frozen minimal implementation uses one dedicated SQLite database with a schema
+registry, one content-addressed BLOB table, and separate typed metadata tables for
+bootstrap supplier captures and Monthly/RaceList response captures. Migration execution
+is explicit, isolated and transaction-owned by its runner; repository construction only
+performs read-only schema validation. Exact duplicate saves are idempotent, different
+content at the same immutable identity conflicts, and malformed/corrupt storage raises
+the existing global repository integrity error without repair, latest selection or
+fallback.
+
+No aggregate bootstrap row or new supplier Protocol is required: the three primary
+captures remain source evidence and the existing aggregate is reconstructed
+deterministically by a later caller. Phase 20 PREPARE changed only CURRENT_PHASE.md and
+this report. It made no production, test, fixture, migration, schema, database or archive
+change and did not stage, commit, push or begin live acquisition.
+
+`EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_20` preflight stopped before
+implementation because CURRENT_PHASE.md remains `DRAFT_FOR_REVIEW` rather than the
+AGENTS.md-required `APPROVED_FOR_CODEX`. Phase ID, branch, Base Commit, Allowed/Forbidden
+Files, Required Tests and Stop Condition otherwise matched. No production, test,
+migration, schema, database or archive file was changed; no test was run because the
+execution authorization gate did not open, and nothing was staged, committed or pushed.
+
+ChatGPT subsequently approved POST_V0_8_DAILY_REPLAY_20 with outcome `IMPLEMENTABLE`.
+CURRENT_PHASE.md now records `APPROVED_FOR_CODEX`; all frozen schema, migration,
+append-only persistence, exact-load, six-file scope and 30-test-group contracts remain
+unchanged. This approval step made no production, test, migration, schema, database or
+archive change and did not begin execution, stage, commit or push.
+
+EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_20 completed within the exact six Allowed
+Files and is `READY_FOR_REVIEW`. The new isolated v1 migration creates exactly the
+daily-target archive registry, content-addressed BLOB table and two typed capture tables.
+Its explicit runner is deterministic/idempotent and transaction-owning; the repository
+constructor and load/save methods never apply schema.
+
+`SQLiteNARDailyTargetEvidenceArchive` now provides typed supplier
+`save_supplier_capture`/`load_supplier_capture` and existing-Protocol-compatible daily
+`save_capture`/`load_capture`. Both families use exact-ID load, byte/digest/domain
+reconstruction, immutable duplicate no-op versus conflict decisions, and global stored
+data integrity failures without update, delete, replacement, repair, fallback or
+selection APIs. Primary supplier captures remain independent; no aggregate evidence or
+target-set row was introduced.
+
+Dedicated Phase 20 tests passed 28/28 while covering all 30 frozen behavior groups; the
+same dedicated command passed with ResourceWarning promoted to error. Related Phase
+6/18 and existing NAR SQLite archive regressions passed 67/67. The full suite passed
+3041/3041. Reported full-suite ResourceWarnings arose only from pre-existing historical
+snapshot, JRA/main migration and bet-plan test paths, not either new Phase 20 test.
+Python compilation and the frozen static boundary search passed with no forbidden
+network, current-clock, immutable-table mutation, main-migration import or settlement
+archive shortcut. No database, logs, fixture or disallowed file changed; the index is
+empty and no stage, commit or push occurred.
+
+ChatGPT final independent review approved POST_V0_8_DAILY_REPLAY_20 for commit. It
+accepted the 28 dedicated, 67 related and 3041 full-suite PASS results, strict static
+boundary result, exact six-file scope, empty index and absence of database/log changes.
+CURRENT_PHASE.md now records `APPROVED_FOR_COMMIT`; the implemented archive contract is
+unchanged.
