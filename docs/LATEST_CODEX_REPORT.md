@@ -9119,3 +9119,62 @@ The attempted Phase 24 execution instruction was withdrawn. ChatGPT approved the
 completed Phase 24 design for commit, retaining `DESIGN_ONLY` scope and outcome
 `IMPLEMENTABLE`. Status is `APPROVED_FOR_COMMIT`; the architecture will move through a
 separately prepared implementation phase rather than expanding Phase 24.
+
+Phase 24 was committed as `9d9573d7ada6bf68a6f3e88da3cd66ae14189623` with message
+`docs: design NAR daily replay orchestrator`. Normal push and fetch completed, and the
+local and remote feature-branch heads matched exactly before Phase 25 PREPARE.
+
+`PREPARE_PHASE POST_V0_8_DAILY_REPLAY_25` prepared **NAR Daily Replay Orchestrator
+Implementation** as `DRAFT_FOR_REVIEW`, type `IMPLEMENTATION`, with outcome
+`CHANGES_REQUIRED`. The approved Phase 24 component sequence, whole-day gate, exact
+manifest/document/runner binding, retained manifest lifecycle, no-network boundary,
+runner-write distinction and deterministic result/audit identity all transfer unchanged.
+
+Read-only audit found one blocking contract conflict: Phase 24 requires the orchestrator
+to prove caller SQLite connection/path identity through a read-only `PRAGMA database_list`
+check, while the requested Phase 25 boundary forbids direct SQLite SQL execution and its
+static inspection rejects it. There is no existing reusable connection-to-Path binding
+API. Omitting the check would weaken Phase 24; adding it would violate Phase 25. No
+production/test file was created, no test was run, and no scope was expanded. ChatGPT
+review must choose a narrow correction before implementation can be approved.
+
+`REVISE_PREPARE_PHASE POST_V0_8_DAILY_REPLAY_25` resolved that blocker without weakening
+the Phase 24 guarantee. The orchestrator may use only the exact read-only literal
+`PRAGMA database_list` in one private connection/path binding helper. It verifies each
+caller-owned, transaction-free resolver connection identifies the same existing
+filesystem object as the corresponding exact caller path, rejects attachment/in-memory/
+empty/missing/ambiguous/wrong bindings before Phase 14, and neither opens a transaction
+nor rewrites the caller path. All other direct SQLite application SQL remains forbidden.
+The outcome is now `IMPLEMENTABLE`; production/tests remain untouched pending a separate
+Phase 25 approval.
+
+ChatGPT approved `POST_V0_8_DAILY_REPLAY_25` with outcome `IMPLEMENTABLE`. Status is
+`APPROVED_FOR_CODEX`; the exact sole direct SQLite exception is the private fixed
+`PRAGMA database_list` connection/path binding query. Its same-file, no-attachment,
+no-transaction and fail-before-Phase14/16/runner requirements remain frozen, while all
+other direct SQLite application SQL remains forbidden. This approval changed docs only;
+production/tests remain unstarted pending a separate EXECUTE instruction.
+
+`EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_25` implemented the deterministic NAR
+daily replay orchestrator in the exact approved production/test files. The public API is
+`NARDailyReplayExecutionState`, `NARDailyReplayOrchestrationResult` and
+`run_nar_daily_replay(...)`. Before Phase 14 it validates the frozen Phase 23 acquisition
+result and explicit inputs, then proves each caller SQLite connection refers to its exact
+caller-supplied filesystem path using only the fixed read-only `PRAGMA database_list`.
+
+Only `ALL_TARGETS_RESOLVED` reaches Phase 16 and the existing runner. The runner receives
+the exact loader-returned `projection.document` once; the successful manifest is retained
+and its file identity and SHA-256 must remain unchanged across the runner call. Partial and
+no-executable resolutions return immutable deterministic diagnostic results without a
+manifest, runner, summary or metrics. The result audit digest uses the frozen
+`nar-daily-replay-orchestration-audit-v1` canonical content and no current-clock or
+filesystem metadata.
+
+Verification passed: 20 dedicated tests with `ResourceWarning` treated as an error; 34
+Phase 14, 20 Phase 16, 24 schema-v1 request, 19 SQLite replay and 13 Phase 23 regression
+tests (110 combined); and the full unittest suite of 3,091 tests. The dedicated tests
+emitted no warning. Full-suite warnings were the pre-existing unrelated unclosed-SQLite
+warnings. Static inspection found exactly the approved PRAGMA and no other SQL, HTTP,
+acquisition, current-clock, migration or duplicated prediction/settlement boundary. Git
+comparison confirmed Phase 14/16/23 and the replay runner remained unchanged. Phase 25 is
+`READY_FOR_REVIEW`; nothing was staged, committed or pushed.

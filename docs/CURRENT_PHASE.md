@@ -1,90 +1,72 @@
 # Current Phase
 
-Status: `APPROVED_FOR_COMMIT`
+Status: `READY_FOR_REVIEW`
 
-## Identity, authority and outcome
+## Identity and authority
 
-- Phase: `POST_V0_8_DAILY_REPLAY_24`
-- Name: `NAR Daily Replay Orchestrator Design`
-- Phase type: `DESIGN_ONLY`
-- Base Commit: `7133771344b176fcef6ec0fb99fd91f822d6c701`
+- Phase: `POST_V0_8_DAILY_REPLAY_25`
+- Name: `NAR Daily Replay Orchestrator Implementation`
+- Phase type: `IMPLEMENTATION`
+- Base Commit: `9d9573d7ada6bf68a6f3e88da3cd66ae14189623`
 - Branch: `feature/post-v0.8-daily-replay`
 - Preparation outcome: `IMPLEMENTABLE`
-- Production/tests implementation during PREPARE: `NOT_AUTHORIZED`
-- Stage/commit/push during PREPARE: `NOT_AUTHORIZED`
+- PREPARE authorization: documentation only
 
-AGENTS.md, the committed Phase 1 whole-day orchestration contract and the committed
-Phase 13-16 and Phase 23 contracts are authority. This phase only designs the final
-sequencing boundary. It does not amend target discovery, evidence selection, manifest
-schema/publication or Ver0.8 replay behavior.
+AGENTS.md, committed Phase 1, the approved/committed Phase 14, 16, 23 and 24 contracts
+are authority. Phase 25 must implement the already-approved Phase 24 architecture only;
+it may not redesign target discovery, evidence selection, manifest publication or the
+existing replay engine.
 
-## Exact Allowed Files for this DESIGN_ONLY phase
+## PREPARE Allowed Files
+
+Only these files may change during PREPARE:
 
 ```text
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-The following are future implementation candidates, not Allowed Files in Phase 24:
+No production/test/fixture/database/archive file was changed during PREPARE. No test,
+stage, commit or push is authorized before a correction is reviewed and approved.
+
+## Proposed EXECUTE Allowed Files after correction
+
+If the blocking conflict below is corrected and Phase 25 receives a new explicit
+approval, execution scope is exactly:
 
 ```text
 scripts/simulation/nar_daily_replay_orchestrator.py
 tests/test_nar_daily_replay_orchestrator.py
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
 ```
 
-Every other path is forbidden, including existing production/tests, fixtures,
-schema/migrations, database/**, logs/**, archives, CLI, AGENTS.md and release history.
-No network acquisition, replay execution, test execution, staging, commit or push is
-authorized by this PREPARE.
+All other paths remain forbidden, including Phase 14/16/23 production and tests, the
+existing replay runner, migrations, schemas, database/**, logs/**, provider archives,
+fixtures, CLI and AGENTS.md. `database/keiba.db` and logs/ are never staged or committed.
+No scope expansion is authorized by this PREPARE.
 
-## Existing API audit
+## Execution result
 
-The existing boundaries are sufficient without modifying them:
+The approved implementation is complete within the exact four-file scope. The new
+orchestrator retains the frozen acquisition target set, verifies both caller SQLite
+connection/path bindings with the sole approved `PRAGMA database_list`, preserves the
+whole-day gate, reuses Phase 14 and Phase 16 exactly, passes the exact projection document
+to the unchanged runner once, and verifies the published manifest identity and SHA-256
+before and after execution. Partial and no-executable days return only deterministic
+diagnostic results.
 
-- `NARDailyTargetLiveAcquisitionResult` is an immutable audit join containing the exact
-  supplier, Monthly and ordered RaceList capture IDs, supplier evidence identity and
-  audited `DailyHistoricalReplayTargetSet`.
-- `resolve_sqlite_nar_daily_evidence(...)` accepts the exact target set, dataset ID,
-  explicit settlement cutoff and distinct caller-supplied snapshot/capture SQLite
-  connections. It returns the complete ordered Phase 14 resolution and owns all
-  metadata selection plus exact repository loads. It performs no migration.
-- `write_daily_historical_replay_manifest(...)` accepts that resolution plus exact
-  absolute paths, caller run/strategy/budget values and an exact output path. It
-  exclusively publishes deterministic schema-v1 bytes and reloads them with
-  `load_historical_replay_request_document`, returning the exact loaded document.
-- `run_sqlite_historical_replay(document=...)` is the existing Ver0.8 multi-race
-  execution boundary. It owns main-database migration, exact snapshot reload, one
-  multi-race prediction/bet-plan batch, official settlement normalization/persistence
-  and final simulation. It returns one `SimulationSummary`.
-- `run_historical_replay_request(request_path=...)` is the existing standalone artifact
-  re-execution boundary. The initial orchestrator does not use it because Phase 16 has
-  already loaded the artifact and returned that exact document; the orchestrator passes
-  that exact object directly to `run_sqlite_historical_replay` once.
+The immutable result and content-derived audit SHA follow the frozen v1 canonical payload.
+No acquisition/network/current-clock behavior, provider parsing, migration invocation,
+application SQL beyond the approved PRAGMA, new persistence, subset replay or fallback was
+added. Dedicated tests passed 20 cases with `ResourceWarning` treated as errors, the
+required related regressions passed 110 cases, and the full unittest suite passed 3,091
+cases. Existing unrelated full-suite unclosed-SQLite warnings remain; the dedicated suite
+emitted none. Static boundary and read-only prerequisite-file checks passed.
 
-`SimulationSummary` contains strategy identity fields and aggregate race/bet/settlement
-metrics, but no target-set, acquisition, manifest, run ID or daily-completeness identity.
-No immutable daily-result repository or daily-result schema exists. A small wrapper
-result is therefore justified, while result persistence remains separate.
+## Frozen public direction
 
-## Acquisition/replay separation decision
-
-The replay orchestrator accepts one already-frozen exact
-`NARDailyTargetLiveAcquisitionResult`. It never constructs or calls
-`NARDailyTargetLiveAcquisitionApplication`, any Phase 22/6 transport, or `.acquire()`.
-Consequently replay contains no network and cannot silently create new observed times,
-capture IDs, supplier identities or target-set content during a rerun.
-
-The exact acquisition result, rather than a bare target set, is the initial NAR input
-because it retains the complete Phase 23 trace needed to identify which supplier,
-Monthly and RaceList evidence produced the denominator. The Phase 14 call receives
-`acquisition_result.target_set` by exact object identity. No archive lookup reconstructs
-or substitutes acquisition state. A later outer facade/CLI may visibly perform
-`fresh acquire -> freeze result -> replay`, but that is two explicit operations and is
-outside this phase.
-
-## Proposed public API
-
-One future production module exposes only:
+The later implementation must expose only the Phase 24 API:
 
 ```python
 class NARDailyReplayExecutionState(StrEnum):
@@ -126,270 +108,153 @@ def run_nar_daily_replay(
 ) -> NARDailyReplayOrchestrationResult: ...
 ```
 
-The two explicit SQLite connections remain caller-owned and are passed unchanged to
-Phase 14. The orchestrator neither closes them nor changes transaction ownership beyond
-the behavior already owned by Phase 14. `database_path` and
-`nar_settlement_capture_archive_path` are the exact paths later frozen into schema v1;
-the latter is the existing settlement official-response archive, never the Phase 20
-daily-target evidence archive.
+Inputs are explicit. The frozen Phase 23 acquisition result and its exact target set are
+the replay authority. No fresh acquisition, supplier/daily-target transport, HTTP,
+network fallback, cache lookup, target reconstruction, default cutoff, default strategy,
+default budget or current-clock input is permitted.
 
-Before resolution, the orchestrator must fail closed unless each connection's SQLite
-`main` database, as reported by the read-only `PRAGMA database_list`, names the same
-existing filesystem object as its corresponding absolute path. Attached databases,
-empty/in-memory paths, ambiguity, missing files or disagreement are rejected. This
-prevents resolution against one evidence store followed by execution against another.
-The check performs no DDL/DML, migration or repair. It must not rewrite the caller's
-path text; the exact supplied absolute paths still enter the manifest.
+## Frozen execution sequence
 
-All inputs are exact domain types. Connections must be distinct and transaction-free;
-paths must be absolute, nonempty and NUL-free; `dataset_id` must equal
-`run_context.dataset_id`; and the acquisition target set must be the exact supported,
-nonempty singleton `NAR/nar_official` scope. No value has a default and no current clock,
-environment, cwd, file timestamp or database row order supplies missing context.
-
-## Exact orchestration sequence
+For exact caller inputs, the implementation must compose only existing boundaries:
 
 ```text
-validate all explicit inputs and connection/path bindings
-  -> call resolve_sqlite_nar_daily_evidence exactly once with
-       acquisition_result.target_set unchanged,
-       exact dataset_id,
-       exact settlement_information_cutoff,
-       exact snapshot_connection and capture_connection
-  -> retain the complete returned resolution
-  -> inspect resolution.day_state
-  -> if PARTIALLY_RESOLVED: return diagnostic NOT_RUN result; no manifest/runner
-  -> if NO_EXECUTABLE_TARGETS: return diagnostic NOT_RUN result; no manifest/runner
-  -> if ALL_TARGETS_RESOLVED: require every target outcome EXECUTABLE
-  -> call write_daily_historical_replay_manifest exactly once with the exact
-       resolution, database/archive paths, run context, strategy, budget and path
-  -> require a non-None exact reloaded document covering every target
-  -> hash the exact frozen manifest bytes
-  -> call run_sqlite_historical_replay(document=projection.document) exactly once
-  -> re-hash and require the manifest bytes remained unchanged
-  -> validate the exact SimulationSummary type, strategy identity fields and
-       race_count == canonical_target_count
-  -> construct FULL_DAY_REPLAY_COMPLETED result
+frozen NARDailyTargetLiveAcquisitionResult
+  -> resolve_sqlite_nar_daily_evidence(
+       exact target_set, dataset_id, settlement_information_cutoff,
+       snapshot_connection, capture_connection)
+  -> whole-day state gate
+  -> write_daily_historical_replay_manifest(
+       exact resolution, database/archive paths, run context, strategy, budget, path)
+  -> exact Phase 16 projection.document
+  -> SHA-256 of exact manifest bytes
+  -> run_sqlite_historical_replay(document=projection.document) once
+  -> require unchanged post-run manifest SHA-256
+  -> immutable orchestration result
 ```
 
-The orchestrator does not call the loader a second time. Phase 16's returned document is
-already the loader-reconstructed schema-v1 authority and is passed by exact object
-identity to the runner. The standalone request application remains available to rerun
-the retained artifact later.
+`ALL_TARGETS_RESOLVED` is the only state allowed to reach manifest and runner. The exact
+Phase 16 reloaded `HistoricalReplayRequestDocument` is passed directly to the runner;
+there is no CLI subprocess, second loader, rebuilt request, rewritten budget or capture
+catalog.
 
-## Whole-day resolution and no-partial policy
+`PARTIALLY_RESOLVED` and `NO_EXECUTABLE_TARGETS` produce only their approved immutable
+diagnostic result. They have `manifest_projection=None`, `manifest_sha256=None` and
+`summary=None`, generate no manifest, call no runner and never claim partial metrics,
+formal daily success or a successful zero-race day. Phase 16's lower-level executable
+subset capability must not weaken this whole-day gate.
 
-| Phase 14 state | Phase 24 action | Meaning |
-| --- | --- | --- |
-| `ALL_TARGETS_RESOLVED` | Require a nonempty denominator whose every outcome is `EXECUTABLE`; generate one full manifest and invoke the runner once | Only state eligible for formal full-day replay |
-| `PARTIALLY_RESOLVED` | Return `NOT_RUN_PARTIAL_RESOLUTION` with exact acquisition and resolution; do not call Phase 16 or runner | Diagnostic outcome only; no partial replay or metrics |
-| `NO_EXECUTABLE_TARGETS` | Return `NOT_RUN_NO_EXECUTABLE_TARGETS` with exact acquisition and resolution; do not call Phase 16 or runner | Audited nonempty denominator has no executable target; never a successful zero-race day |
+The manifest path is an exact caller-supplied absolute path. Phase 16 retains exclusive
+creation, no overwrite, no alternative filename, no random/clock suffix and reload
+validation. After successful publication it remains available as an audit/rerun artifact;
+the orchestrator does not delete it, including after a runner failure. Mutation before or
+after the runner fails closed without a retry or alternate manifest.
 
-Phase 23's supported target set is nonempty. Therefore `NO_EXECUTABLE_TARGETS` never
-means that a zero-race provider day was positively proven. A discovery/integrity error
-raises before any result. Non-run results have `manifest_projection=None`,
-`manifest_sha256=None` and `summary=None`; they expose no ROI or partial metrics.
+## Existing runner boundary
 
-The orchestrator intentionally does not use Phase 16's permitted partial projection.
-That projection remains a valid lower-level diagnostic artifact contract, but the
-initial formal daily replay policy is stricter. No race is dropped, skipped, retried or
-reclassified by Phase 24.
+The Phase 25 orchestrator itself must not execute direct SQLite application SQL, invoke
+migrations, implement prediction/betting/allocation/settlement/payout logic, persist a
+new daily orchestration aggregate, or alter the replay runner. Its sole direct SQLite
+metadata exception is the exact fixed literal `PRAGMA database_list` for the private
+connection/path binding check below. It also must not parse source HTML/JS, generate
+provider URLs, use network/current-clock APIs, or call Phase 23 `.acquire()`.
 
-## Result invariants and audit identity
+The unchanged existing `run_sqlite_historical_replay` remains the sole runner boundary
+and is explicitly allowed to retain its already-approved internal behavior: main-database
+migration, historical bet-plan persistence, official settlement/result/payout persistence
+and final `SimulationSummary` generation. Deferred persistence means only that new
+`NARDailyReplayOrchestrationResult`/daily aggregate persistence is outside Phase 25.
 
-The immutable result always retains the exact acquisition result and exact complete
-resolution. `canonical_target_count` is derived from the audited target set;
-`executable_count` is derived from exact dispositions. No `target_race_count` field is
-introduced and `SimulationSummary.race_count` remains unchanged.
+`StrategyIdentity`, uniform `BetStakeBudget`, `SimulationRunContext`, database/archive
+paths and the explicit settlement cutoff pass unchanged to the existing components.
+Acquisition timestamps, stored timestamps, manifest metadata and runner time never become
+prediction or settlement causality.
 
-For `FULL_DAY_REPLAY_COMPLETED`, the result requires:
+## Result and deterministic audit identity
 
-- exact target-set equality/object binding through acquisition, resolution and manifest;
-- `executable_count == canonical_target_count > 0`;
-- a non-None Phase 16 projection/document and lowercase manifest SHA-256;
-- the document's source path equals the caller's manifest path;
-- document run context, strategy, dataset, paths, budget coverage and ordered races are
-  the exact Phase 16 outputs;
-- an exact `SimulationSummary` whose strategy ID/name/config hash equal the supplied
-  `StrategyIdentity` and whose `race_count` equals the full denominator.
+The successful result retains the frozen acquisition result, complete Phase 14 resolution,
+execution state, Phase 16 projection, manifest SHA-256 and exact `SimulationSummary`.
+It requires `ALL_TARGETS_RESOLVED`, a non-None exact document/summary, full canonical
+target coverage and `summary.race_count == canonical_target_count`. It adds no
+`target_race_count` field and computes no metric itself.
 
-`orchestration_audit_sha256` is a content-derived lowercase SHA-256, not a clock-based
-run ID and not a persistence key. Its canonical payload version is
-`nar-daily-replay-orchestration-audit-v1` and contains:
+The deterministic `orchestration_audit_sha256` remains the Phase 24 content-derived
+identity. It binds the frozen acquisition identities/target-set digest, complete ordered
+resolution, state, exact explicit orchestration inputs and manifest digest/null. It uses
+the Phase 24 frozen UTF-8/NFC canonical JSON rules, UTC microsecond datetimes, sorted
+object keys and authoritative tuple order. It contains no UUID, random value, current
+time, mtime, object ID, memory address, repr or unordered iteration. Diagnostic results
+also receive this deterministic audit identity, but never an empty fake summary.
 
-- target date; all Phase 23 supplier/Monthly/ordered RaceList capture IDs and supplier
-  evidence identity; and `target_set.content_sha256`;
-- dataset, selection policy, settlement cutoff, resolution state and every ordered
-  outcome's target key, disposition/reasons, internal race ID, exact snapshot identity
-  fields/content digest and exact result/payout reference fields;
-- exact database/archive/manifest path strings, caller run-context fields, strategy
-  ID/name/config hash and uniform budget amount;
-- execution state and manifest SHA-256 or null.
+## Approved SQLite connection/path binding exception
 
-Object keys are lexically sorted; lists retain their authoritative tuple order; text is
-UTF-8/NFC; datetimes are UTC ISO-8601 with microseconds and explicit `+00:00`; JSON uses
-`ensure_ascii=False`, `allow_nan=False`, separators `(',', ':')`, no trailing LF, then
-SHA-256. Optional values are explicit JSON null. Python repr, unordered iteration,
-locale, filesystem metadata and current time are forbidden digest material.
-
-The audit digest identifies the frozen acquisition, complete resolution and exact replay
-request/run inputs. The exact `SimulationSummary` remains a first-class result value and
-is not redundantly reserialized into this request/evidence audit digest. Equal frozen
-inputs produce the same audit digest; changing the target-set content digest, selected
-evidence, run context, strategy, budget, paths, state or manifest bytes changes it.
-
-## Manifest lifecycle
-
-The caller exclusively owns selection and retention of the exact absolute manifest
-destination. Its parent must already exist. Phase 24 never invents a clock/random/temp
-name, creates directories, overwrites, selects another path or retries publication.
-
-For an all-resolved day, Phase 16 owns exclusive creation and safe cleanup only when its
-own publication/reload validation fails. Once Phase 16 returns successfully, the
-manifest remains as an audit and exact-rerun artifact. Phase 24 never deletes it,
-including after a runner or post-run validation failure. The caller may manage retention
-outside this application, but no automatic cleanup is designed here.
-
-The orchestrator hashes bytes after successful Phase 16 publication and again after the
-runner. Any mutation/replacement/read failure prevents a successful daily result. It
-does not trigger a rewrite, alternate filename or rerun. Existing runner durable effects
-may remain, exactly as Phase 1 already permits after runner failure.
-
-## Strategy, budget and causal boundaries
-
-`StrategyIdentity` is the sole strategy authority and is passed unchanged to Phase 16.
-There is no duplicate StrategyConfig, default strategy or current-market selection.
-The one exact `BetStakeBudget` is passed unchanged; Phase 16 alone projects it to all
-manifest races. No per-race/venue/confidence/portfolio fallback is introduced.
-
-The exact caller `settlement_information_cutoff` is passed to Phase 14 and copied by
-Phase 16. Snapshot selection remains bounded by each audited scheduled start inside
-Phase 14. `SimulationRunContext.started_at` is caller-supplied. Acquisition observed
-times, current time, manifest timestamps and file metadata are never substituted for a
-prediction, settlement or snapshot cutoff.
-
-## Runner and failure semantics
-
-`run_sqlite_historical_replay` is called once and only once, only after an all-resolved
-full manifest exists. Phase 24 never directly calls prediction, plan generation,
-strategy allocation, provider normalizers, payout handling, settlement or metrics code.
-It never parses raw HTML or reconstructs provider URLs/identities.
-
-Resolver, connection-binding, projection, reload, file-integrity and runner exceptions
-propagate with their existing type/cause. The orchestrator does not catch them into a
-success or generic wrapper. A runner exception returns no orchestration result and no
-partial `SimulationSummary`; it triggers no retry, target removal, reduced manifest,
-fallback dataset/capture or per-race replay. Existing durable plan/result/payout prefix
-may remain and is not repaired or rolled back by this layer.
-
-An invalid runner return, summary strategy mismatch, summary race-count mismatch or
-post-run manifest mutation also raises and returns no successful result. No daily-result
-failure row is written in this phase.
-
-## Network, migration and persistence boundaries
-
-The future orchestrator is no-network and must contain no HTTP client, supplier
-transport or Phase 23 `.acquire()` call. It has no browser/eval/exec and no current-clock
-call. It performs no source acquisition, archive cache lookup or fallback.
-
-Phase 24 adds no SQL domain logic, DDL, migration invocation or schema repair. Its only
-SQLite-specific validation is read-only connection/path binding. Phase 14 owns evidence
-reads and the existing runner remains the sole owner of main-database migration plus
-replay writes. The Phase 20 daily-target archive is not opened by replay.
-
-This is an ownership boundary, not a claim that the complete replay path is read-only.
-The orchestrator itself must not call `apply_migrations`, persist an orchestration
-aggregate, or implement settlement/bet-plan persistence. After the orchestrator makes
-its one approved call, the unchanged existing `run_sqlite_historical_replay` is already
-authorized to apply its main migrations, persist historical bet plans, persist official
-settlement facts and race-result/payout data, then build `SimulationSummary`. Those are
-existing runner behaviors, not new Phase 24 persistence. Only persistence of
-`NARDailyReplayOrchestrationResult` or a daily aggregate remains deferred.
-
-Daily replay result persistence and cumulative aggregation are deferred to a separately
-reviewed phase, tentatively `Daily Replay Result Persistence and Aggregation`. That phase
-may persist successful and failed batch audit state but must not alter this execution
-contract or `SimulationSummary`. Phase 24 implementation must first close deterministic
-execution only.
-
-## Required tests for a later IMPLEMENTATION phase
-
-One future test module must freeze at least these behavior groups:
-
-1. exact public enum/result/function API and exact keyword-only signature;
-2. exact frozen Phase 23 acquisition result required; no bare/substituted target set;
-3. no Phase 23 application construction or `.acquire()` call;
-4. exact acquisition target-set object passed unchanged to Phase 14;
-5. exact dataset ID and settlement cutoff passed unchanged;
-6. exact snapshot and settlement-capture connection objects passed unchanged;
-7. connection/path binding accepts exact existing pair and rejects mismatch, attachment,
-   in-memory/empty path, missing path and alias ambiguity without writes;
-8. exact database, settlement archive and manifest paths propagated without cwd/default;
-9. `ALL_TARGETS_RESOLVED` proceeds only when every target is EXECUTABLE;
-10. `PARTIALLY_RESOLVED` returns diagnostic non-run state with full denominator;
-11. `NO_EXECUTABLE_TARGETS` returns diagnostic non-run state and is not a zero-race success;
-12. partial/no-executable states create no manifest and invoke no loader/runner;
-13. no partial summary/ROI or successful full-day claim exists;
-14. Phase 16 writer is called exactly once only for all-resolved input;
-15. exact StrategyIdentity, uniform budget and SimulationRunContext propagate unchanged;
-16. Phase 16 exclusive-create, existing-path and parent-missing failures propagate;
-17. exact Phase 16 loaded document object is passed to the runner;
-18. existing schema-v1 loader/revalidation is retained with no second custom loader;
-19. existing Ver0.8 SQLite runner is called exactly once, is unchanged, and its existing
-    internal migration/bet-plan/settlement/result/payout writes remain allowed;
-20. runner summary exact type/strategy/race-count validation;
-21. resolver failure creates no manifest and makes no runner call;
-22. projection/reload failure makes no runner call;
-23. runner failure returns no result/partial summary and does not retry;
-24. invalid runner return or summary mismatch fails closed;
-25. no target skip/drop, per-race loop, reduced-manifest rerun or fallback evidence;
-26. manifest SHA is exact, retained, and unchanged before/after runner;
-27. runner failure retains the successfully frozen manifest; no orchestrator cleanup;
-28. exact acquisition capture IDs and supplier identity remain traceable in result/digest;
-29. exact complete resolution and denominator remain in every returned state;
-30. canonical target and outcome ordering remain deterministic;
-31. canonical/executable count properties are derived correctly; no target_race_count;
-32. deterministic canonical audit SHA for identical frozen inputs;
-33. target-set digest/evidence/run/strategy/budget/path/state/manifest changes alter audit SHA;
-34. audit SHA contains no clock/filesystem timestamp/repr/unordered material;
-35. no network/HTTP/supplier transport/cache/live-acquisition behavior;
-36. no direct current-clock dependency or causal timestamp substitution;
-37. no prediction, bet, provider parser/normalizer, payout, settlement or metrics duplication;
-38. orchestrator itself makes no migration call, DDL/DML, database repair or Phase 20
-    archive use; this does not prohibit the invoked unchanged runner's existing writes;
-39. caller-owned connections remain open and transaction-free after normal resolution;
-40. Phase 14 resolver regression;
-41. Phase 16 projection and schema-v1 loader/request-application regressions;
-42. existing SQLite historical replay application regression;
-43. Phase 23 acquisition regression;
-44. full unittest suite and static boundary checks.
-
-Future verification must include dedicated, Phase 14, Phase 16/request, runner and Phase
-23 regressions plus:
+Phase 24's anti-cross-store guarantee remains mandatory. Before calling Phase 14, a
+private `_require_connection_path_binding(connection, expected_path, name)` helper uses
+the only direct SQLite query authorized in this module, exactly the fixed literal:
 
 ```text
-python -m unittest discover -s tests -p "test_*.py"
-rg -n "requests|httpx|urllib\.request|socket|NARDailyTargetLiveAcquisitionApplication|\.acquire\(|datetime\.now|datetime\.today|utcnow|time\.time|apply_migrations|CREATE TABLE|INSERT |UPDATE |DELETE |BeautifulSoup|HTMLParser|PredictionPipeline|acquire_and_persist_official_settlement_facts|execute_final_historical_settlement_simulation" scripts/simulation/nar_daily_replay_orchestrator.py
-git diff --check
-git diff --name-only
-git status --short
-git diff --cached --name-only
+PRAGMA database_list
 ```
 
-Expected static hits from imported immutable result/types or explanatory strings must be
-individually justified; direct boundary calls are forbidden. Tests use temporary SQLite
-files and caller paths only, never database/keiba.db, logs, network or provider archives.
-No failure is skipped or relaxed.
+The helper accepts no SQL from a caller and constructs no SQL. It exists only to prove
+that the caller-owned connection resolves to the same existing filesystem object as the
+exact caller-supplied path later named in the manifest/replay request.
+
+For both `snapshot_connection -> database_path` and
+`capture_connection -> nar_settlement_capture_archive_path`, require before Phase 14:
+
+- exact approved SQLite connections, distinct and transaction-free;
+- an absolute, nonempty, NUL-free expected Path which exists as a filesystem file;
+- a successful `PRAGMA database_list` result with exactly one usable `main` binding;
+- no attached database, empty filename, `:memory:`/in-memory state, unexpected row
+  shape, ambiguous/non-filesystem result or path mismatch; and
+- filesystem-object equality using `Path.samefile(...)` or an equivalent identity check,
+  rather than textual spelling equality.
+
+Aliases to the same existing file may therefore bind successfully. The exact original
+caller Path text nevertheless remains authoritative for Phase 16 serialization; it is
+never replaced, resolved or rewritten from SQLite's reported text.
+
+The binding query must neither begin nor leave a transaction. The helper verifies
+`connection.in_transaction` before and after it, issues no commit/rollback, does not
+close/reopen/repair a connection and fails closed before Phase 14, Phase 16 or the runner
+on any uncertainty. No SELECT against application tables, INSERT, UPDATE, DELETE, DDL,
+VACUUM, ATTACH, DETACH, transaction control, schema inspection, arbitrary/dynamic PRAGMA,
+migration or application data read/write is permitted in the orchestrator.
+
+No utility module, repository, schema or migration is added for this one private
+infrastructure invariant.
+
+## Required tests after correction
+
+The implementation must carry the Phase 24 frozen behavior groups, including:
+
+- exact frozen acquisition result; no Phase 23 acquisition/network/cache;
+- exact target set, dataset, settlement cutoff and caller connections into Phase 14;
+- exact private binding: correct snapshot/archive pairs pass; wrong paths, unexpected
+  pairings, attachments, in-memory/empty/missing/non-file paths and active transactions
+  fail closed before Phase 14/16/runner; supported same-file aliases pass; no transaction
+  remains after the fixed PRAGMA; and PRAGMA errors propagate;
+- only all-resolved execution; partial/zero diagnostic-only with no manifest/runner/summary;
+- exact Phase 16 reuse and propagation of paths, run context, strategy and uniform budget;
+- exact `projection.document` passed to unchanged runner once; no subset/retry/fallback;
+- SHA-256 before/after runner, mutation fail-closed, frozen manifest retained on runner error;
+- exact full-day `SimulationSummary`, no new aggregate persistence and no metric logic;
+- deterministic audit SHA, including changes to semantic acquisition/target inputs;
+- no network, current clock, direct migration, source parsing, provider URL construction,
+  prediction, allocation, settlement, payout parsing or manifest-schema duplication;
+- static inspection proves the only direct `.execute(...)` SQL is exactly
+  `PRAGMA database_list`, with no executemany/executescript, SQL construction or other
+  SQLite application query;
+- Phase 14, Phase 16/schema-v1 request, SQLite replay runner and Phase 23 regressions;
+- full unittest suite and static-boundary inspection.
+
+Dedicated tests must use temporary caller-supplied SQLite files/paths only, never
+database/keiba.db, logs, network or provider archives. Dedicated warnings are errors;
+existing unrelated suite warnings must be reported separately.
 
 ## Stop condition
 
-Outcome is `IMPLEMENTABLE`: the current Phase 14, Phase 16 and Ver0.8 runner APIs can be
-composed safely in one new production module and one new test module; no adapter split or
-existing production/schema change is required.
-
-Stop at `DRAFT_FOR_REVIEW` after updating only the two documentation files and running
-Git checks. Do not implement, test, stage, commit, push, execute replay, begin result
-persistence or advance to another phase. Any review-discovered inability to prove
-connection/path binding, retain whole-day semantics, pass the exact loaded document, or
-avoid modifying an existing contract changes the outcome to `ORCHESTRATOR_SPLIT_REQUIRED`
-and must return to ChatGPT review.
+Stop at `DRAFT_FOR_REVIEW` with outcome `IMPLEMENTABLE`. Do not implement, create tests,
+run implementation tests, stage, commit, push or advance automatically. A separate
+`APPROVE_PHASE` and `EXECUTE_APPROVED_PHASE` remain required before the exact four-file
+implementation scope becomes writable.
