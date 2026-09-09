@@ -22,9 +22,13 @@ def _connection() -> sqlite3.Connection:
     return connection
 
 
+def _through(version: int) -> tuple[object, ...]:
+    return tuple(item for item in MIGRATIONS if item.VERSION <= version)
+
+
 def _v014() -> sqlite3.Connection:
     connection = _connection()
-    apply_migrations(connection, migrations=MIGRATIONS[:-1])
+    apply_migrations(connection, migrations=_through(14))
     return connection
 
 
@@ -38,12 +42,12 @@ def test_v015_identity_registration_and_exact_scope() -> None:
     source_columns = _columns(connection, "historical_input_source_identities")
     race_columns = _columns(connection, "historical_input_external_races")
     entry_columns = _columns(connection, "historical_input_external_entries")
-    apply_migrations(connection)
+    apply_migrations(connection, migrations=_through(15))
     after_tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert migration.VERSION == 15
     assert migration.NAME == "v015_jra_race_replay_seed_schema"
     assert tuple(item.VERSION for item in MIGRATIONS).count(15) == 1
-    assert MIGRATIONS[-1] is migration
+    assert tuple(item for item in MIGRATIONS if item.VERSION == 15) == (migration,)
     assert after_tables - before_tables == {"jra_race_replay_seeds", "jra_race_replay_seed_entries"}
     assert _columns(connection, "historical_input_source_identities") == source_columns
     assert _columns(connection, "historical_input_external_races") == race_columns
@@ -57,13 +61,13 @@ def test_v015_identity_registration_and_exact_scope() -> None:
     assert connection.execute(
         "SELECT 1 FROM sqlite_master WHERE type='index' AND name LIKE '%external_races%exact%'"
     ).fetchone() is None
-    apply_migrations(connection)
+    apply_migrations(connection, migrations=_through(15))
     assert get_applied_versions(connection)[15] == migration.NAME
 
 
 def test_v015_foreign_keys_natural_identity_and_fixed_family_checks() -> None:
     connection = _connection()
-    apply_migrations(connection)
+    apply_migrations(connection, migrations=_through(15))
     header_sql = connection.execute(
         "SELECT sql FROM sqlite_master WHERE type='table' AND name='jra_race_replay_seeds'"
     ).fetchone()[0]
@@ -120,7 +124,7 @@ def _insert_header(connection: sqlite3.Connection, seed, **changes: object) -> N
 
 def test_v015_accepts_valid_exact_mapping_and_rejects_bad_children() -> None:
     connection = _connection()
-    apply_migrations(connection)
+    apply_migrations(connection, migrations=_through(15))
     seed = _valid_state(connection)
     _insert_header(connection, seed)
     connection.execute(
@@ -146,7 +150,7 @@ def test_v015_accepts_valid_exact_mapping_and_rejects_bad_children() -> None:
 ])
 def test_v015_rejects_malformed_header_or_foreign_mapping(changes: dict[str, object]) -> None:
     connection = _connection()
-    apply_migrations(connection)
+    apply_migrations(connection, migrations=_through(15))
     seed = _valid_state(connection)
     with pytest.raises(sqlite3.IntegrityError):
         _insert_header(connection, seed, **changes)
@@ -154,13 +158,13 @@ def test_v015_rejects_malformed_header_or_foreign_mapping(changes: dict[str, obj
 
 def test_registered_v014_without_request_identity_column_fails_before_mutation() -> None:
     connection = _connection()
-    apply_migrations(connection, migrations=MIGRATIONS[:-2])
+    apply_migrations(connection, migrations=_through(13))
     connection.execute(
         "INSERT INTO schema_migrations VALUES(14,'v014_historical_input_request_identity_schema','2025-01-01T00:00:00+00:00')"
     )
     connection.commit()
     with pytest.raises(RuntimeError, match="v014 provenance evidence"):
-        apply_migrations(connection)
+        apply_migrations(connection, migrations=_through(15))
     assert get_applied_versions(connection).get(15) is None
     assert connection.execute("SELECT 1 FROM sqlite_master WHERE name='jra_race_replay_seeds'").fetchone() is None
 
@@ -173,7 +177,7 @@ def test_malformed_mapping_key_or_fk_prerequisite_fails_before_mutation() -> Non
     connection.commit()
     connection.execute("PRAGMA foreign_keys=ON")
     with pytest.raises(RuntimeError):
-        apply_migrations(connection)
+        apply_migrations(connection, migrations=_through(15))
     assert get_applied_versions(connection).get(15) is None
     assert connection.execute("SELECT 1 FROM sqlite_master WHERE name='jra_race_replay_seeds'").fetchone() is None
 
@@ -183,7 +187,7 @@ def test_preexisting_partial_v015_object_is_not_adopted() -> None:
     connection.execute("CREATE TABLE jra_race_replay_seeds(fake TEXT)")
     connection.commit()
     with pytest.raises(RuntimeError, match="already exist"):
-        apply_migrations(connection)
+        apply_migrations(connection, migrations=_through(15))
     assert get_applied_versions(connection).get(15) is None
     assert _columns(connection, "jra_race_replay_seeds") == ("fake",)
     assert connection.execute("SELECT 1 FROM sqlite_master WHERE name='jra_race_replay_seed_entries'").fetchone() is None

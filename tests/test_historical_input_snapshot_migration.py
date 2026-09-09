@@ -17,6 +17,7 @@ from scripts.migrations.versions import (
     v013_historical_past_race_race_time_domain_schema,
     v014_historical_input_request_identity_schema,
     v015_jra_race_replay_seed_schema,
+    v016_nar_daily_replay_result_schema,
 )
 
 
@@ -47,6 +48,10 @@ V010_TRIGGERS = {
 UTC = "2026-08-05T12:00:00.000000+00:00"
 CUTOFF = "2026-08-05T12:30:00.000000+00:00"
 HASH = "a" * 64
+
+
+def _through(version: int) -> tuple[object, ...]:
+    return tuple(item for item in MIGRATIONS if item.VERSION <= version)
 
 
 class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
@@ -137,10 +142,12 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         self.assertEqual(v014_historical_input_request_identity_schema.NAME, "v014_historical_input_request_identity_schema")
         self.assertEqual(v015_jra_race_replay_seed_schema.VERSION, 15)
         self.assertEqual(v015_jra_race_replay_seed_schema.NAME, "v015_jra_race_replay_seed_schema")
-        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS), (8, 9, 10, 11, 12, 13, 14, 15))
+        self.assertEqual(v016_nar_daily_replay_result_schema.VERSION, 16)
+        self.assertEqual(v016_nar_daily_replay_result_schema.NAME, "v016_nar_daily_replay_result_schema")
+        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS), (8, 9, 10, 11, 12, 13, 14, 15, 16))
         self.assertEqual(
             get_applied_versions(connection),
-            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema", 14: "v014_historical_input_request_identity_schema", 15: "v015_jra_race_replay_seed_schema"},
+            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema", 14: "v014_historical_input_request_identity_schema", 15: "v015_jra_race_replay_seed_schema", 16: "v016_nar_daily_replay_result_schema"},
         )
         self.assertEqual(
             {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'historical_input_%'")},
@@ -164,7 +171,7 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         apply_migrations(connection)
         self.assertEqual(
             connection.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall(),
-            [(8,), (9,), (10,), (11,), (12,), (13,), (14,), (15,)],
+            [(8,), (9,), (10,), (11,), (12,), (13,), (14,), (15,), (16,)],
         )
         self.assertEqual(connection.execute("SELECT count(*) FROM historical_input_snapshots").fetchone()[0], 0)
         for table in HISTORICAL_TABLES:
@@ -175,7 +182,7 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
 
     def test_v014_adds_nullable_request_identity_without_rewriting_nonempty_store(self) -> None:
         connection = self.db()
-        apply_migrations(connection, migrations=MIGRATIONS[:-2])
+        apply_migrations(connection, migrations=_through(13))
         self.source_and_external_mapping(connection)
         self.header(connection)
         self.entry(connection)
@@ -295,7 +302,7 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
 
     def test_v011_keeps_identity_linkage_rows_when_snapshot_store_is_empty(self) -> None:
         connection = self.db()
-        apply_migrations(connection, MIGRATIONS[:4])
+        apply_migrations(connection, _through(11))
         self.source_and_external_mapping(connection)
         connection.commit()
         columns = {row[1] for row in connection.execute("PRAGMA table_info(historical_input_snapshot_past_races)")}
@@ -309,7 +316,7 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
 
     def test_v012_rejects_nonempty_snapshot_store_atomically(self) -> None:
         connection = self.db()
-        apply_migrations(connection, MIGRATIONS[:4])
+        apply_migrations(connection, _through(11))
         self.source_and_external_mapping(connection)
         self.header(connection)
         connection.commit()
@@ -332,7 +339,7 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
 
     def test_v013_removes_obsolete_column_from_empty_store_and_preserves_linkage(self) -> None:
         connection = self.db()
-        apply_migrations(connection, MIGRATIONS[:5])
+        apply_migrations(connection, _through(12))
         self.source_and_external_mapping(connection)
         connection.commit()
         before = {row[1] for row in connection.execute("PRAGMA table_info(historical_input_snapshot_past_races)")}
@@ -348,7 +355,7 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
 
     def test_v013_rejects_nonempty_snapshot_store_before_schema_mutation(self) -> None:
         connection = self.db()
-        apply_migrations(connection, MIGRATIONS[:5])
+        apply_migrations(connection, _through(12))
         self.source_and_external_mapping(connection)
         self.header(connection)
         connection.commit()

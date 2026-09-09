@@ -131,6 +131,7 @@ class NARDailyReplayOrchestratorTests(unittest.TestCase):
         self.assertEqual(subject.__all__, (
             "NARDailyReplayExecutionState",
             "NARDailyReplayOrchestrationResult",
+            "compute_nar_daily_replay_orchestration_audit_sha256",
             "run_nar_daily_replay",
         ))
         self.assertEqual(
@@ -160,6 +161,42 @@ class NARDailyReplayOrchestratorTests(unittest.TestCase):
             value.kind is inspect.Parameter.KEYWORD_ONLY
             for value in signature.parameters.values()
         ))
+
+    def test_public_audit_verifier_reuses_exact_phase25_identity(self) -> None:
+        resolution = self._partial_resolution()
+        values = self._values(resolution)
+        with patch.object(subject, "_resolve_evidence", return_value=resolution):
+            result = subject.run_nar_daily_replay(**values)
+        audit = subject.compute_nar_daily_replay_orchestration_audit_sha256(
+            acquisition_result=result.acquisition_result,
+            resolution=result.resolution,
+            execution_state=result.execution_state,
+            manifest_sha256=result.manifest_sha256,
+            database_path=values["database_path"],
+            nar_settlement_capture_archive_path=values[
+                "nar_settlement_capture_archive_path"
+            ],
+            run_context=values["run_context"],
+            strategy_identity=values["strategy_identity"],
+            race_budget=values["race_budget"],
+            manifest_source_path=values["manifest_source_path"],
+        )
+        self.assertEqual(audit, result.orchestration_audit_sha256)
+        changed = subject.compute_nar_daily_replay_orchestration_audit_sha256(
+            acquisition_result=result.acquisition_result,
+            resolution=result.resolution,
+            execution_state=result.execution_state,
+            manifest_sha256=result.manifest_sha256,
+            database_path=values["database_path"],
+            nar_settlement_capture_archive_path=values[
+                "nar_settlement_capture_archive_path"
+            ],
+            run_context=values["run_context"],
+            strategy_identity=values["strategy_identity"],
+            race_budget=values["race_budget"],
+            manifest_source_path=self.root / "changed.json",
+        )
+        self.assertNotEqual(changed, audit)
 
     def test_full_day_reuses_exact_components_document_and_paths_once(self) -> None:
         resolution = self._all_resolution()

@@ -9219,3 +9219,162 @@ audit-SHA re-verification before immutable publication, keeps diagnostic records
 prohibits implicit result selection and rate averaging, exposes only the honestly named
 `max_single_day_maximum_drawdown`, and leaves Phase 25 read-only. This approval changes docs
 only; Phase 27 remains unprepared and no implementation is authorized.
+
+Phase 26 was committed as `daa976b546610daceee670b4408238c87164c9a8` with message
+`docs: design NAR daily replay result persistence and aggregation`. Normal push/fetch completed
+and local/remote `feature/post-v0.8-daily-replay` heads matched exactly before Phase 27 PREPARE.
+
+`PREPARE_PHASE POST_V0_8_DAILY_REPLAY_27` prepared **NAR Daily Replay Result Persistence
+Implementation** as `DRAFT_FOR_REVIEW`, type `IMPLEMENTATION`, with outcome `IMPLEMENTABLE`.
+Read-only audit confirmed v015 is the current highest registered main migration, so the next
+exact migration is v016 `v016_nar_daily_replay_result_schema`; daily results belong only to the
+existing main simulation database.
+
+Phase 25's audit implementation has no public verifier: its canonical machinery is private.
+The prepared minimal correction is one pure public audit-digest function in the existing
+orchestrator, reused by the existing result constructor and by persistence. It exposes no replay
+behavior and avoids both private imports and a copied second canonicalization algorithm. The
+future persistence request supplies the exact result plus the audit inputs not retained by
+diagnostic results, re-verifies the Phase 25 SHA before publication, then derives a separate
+`nar-daily-replay-persisted-result-v1` full-content SHA.
+
+The proposed v016 header/child schema is append-only: content SHA primary identity, unique Phase
+25 audit identity, summary-less diagnostic rows, completed-only summary/by-bet-type content, and
+canonical JSON only for ordered provenance/reference structures. Exact duplicates are no-ops;
+same audit identity with different content conflicts; corruption, noncanonical values and schema
+disagreement fail closed. The connection-injected repository neither migrates nor selects latest
+records. Phase 27 stops after exact reload verification of one result; explicit series selection
+and aggregate arithmetic remain Phase 28 only. No production/test/migration file was changed,
+staged, committed or pushed during this PREPARE.
+
+ChatGPT approved `POST_V0_8_DAILY_REPLAY_27` without correction. The implementation outcome is
+`IMPLEMENTABLE`; status is `APPROVED_FOR_CODEX`. The approved scope freezes v016 registration,
+the one shared public pure Phase 25 audit verifier, immutable daily-result projection and exact
+reload validation. It retains the separate orchestration and persisted-content identities,
+summary-less diagnostic records, append-only conflict semantics, and the Phase 28 aggregation
+boundary. This approval changes docs only: no production/test/migration implementation, stage,
+commit or push is authorized.
+
+`EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_27` stopped fail-closed with outcome
+`CHANGES_REQUIRED`. The approved v016 implementation must append to `MIGRATIONS`, but existing
+regressions outside the frozen Allowed Files encode the previous registry tail through positional
+slices. `tests/test_jra_race_replay_seed_migration.py` produced 4 failures / 9 passes after the
+honest v016 registration, and `tests/test_historical_input_snapshot_migration.py` also contains a
+now-shifted `MIGRATIONS[:-2]` prerequisite plus an exact v015 terminal-version assertion.
+
+Correcting those two existing test contracts requires explicit Allowed Files authority. Codex did
+not hide v016, change registry semantics, alter either out-of-scope test, or continue toward a
+misleading green suite. Partial work is unstaged and limited to currently allowed Phase 27 paths;
+no database/**, logs/**, commit, push, Phase 28 preparation or full-suite claim was made.
+
+`REVISE_PREPARE_PHASE POST_V0_8_DAILY_REPLAY_27` resolved that scope-only blocker without
+resuming implementation. Phase 27 remains `DRAFT_FOR_REVIEW` with outcome `IMPLEMENTABLE`.
+Its future Allowed Files now additionally and exclusively include
+`tests/test_jra_race_replay_seed_migration.py` and
+`tests/test_historical_input_snapshot_migration.py` (13 files total). Their later updates are
+limited to preserving explicit v015 and v010--v015 migration-boundary semantics after the honest
+v016 registry extension; v016 must not be hidden or conditionally omitted. Existing unstaged
+partial implementation changes were left untouched. Nothing was staged, committed or pushed.
+
+`APPROVE_PHASE POST_V0_8_DAILY_REPLAY_27` accepted that exact 13-file scope and set the phase
+to `APPROVED_FOR_CODEX` with outcome `IMPLEMENTABLE`. This approval changed documentation only;
+the partial implementation and both newly allowed migration regressions remain untouched,
+unstaged, and unexecuted. No database/** or logs/** path changed, and nothing was staged,
+committed, pushed, or advanced to Phase 28.
+
+The resumed `EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_27` stopped again with outcome
+`CHANGES_REQUIRED` after finding two more fixed-v015 registry assumptions outside the corrected
+13-file scope. `tests/test_nar_official_response_capture_migration.py` has one failing assertion
+that the main migration registry ends at v015, and
+`tests/test_simulation_bet_plan_migration.py` has three failing full-registry/applied-version
+assertions. Their focused combined run was 21 passes / 4 failures.
+
+Before that stop, work remained confined to approved files: the new dedicated Phase 27
+persistence/repository suite passed 29 tests with `ResourceWarning` treated as an error; the
+already-authorized v015 and historical-input migration corrections passed; and the Phase 25
+orchestrator regression passed. No out-of-scope test was edited and the full suite was not run
+because it is known to fail on these scope-bound assertions. All changes remain unstaged and
+preserved; no database/**, logs/**, commit, push, or Phase 28 work occurred.
+
+`REVISE_PREPARE_PHASE POST_V0_8_DAILY_REPLAY_27` then performed a read-only exhaustive audit of
+all tests referencing `MIGRATIONS` or applying the global migration registry. It confirms v016
+remains the authoritative successor to v015 and finds one additional same-class stale expectation:
+`tests/test_sqlite_persisted_simulation_application.py` verifies two full
+`apply_migrations(...)` databases against exact maps ending at v015. The two already-confirmed
+files are `tests/test_nar_official_response_capture_migration.py` (an unrelated global-registry
+tuple; its dedicated capture registry remains `(1,)`) and
+`tests/test_simulation_bet_plan_migration.py` (current registry/full applied-version maps).
+
+Those three files are the only Category-C migration-registry tests and are now added to the future
+Phase 27 scope. All other audited tests are either unaffected by the new registry tail or were
+already allowed and use explicit version boundaries/current v016 expectations. The final future
+Allowed Files count is 16. The phase remains `DRAFT_FOR_REVIEW` with outcome `IMPLEMENTABLE` and
+blockers none. This revision touched only `docs/CURRENT_PHASE.md` and
+`docs/LATEST_CODEX_REPORT.md`; the preserved partial Phase 27 implementation was not resumed,
+altered, staged, committed, or pushed. No database/** or logs/** path changed.
+
+`APPROVE_PHASE POST_V0_8_DAILY_REPLAY_27` accepted the exhaustive migration-test audit and set
+Phase 27 to `APPROVED_FOR_CODEX` with outcome `IMPLEMENTABLE`. The final Allowed Files count is
+16: Category A has 11 unaffected files, Category B has 5 files already in scope, and Category C
+has the three narrowly authorized v016 expectation corrections in
+`tests/test_nar_official_response_capture_migration.py`,
+`tests/test_simulation_bet_plan_migration.py`, and
+`tests/test_sqlite_persisted_simulation_application.py`. The v016 registry remains authoritative.
+Only the two phase documents changed during approval; preserved partial implementation was not
+resumed, altered, staged, committed, or pushed. No database/** or logs/** path changed. Blockers:
+none.
+
+`EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_27` resumed and completed the preserved partial
+implementation within the exact final 16-file scope. Phase 27 is `READY_FOR_REVIEW`; blockers are
+none. The global migration registry now contains v008 through v016 exactly once and in order.
+Migration v016 creates only the frozen append-only NAR daily replay result header and bet-type
+summary tables plus their immutability/state triggers; it does not backfill results, create an
+aggregate table, or add a semantic current-clock timestamp.
+
+The Phase 25 orchestrator now exposes the approved pure public audit computation boundary. Both
+that helper and `NARDailyReplayOrchestrationResult` route through the same existing canonical
+audit implementation, so Phase 25 execution semantics and existing digest material are unchanged.
+Phase 27 persistence re-verifies that audit before projecting a frozen daily-result record. Its
+separate persisted-content SHA binds the complete persisted semantics, including exact completed
+`SimulationSummary` and by-bet-type Decimal content. All three valid Phase 25 states persist;
+diagnostics remain summary-less and without a published manifest artifact.
+
+The connection-injected SQLite repository performs explicit-schema gating without migration,
+atomic immutable publication, exact duplicate no-op, same-audit/different-content conflict, and
+strict exact-content-ID reload/reconstruction. It exposes no latest/date fallback, update, delete,
+repair, or aggregate operation. The five authorized migration-regression files now preserve their
+original version-specific behavior while treating v016 as the legitimate current global registry.
+
+Verification passed:
+
+```text
+Dedicated Phase 27: 29 passed (ResourceWarning-as-error clean)
+Phase 25 orchestrator: 21 passed
+Five migration regressions: 13, 11, 8, 17, and 8 passed
+Related unittest suite: 216 passed
+Full unittest suite: 3,121 passed
+Static boundary and Python compilation: passed
+```
+
+The wider related/full suites emitted the pre-existing unclosed-SQLite ResourceWarnings; no new
+dedicated warning was found. Static inspection confirmed one Phase 25 canonical audit algorithm,
+no private digest imports, no network/current clock/random/UUID/pickle/eval/replay/aggregation
+leakage, no target-date uniqueness, no implicit latest selection, and no mutable repository API.
+
+The two final-review findings were corrected without scope expansion. The v016 migration module
+now supplies the single authoritative schema-contract verifier used by the repository constructor;
+it validates exact schema SQL, column attributes, PK/UNIQUE indexes and ordering, foreign-key
+actions, WITHOUT ROWID state, and trigger definitions rather than accepting names alone. New
+negative cases reject missing or changed PK, UNIQUE, CHECK, FK action, WITHOUT ROWID, required
+index semantics, and a correct-name no-op trigger. The public persistence function now resolves
+and runtime-checks the exact concrete `SQLiteNARDailyReplayResultRepository`; matching duck types
+and unrelated repositories are rejected.
+
+Post-correction verification passed: dedicated Phase 27 32/32 with ResourceWarning promoted to
+error, Phase 25 21/21, expanded related unittest coverage 267/267, the five migration regressions
+13/13, 11/11, 8/8, 17/17 (23 subtests), and 8/8 (45 subtests), explicit pytest coverage 89/89
+(99 subtests), and full unittest discovery 3,124/3,124. Broad-suite warnings remain the previously
+reported unrelated unclosed-SQLite warnings; dedicated coverage is clean. Static boundaries and
+the 16-file unstaged Git scope remain clean. Phase 27 stays `READY_FOR_REVIEW`; blockers: none.
+All changes remain unstaged and inside the exact 16 Allowed Files. `database/**` and `logs/**`
+remain unchanged; no commit, push, or Phase 28 preparation occurred.

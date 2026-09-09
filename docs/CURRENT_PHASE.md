@@ -1,55 +1,129 @@
 # Current Phase
 
-Status: `APPROVED_FOR_CODEX`
+Status: `READY_FOR_REVIEW`
 
 ## Identity and scope
 
-- Phase: `POST_V0_8_DAILY_REPLAY_26`
-- Name: `NAR Daily Replay Result Persistence and Aggregation Design`
-- Phase type: `DESIGN_ONLY`
-- Base Commit: `ec4f7b475185c78f19ce814fa73e21693a435425`
+- Phase: `POST_V0_8_DAILY_REPLAY_27`
+- Name: `NAR Daily Replay Result Persistence Implementation`
+- Phase type: `IMPLEMENTATION`
+- Base Commit: `daa976b546610daceee670b4408238c87164c9a8`
 - Branch: `feature/post-v0.8-daily-replay`
-- Preparation outcome: `PERSISTENCE_AGGREGATION_SPLIT_REQUIRED`
+- Preparation outcome: `IMPLEMENTABLE`
 
-This phase designs the durable post-replay result and explicit multi-day aggregation
-boundaries only. Phase 25 replay execution, discovery, evidence resolution, manifest,
-runner, prediction, settlement and existing archives are read-only authority.
+Phase 27 persists one already-valid Phase 25 orchestration result into the main simulation
+SQLite database as an immutable, reload-validated daily-result record. It does not execute,
+repeat, alter, or automatically persist Phase 25 replay orchestration. It does not select or
+aggregate multiple days; that remains exclusively Phase 28.
 
 ## PREPARE scope
 
-Only these files may change:
+Only these files may change during this PREPARE:
 
 ```text
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-Production, tests, fixtures, migrations, schemas, database/**, logs/**, archives and CLI are
-forbidden. No stage, commit or push is authorized.
+No production, test, migration, schema, fixture, database/**, logs/**, archive or CLI change is
+authorized in PREPARE. No stage, commit or push is authorized.
 
-## Read-only audit findings and database ownership
+## Read-only audit and migration decision
 
-- Phase 25 produces valid immutable outcomes for all three execution states; diagnostic
-  results deliberately contain no summary, projection or financial metric.
-- `orchestration_audit_sha256` is an evidence/request identity and intentionally excludes
-  `SimulationSummary` and by-bet-type values.
-- Completed results expose run/strategy/budget/path values through their manifest document;
-  diagnostic results intentionally do not retain those inputs.
-- The main migration registry ends at v015 and owns the existing simulation schema. No daily
-  replay-result table exists. Phase 20's dedicated evidence archive and settlement archive
-  are separate ownership boundaries and cannot store daily-result records.
-- Existing immutable repositories use injected SQLite connections, explicit migration setup,
-  exact-key reload, and the existing validation/conflict/data-integrity error classes.
+- The current branch and `origin/feature/post-v0.8-daily-replay` both resolve to
+  `daa976b546610daceee670b4408238c87164c9a8` before this PREPARE.
+- `scripts/migrations/runner.py` registers v008 through v015, and the registered highest
+  migration is exactly `v015_jra_race_replay_seed_schema`. No daily-result relation exists.
+- The next migration is therefore frozen as version 16 with
+  `NAME = "v016_nar_daily_replay_result_schema"` in
+  `scripts/migrations/versions/v016_nar_daily_replay_result_schema.py`; it is appended exactly
+  once to `scripts/migrations/runner.py` after v015. No version is skipped or reused.
+- Existing injected-connection repositories establish the applicable model: caller-owned active
+  transactions are rejected, migration is explicit, writes use one `BEGIN IMMEDIATE` transaction,
+  immutable exact duplicates are idempotent, and corruption/conflict uses the existing repository
+  exceptions.
+- The main simulation database is the exclusive Phase 27 owner. The Phase 20 daily-target archive
+  and the NAR settlement archive remain separate and are neither altered nor used as daily-result
+  stores.
 
-Daily-result records therefore belong to the explicit main simulation SQLite database. Future
-repository construction, save and load do not migrate, auto-create a database, use a hidden
-path, choose a fallback store or use network. The next main migration is provisionally
-`v016_nar_daily_replay_result_schema`; Phase 27 PREPARE must confirm the exact v015 registry
-precondition before freezing that version/file name.
+## Phase 25 audit-verification boundary
 
-## Persistence coverage and audit receipt
+`NARDailyReplayOrchestrationResult.orchestration_audit_sha256` is valid only when recomputed from
+the exact public source values. The existing Phase 25 canonical implementation is private
+(`_AuditInputs` / `_audit_digest`), and no other public verifier exists. Persistence must not
+import those private names, copy their payload, trust the stored digest, or rerun replay.
 
-Every successfully constructed Phase 25 result is persistable:
+Phase 27 therefore adds one thin, public, pure boundary to the existing Phase 25 module:
+
+```python
+compute_nar_daily_replay_orchestration_audit_sha256(
+    *,
+    acquisition_result: NARDailyTargetLiveAcquisitionResult,
+    resolution: DailyHistoricalReplayEvidenceResolution,
+    execution_state: NARDailyReplayExecutionState,
+    manifest_sha256: str | None,
+    database_path: Path,
+    nar_settlement_capture_archive_path: Path,
+    run_context: SimulationRunContext,
+    strategy_identity: StrategyIdentity,
+    race_budget: BetStakeBudget,
+    manifest_source_path: Path,
+) -> str
+```
+
+It validates the same public invariants and delegates to the existing single canonical audit
+algorithm. `NARDailyReplayOrchestrationResult` must be routed through that same implementation;
+the digest version and canonical payload remain exactly
+`nar-daily-replay-orchestration-audit-v1`. This exposes no replay operation, performs no
+network/clock/SQL work, and does not change Phase 25 execution semantics.
+
+## Public persistence boundary
+
+Create `scripts/simulation/nar_daily_replay_result_persistence.py` with these exact public
+values and pure/application entry point:
+
+```python
+@dataclass(frozen=True, slots=True)
+class NARDailyReplayResultPersistenceRequest:
+    orchestration_result: NARDailyReplayOrchestrationResult
+    database_path: Path
+    nar_settlement_capture_archive_path: Path
+    run_context: SimulationRunContext
+    strategy_identity: StrategyIdentity
+    race_budget: BetStakeBudget
+    manifest_source_path: Path
+
+@dataclass(frozen=True, slots=True)
+class PersistedNARDailyReplayResult:
+    ...  # the immutable fields frozen below
+
+def persist_nar_daily_replay_result(
+    *,
+    request: NARDailyReplayResultPersistenceRequest,
+    repository: SQLiteNARDailyReplayResultRepository,
+) -> PersistedNARDailyReplayResult:
+    ...
+```
+
+The request constructor requires exact, immutable Phase 25 public values. Publication is:
+
+```text
+validate request/result state
+-> recompute the Phase 25 audit SHA through the public verifier
+-> require exact equality with result.orchestration_audit_sha256
+-> project and validate immutable persisted content
+-> compute persisted_content_sha256
+-> repository.save_result(record)
+-> repository.load_result(persisted_content_sha256)
+-> require exact equality with the projected record
+-> return that exact reload
+```
+
+It never calls `run_nar_daily_replay`, acquisition, Phase 14, Phase 16, a runner, network, a
+clock, or aggregation. It neither creates nor migrates a database. An error from Phase 25 that
+did not create a valid result has no request/record and cannot be persisted.
+
+All three valid Phase 25 result states are persistable:
 
 ```text
 FULL_DAY_REPLAY_COMPLETED
@@ -57,177 +131,321 @@ NOT_RUN_PARTIAL_RESOLUTION
 NOT_RUN_NO_EXECUTABLE_TARGETS
 ```
 
-An exception from Phase 25 produces no valid result and no row. Diagnostic rows are immutable
-audit records only: summary fields are absent and never replaced with a fabricated zero-money
-summary.
+Diagnostic records are durable audit facts only. They retain state and provenance but have no
+summary, by-bet-type child, published manifest artifact path or manifest digest; zero-valued
+financial fields must never be fabricated. `configured_manifest_source_path` remains a separate
+mandatory audit input for every state. A completed record stores a published manifest path and
+digest; Phase 25 requires that artifact path to equal the configured source path, but the two
+fields remain semantically distinct.
 
-Phase 25 intentionally omits audit inputs from diagnostic result fields. Phase 27 must thus
-require an immutable persistence request containing the exact result plus exact database path,
-NAR settlement-capture archive path, manifest path, `SimulationRunContext`, `StrategyIdentity`
-and `BetStakeBudget`. Its constructor must rebuild the frozen
-`nar-daily-replay-orchestration-audit-v1` canonical payload and require that digest to equal
-the result's audit SHA before projecting a persisted record. This is a verifier for the
-committed Phase 25 protocol, not a new Phase 25 identity or a Phase 25 modification.
+## Immutable record and deterministic content identity
 
-## Persisted record and content identity
+`PersistedNARDailyReplayResult` is a compact audited projection, not a serialization of the whole
+runtime object graph. It contains exactly:
 
-Phase 27 should add a provider-specific immutable persistence-record domain and an
-independent repository protocol/module, rather than extending `repositories/interfaces.py`.
-The record is an audited projection; it need not reconstruct the complete runtime result.
+- `schema_version = 1`, `persisted_content_sha256`, `orchestration_audit_sha256`, target date,
+  `NAR` / `nar_official` provider, execution state and resolution state;
+- target-set content SHA; supplier evidence identity; homepage, Monthly-root and locator-JS
+  supplier capture IDs; Monthly capture ID; and authoritative ordered RaceList capture IDs;
+- dataset ID, selection policy, settlement-information cutoff, canonical target count,
+  executable count, and authoritative ordered resolution references (target key, disposition,
+  reasons, internal race ID, snapshot identity/content and result/payout reference fields);
+- run ID, UTC-microsecond run start, target commit ID, strategy ID/name/config hash, uniform
+  race-budget amount, configured manifest path, and completed-only published artifact path/SHA;
+- completed-only exact `SimulationSummary` scalar fields and lexically ordered exact
+  `BetTypeSummary` values; or no summary content for diagnostics.
 
-Minimum record content:
+The content identity is primary:
 
-- target date; exact `NAR`/`nar_official` provider; execution/resolution state;
-- orchestration audit SHA and distinct persisted full-content SHA;
-- target-set content SHA; supplier homepage/root/JS IDs, supplier evidence identity, Monthly
-  ID and authoritative ordered RaceList IDs;
-- dataset, selection policy, settlement cutoff and ordered resolution outcome references
-  (target key, disposition/reasons, internal ID, snapshot/result/payout identity data);
-- run ID, target commit ID, strategy ID/name/config hash, uniform race budget, exact requested
-  manifest path and optional manifest SHA; and
-- completed-only exact `SimulationSummary` scalars and ordered `BetTypeSummary` values.
+```text
+nar-daily-replay-persisted-result-v1
+```
 
-Canonical structured values may use compact JSON only with a frozen schema/version, lexical
-object-key sorting, authoritative list order, NFC text, UTC microsecond `+00:00` datetimes,
-UTF-8, `ensure_ascii=False`, `allow_nan=False`, separators `(',', ':')`, and no trailing LF.
-No pickle, repr, locale or unordered serialization is permitted. Decimal rates use normalized
-finite fixed-point text and are recomputed from saved integer numerators/denominators on load.
+Its lower-case SHA-256, `persisted_content_sha256`, covers every persisted semantic header field,
+the authoritative ordered reference lists, every optional summary scalar, and every ordered
+by-bet-type child. `orchestration_audit_sha256` remains the separate Phase 25 request/evidence
+identity and is unique in storage. Thus the same audit identity plus exact content is an
+idempotent no-op, while the same audit identity with any different persisted content is a
+`RepositoryConflictError`. Different audit identities may coexist for the same target date.
 
-The separate `nar-daily-replay-persisted-result-v1` SHA-256 covers every stored header, ordered
-outcome reference, optional summary scalar and ordered by-bet-type value. It is not a
-replacement for `orchestration_audit_sha256`.
+Canonical structured payloads are frozen as schema-versioned JSON TEXT, not pickle/repr/eval:
 
-## Proposed append-only main schema
+- UTF-8, NFC text, `ensure_ascii=False`, `allow_nan=False`, lexical key sort, separators
+  `(',', ':')`, and no trailing LF;
+- authoritative tuple/list order is retained; order-insensitive maps are emitted in lexical key
+  order;
+- aware datetimes are UTC ISO-8601 with microseconds and explicit `+00:00`;
+- finite `Decimal` values use canonical normalized fixed-point text (zero is `"0"`), are checked
+  against their integer numerator/denominator formulas, and are never stored as floats.
 
-Subject to the v016 registry audit, use exactly two tables:
+Reload rejects malformed, noncanonical or semantically contradictory structured content rather
+than normalizing or repairing it.
+
+## v016 schema and storage invariants
+
+The migration creates only these two append-only main-schema tables:
 
 ```text
 nar_daily_replay_results
 nar_daily_replay_result_bet_type_summaries
 ```
 
-The header natural primary key is `orchestration_audit_sha256`; it retains all non-child fields
-above. The child primary key is `(orchestration_audit_sha256, bet_type)` and holds exact
-by-bet-type values. No surrogate identity, latest flag, current-clock `created_at`, mutable
-cumulative row or foreign key to a separate capture archive is added.
+`nar_daily_replay_results.persisted_content_sha256` is the primary key and
+`orchestration_audit_sha256` is `UNIQUE NOT NULL`. It carries all header/provenance, canonical
+JSON, run/configuration, optional artifact, and optional completed-summary scalar columns.
+`nar_daily_replay_result_bet_type_summaries` has primary key
+`(persisted_content_sha256, bet_type)`, a restrictive foreign key to the header, and exact
+by-bet-type scalar/rate columns. Its rows are lexical by `bet_type` on reload.
 
-Checks enforce provider, state relation, digest shape, canonical UTC text, money/count shape
-and summary-nullability. Completed rows require a complete summary; diagnostic rows require
-all summary fields NULL and no child rows. Domain reload is authoritative for complete state
-and content validation. Append-only triggers plus repository scope forbid update/delete/repair,
-replacement and latest-wins behavior.
+SQLite checks cover the fixed provider, digest shape, exact allowed execution/resolution states,
+nonempty canonical text, UTC text shape, nonnegative count/money shape, and state-specific
+NULL consistency. Completed headers require a complete summary and child mapping that exactly
+matches it. Diagnostic headers require every summary scalar and artifact field NULL and have no
+children. Domain reconstruction and both digest re-computations remain the final authority.
 
-## Repository semantics
+The migration first requires the exact v015 registry/schema state, rejects pre-existing v016
+objects, and makes no backfill, inference, seed, daily-result timestamp or other semantic data.
+It is applied only by the existing explicit runner transaction. `BEFORE UPDATE` and `BEFORE
+DELETE` abort triggers protect both tables from mutation; no update/delete API is added.
 
-The future connection- and exact-main-path-injected repository proves its connection names the
-caller-supplied existing main database, has no caller transaction, verifies foreign keys and
-registered schema, and never invokes migration. Save uses one `BEGIN IMMEDIATE` transaction:
+## Repository boundary and exact load
 
-```text
-exact persistence request
--> verify existing Phase 25 audit SHA
--> build record/full-content digest
--> exact audit-ID load
--> absent: insert header and children atomically
--> exact equal: idempotent no-op
--> different content: RepositoryConflictError
+Create `scripts/simulation/repositories/sqlite_nar_daily_replay_result_repository.py`:
+
+```python
+class SQLiteNARDailyReplayResultRepository:
+    def __init__(self, *, connection: sqlite3.Connection, database_path: Path) -> None: ...
+    def save_result(self, *, record: PersistedNARDailyReplayResult) -> None: ...
+    def load_result(
+        self, *, persisted_content_sha256: str
+    ) -> PersistedNARDailyReplayResult | None: ...
 ```
 
-Exact load returns `None` only for exact absence. Duplicate headers/children, malformed
-canonical field, digest mismatch, invalid state/summary relation, corrupt child content or
-schema disagreement are `RepositoryDataIntegrityError`; invalid caller input is
-`RepositoryValidationError`. No latest/date/fuzzy lookup, update/delete, repair or fallback
-API is introduced.
+The constructor accepts an exact SQLite connection and an exact caller-supplied existing absolute
+main-database path, verifies no active transaction, foreign-key enablement and the registered
+v016 schema, but never invokes migration. It uses the normal repository read-only
+`PRAGMA database_list` filesystem-identity check without changing the caller's path spelling;
+the supplied path remains the audit authority. Load does no migration, no write, no clock and
+no network.
 
-## Explicit series selection and compatibility
+Save rejects a caller transaction, validates the record and begins one `BEGIN IMMEDIATE`
+transaction. It exact-loads by both primary content SHA and unique audit SHA before inserting
+the complete header and children. Equal material succeeds without mutation; any disagreement
+is conflict; SQLite/schema/canonical reconstruction/digest failures are integrity errors. A
+failed write rolls back all logical rows. Missing exact content ID returns `None` only. There
+is no latest/date/list/fuzzy lookup, automatic selection, update, delete, repair, replacement or
+fallback.
 
-Multiple immutable attempts for one date may exist when orchestration identities differ.
-Phase 28 aggregation accepts an explicit immutable selection of exact-loaded records, ordered
-strictly by target date and containing at most one record per date. Empty, unsorted or duplicate
-date/identity selections, implicit latest/newest/insertion-order choices and unknown members
-fail closed.
+Use only existing `RepositoryValidationError` for invalid caller values,
+`RepositoryConflictError` for immutable different-content publication, and
+`RepositoryDataIntegrityError` for stored/schema/constraint corruption; preserve causes. Do not
+extend `repositories/interfaces.py`, avoiding simulation-domain import cycles.
 
-All selected records must share this compatibility key:
+## Future-information and Phase 28 boundaries
 
-```text
-provider organization/source system
-dataset ID
-selection policy
-strategy ID
-strategy name
-strategy config hash
-target commit ID
-uniform race-budget amount
-```
+Persistence output is analysis output only. The Phase 27 modules/tables must not be imported or
+read by historical snapshot construction, Phase 14 resolution, target discovery,
+`PredictionPipeline`, value computation or strategy code. No automatic outcome-feedback path is
+introduced.
 
-`run_id` is an execution identity and may differ. Settlement cutoff remains immutable per-day
-evidence provenance, not a selection preference or tie breaker. Any incompatible key fails
-closed.
+Phase 27 stops at one exact daily record persisted and reload-verified. It does not implement
+explicit multi-day selection, duplicate-date series policy, cumulative counts/money/rates,
+by-bet-type aggregation, drawdown aggregation, aggregate digest, reporting, CLI, cache, or an
+aggregate table. Those belong to Phase 28.
 
-## Read-only aggregation
+## Exact future implementation scope
 
-Phase 28 computes an immutable aggregate on demand; it persists no cache. It reports selected,
-completed, partial-resolution and no-executable day counts. Diagnostics contribute only to
-those status counts, never to financial amounts or rate denominators. A completed no-bet day
-remains distinct because it has an actual completed summary.
-
-All additive count/money fields are summed; profit is recomputed as payout minus investment.
-Rates are recomputed, never averaged:
+Only the following files are proposed for a separately approved Phase 27 EXECUTE:
 
 ```text
-ROI = None if investment == 0 else Decimal(payout) * 100 / Decimal(investment)
-bet hit rate = None if settled_bet_count == 0 else Decimal(hit_bet_count) * 100 / Decimal(settled_bet_count)
-race hit rate = None if settled_purchase_race_count == 0 else Decimal(hit_race_count) * 100 / Decimal(settled_purchase_race_count)
+scripts/migrations/runner.py
+scripts/migrations/versions/v016_nar_daily_replay_result_schema.py
+scripts/simulation/nar_daily_replay_orchestrator.py
+scripts/simulation/nar_daily_replay_result_persistence.py
+scripts/simulation/repositories/sqlite_nar_daily_replay_result_repository.py
+tests/test_simulation_migrations.py
+tests/test_nar_daily_replay_orchestrator.py
+tests/test_nar_daily_replay_result_persistence.py
+tests/test_sqlite_nar_daily_replay_result_repository.py
+tests/test_jra_race_replay_seed_migration.py
+tests/test_historical_input_snapshot_migration.py
+tests/test_nar_official_response_capture_migration.py
+tests/test_simulation_bet_plan_migration.py
+tests/test_sqlite_persisted_simulation_application.py
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
 ```
 
-Each by-bet-type value uses the same summed numerators/denominators and is deterministic by bet
-type. A plain cumulative `maximum_drawdown` is omitted: it cannot be reconstructed from daily
-summaries. The only optional safe statistic is `max_single_day_maximum_drawdown`, explicitly
-not a cumulative race-level MDD.
+All other production, tests, migrations, schemas, database/**, logs/**, archives, CLI and the
+Phase 25 runner are forbidden. The Phase 25 file/test exception is solely the thin public audit
+verifier and its regression coverage; a replay refactor is not authorized.
 
-The aggregate receives `nar-daily-replay-series-aggregate-v1`, a canonical content SHA binding
-ordered member audit/content identities, compatibility key, status counts and derived values.
-No clock, UUID, random, filesystem metadata, database row order or float enters it.
+## Required later verification
 
-Daily result/aggregate storage is analysis output only. Phase 14 resolution, historical snapshot
-construction, PredictionPipeline, strategy/value logic and target discovery must not import or
-read it.
+The future implementation must cover these behavior groups:
 
-## Required follow-up phases
-
-`PERSISTENCE_AGGREGATION_SPLIT_REQUIRED` is the formal decision.
-
-1. **POST_V0_8_DAILY_REPLAY_27 — NAR Daily Replay Result Persistence Implementation**
-   - v016-style main migration, immutable persistence request/record, exact-ID repository,
-     audit/content verification and storage integrity tests.
-   - Likely future files: `scripts/migrations/runner.py`,
-     `scripts/migrations/versions/v016_nar_daily_replay_result_schema.py`,
-     `scripts/simulation/nar_daily_replay_result_persistence.py`,
-     `scripts/simulation/repositories/sqlite_nar_daily_replay_result_repository.py`, and
-     dedicated migration/repository tests.
-2. **POST_V0_8_DAILY_REPLAY_28 — NAR Daily Replay Series Aggregation Implementation**
-   - explicit selection, compatibility gate, Decimal/by-bet-type aggregation, status counts,
-     safe drawdown statistic and no-mutation aggregate identity.
-   - Likely future files: `scripts/simulation/nar_daily_replay_series_aggregation.py` and
-     dedicated tests.
-
-Each is independently PREPARE/review/approval gated. No subsequent phase is started here.
-
-## Required later tests
-
-Phase 27: all three states; complete/by-bet-type round trips; diagnostic summary absence;
-explicit audit-input mismatch; idempotent exact duplicate; same-audit/different-content
-conflict; absent/incompatible schema; header/child/digest/enum/JSON/Decimal/timestamp
-corruption; no implicit migration/update/delete/repair; distinct same-date attempts; exact-ID
-load only; and no database/** fixtures.
-
-Phase 28: explicit-only sorted unique selection; every compatibility conflict; differing allowed
-run IDs; diagnostic versus completed-no-bet distinction; integer sums; recomputed overall and
-by-bet-type rates; zero denominators; no daily-rate averaging; safe drawdown naming;
-deterministic/changed-member aggregate digest; no network/current clock/prediction imports;
-Phase 25 regression; and full suite.
+1. exact public audit verifier matches the existing Phase 25 digest; changed database/archive
+   path, run context, strategy, budget or configured manifest path fails verification; no private
+   helper import or second audit algorithm;
+2. completed, partial diagnostic and no-executable diagnostic results each persist/reload;
+   failed/no-result cannot persist; diagnostics remain summary-less; completed no-bet remains
+   distinct from diagnostics;
+3. exact scalar summary, Decimal rates, maximum drawdown and ordered by-bet-type values round
+   trip; result content SHA is deterministic and invalid content SHA is rejected;
+4. exact duplicate is a no-op; same audit identity with changed summary or metadata conflicts;
+   different immutable attempts on one date remain allowed;
+5. v016 is registered exactly once after v015; migration is explicit/idempotent; absent or
+   malformed schema fails closed; constructor never migrates. The JRA v015, historical-input,
+   NAR response-capture, simulation bet-plan, and persisted-simulation application migration
+   regressions retain their original semantics through explicit migration boundaries/current
+   registry expectations rather than assumptions that v015 is the registry tail;
+6. exact-ID-only absence returns `None`; corrupt scalar, child, enum, UTC text, canonical JSON,
+   Decimal, digest or state/NULL relation fails closed; no latest/fallback/update/delete/repair;
+7. failed writes roll back; caller transaction state is preserved; connection/path identity is
+   checked; no network/current clock/replay/acquisition/aggregation; and no analysis-output
+   dependency reaches prediction/evidence/strategy;
+8. Phase 25 public-audit regression, migration regression, existing simulation repository
+   regressions and the full unittest suite pass; `database/**` and `logs/**` remain unchanged.
 
 ## Stop condition
 
-Stop at `DRAFT_FOR_REVIEW`. No implementation, tests, migration, stage, commit, push or Phase
-27 PREPARE is authorized in this run.
+Stop at `DRAFT_FOR_REVIEW`. No implementation, test creation, migration creation, stage,
+commit, push or Phase 28 preparation is authorized in this run.
+
+## PREPARE revision: migration-regression scope correction
+
+Preparation outcome: `IMPLEMENTABLE`.
+
+The previously identified v016 registry-tail blocker is resolved by adding exactly these existing
+regression tests to the Phase 27 implementation Allowed Files:
+
+```text
+tests/test_jra_race_replay_seed_migration.py
+tests/test_historical_input_snapshot_migration.py
+```
+
+The JRA v015 regression must explicitly construct a through-v014 state when testing v015, assert
+v015's unique registered identity and expected objects, and stop treating v015 as permanently
+terminal. The historical-input regression must update only the assumptions that the full registry
+ends at v015 and express any v010--v015 historical boundary by version identity. Neither test may
+lose its existing migration-specific coverage.
+
+No workaround in `MIGRATIONS`, hidden v016 registry, conditional omission, or weakened regression
+coverage is permitted. This revision touched documentation only; the pre-existing unstaged partial
+Phase 27 implementation remains untouched. No database/** or logs/** path is changed. Blockers:
+none.
+
+## Resumed EXECUTE scope blocker
+
+Execution outcome: `CHANGES_REQUIRED`.
+
+The resumed implementation completed the approved corrections above, then an exhaustive
+migration-registry assumption search and focused execution found two additional existing
+regressions outside the exact 13-file Allowed Files:
+
+```text
+tests/test_nar_official_response_capture_migration.py
+tests/test_simulation_bet_plan_migration.py
+```
+
+With the honest v016 registry, the first has one failure because it asserts the unrelated main
+registry is permanently `(8, ..., 15)`. The second has three failures because its v009-focused
+tests assert the current full registry/applied set ends at v015. Their dedicated combined run was
+21 passes / 4 failures. Both corrections are registry-expectation maintenance only; neither
+requires a production, migration, archive, or domain change.
+
+These paths are not in the approved scope, so Codex did not edit them, hide v016, weaken the
+registry, run the full suite, or continue implementation. ChatGPT must explicitly authorize any
+scope correction. All partial Phase 27 work remains unstaged and preserved; no database/** or
+logs/** path changed.
+
+## PREPARE revision: exhaustive v016 global-registry audit
+
+Preparation outcome: `IMPLEMENTABLE`. Status remains `DRAFT_FOR_REVIEW`.
+
+The v016 main registry extension remains authoritative. No production registry workaround,
+conditional test registry, v015 terminal rule, or migration omission is permitted. This revision
+performed a read-only audit of every test using `MIGRATIONS` or applying the global migration
+registry. The classifications are:
+
+```text
+A — unaffected by v016 registry-tail semantics
+tests/test_cli_run_persisted_simulation.py
+tests/test_historical_replay_mixed_provider_acceptance.py
+tests/test_jra_race_historical_replay.py
+tests/test_nar_daily_target_evidence_archive_migration.py
+tests/test_persisted_simulation_integration.py
+tests/test_simulation_repositories.py
+tests/test_sqlite_historical_input_snapshot_repository.py
+tests/test_sqlite_jra_race_replay_seed_repository.py
+tests/test_sqlite_nar_daily_evidence_resolver.py
+tests/test_sqlite_persisted_simulation_composition.py
+tests/test_sqlite_simulation_bet_plan_snapshot_repository.py
+
+B — already in the Phase 27 Allowed Files
+tests/test_historical_input_snapshot_migration.py
+tests/test_jra_race_replay_seed_migration.py
+tests/test_nar_daily_target_evidence_archive_migration.py
+tests/test_simulation_migrations.py
+tests/test_sqlite_nar_daily_replay_result_repository.py
+
+C — narrow v016 current-registry expectation correction required
+tests/test_nar_official_response_capture_migration.py
+tests/test_simulation_bet_plan_migration.py
+tests/test_sqlite_persisted_simulation_application.py
+```
+
+The first Category-C file asserts the unrelated global registry is exactly versions 8--15 even
+though its dedicated `CAPTURE_MIGRATIONS == (1,)` contract remains unchanged. The second asserts
+both the current registry and full `get_applied_versions(...)` maps end at v015; its v008/v009
+upgrade boundaries must remain explicit. The third verifies two full `apply_migrations(...)`
+databases against exact version/name maps ending at v015. Each must include v016 while preserving
+its existing simulation-application assertions. No other audit match contains a stale v015-tail
+assumption.
+
+The exact newly added future implementation files are:
+
+```text
+tests/test_nar_official_response_capture_migration.py
+tests/test_simulation_bet_plan_migration.py
+tests/test_sqlite_persisted_simulation_application.py
+```
+
+The final future Phase 27 Allowed Files count is exactly 16. This PREPARE revision changes only
+the two phase documents; all existing unstaged partial implementation remains untouched. No
+database/** or logs/** path is changed. Blockers: none.
+
+## Approval
+
+ChatGPT approved Phase 27 for Codex execution with outcome `IMPLEMENTABLE`. The final 16-file
+Allowed Files scope is frozen. The v016 registry extension remains authoritative, and later
+Category-C corrections are limited to the three listed migration-registry expectations; no
+production registry workaround or further scope expansion is authorized. This approval changes
+only the phase documents. The preserved partial implementation remains unstaged and untouched.
+
+## Execution completion
+
+Phase 27 implementation is complete and `READY_FOR_REVIEW`. Migration v016 is registered once
+after v015 and creates the two frozen append-only daily-result tables and their immutability
+triggers. The public Phase 25 audit helper and orchestration result share the single existing
+canonical audit implementation. The immutable persistence request/domain, content digest,
+connection-injected main-DB repository, atomic duplicate/conflict behavior, and exact-ID reload
+verification are implemented for all three valid Phase 25 states.
+
+All five approved migration-regression files retain their original scope while recognizing v016
+as the current global migration. Verification passed: 32 dedicated tests with ResourceWarning
+treated as an error, 21 Phase 25 tests, 267 related unittest tests, the five migration files
+individually (13, 11, 8, 17, and 8 tests), and the full 3,124-test unittest suite. The dedicated
+suite emitted no warning; broader suites retain pre-existing unclosed-SQLite ResourceWarnings.
+Static inspection found no private Phase 25 audit imports, second canonical audit algorithm,
+network/current-clock/random/UUID/pickle/eval/replay/aggregation dependency, target-date
+uniqueness, implicit latest selection, or mutation API. No file is staged; database/** and logs/**
+remain unchanged. Blockers: none.
+
+The final review corrections are complete. The v016 migration now owns one exact read-only schema
+contract verifier shared by migration DDL and repository construction; it compares SQLite schema
+SQL, full column metadata, PK/UNIQUE index identity and order, foreign-key actions, WITHOUT ROWID
+state, and exact trigger definitions. Dedicated negative coverage rejects missing/changed keys,
+checks, foreign keys, WITHOUT ROWID, index order/uniqueness, and same-name no-op triggers. The
+persistence application now requires the exact concrete SQLite repository at both its resolved
+public type hint and runtime boundary; duck-typed and unrelated repositories fail closed.

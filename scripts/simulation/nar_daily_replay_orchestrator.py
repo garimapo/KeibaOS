@@ -47,6 +47,7 @@ from scripts.simulation.stake_allocation import BetStakeBudget as _BetStakeBudge
 __all__ = (
     "NARDailyReplayExecutionState",
     "NARDailyReplayOrchestrationResult",
+    "compute_nar_daily_replay_orchestration_audit_sha256",
     "run_nar_daily_replay",
 )
 
@@ -319,6 +320,67 @@ def _audit_digest(
     return _sha256(canonical).hexdigest()
 
 
+def compute_nar_daily_replay_orchestration_audit_sha256(
+    *,
+    acquisition_result: _AcquisitionResult,
+    resolution: _Resolution,
+    execution_state: NARDailyReplayExecutionState,
+    manifest_sha256: str | None,
+    database_path: _Path,
+    nar_settlement_capture_archive_path: _Path,
+    run_context: _RunContext,
+    strategy_identity: _StrategyIdentity,
+    race_budget: _BetStakeBudget,
+    manifest_source_path: _Path,
+) -> str:
+    """Compute the frozen Phase 25 audit identity from exact public inputs."""
+
+    acquisition = _validate_acquisition_result(acquisition_result)
+    if type(resolution) is not _Resolution or resolution.target_set is not acquisition.target_set:
+        raise ValueError("resolution must retain the exact acquisition target set")
+    if type(execution_state) is not NARDailyReplayExecutionState:
+        raise ValueError("execution_state must be an exact NARDailyReplayExecutionState")
+    expected_state = {
+        _ResolutionState.ALL_TARGETS_RESOLVED: NARDailyReplayExecutionState.FULL_DAY_REPLAY_COMPLETED,
+        _ResolutionState.PARTIALLY_RESOLVED: NARDailyReplayExecutionState.NOT_RUN_PARTIAL_RESOLUTION,
+        _ResolutionState.NO_EXECUTABLE_TARGETS: NARDailyReplayExecutionState.NOT_RUN_NO_EXECUTABLE_TARGETS,
+    }[resolution.day_state]
+    if execution_state is not expected_state:
+        raise ValueError("execution_state disagrees with resolution state")
+    if execution_state is NARDailyReplayExecutionState.FULL_DAY_REPLAY_COMPLETED:
+        manifest_digest = _digest(manifest_sha256, "manifest_sha256")
+    elif manifest_sha256 is not None:
+        raise ValueError("diagnostic audit must not contain manifest_sha256")
+    else:
+        manifest_digest = None
+    database = _absolute_path(database_path, "database_path")
+    archive = _absolute_path(
+        nar_settlement_capture_archive_path,
+        "nar_settlement_capture_archive_path",
+    )
+    manifest = _absolute_path(manifest_source_path, "manifest_source_path")
+    if type(run_context) is not _RunContext:
+        raise ValueError("run_context must be an exact SimulationRunContext")
+    if type(strategy_identity) is not _StrategyIdentity:
+        raise ValueError("strategy_identity must be an exact StrategyIdentity")
+    if type(race_budget) is not _BetStakeBudget:
+        raise ValueError("race_budget must be an exact BetStakeBudget")
+    return _audit_digest(
+        acquisition_result=acquisition,
+        resolution=resolution,
+        execution_state=execution_state,
+        manifest_sha256=manifest_digest,
+        audit_inputs=_AuditInputs(
+            database,
+            archive,
+            run_context,
+            strategy_identity,
+            race_budget,
+            manifest,
+        ),
+    )
+
+
 @_dataclass(frozen=True, slots=True)
 class NARDailyReplayOrchestrationResult:
     acquisition_result: _AcquisitionResult
@@ -383,12 +445,19 @@ class NARDailyReplayOrchestrationResult:
         object.__setattr__(
             self,
             "orchestration_audit_sha256",
-            _audit_digest(
+            compute_nar_daily_replay_orchestration_audit_sha256(
                 acquisition_result=self.acquisition_result,
                 resolution=self.resolution,
                 execution_state=self.execution_state,
                 manifest_sha256=self.manifest_sha256,
-                audit_inputs=_audit_inputs,
+                database_path=_audit_inputs.database_path,
+                nar_settlement_capture_archive_path=(
+                    _audit_inputs.nar_settlement_capture_archive_path
+                ),
+                run_context=_audit_inputs.run_context,
+                strategy_identity=_audit_inputs.strategy_identity,
+                race_budget=_audit_inputs.race_budget,
+                manifest_source_path=_audit_inputs.manifest_source_path,
             ),
         )
 
