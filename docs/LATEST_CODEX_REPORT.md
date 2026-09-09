@@ -9378,3 +9378,136 @@ reported unrelated unclosed-SQLite warnings; dedicated coverage is clean. Static
 the 16-file unstaged Git scope remain clean. Phase 27 stays `READY_FOR_REVIEW`; blockers: none.
 All changes remain unstaged and inside the exact 16 Allowed Files. `database/**` and `logs/**`
 remain unchanged; no commit, push, or Phase 28 preparation occurred.
+
+`PREPARE_PHASE POST_V0_8_DAILY_REPLAY_28` completed as a documentation-only DESIGN_ONLY
+preparation. The base is `49733e7e4563d25b36d7183a13b282749ff0ac7a` on
+`feature/post-v0.8-daily-replay`; the outcome is `IMPLEMENTABLE` and the status is
+`DRAFT_FOR_REVIEW`. No production, test, migration, database/**, logs/**, stage, commit or push
+action was performed.
+
+Read-only inspection confirmed that Phase 27 exposes only exact-ID
+`SQLiteNARDailyReplayResultRepository.load_result(...)` loading of integrity-reconstructed
+`PersistedNARDailyReplayResult` values; it offers no latest/date/list selection or aggregate API.
+`SimulationSummary` and `BetTypeSummary` are the existing Decimal arithmetic authority. The only
+existing drawdown helper requires a race-level settlement sequence, so it is not reused for a
+cross-day daily-summary MDD. No existing daily-result aggregation owner was found, and no reverse
+dependency from persisted replay outputs into evidence, prediction, value or strategy inputs is
+present.
+
+Phase 28 freezes a nonempty, caller-ordered
+`NARDailyReplayAggregationSelection` of explicit persisted-content SHA-256 identities. Each ID
+is loaded exactly once through Phase 27; IDs, target dates and chronological order must be unique
+and strictly ascending, so competing attempts for one date fail closed rather than being selected
+or reordered. The deterministic selection identity is
+`nar-daily-replay-aggregation-selection-v1`. Compatible records must share provider,
+dataset/policy/cutoff, strategy identity/configuration, target commit and uniform budget; run IDs
+may differ.
+
+`aggregate_nar_daily_replay_selection(...)` returns a frozen in-memory result with selected and
+diagnostic-state accounting, compatible-series fields, cumulative additive totals, exact Decimal
+ratios, lexical `BetTypeSummary` aggregation,
+`max_single_day_maximum_drawdown`, and the distinct
+`nar-daily-replay-aggregation-result-v1` content SHA. Diagnostics stay selected audit facts but
+have no synthetic summary contribution. Ratios are recomputed from cumulative numerators and
+denominators; daily ratios are never averaged. No plain/cumulative `maximum_drawdown` field is
+permitted because daily summaries cannot reconstruct the race-level equity sequence.
+
+The proposed future implementation scope is exactly four files:
+
+```text
+scripts/simulation/nar_daily_replay_aggregation.py
+tests/test_nar_daily_replay_aggregation.py
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+```
+
+It remains read-only: no migration, SQL write, cache, aggregate table, current clock, network,
+replay/acquisition/resolution/manifest work, implicit selection, or outcome-feedback import path.
+Required later tests cover exact selection loading/validation, state accounting, Decimal and
+by-bet-type arithmetic, compatibility, explicit MDD limits, deterministic identities, static
+read-only boundaries, Phase 27 regressions and the full suite. Blockers: none.
+
+`APPROVE_PHASE POST_V0_8_DAILY_REPLAY_28` accepted the prepared design without correction.
+Phase 28 is now `APPROVED_FOR_CODEX` with outcome `IMPLEMENTABLE` on base
+`49733e7e4563d25b36d7183a13b282749ff0ac7a`. The frozen public surface remains exactly
+`NARDailyReplayAggregationSelection`, `NARDailyReplayAggregationResult`, and
+`aggregate_nar_daily_replay_selection(...)`.
+
+The approval preserves explicit nonempty SHA selection, exact-ID-only Phase 27 loading, strict
+caller-supplied target-date ascending order, unique IDs/dates, and the prepared compatibility
+predicate. Diagnostics remain selected audit facts without fabricated financial summaries;
+completed-only totals and exact Decimal ratio recomputation remain mandatory. Only
+`max_single_day_maximum_drawdown` is permitted; a cumulative `maximum_drawdown` is forbidden.
+
+This approval modified only the two phase documents. The exact future implementation scope remains
+four files, with no migration, database write, cache, output persistence, implicit selection,
+replay/acquisition/resolution/manifest work, or outcome-feedback path authorized. Nothing was
+staged, committed, pushed, or advanced to another phase. Blockers: none.
+
+`EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_28` completed within the exact four-file
+scope. Phase 28 is `READY_FOR_REVIEW`; blockers are none. The new immutable
+`NARDailyReplayAggregationSelection`, `NARDailyReplayAggregationResult`, and
+`aggregate_nar_daily_replay_selection(...)` API loads each explicit persisted-content identity
+once through the concrete Phase 27 exact-ID repository. It has no direct SQL, broad query,
+implicit latest/date selection, fallback, write, migration or aggregate persistence.
+
+Selections are nonempty lowercase SHA tuples, remain in caller order, and must resolve to unique
+records with strictly ascending unique target dates and the frozen common
+provider/dataset/policy/cutoff/strategy/commit/budget key. Invalid order is rejected rather than
+sorted. Compatible different run IDs are allowed. Diagnostics remain in selection identity,
+coverage and state counts but add no fabricated replay summary or financial values; a completed
+no-bet day remains completed.
+
+Completed `SimulationSummary` integer values are summed and profit plus ROI/bet-hit/race-hit rates
+are recomputed from the final integer totals with exact `Decimal`, never float or daily-rate
+averaging. Completed bet-type mappings are unioned in lexical order and rebuilt as validated
+`BetTypeSummary` totals. The only drawdown statistic is
+`max_single_day_maximum_drawdown`; diagnostic-only selections use `None`, and no cumulative MDD
+field or equity-curve synthesis exists. The frozen selection and result versioned SHA identities
+bind their deterministic canonical content without clock, random or UUID input.
+
+Verification passed:
+
+```text
+Dedicated Phase 28: 18 passed (ResourceWarning-as-error clean)
+Phase 27 repository: 22 passed
+Phase 27 persistence: 10 passed
+Related models/summary/repositories: 178 passed
+Combined related: 210 passed
+Full unittest discovery: 3,142 passed
+Compilation and static boundaries: passed
+```
+
+The full suite retains the pre-existing unrelated unclosed-SQLite warnings; Phase 28 dedicated
+coverage adds none. No relevant pytest-only Phase 28 test lies outside unittest discovery. The
+exact four Allowed Files are the only modified/untracked paths, cached is empty, and database/**
+and logs/** remain unchanged. Nothing was staged, committed, pushed, or advanced to Phase 29.
+
+The two final-review findings for `POST_V0_8_DAILY_REPLAY_28` are corrected within the same exact
+four-file scope. `NARDailyReplayAggregationResult` no longer has a usable ordinary public
+constructor. Its private validated construction path receives the exact Phase 27 records and
+derives every record-dependent field and both deterministic SHA identities; forged target-date
+coverage, forged state counts and dataclass replacement are rejected. The frozen public API still
+contains exactly the selection type, result type and aggregation function.
+
+The completed-day test data now deliberately uses unequal race-hit denominators and rates: `1/1`
+(`100%`) and `1/4` (`25%`). The asserted aggregate is the exact total-first Decimal result `2/5 *
+100 = 40%`, not their `62.5%` arithmetic mean. Previously approved selection, compatibility,
+diagnostic, ROI, bet-hit, bet-type, drawdown and read-only behavior is unchanged.
+
+Final correction verification passed:
+
+```text
+Dedicated Phase 28: 20 passed (ResourceWarning-as-error clean)
+Phase 27 repository: 22 passed
+Phase 27 persistence: 10 passed
+Phase 25 orchestrator: 21 passed
+Related model/repository suites: 206 passed
+Full unittest discovery: 3,144 passed
+Compilation and focused static audit: passed
+```
+
+The broad related/full suites emitted only the established unrelated unclosed-SQLite warnings;
+the dedicated suite emitted none. No relevant pytest-only Phase 28 test exists outside unittest
+discovery. Phase 28 remains `READY_FOR_REVIEW`, blockers are none, changes remain unstaged and
+confined to the exact four Allowed Files, and database/** and logs/** are unchanged.
