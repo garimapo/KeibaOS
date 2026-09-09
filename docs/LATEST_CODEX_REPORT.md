@@ -9178,3 +9178,44 @@ warnings. Static inspection found exactly the approved PRAGMA and no other SQL, 
 acquisition, current-clock, migration or duplicated prediction/settlement boundary. Git
 comparison confirmed Phase 14/16/23 and the replay runner remained unchanged. Phase 25 is
 `READY_FOR_REVIEW`; nothing was staged, committed or pushed.
+
+Phase 25 received independent remote review with no correction and was formally completed at
+`ec4f7b475185c78f19ce814fa73e21693a435425`. `PREPARE_PHASE
+POST_V0_8_DAILY_REPLAY_26` prepared **NAR Daily Replay Result Persistence and Aggregation
+Design** as `DRAFT_FOR_REVIEW`, type `DESIGN_ONLY`. Local and remote branch heads were both
+verified at that exact base commit, with a clean starting worktree.
+
+Read-only audit found that all three Phase 25 execution states are valid persistence candidates,
+but the orchestration audit SHA intentionally excludes `SimulationSummary`; diagnostic results
+also do not retain run/strategy/budget/path values. The design therefore requires an immutable
+persistence request carrying those exact inputs and re-verifying the committed Phase 25 audit
+protocol before it creates a separate persisted full-content digest. This preserves diagnostic
+audit rows without modifying Phase 25 or introducing a current-clock persistence timestamp.
+
+Daily results are designed for the existing main simulation database, not either NAR archive.
+The provisional v016-style append-only header/child schema persists immutable provenance,
+ordered resolution references, all execution states and completed-only summary/by-bet-type
+content. Exact duplicates are no-ops; same audit identity with different content conflicts;
+corruption fails closed. There is no implicit migration, latest selection, replacement, repair
+or mutable cumulative cache.
+
+The preparation outcome is `PERSISTENCE_AGGREGATION_SPLIT_REQUIRED`. Phase 27 will separately
+implement the main-schema persistence record/repository; Phase 28 will implement explicit
+record selection and read-only cumulative aggregation. Selection permits at most one explicit
+record per target date and rejects implicit latest/insertion-order choices. Aggregation validates
+provider/dataset/strategy/commit/budget compatibility, recomputes rates from cumulative
+numerators and denominators, excludes diagnostics from financial totals, preserves by-bet-type
+arithmetic, and omits falsely named cumulative MDD. Daily result outputs remain isolated from
+prediction inputs.
+
+Phase 26 changed documentation only. No production/test/migration implementation, stage,
+commit, push or later-phase preparation was performed.
+
+ChatGPT approved `POST_V0_8_DAILY_REPLAY_26` without correction. Its accepted outcome is
+`PERSISTENCE_AGGREGATION_SPLIT_REQUIRED`: Phase 27 owns immutable NAR daily replay-result
+persistence and Phase 28 owns explicit-selection, read-only cumulative aggregation. Status is
+`APPROVED_FOR_CODEX`. The approved design preserves all three valid Phase 25 states, requires
+audit-SHA re-verification before immutable publication, keeps diagnostic records summary-less,
+prohibits implicit result selection and rate averaging, exposes only the honestly named
+`max_single_day_maximum_drawdown`, and leaves Phase 25 read-only. This approval changes docs
+only; Phase 27 remains unprepared and no implementation is authorized.
