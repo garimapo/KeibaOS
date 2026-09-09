@@ -9074,3 +9074,48 @@ ChatGPT final review approved Phase 23 for commit. The reported 13 dedicated, 43
 22, 28 Phase 20, 22 Phase 6 and 3,071 full-suite passing tests, static-boundary result,
 unchanged prerequisite production files, exact four-file scope and empty cached state
 were accepted. Status is `APPROVED_FOR_COMMIT`; no implementation contract changed.
+
+Phase 23 was committed as `7133771344b176fcef6ec0fb99fd91f822d6c701` with message
+`feat: add NAR daily target live acquisition`. Normal push and fetch completed, and the
+local and remote feature-branch heads matched exactly before Phase 24 PREPARE.
+
+`PREPARE_PHASE POST_V0_8_DAILY_REPLAY_24` prepared **NAR Daily Replay Orchestrator
+Design** as `DRAFT_FOR_REVIEW`, type `DESIGN_ONLY`, outcome `IMPLEMENTABLE`. Read-only
+inspection confirmed that Phase 14 resolution, Phase 16 schema-v1 publication/reload and
+the existing multi-race SQLite runner can be composed without changing an existing API.
+
+The replay boundary accepts one frozen Phase 23 acquisition result and never performs
+fresh acquisition. It passes the exact target set and explicit causal/storage inputs to
+Phase 14, verifies that resolver connections correspond to the exact manifest/runner
+paths, and proceeds only for `ALL_TARGETS_RESOLVED`. Partial or no-executable resolution
+returns an explicit diagnostic non-run result with the full denominator and no manifest,
+runner call or metrics. The all-resolved path calls Phase 16 once, passes its exact
+loader-returned document to `run_sqlite_historical_replay` once, retains the manifest,
+and validates its digest plus the full-denominator `SimulationSummary`.
+
+The proposed immutable result retains acquisition, resolution, projection, manifest
+digest and exact summary with a deterministic content-derived audit digest. Daily-result
+persistence remains a separately gated later phase. Phase 24 freezes only one future
+production module, one future test module and 44 behavior groups. PREPARE changed docs
+only; it did not implement, run replay/tests, stage, commit, push or advance further.
+
+ChatGPT approved `POST_V0_8_DAILY_REPLAY_24` with outcome `IMPLEMENTABLE`. Status is
+`APPROVED_FOR_CODEX`; production implementation remains unstarted. The approval records
+that the Phase 24 orchestrator itself never runs migrations, implements SQL or persists
+a new daily orchestration aggregate, while the unchanged existing SQLite replay runner
+remains authorized to perform its already-owned migration, bet-plan, settlement,
+race-result and payout writes after its single exact invocation. New daily-result/
+aggregate persistence remains deferred. This approval changed docs only.
+
+`EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_24` stopped at preflight without
+implementation. The authoritative current phase remains type `DESIGN_ONLY`; its exact
+Allowed Files are only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`, while
+the proposed production and test modules are explicitly marked future implementation
+candidates and not Allowed Files. This conflicts with the requested production/test
+execution scope and fails the AGENTS.md execution gate. No production/test file was
+created or changed, no test was run, and nothing was staged, committed or pushed.
+
+The attempted Phase 24 execution instruction was withdrawn. ChatGPT approved the
+completed Phase 24 design for commit, retaining `DESIGN_ONLY` scope and outcome
+`IMPLEMENTABLE`. Status is `APPROVED_FOR_COMMIT`; the architecture will move through a
+separately prepared implementation phase rather than expanding Phase 24.
