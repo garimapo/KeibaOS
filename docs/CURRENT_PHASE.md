@@ -4,498 +4,762 @@ Status: `READY_FOR_REVIEW`
 
 ## Identity and scope
 
-- Phase: `POST_V0_8_DAILY_REPLAY_30`
-- Name: `Pure Deterministic Strict-Ranking Probability Core`
+- Phase: `POST_V0_8_DAILY_REPLAY_32`
+- Name: `NAR Market Odds Raw Capture Archive Implementation`
 - Phase type: `IMPLEMENTATION`
-- Base Commit: `6881cd86e12bd5c0eb986ff32f40d1f2736901ed`
+- Base Commit: `6912138d7f712431e9b522a5a6a024681bb1bea3`
 - Branch: `feature/post-v0.8-daily-replay`
 - Implementation outcome: `IMPLEMENTED`
-- Phase 29 authority outcome: `SPLIT_REQUIRED`
-- Blocking capability: `COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE`
+- Phase 31 authority outcome: `SPLIT_REQUIRED`
+- Existing dependency: `COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE`
 
-Phase 30 implements only the approved immutable pure ranking-probability core for `単勝`, `馬連`,
-`ワイド`, and `3連複`. It does not implement capture, market odds, EV, strategy, persistence,
-migration, replay, settlement, calibration, or scheduling.
+Phase 32 implements the NAR-only immutable raw-response capture and isolated append-only SQLite
+archive authorized by Phase 31. It preserves exact response bytes and deterministic request/capture
+identities, but implements no normalized market quote parser, WIDE EV policy, replay resolver,
+BUY/SKIP integration, T-5 scheduler, or JRA support.
 
 ## Allowed and forbidden scope
 
-Phase 30 may change exactly:
+This implementation may change exactly:
 
 ```text
-scripts/prediction/ranking_probability.py
-tests/test_ranking_probability.py
+scripts/simulation/nar_market_odds_capture.py
+scripts/simulation/nar_market_odds_capture_archive_migration.py
+scripts/simulation/sqlite_nar_market_odds_capture_archive.py
+tests/test_nar_market_odds_capture.py
+tests/test_nar_market_odds_capture_archive_migration.py
+tests/test_sqlite_nar_market_odds_capture_archive.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-All existing prediction/value/generator/strategy/pipeline files, simulation models, repositories,
-migrations, official capture/acquisition, payout/settlement, Phase 27/28 files, database/** and
-logs/** are forbidden. Stage, commit, and push remain unauthorized.
+All other production, tests, migrations, database/**, logs/**, stage, commit, and push are forbidden.
 
-## Inherited Phase 29 audit findings
+## Read-only repository audit
 
-- No canonical ranking-probability or calibrated-probability abstraction exists. The only current
-  probability transformation is `ValueEngine`'s binary-float softmax, whose constructor default is
-  exactly `ValueEngine.DEFAULT_TEMPERATURE == 10.0`.
-- `ValueEngine` evaluates only WIN. It labels its softmax output as an uncalibrated provisional
-  estimate and multiplies it by `odds_by_horse`. Its legacy raw-input normalization maps a
-  non-`int`/`float`, non-finite, or negative score to `0.0`, accepts zero, leaves every positive
-  finite score uncapped, rejects duplicate `horse_id`, returns an empty list for an empty field,
-  and returns exact binary-float uniform values when all normalized scores are equal. Because
-  Python `bool` is an `int`, the legacy helper also accepts bool; that incidental permissiveness is
-  not promoted into the new formal input contract.
-- `BetGenerator` creates every supported combination but uses
-  `factorial(selection_size) * product(individual estimated win probabilities)`, capped at one.
-  Combination `expected_value` is always `None`; `combination_score` is the mean of constituent
-  WIN expected values. This is a ranking heuristic, not a combination probability or market EV.
-- `RuleBasedBetStrategy` admits combination candidates through `min_combination_score`; there is no
-  per-bet-type model-EV or probability threshold. `StrategyConfig` schema version 1 and its exact
-  fields, including `min_combination_score`, are bound into `strategy_config_hash`.
-- `RacePredictionInput.odds_by_horse` and historical `win_odds` contain WIN odds only. The current
-  immutable `SimulationBetPlanSnapshot` persists purchased selection, stake, rank, and cutoff, but
-  not raw prediction score, model probability, quote evidence, model EV, rejected candidates, or
-  decision reason.
-- The v008 generic `OddsSnapshotBatch`/repository can represent all four bet types and canonical
-  selections with `Decimal`, but it has only `observed_at`, source, optional URL, and a latest-by-
-  cutoff lookup. It lacks the complete official response/capture identity and the full causal
-  timestamp/path binding required here. The authoritative simulator design already classifies
-  existing v008 odds rows as untrusted for official historical input.
-- JRA has a byte-preserving official capture path for `FINAL_WIN_ODDS`; NAR target input parses WIN
-  odds from its captured race page. Neither provider has a current official prediction-time
-  QUINELLA/WIDE/TRIO odds acquisition, normalization, complete-market evidence, or immutable quote
-  archive wired into the prediction input.
-- `PayoutPublication` and provider payout parsers support the four settlement bet types, but these
-  are post-result facts. Both JRA and NAR parsing currently reject known dead-heat representations
-  as unsupported. Payouts and final-result pages are forbidden as market-odds substitutes.
-- Existing public selection authority is race-scoped `race_entry_id`: WIN has one ID, QUINELLA and
-  WIDE two distinct IDs, and TRIO three distinct IDs; unordered selections are ascending tuples.
-  Existing prediction `horse_id` currently denotes that race-entry row, but a future adapter must
-  make that equivalence explicit once and must never use horse name as identity.
+- Phase 30 supplies deterministic strict-ranking model probabilities for WIN, QUINELLA, WIDE,
+  and TRIO. It deliberately has no market-odds, EV, transport, or persistence dependency.
+- `RacePredictionInput`, `HistoricalInputSnapshot`, and the current prediction pipeline carry WIN
+  odds only. They provide no prediction-time combination quote identity.
+- Generic v008 `OddsSnapshotBatch` supports the four bet types, canonical race-entry selections,
+  complete/incomplete status, and `Decimal` odds. It has only `observed_at`, source, optional URL,
+  and latest-by-cutoff retrieval. It lacks raw capture identity/body digest, `captured_at`, optional
+  `available_at`, parser identity, exact provider request identity, and the immutable replay evidence
+  binding required here. Existing generic v008 rows are not promoted to formal evidence.
+- Existing provider helpers already establish useful non-source-specific rules: race-scoped positive
+  entry IDs, ascending unordered selection tuples, active/excluded/cancelled entry separation, and
+  complete expected-selection enumeration. Those rules may be reused later, but the current generic
+  odds model is not itself the new evidence authority.
+- The existing NAR official-response capture is byte-preserving and immutable, but its closed page
+  vocabulary is only DebaTable, RaceMarkTable, and HorseMarkInfo. The Phase 20 daily-target archive
+  is likewise closed around target-supplier and Monthly/RaceList evidence. Neither archive may be
+  silently widened or treated as an odds cache.
+- Existing JRA official-response capture supports a final WIN-odds `accessO.html` request path used
+  with result evidence. That is final/post-race evidence, not an approved prediction-time market
+  quote. No current repository component supplies formal pre-race JRA QUINELLA/WIDE/TRIO evidence.
+- Payout publications and settlement parsers are post-result facts. They must never supply,
+  reconstruct, or imply prediction-time odds.
 
-The audit therefore supports an independently implementable pure probability core, but not a
-causally valid end-to-end combination EV path. Full EV implementation must wait for explicit
-provider market-odds capture.
+## Provider support matrix
 
-## Frozen probability model
+| Provider | Bet type | Audited official source | Published representation | Capture design | Exact future EV |
+|---|---|---|---|---|---|
+| NAR | WIN | `OddsTanFuku` | one positive decimal per horse | supported by the NAR-first design | eligible after the later parser/persistence/resolver path |
+| NAR | QUINELLA | `OddsUmLenFuku` | one positive decimal per unordered pair | supported by the NAR-first design | eligible after the later complete-market path |
+| NAR | WIDE | `OddsWide` | positive decimal lower/upper range per unordered pair | capture and normalized range evidence supported | **not exact-EV eligible** |
+| NAR | TRIO | `Odds3LenFuku` | one positive decimal per unordered triple | supported by the NAR-first design | eligible after the later complete-market path |
+| JRA | WIN | no approved prediction-time request identity; current repository path is final WIN | final value only in current authority | deferred | deferred |
+| JRA | QUINELLA | no approved stable public prediction-time source/request grammar | unproven | deferred | deferred |
+| JRA | WIDE | no approved stable public prediction-time source/request grammar | unproven | deferred | deferred |
+| JRA | TRIO | no approved stable public prediction-time source/request grammar | unproven | deferred | deferred |
 
-The first model is a versioned Plackett-Luce strict-ranking model:
+NAR official desktop race pages expose all four relevant page families and change while betting is
+open. Audited pages label a live market with text such as `HH:MM 現在` and a closed market with
+`最終`. Representative WIDE pages expose ranges, not one exact price. Representative QUINELLA and
+TRIO pages expose single values. A source page's mere presence is not proof that a particular
+captured response is complete or prediction-time eligible; the later parser must prove that from
+the exact bytes.
 
-```text
-model_name    = "plackett_luce"
-model_version = "score-softmax-decimal-v1"
-event_model   = "strict_finish_order_no_ties_v1"
-```
+JRA is explicitly deferred. Authenticated betting UI documentation or a final-odds/result access
+path is not a sufficiently stable public raw-response contract for an unattended evidence archive.
+JRA support requires a separate source-discovery/design phase and may not piggyback on NAR URL,
+parser, or completeness assumptions.
 
-There is exactly one Phase 30 score-to-weight rule. Let the nonempty active race entries be `E`,
-sorted by `race_entry_id`. Each accepted `prediction_score` is an exact built-in Python `float`
-that is finite and non-negative. Define `v_i = Decimal.from_float(prediction_score_i)`. Let `T` be
-the explicitly supplied positive finite `Decimal` temperature and `m = max(v_i)`:
+## Exact NAR source authority
+
+The approved NAR v1 request families are HTTPS GET responses from exactly
+`https://www.keiba.go.jp` with these case-sensitive paths:
 
 ```text
-w_i = exp((v_i - m) / T)
-W   = sum(i in E, w_i)
-
-P(i1, ..., ik in that exact leading order)
-  = product(r=1..k, w_ir / (W - sum(q=1..r-1, w_iq)))
+WIN       /KeibaWeb/TodayRaceInfo/OddsTanFuku
+QUINELLA  /KeibaWeb/TodayRaceInfo/OddsUmLenFuku
+WIDE      /KeibaWeb/TodayRaceInfo/OddsWide
+TRIO      /KeibaWeb/TodayRaceInfo/Odds3LenFuku
 ```
 
-All `w_i` are strictly positive. The subtraction by `m` is a numerical stabilization and does not
-change the Plackett-Luce distribution. Candidate enumeration and all denominator summation use
-ascending `race_entry_id`; permutation enumeration is lexicographic. Phase 30 exposes no alternate
-raw-weight input and no caller-selected score normalization, so production cannot choose another
-latent-weight meaning ad hoc.
+Each canonical request has exactly the three query keys `k_babaCode`, `k_raceDate`, and
+`k_raceNo`. The race date is a real `YYYY/MM/DD` value serialized canonically with the slashes
+percent-encoded as `%2F`; venue code and race number are positive canonical ASCII decimal tokens.
+No fragment, credentials, alternate host, port, extra query key, duplicated key, blank value, or
+ambiguous percent encoding is allowed. Optional display/sort controls such as `odds_flg` are not
+part of the canonical evidence request. Mobile/SP pages and popularity-only views are not v1
+authority or fallback.
 
-For the same accepted scores and temperature, the intended existing WIN model is the mathematical
-temperature-softmax
+One request identity binds organization `NAR`, source system `nar_official`, page kind, bet type,
+external race identity, method `GET`, and the exact canonical URL. There is no caller-supplied URL
+escape hatch and no alternate URL retry.
+
+## Raw capture identity and archive ownership
+
+The evidence pipeline is:
 
 ```text
-P_existing_WIN(i) = exp((v_i - m) / T) / sum(j in E, exp((v_j - m) / T))
+canonical request identity
+  -> one complete HTTP response body
+  -> immutable byte-preserving raw capture
+  -> versioned pure parser and eligibility evidence
+  -> immutable normalized market batch
+  -> causal resolver
+  -> manifest/snapshot/prediction adapter
+  -> later exact quote/EV adapter
 ```
 
-and the Plackett-Luce first-place marginal is, by the definitions above,
+Raw bodies remain exact bytes. `response_sha256` is lowercase SHA-256 of those bytes. A capture ID
+is a versioned SHA-256 identity binding the request identity, page kind/bet type, response digest,
+and exact `observed_at`; it is not merely a body hash. Therefore identical bytes have the same body
+identity, while a fresh later observation of identical bytes is a distinct capture. Repeating the
+same complete evidence tuple is idempotent.
+
+Odds captures belong to a new explicit, caller-owned, append-only NAR market-odds capture SQLite
+archive. It follows the existing trusted archive pattern but does not modify or overload the closed
+NAR official-response or daily-target archives. It has an isolated explicit migration registry;
+its repository constructor never migrates, creates a hidden database, uses a global connection, or
+falls back to another archive. No UPDATE, DELETE, repair, latest, or cache API is introduced.
+
+The later normalized quote batch belongs to immutable simulation evidence persistence, not the raw
+archive and not a mutable current-price row. It must retain the raw capture ID, body digest, exact
+request identity, parser/schema version, and normalized content/completeness identity. Phase 31
+does not freeze a main-database migration number; that is audited only when the normalized
+persistence phase is prepared.
+
+## Market quote and batch model
+
+The later normalized public domain is one immutable race-and-bet-type batch, not an independently
+trusted quote row. It binds at least:
+
+- schema/domain version;
+- organization `NAR` and source system `nar_official`;
+- exact external NAR race identity and canonical internal race ID;
+- bet type and canonical page/request identity;
+- exact raw capture ID and `response_sha256`;
+- parser name/version;
+- exact captured prediction-time race-entry-universe evidence identity;
+- provider-listed eligible horse numbers and mapped active race-entry IDs in canonical order;
+- expected, parsed, missing, unexpected, duplicate, suspended, and unavailable selection facts;
+- batch/completeness status and deterministic completeness/content identity;
+- requested, observed, captured, optional provider quote-as-of, and optional proven availability
+  timestamps;
+- every canonical quote entry in deterministic lexical selection order.
+
+Canonical selection identity is race-scoped internal `race_entry_id`, never horse name. WIN uses a
+one-item tuple; QUINELLA and WIDE use two distinct IDs sorted ascending; TRIO uses three distinct
+IDs sorted ascending. The exact captured mapping from official horse number to internal entry ID is
+evidence and must be one-to-one for every selected participant.
+
+Quote values are a typed union:
 
 ```text
-P_PL(i finishes first) = w_i / W = P_existing_WIN(i).
+EXACT: exact_odds is one finite positive Decimal; range fields are absent
+RANGE: lower_odds and upper_odds are finite positive Decimals with lower <= upper; exact is absent
 ```
 
-This is equality of the mathematical model, not a second formula. Phase 30's fixed Decimal
-implementation becomes the formal deterministic numerical authority for this model; it does not
-claim exact numeric or bitwise equality with every binary-float rounding produced by legacy
-`ValueEngine` and `math.exp`. If the two implementations are compared in a regression test, the
-legacy-float comparison uses one explicit documented tolerance. Exact equality is required only
-among repeated Phase 30 calculations from the same canonical input.
-Phase 30 does not modify or call `ValueEngine`, so existing v0.8 behavior remains unchanged. In the
-later formally approved integration, one adapter must validate `Prediction.horse_id` as the exact
-`race_entry_id`, own the one raw-`Prediction.score` normalization step, pass the one authoritative
-configured temperature into this core, and make the formal WIN path consume this core's WIN values.
-That adapter must not calculate another softmax or normalize the same raw prediction twice, and the
-formal path must not choose between legacy and Phase 30 probability implementations.
+WIN, QUINELLA, and TRIO require `EXACT`. WIDE requires `RANGE` even when the displayed endpoints
+happen to be equal; it is not silently coerced to exact semantics. No float, NaN, Infinity, zero,
+negative value, popularity rank, textual inference, midpoint, or payout-derived value is allowed.
 
-### Numeric and canonical contract
+Provider conditions are explicit. A numeric complete batch is `QUOTED`; recognizable betting
+suspension or unavailable market state is diagnostic `SUSPENDED` or `UNAVAILABLE`; malformed,
+ambiguous, partial, or contradictory content fails closed. Consumers never receive a successful
+subset map from an incomplete batch.
 
-- Phase 30 consumes one already-normalized score representation: `prediction_score` is an exact
-  built-in Python `float`, finite and `>= 0`. Bool, integers, other numeric types, NaN, infinity,
-  and negative values fail closed. There is no artificial upper cap because current `ValueEngine`
-  does not cap a positive finite prediction score. Zero is valid and still produces a strictly
-  positive weight. Phase 30 does not import `ValueEngine` and does not accept raw `Prediction`
-  objects.
-- The exact binary64 score is bound by `float.hex()` and converted only by
-  `Decimal.from_float(score)`, which preserves that binary64 value exactly and does not consult the
-  ambient Decimal context.
-- `temperature` has exact runtime type `Decimal`, is finite and `> 0`, and is used at its supplied
-  exact value; Phase 30 performs no float/string conversion or implicit defaulting. The existing
-  default-temperature compatibility case is supplied explicitly by a future adapter as
-  `Decimal.from_float(ValueEngine.DEFAULT_TEMPERATURE)`, exactly `Decimal("10")`. A later
-  integration has one temperature authority and may not maintain a separate combination-model
-  temperature.
-- The module owns one private arithmetic-context template, never exposed or mutated after
-  initialization, with `prec=50`,
-  `rounding=ROUND_HALF_EVEN`, `Emin=-999999`, `Emax=999999`, `capitals=1`, and `clamp=0`.
-  `InvalidOperation`, `DivisionByZero`, and `Overflow` traps are enabled; all other signal traps are
-  disabled. Every subtraction, division by temperature, `Decimal.exp`, ordered sum,
-  multiplication, denominator subtraction, probability division, partition check, and Decimal
-  canonicalization runs inside `decimal.localcontext(the_private_template)`. No arithmetic reads or
-  mutates `decimal.getcontext()` directly, and no flags or precision leak between calls.
-- A temperature/score combination whose exponent or subsequent arithmetic does not yield finite
-  strictly positive weights and finite probabilities under that fixed context fails closed. No
-  ambient Decimal context, float probability conversion, locale, clock, random, UUID, or input
-  iteration order may influence output.
-- Public probabilities and weights are positive finite `Decimal` values. Mathematical partition
-  identities equal one; finite-precision tests use the frozen context's explicit tolerance rather
-  than silently adjusting a final candidate.
-- A zero-entry field fails closed because no strict ranking distribution exists. A one-entry field
-  has WIN probability one and produces no impossible multi-entry candidate. Equal-score fields
-  produce exactly symmetric weights and probabilities under the frozen context. Duplicate or
-  non-positive `race_entry_id` values fail closed. A requested selection containing an unknown ID,
-  repeated ID, wrong cardinality, or more entries than the field is impossible and fails closed;
-  impossible candidate families are not generated.
-- The future integration adapter is the only boundary authorized to normalize raw
-  `Prediction.score`. It must explicitly preserve the intended legacy policy before calling Phase
-  30: non-numeric or non-finite raw values become `0.0`, negative finite values clamp to `0.0`, and
-  finite non-negative values remain uncapped after conversion to built-in float. Formal bool input
-  is rejected rather than inheriting Python's incidental `bool`-is-`int` behavior. After migration,
-  neither `ValueEngine` nor any second adapter may independently normalize or softmax the same raw
-  predictions on the formal production path. Implementing that adapter/refactor is a later reviewed
-  integration phase, not Phase 30.
-- Canonical SHA payloads use NFC text, sorted object keys, UTF-8, `ensure_ascii=False`,
-  `allow_nan=False`, compact separators, no trailing LF, authoritative tuple order, and lowercase
-  SHA-256. Decimal text is `format(value.normalize(frozen_context), "f")` (with exact zero encoded
-  as `"0"`), so exponent notation and representational trailing zeros are not identity inputs.
+## Complete-market and eligibility invariant
 
-### Exact bet events
+The expected field is the provider-listed betting-eligible field at capture time, reconciled
+exactly with a causally valid captured pre-race `RaceEntryUniverse` for the same race. It is not the
+original declared field and is never rewritten from later results. Active, scratched/excluded,
+cancelled, and suspended states must be supported by exact captured content. If the odds response
+and entry-universe evidence cannot prove one coherent eligible set, the batch is unsupported or
+invalid; the parser must not guess.
 
-For distinct canonical race-entry selections:
+For evidenced eligible count `n`, the complete quoted selection set is exactly:
 
 ```text
-WIN {i}
-  P_win(i) = w_i / W
-
-QUINELLA {i,j}
-  P_quinella({i,j}) = P(i,j) + P(j,i)
-
-TRIO {i,j,k}
-  P_trio({i,j,k}) = sum(P(pi) for pi in all 6 permutations of (i,j,k))
-
-WIDE {i,j}
-  P_wide({i,j})
-    = sum(P(pi) for h in E excluding {i,j}
-                 for pi in all 6 permutations of (i,j,h))
+WIN       n
+QUINELLA  C(n, 2)
+WIDE      C(n, 2)
+TRIO      C(n, 3)
 ```
 
-Thus WIDE is joint inclusion of both chosen entries in the first three positions of a strict
-no-tie ranking, not the QUINELLA formula and not a product heuristic. For every `h` distinct from
-`i,j`, the six enumerated orders are exactly the ordinary top-three outcomes containing the chosen
-pair and that third entry; no tie event is included. WIN and QUINELLA require at least one and two
-modeled entries respectively; WIDE and TRIO require at least three. A mathematical probability does
-not authorize sale: JRA WIDE sale requires a field of at least four at sale opening, and provider
-market availability plus an exact market quote remain separate requirements.
+The exact canonical identities, not only counts, must equal the expected set. A missing,
+unexpected, duplicate, unmapped, nonnumeric, suspended, or unavailable expected selection prevents
+a `QUOTED` complete batch. A wholly recognized suspended/unavailable response may yield only its
+explicit diagnostic batch state. No numeric successful subset, venue filter, first-N cap, cached
+fallback, or alternate source is returned.
 
-The candidate identities are exactly:
+Late scratches are accepted only when the captured odds participant set and captured entry-state
+evidence agree before the cutoff. A later result page may not retroactively change membership.
+Race cancellation or betting suspension produces no exact quote map and no EV eligibility.
 
-- WIN: one positive `race_entry_id`;
-- QUINELLA: two distinct IDs, ascending;
-- WIDE: two distinct IDs, ascending;
-- TRIO: three distinct IDs, ascending.
+## Timing and causal authority
 
-Wrong cardinality, duplicate IDs, an ID outside the modeled universe, unsupported type, or an
-impossible field size fails closed. Results are ordered by the fixed bet-type order
-`単勝`, `馬連`, `ワイド`, `3連複`, then selection tuple. WIN, QUINELLA, and TRIO form unit-mass
-partitions where defined; the sum of all WIDE pair probabilities is three because every strict
-top-three outcome contains three winning pairs.
+The raw acquisition clock is one explicit injected UTC clock shared by the live capture service
+and archive composition. The application adds no hidden/default/current clock.
 
-### Official WIDE and dead-heat boundary
+- `requested_at`: sampled immediately before sending the exact request.
+- `observed_at`: sampled only after the full response body and headers have been received.
+- `captured_at`: the immutable archive's durable validation/publication time (`stored_at` in the
+  existing archive vocabulary), sampled after response validation and no earlier than observed.
+- `available_at`: optional and present only when an official field is proven to mean publication
+  availability. It is not inferred from file time, cache headers, or current wall clock.
+- `provider_quote_as_of_at`: optional audit fact parsed from an unambiguous official market-as-of
+  label. `HH:MM 現在` is not automatically promoted to `available_at` without a separately tested
+  semantic proof. `最終` is not prediction-time evidence.
 
-JRA and NAR describe WIDE as the unordered pair among 1st/2nd, 1st/3rd, or 2nd/3rd. JRA publishes
-WIDE only when at least four entries exist at sale opening; NAR notes that offered wager types can
-vary by racecourse. Sale eligibility is therefore provider-market evidence, not a probability-core
-inference. Both official descriptions state that a pair consisting only of two horses tied for
-third is not winning.
+Every quote used for replay/EV must satisfy exactly:
 
-Plackett-Luce v1 assigns probability only to strict total orders: tie/dead-heat event probability is
-not represented and no pseudo-probability or tie adjustment may be added. Its QUINELLA, TRIO, and
-WIDE values are therefore `model_probability` conditional on the frozen strict no-tie ranking
-model. They are the ordinary-order event sums above, not a complete empirical model of official
-dead-heat settlement. In particular, official JRA/NAR WIDE rules do not award a pair consisting
-only of the two horses tied for third; Phase 30 neither models that tie nor moves its mass into an
-ordinary-order event. Settlement continues to consume independently recorded official results and
-payouts. Any tie-capable probability model requires a new model/event version and a separately
-reviewed design. Displayed odds can also differ from an actual dead-heat payout, so v1 must not
-claim a fully actuarial dead-heat-adjusted return.
+```text
+available_at <= observed_at <= captured_at <= information_cutoff < scheduled_start_at
+```
 
-## Implemented probability API
+when `available_at` exists, otherwise:
 
-`scripts/prediction/ranking_probability.py` exposes exactly:
+```text
+observed_at <= captured_at <= information_cutoff < scheduled_start_at
+```
+
+The later live service additionally requires `requested_at <= observed_at`. A request that begins
+before cutoff but completes or is archived after cutoff is not prediction eligible. It may remain
+as immutable audit capture, but it cannot produce a successful quote resolution. There is no
+backdating, nearest-future selection, final-odds substitution, or wall-clock reconstruction.
+
+For a future T-5 run the caller supplies both `scheduled_start_at` and the exact
+`information_cutoff = scheduled_start_at - five minutes`. The service must be started early enough
+for full response observation and archive publication to finish by that cutoff. Scheduling itself
+is outside Phase 31 and every listed implementation phase.
+
+## Multi-request atomicity
+
+Each approved NAR bet-type page is treated as one full-market response for that one bet type. One
+normalized bet-type batch must come from exactly one raw odds capture; pages or fragments from
+multiple request times are never spliced into one batch.
+
+A four-bet-type acquisition consists of four independently timestamped immutable captures. It is
+not described as an atomic simultaneous market snapshot. A downstream decision may bind all four
+capture identities only after each required batch separately passes the same explicit cutoff and
+race-universe checks. Failure of any required batch means no partial four-type decision input.
+
+The separate race-entry-universe evidence is permitted only as eligibility evidence. Its exact
+race identity and pre-cutoff capture identity are bound into the normalized batch, and its active
+set must reconcile with the participants proven by the odds response. It does not authorize
+combining odds values from multiple odds responses.
+
+## Historical replay selection
+
+Replay never reparses arbitrary raw HTML as a fallback once a normalized batch exists. The parser
+version and raw evidence identities are immutable members of the normalized batch, and replay
+loads that exact validated batch through its repository.
+
+The frozen resolver policy is `latest-observed-before-cutoff-fail-on-tie-v1`:
+
+1. match exact organization/source, external and internal race identity, bet type, parser/domain
+   version, and required completeness/quote representation;
+2. retain only batches satisfying the causal chain and scheduled-start boundary;
+3. select the greatest `observed_at` not after the cutoff;
+4. collapse only an exact duplicate immutable content identity;
+5. if two different content identities share the greatest `observed_at`, fail closed as ambiguous.
+
+`available_at` is a causal gate, not an implicit freshness override. Database row ID, insertion
+order, current time, file timestamp, lexical content preference, date fallback, and “latest current”
+are forbidden. The replay resolution and manifest must eventually bind the selected normalized
+batch content SHA, raw capture ID/SHA, request identity, parser version, and exact policy.
+
+## EV boundary and WIDE decision
+
+The later exact market ratio may be calculated only when all of the following are exact and valid:
+
+- Phase 30 probability/model identity;
+- provider, race, bet type, and canonical selection identity;
+- a causally valid, complete `QUOTED` market batch;
+- one positive exact Decimal quote for that selection.
+
+Only then:
+
+```text
+model_expected_value_ratio = model_probability * market_decimal_odds
+```
+
+WIN, QUINELLA, and TRIO can meet this representation gate after the later NAR path is implemented.
+NAR WIDE remains excluded from exact market EV because the official source publishes a range. No
+lower endpoint, upper endpoint, or midpoint is called exact EV. A separately named conservative or
+interval metric would require a later design review proving its semantics. JRA remains fully
+deferred. Accordingly `COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE` is design-resolved only for the
+future NAR QUINELLA/TRIO capture path; it is not yet implementation-resolved and remains open for
+WIDE exact EV and JRA.
+
+## Approved phase decomposition
+
+The work is split because raw evidence integrity, live acquisition, parser/completeness semantics,
+normalized persistence/resolution, replay integration, and EV integration have independent failure
+and audit boundaries:
+
+1. **Phase 32 — NAR Market Odds Raw Capture Archive Implementation**: closed request identity,
+   byte-preserving raw capture, isolated explicit archive migration, immutable exact-ID archive.
+   No HTTP, HTML parser, normalized quote, cutoff resolver, or EV.
+2. **Phase 33 — NAR Market Odds Live Acquisition Implementation**: one fixed GET per requested bet
+   type, injected transport/clock, immediate archive, conservative request/observation/storage
+   timing, no parser and no cross-type partial success.
+3. **Phase 34 — NAR Market Odds Parser and Complete Quote Batch Implementation**: pure parsing,
+   exact/range quote union, entry-universe reconciliation, provider status, completeness, content
+   identity. No network or database writes.
+4. **Phase 35 — NAR Normalized Market Odds Persistence and Causal Resolution**: immutable main-DB
+   normalized batch storage, exact load, causal policy, ambiguity failure. Migration version is
+   audited then, not guessed now.
+5. **Phase 36 — NAR Replay Manifest/Input Quote Evidence Integration**: bind selected quote evidence
+   to resolver, manifest, snapshot, and prediction input without changing model or strategy.
+6. **Phase 37 or later — Exact NAR WIN/QUINELLA/TRIO EV and versioned decision integration**:
+   probability/quote adapter first, then separately reviewed strategy and immutable decision audit.
+
+WIDE range analytics and JRA prediction-time source discovery remain separate later designs.
+
+## Exact Phase 32 public domain API
+
+`POST_V0_8_DAILY_REPLAY_32` — `NAR Market Odds Raw Capture Archive Implementation` — is the
+only next implementation proposed. The public domain API is frozen exactly as follows.
 
 ```python
-@dataclass(frozen=True, slots=True)
-class RaceEntryModelScore:
-    race_entry_id: int
-    prediction_score: float
-    prediction_score_float_hex: str = field(init=False)
+class NARMarketOddsPageKind(StrEnum):
+    ODDS_TAN_FUKU = "odds_tan_fuku"
+    ODDS_UM_LEN_FUKU = "odds_um_len_fuku"
+    ODDS_WIDE = "odds_wide"
+    ODDS_3_LEN_FUKU = "odds_3_len_fuku"
 
 @dataclass(frozen=True, slots=True)
-class RaceEntryLatentWeight:
-    race_entry_id: int
-    latent_weight: Decimal
+class NARMarketOddsRaceIdentity:
+    baba_code: str
+    race_date: date
+    race_no: int
 
 @dataclass(frozen=True, slots=True)
-class BetSelectionModelProbability:
-    bet_type: str
-    race_entry_ids: tuple[int, ...]
-    model_probability: Decimal
+class NARMarketOddsRequestIdentity:
+    page_kind: NARMarketOddsPageKind
+    race_identity: NARMarketOddsRaceIdentity
+    schema_version: int = field(init=False, default=1)
+    organization: str = field(init=False, default="NAR")
+    source_system: str = field(init=False, default="keiba.go.jp")
+    method: str = field(init=False, default="GET")
+    official_origin: str = field(init=False, default="https://www.keiba.go.jp")
+    canonical_request_url: str = field(init=False)
+    request_identity_sha256: str = field(init=False)
+    request_identity: str = field(init=False)
 
-@dataclass(frozen=True, slots=True)
-class PlackettLuceBetProbabilitySet:
-    schema_version: int
-    model_name: str
-    model_version: str
-    event_model: str
-    temperature: Decimal
-    entry_scores: tuple[RaceEntryModelScore, ...]
-    latent_weights: tuple[RaceEntryLatentWeight, ...]
-    probabilities: tuple[BetSelectionModelProbability, ...]
-    probability_content_sha256: str = field(init=False)
-
-def calculate_plackett_luce_bet_probabilities(
+def build_nar_market_odds_request_identity(
     *,
-    entry_scores: Sequence[RaceEntryModelScore],
-    temperature: Decimal,
-) -> PlackettLuceBetProbabilitySet:
-    ...
+    page_kind: NARMarketOddsPageKind,
+    baba_code: str,
+    race_date: date,
+    race_no: int,
+) -> NARMarketOddsRequestIdentity: ...
+
+@dataclass(frozen=True, slots=True)
+class NARMarketOddsResponseCapture:
+    request_identity: NARMarketOddsRequestIdentity
+    effective_url: str
+    response_body: bytes
+    charset: str
+    requested_at: datetime
+    observed_at: datetime
+    captured_at: datetime
+    http_status: int
+    content_type: str | None = None
+    content_encoding: str | None = None
+    http_date: str | None = None
+    etag: str | None = None
+    last_modified: str | None = None
+    content_length: int | None = None
+    schema_version: int = field(init=False, default=1)
+    response_sha256: str = field(init=False)
+    byte_length: int = field(init=False)
+    capture_id: str = field(init=False)
 ```
 
-`schema_version` is exactly 1. Construction is immutable and derives all weights, candidate
-probabilities, and `probability_content_sha256`; callers cannot inject trusted derived fields.
-The public result constructor rejects ordinary direct construction; the calculation function is the
-sole trusted factory and validates/recomputes every derived child before returning.
-`probability_content_sha256` uses version
-`formal-bet-probability-plackett-luce-v1` and binds every model/input/output semantic field.
-No quote, EV, strategy, stake, network, database, or current clock enters this pure API.
+`NARMarketOddsRaceIdentity` accepts only an exact built-in `str` `baba_code` matching
+`[1-9][0-9]*`, an exact `datetime.date` that is not `datetime.datetime`, and an exact built-in
+positive `int` `race_no` that is not bool. It contains provider identity only; Phase 32 adds no
+internal/main-database race ID and never uses a horse name.
 
-## Probability and EV terminology
-
-- `model_probability` is the uncalibrated output of the frozen strict no-tie ranking model. Every
-  use must preserve that qualifier; it is neither tie-adjusted nor a complete empirical official-
-  settlement probability. It is never named or represented as `calibrated_probability`.
-- `calibrated_probability` is reserved for a later empirical calibration model carrying its own
-  version, training-data identity, target commit, fit cutoff, and out-of-sample validation. It is
-  absent in the first implementation.
-- Once a valid quote exists, `model_expected_value_ratio = model_probability * market_decimal_odds`.
-  Example: `Decimal("0.082") * Decimal("15.8") = Decimal("1.2956")`.
-- The ratio 1 is break-even gross return; it corresponds to 100 percent gross return, not 100
-  percent profit. No percent conversion is stored in this field.
-- Because its probability is uncalibrated and its quoted dividend may change under dead heat,
-  `model_expected_value_ratio` is a model-implied quote value ratio, not a validated profit claim.
-  An API or policy requiring calibrated EV must fail closed until calibration evidence exists.
-- Legacy `estimated_probability`, `expected_value`, and `combination_score` retain their v0.8
-  meanings. They must not be silently reinterpreted. A later integration uses a new explicit
-  candidate value rather than changing these fields in place.
-
-## Prediction-time market quote contract
-
-The market-odds phase must define one immutable complete market snapshot and exact quote values.
-Each quote/snapshot identity must bind at least:
-
-- schema and collector contract versions;
-- `organization` (`JRA` or `NAR`) and exact `source_system`;
-- internal `race_id`, provider `external_race_id`, bet type, and canonical `race_entry_ids`;
-- positive finite `market_decimal_odds: Decimal`;
-- optional provider `available_at`, plus `observed_at`, `captured_at`, explicit
-  `information_cutoff`, and `scheduled_start_at` in UTC microseconds;
-- exact request identity, canonical source URL, response capture ID, response SHA-256, and complete
-  market-snapshot content SHA-256;
-- the complete active entry universe, market offered/status fact, and complete expected-versus-
-  observed selection coverage for that provider/race/bet type.
-
-Required causal relation is:
+The page/path relation is exact:
 
 ```text
-available_at <= observed_at <= captured_at <= information_cutoff <= scheduled_start_at
+ODDS_TAN_FUKU    /KeibaWeb/TodayRaceInfo/OddsTanFuku
+ODDS_UM_LEN_FUKU /KeibaWeb/TodayRaceInfo/OddsUmLenFuku
+ODDS_WIDE        /KeibaWeb/TodayRaceInfo/OddsWide
+ODDS_3_LEN_FUKU  /KeibaWeb/TodayRaceInfo/Odds3LenFuku
 ```
 
-where `available_at` may be `None` only under a separately approved observed-only provider policy.
-No timestamp is inferred from current time, DB insertion, file mtime, race date, result, or payout.
-Historical replay must receive an exact snapshot identity already linked to its prediction input;
-it cannot call a latest lookup or substitute closing/current odds. Missing, incomplete, unsupported,
-future-dated, mismatched, or corrupt quote evidence makes that candidate unsupported/no-EV and may
-make the strategy fail closed according to its explicit policy. There is no fallback to WIN odds,
-`combination_score`, settlement payout, or another bet type's quote.
+The future normalized mapping is respectively WIN, QUINELLA, WIDE, and TRIO, but Phase 32 does not
+parse that content. `OddsTanFuku` is preserved in full even though only its WIN portion is expected
+to become a later normalized value.
 
-The existing v008 `OddsSnapshotBatch` is not this authority and is not retroactively promoted.
-Provider capture design must first freeze the real JRA and NAR request/response grammar, sale-state
-rules, completeness, body archive ownership, and exact timestamp source.
+## Canonical request and identity
 
-## Strategy, BUY/SKIP, and allocation boundary
-
-The responsibility sequence remains:
+The request builder alone creates the URL. Query order is exactly `k_babaCode`, `k_raceDate`, then
+`k_raceNo`; date slashes are uppercase `%2F`:
 
 ```text
-prediction score -> model probability -> exact market quote -> model EV ratio
-                 -> strategy BUY/SKIP eligibility -> stake allocation
+https://www.keiba.go.jp<PATH>?k_babaCode=<BABA>&k_raceDate=YYYY%2FMM%2FDD&k_raceNo=<RACE_NO>
 ```
 
-The probability/EV calculator never chooses BUY or stake. A future formal-EV strategy configuration
-must explicitly bind:
+No arbitrary input URL, reordered or extra query, alternate host, credentials, fragment, HTTP, or
+port spelling is accepted as identity. The one private canonical JSON authority used by both
+request and capture identities is exactly:
 
-- probability basis (`model_uncalibrated_v1`; calibrated variants require separate evidence);
-- allowed bet types;
-- a complete per-bet-type minimum model-EV-ratio map;
-- optional per-bet-type minimum model-probability map;
-- maximum candidates/bets and deterministic sort/tie-break policy; and
-- existing allocation-policy identity.
+```python
+json.dumps(
+    payload,
+    ensure_ascii=False,
+    allow_nan=False,
+    sort_keys=True,
+    separators=(",", ":"),
+).encode("utf-8")
+```
 
-No example threshold is frozen as a default. Exact threshold comparison is inclusive (`>=`) and a
-strategy may legitimately produce zero bets. Missing quote/EV can never pass the threshold.
+The request payload is exactly:
 
-Adding these fields to current `StrategyConfig` would change its hash. The existing schema-version-1
-payload and every persisted v0.8 strategy identity must remain reproducible. A later integration
-must introduce a version-dispatched strategy-config schema version 2 (or return for review if the
-actual implementation requires a different compatibility mechanism), retain v1 loading/hashing,
-and bind probability model/version, quote contract, threshold maps, and decision sort policy into
-the new hash. It must remove `combination_score` as a formal BUY authority without altering legacy
-v1 behavior.
+```json
+{
+  "baba_code": "<canonical token>",
+  "canonical_request_url": "<exact canonical URL>",
+  "method": "GET",
+  "official_origin": "https://www.keiba.go.jp",
+  "organization": "NAR",
+  "page_kind": "<enum value>",
+  "race_date": "YYYY-MM-DD",
+  "race_no": 1,
+  "schema_version": 1,
+  "source_system": "keiba.go.jp"
+}
+```
 
-## Prediction-decision persistence boundary
-
-The current v009 bet-plan snapshot is insufficient as a full prediction-time decision audit: it
-stores only purchased bets. A later, separately reviewed immutable snapshot must preserve every
-evaluated candidate, including raw score/model identity, model probability, exact quote identity
-and odds, model EV ratio or explicit unavailability, BUY/SKIP decision and reason, rank, and chosen
-stake. It must distinguish an unsupported/no-quote candidate from an intentional below-threshold
-SKIP and from a purchased zero-return outcome.
-
-No v009 row is rewritten or inferred, and no migration is included in the probability-core phase.
-Schema/version and append-only conflict semantics belong to the later decision-evidence persistence
-phase. Phase 27/28 replay-result persistence and aggregation remain unchanged and must not feed back
-into prediction, calibration, value, or strategy inputs.
-
-## Required phase split
-
-1. **Phase 30 — Formal Plackett-Luce Bet Probability Core Implementation.** Completed within the
-   immutable pure probability API/formulas above; the current pipeline and v0.8 behavior remain
-   unchanged.
-2. **Phase 31 — Prediction-Time Combination Market Odds Capture Design.** Audit and freeze JRA and
-   NAR provider request grammar, complete-market semantics, sale availability, causal timestamps,
-   capture/archive/database ownership, and exact quote API. This is a design gate; provider-specific
-   implementations may need separate phases.
-3. **Later approved capture implementation phase(s).** Implement byte-exact official acquisition,
-   normalized complete quote snapshots, immutable persistence, exact-ID reload, and historical
-   snapshot linkage. No EV integration precedes both provider and causal contracts required by its
-   declared scope.
-4. **Later formal EV and strategy-v2 integration phase.** Join the probability set to exact
-   race-entry quote identities, calculate `model_expected_value_ratio`, create explicit candidate
-   values, and apply the versioned strategy BUY/SKIP policy before existing allocation.
-5. **Later prediction-decision evidence persistence phase.** Persist the immutable candidate and
-   decision audit without changing Phase 27/28 result layers or creating outcome feedback.
-6. **Later calibration phase.** Only validated empirical calibration may introduce
-   `calibrated_probability` and calibrated-EV terminology.
-
-No scheduler is part of Phase 29/30. Future T-5 operation supplies an explicit cutoff equal to the
-approved scheduled start minus five minutes; no engine samples a wall clock.
-
-Exact enumeration is practical at normal race size: QUINELLA is `O(n^2)`, and WIDE/TRIO are
-`O(n^3)` with constant six-permutation work. Phase 30 uses no Monte Carlo, sampling, approximation,
-or factorial-product shortcut.
-
-## Exact Phase 30 Allowed Files
-
-Phase 30 may modify exactly:
+`race_no` is the actual integer. `request_identity_sha256` is SHA-256 of those canonical bytes and
+`request_identity` is exactly:
 
 ```text
-scripts/prediction/ranking_probability.py
-tests/test_ranking_probability.py
+nar-market-odds-request-v1:<64 lowercase hex>
+```
+
+## Exact response capture contract
+
+`request_identity` must be the exact public request type. `effective_url` must be an exact nonempty
+built-in string that passes the same official canonical URL validation and equals
+`request_identity.canonical_request_url` exactly; redirects and cross-origin responses are outside
+Phase 32. The body is exact nonempty built-in `bytes`. It is decoded once only to prove strict UTF-8
+support, but decoded text is never identity material and bytes are never normalized or re-encoded.
+
+`charset` is exactly `utf-8`; `http_status` is exact int 200 and rejects bool. `content_encoding` is
+only `None` or exact `identity`. Optional HTTP metadata is exact `str | None` with no control
+characters. `content_length`, when present, is an exact nonnegative int, rejects bool, and equals
+the exact response byte length.
+
+Malformed types, URL/status/length contradictions, and timestamp contradictions raise validation
+errors. A syntactically valid but unsupported charset, content-encoding profile, or body that is not
+strict UTF-8 raises the unsupported error.
+
+`requested_at`, `observed_at`, and `captured_at` are exact aware `datetime.datetime` values,
+canonicalized to UTC and persisted with microseconds as `YYYY-MM-DDTHH:MM:SS.ffffff+00:00`. Their
+exact relation is:
+
+```text
+requested_at <= observed_at <= captured_at
+```
+
+They are supplied by the future transport/caller; the domain calls no current clock. Phase 32 owns
+no `available_at`, `information_cutoff`, or `scheduled_start_at` field and does not infer
+availability from HTTP Date. A capture can be valid raw evidence even when a later resolver rejects
+it for a prediction cutoff. The later resolver retains the Phase 31 causal chain and
+`latest-observed-before-cutoff-fail-on-tie-v1` policy.
+
+`response_sha256 = sha256(response_body).hexdigest()` over the exact persisted bytes and
+`byte_length = len(response_body)`. The capture payload binds every immutable response fact:
+
+```json
+{
+  "captured_at_utc": "<microsecond UTC text>",
+  "charset": "utf-8",
+  "content_encoding": null,
+  "content_length": null,
+  "content_type": null,
+  "effective_url": "<exact canonical request URL>",
+  "etag": null,
+  "http_date": null,
+  "http_status": 200,
+  "last_modified": null,
+  "observed_at_utc": "<microsecond UTC text>",
+  "request_identity_sha256": "<64 lowercase hex>",
+  "requested_at_utc": "<microsecond UTC text>",
+  "response_sha256": "<64 lowercase hex>",
+  "schema_version": 1
+}
+```
+
+Optional members use their exact actual string/int value instead of null. The capture digest is
+SHA-256 of the same canonical JSON bytes; `capture_id` is exactly:
+
+```text
+nar-market-odds-capture-v1:<64 lowercase hex>
+```
+
+Thus the same full semantic capture is deterministic/idempotent; changed bytes, request, header, or
+owned timestamp changes the capture identity. Identical bytes observed later retain the same body
+SHA but receive a distinct capture ID.
+
+## Exact domain and Protocol errors
+
+```python
+class NARMarketOddsCaptureError(Exception): ...
+
+class NARMarketOddsCaptureValidationError(NARMarketOddsCaptureError): ...
+
+class NARMarketOddsCaptureUnsupportedError(NARMarketOddsCaptureError): ...
+
+class NARMarketOddsCaptureSource(Protocol):
+    def load_capture(
+        self,
+        *,
+        capture_id: str,
+    ) -> NARMarketOddsResponseCapture | None: ...
+
+class NARMarketOddsCaptureArchive(NARMarketOddsCaptureSource, Protocol):
+    def save_capture(
+        self,
+        *,
+        capture: NARMarketOddsResponseCapture,
+    ) -> None: ...
+```
+
+Exact missing lookup returns `None`; there is no domain missing exception. There is no latest,
+closest, date, cutoff, page search, update, delete, repair, or fallback method.
+
+## Exact isolated migration authority
+
+The migration module freezes:
+
+```python
+VERSION = 1
+NAME = "v001_nar_market_odds_capture_archive_schema"
+
+def apply(connection: sqlite3.Connection) -> None: ...
+
+def get_applied_nar_market_odds_capture_archive_schema_versions(
+    connection: sqlite3.Connection,
+) -> dict[int, str]: ...
+
+def get_pending_nar_market_odds_capture_archive_migrations(
+    connection: sqlite3.Connection,
+) -> tuple[object, ...]: ...
+
+def apply_nar_market_odds_capture_archive_migrations(
+    connection: sqlite3.Connection,
+) -> None: ...
+
+def require_nar_market_odds_capture_archive_schema(
+    connection: sqlite3.Connection,
+) -> None: ...
+```
+
+Every entrypoint requires exact `sqlite3.Connection`. `apply` creates only v1 domain objects and
+does not begin, commit, or roll back; its caller owns that transaction. The explicit migration
+runner rejects an active caller transaction, enables/verifies foreign keys, owns one atomic
+`BEGIN IMMEDIATE`, and rolls back on failure. Read/schema-gate entrypoints never create or migrate
+schema. Unknown future versions, name mismatches, malformed registry, and unregistered objects fail
+closed. No hidden path, current clock, main simulation migration registry, seed, or backfill exists.
+
+The exact schema object set is:
+
+```text
+nar_market_odds_capture_archive_schema_migrations
+nar_market_odds_response_bodies
+nar_market_odds_response_captures
+ux_nar_market_odds_response_captures_evidence
+```
+
+The registry is the standard `version INTEGER PRIMARY KEY` / unique nonempty `name TEXT` table,
+`WITHOUT ROWID`. The bodies table, also `WITHOUT ROWID`, has exactly
+`response_sha256`, `response_body`, and `byte_length`; it enforces lowercase 64-hex identity,
+nonempty BLOB, positive integer length, and `byte_length = length(response_body)`.
+
+The capture table is `WITHOUT ROWID` with these columns in exact order:
+
+```text
+capture_id
+schema_version
+request_schema_version
+request_identity
+request_identity_sha256
+page_kind
+organization
+source_system
+request_method
+request_official_origin
+request_baba_code
+request_race_date
+request_race_no
+canonical_request_url
+effective_url
+response_sha256
+charset
+requested_at_utc
+observed_at_utc
+captured_at_utc
+http_status
+content_type
+content_encoding
+http_date
+etag
+last_modified
+content_length
+```
+
+It enforces both version values equal one; exact identity prefixes/lowercase SHA shape; the four
+page kinds; constant organization/source/method/origin; positive canonical baba/race values; real
+canonical date text and exact request/canonical/effective URL reconstruction through repository
+validation; strict UTF-8/status/encoding; microsecond UTC timestamp shape and order; and optional
+metadata types/length. `capture_id` is the primary key. `response_sha256` references
+`nar_market_odds_response_bodies(response_sha256)` with `ON UPDATE RESTRICT ON DELETE RESTRICT`.
+
+The only evidence index is named `ux_nar_market_odds_response_captures_evidence`, is UNIQUE, and
+has this exact column order:
+
+```text
+request_identity_sha256,response_sha256,requested_at_utc,observed_at_utc,captured_at_utc
+```
+
+There is no `CURRENT_TIMESTAMP`, generated semantic time, mutable timestamp, trigger, aggregate, or
+main-simulation table. The migration DDL is the single schema authority. Its public schema gate
+checks the exact object set and normalized SQL plus column order/type/nullability/PK, CHECK clauses,
+`WITHOUT ROWID`, unique index definition/order, FK target/actions, and `foreign_key_check`; a
+lookalike schema is rejected and never repaired.
+
+## Exact SQLite repository API and behavior
+
+```python
+class SQLiteNARMarketOddsCaptureArchive:
+    def __init__(
+        self,
+        *,
+        connection: sqlite3.Connection,
+    ) -> None: ...
+
+    def save_capture(
+        self,
+        *,
+        capture: NARMarketOddsResponseCapture,
+    ) -> None: ...
+
+    def load_capture(
+        self,
+        *,
+        capture_id: str,
+    ) -> NARMarketOddsResponseCapture | None: ...
+```
+
+Construction requires exact `sqlite3.Connection`, rejects an active transaction, enables/verifies
+foreign keys, and requires the already-applied exact v1 schema. It does not migrate, repair, open,
+or close a connection. Caller owns connection lifetime.
+
+The repository reuses exactly `RepositoryValidationError`, `RepositoryConflictError`, and
+`RepositoryDataIntegrityError` from `scripts.simulation.repositories.errors`. Invalid caller or
+lookup values use validation; the same immutable identity with different valid supplied content
+uses conflict; malformed/corrupt/incompatible stored data or SQLite integrity failures use data
+integrity.
+
+Save requires exact capture type and no active caller transaction, owns one atomic
+`BEGIN IMMEDIATE`, and commits or rolls back its own work. Same capture ID and exact reconstructed
+capture is an idempotent success. Any semantic difference is a conflict. Bodies are deduplicated by
+response SHA; multiple capture rows may reference one body. Same supplied SHA with different valid
+bytes is a conflict, while a corrupt preexisting body or missing referenced body is data-integrity
+failure and is never repaired. Publication is INSERT-only: no `INSERT OR REPLACE`, `REPLACE`,
+UPDATE, DELETE, refresh, or overwrite.
+
+Load validates canonical capture-ID syntax, reads one exact capture and one exact body, validates
+BLOB type/length/SHA, reconstructs race/request/capture domain values, recomputes both identities,
+compares every stored scalar to the reconstructed tuple, and verifies evidence-index coherence.
+Any mismatch raises data integrity; only an absent exact key returns `None`. The repository exposes
+no latest, closest, date, cutoff, fuzzy URL, mutable, or resolver API.
+
+## Phase 32 raw-only boundaries
+
+Phase 32 performs no HTTP request. A future transport supplies the exact request identity, effective
+URL, raw bytes, response metadata, and timestamps. The three approved production files contain no
+`requests`, `urllib.request`, aiohttp, browser, global session, hidden clock, random, UUID, JRA,
+Phase 30 probability, ValueEngine, BetGenerator, strategy, settlement, payout, main migration
+runner, or replay dependency.
+
+Phase 32 does not parse horse numbers, selections, odds, popularity, completeness, suspension, or
+WIDE bounds; imports no Decimal odds model; computes no model probability or EV; and leaves
+`COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE` open. The later normalized WIDE representation remains
+a lower/upper range with no exact EV policy. JRA, causal resolver, replay manifest, BUY/SKIP, and T-5
+scheduler remain deferred.
+
+## Exact Phase 32 Allowed Files
+
+Phase 32 may change exactly these eight files:
+
+```text
+scripts/simulation/nar_market_odds_capture.py
+scripts/simulation/nar_market_odds_capture_archive_migration.py
+scripts/simulation/sqlite_nar_market_odds_capture_archive.py
+tests/test_nar_market_odds_capture.py
+tests/test_nar_market_odds_capture_archive_migration.py
+tests/test_sqlite_nar_market_odds_capture_archive.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-All existing prediction/value/generator/strategy/pipeline files, simulation models, repositories,
-migrations, official capture/acquisition, payout/settlement, Phase 27/28 files, database/** and
-logs/** remain unchanged. The implementation stayed within these four files.
+No ninth file is permitted. Existing NAR/JRA capture production, global migrations, prediction,
+settlement, payout, database/**, and logs/** remain read-only.
 
-## Required Phase 30 tests
+## Frozen Phase 32 test contract
 
-The dedicated suite must prove:
+Phase 32 tests must cover at least:
 
-1. exact public names/signatures, frozen dataclasses, derived-field construction, schema/model/event
-   versions, and deterministic content SHA;
-2. strict score/temperature/identity validation, input-order independence, ascending canonical
-   entries, canonical selection arities, no duplicate candidates, and impossible selections;
-3. hand-computable two-entry WIN values and QUINELLA probability one;
-4. exact equality of each PL first-place value to `w_i / sum(w)` and mathematical equality to the
-   frozen intended WIN softmax for identical accepted scores/temperature, including the existing
-   default-temperature case; any direct legacy `ValueEngine` float comparison uses the one explicit
-   test tolerance and makes no bitwise-equality claim;
-5. exact ordered-prefix formula, QUINELLA two-order sum, TRIO six-order sum, and WIDE top-three
-   joint-inclusion enumeration; WIDE differs from QUINELLA in an eligible four-entry fixture;
-6. symmetry under input/candidate permutation, every probability in `[0,1]`, WIN/QUINELLA/TRIO
-   unit partition mass at frozen Decimal tolerance, and WIDE total mass three;
-7. the exact private Decimal context is used for every arithmetic/canonicalization step; repeated
-   calls are exactly identical, and changing ambient precision and rounding to materially different
-   values leaves every weight, probability, ordering, and content SHA exactly unchanged;
-8. stable exact score conversion, exact temperature handling, equal-score symmetry, zero-score
-   validity, empty/impossible-field rejection, no float probability/weight output, no NaN/infinity,
-   no locale dependence, and semantic change changes content SHA;
-9. the public core exposes no raw-weight alternate authority; duplicate identities are rejected;
-   the model exposes no dead-heat/tie pseudo-probability and imports no official settlement logic;
-10. no market quote, EV, strategy, allocation, persistence, SQL, migration, network, current clock,
-   random, UUID, Monte Carlo, settlement, or payout behavior in the new module;
-11. existing `ValueEngine`, including its default-temperature WIN regression, `BetGenerator`,
-   `BetStrategy`, pipeline, selection normalization,
-   Phase 27/28, settlement, and full-suite regressions remain unchanged.
+- all four exact enum members/values, endpoint paths, query order, uppercase `%2F`, future wager
+  association without parsing, and deterministic request identity;
+- identity changes for page/baba/date/race; malformed/leading-zero baba, datetime-as-date, bool or
+  nonpositive race number, arbitrary/wrong-origin/effective URL rejection;
+- deterministic capture ID; exact Japanese UTF-8 and CRLF/LF byte preservation; exact body SHA and
+  length; one-byte/header/requested/observed/captured changes alter the required identity;
+- exact bytes/type, strict UTF-8, HTTP 200, charset/encoding, metadata/control, content-length, aware
+  datetime, UTC canonicalization, and owned timestamp-order validation; no ambient clock;
+- migration `VERSION`/`NAME`, empty apply, applied/pending queries, repeat idempotence, unknown future
+  version, malformed registry, unexpected object, malformed body/capture/index/FK/CHECK/SQL,
+  foreign-key integrity, and repository no-auto-migration;
+- exact connection and transaction gates; atomic save/load round trip; byte-for-byte body reload;
+  idempotent duplicate; immutable conflict; shared body hash; missing exact ID; invalid ID; corrupt
+  body/SHA/length/metadata/FK/evidence tuple; rollback; clean transaction; caller connection remains
+  open; no repair;
+- absence of latest/fallback/update/delete/replace APIs and static absence of network/current-clock,
+  random/UUID, JRA, main migration runner, market parser, normalized odds/Decimal, EV, probability,
+  strategy, settlement, and payout dependencies;
+- existing NAR official-response and daily-target archive/migration regressions, Phase 30,
+  Phase 25/27/28, relevant migration regressions, full unittest discovery, focused compilation,
+  ResourceWarning-as-error where practical, static boundary searches, and database/log Git gates.
 
-Later market/EV/strategy tests must additionally cover exact quote-by-bet-type matching, complete
-coverage, malformed odds, cutoff violations, payout masquerading, no combination-score fallback,
-threshold BUY/SKIP/boundary behavior, zero bet, strategy v1 hash stability/v2 determinism, and
-prediction-decision evidence persistence. They are not Phase 30 implementation scope.
-
-The final-review finite-precision correction preserves the approved precision-50
-`ROUND_HALF_EVEN` model. Each ordered prefix now rebuilds its denominator from the authoritative
-remaining-weight set, avoiding cancellation from iterative subtraction, and validates the ordered
-term independently. A complete event may canonicalize a result just above one to exact
-`Decimal(1)` only inside the deterministic forward-error envelope
-`gamma(n) = n*u/(1-n*u)`, where `u = 10**(1-precision)` and `n` is the conservative count of
-remaining-weight additions, divisions, products, and event-sum additions. Non-complete events and
-excess beyond that derived envelope still fail closed; there is no unconditional clamp.
-
-## Verification result
-
-```text
-Dedicated Phase 30 with ResourceWarning-as-error: 24 passed
-Phase 25/27/28 regression: 73 passed
-Prediction/value/generator/strategy/pipeline/selection/settlement regression: 106 passed
-Full unittest discovery: 3,168 passed
-Python compilation and static boundary checks: passed
-```
-
-The dedicated and focused related suites are warning-clean. Full discovery emits only the existing
-unrelated unclosed-SQLite `ResourceWarning` class already recorded before Phase 30. Static AST and
-source checks confirm the new production module has no ValueEngine, generator, strategy,
-settlement, payout, database, repository, network, clock, random, UUID, market-odds, or EV
-dependency. The only text match for settlement is the module docstring describing its absence.
+Cutoff crossing/no-partial transport behavior remains Phase 33; canonical pair/triple parsing,
+Decimal odds validation, expected combination counts, scratches, suspension, and complete/no-partial
+normalized maps remain Phase 34; cutoff selection and manifest identity remain Phases 35–36.
 
 ## Stop condition
 
-Phase 30 stops at `READY_FOR_REVIEW`. No stage, commit, push, Phase 31 preparation, provider
-acquisition, market-odds integration, or strategy integration is authorized. End-to-end combination
-EV remains split behind `COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE`; this is not a blocker to
-reviewing the completed pure probability core.
+Phase 32 stops at `READY_FOR_REVIEW`. The implementation and tests remain unstaged for independent
+review. No stage, commit, push, Phase 33 preparation, normalized market parsing, EV integration,
+resolver, scheduling, or JRA work is authorized. Blockers are none.

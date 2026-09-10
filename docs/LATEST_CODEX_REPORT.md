@@ -9693,3 +9693,203 @@ dedicated and focused suites remain warning-clean; the full suite emits only the
 unrelated unclosed-SQLite warnings. Status remains `READY_FOR_REVIEW`; blockers are none. Changes
 remain unstaged and restricted to the exact four Allowed Files, with database/** and logs/**
 unchanged.
+
+## POST_V0_8_DAILY_REPLAY_31 PREPARE
+
+`PREPARE_PHASE POST_V0_8_DAILY_REPLAY_31` completed as a docs-only design audit at base
+`6912138d7f712431e9b522a5a6a024681bb1bea3` on
+`feature/post-v0.8-daily-replay`. Status is `DRAFT_FOR_REVIEW`; outcome is `SPLIT_REQUIRED`;
+design blockers are none.
+
+The repository audit confirmed that Phase 30 owns only deterministic strict-ranking probabilities,
+while present prediction and historical snapshot inputs carry WIN odds only. Generic v008 odds
+batches have Decimal combination support and useful canonical-selection/completeness helpers, but
+do not have the raw body/capture identity, captured/available timestamps, parser provenance, and
+immutable replay binding required for formal prediction-time evidence. Existing NAR archives have
+closed non-odds vocabularies. Existing JRA `accessO.html` support is final WIN evidence and cannot
+be reused as a prediction-time quote. Payout and settlement facts remain prohibited substitutes.
+
+Official NAR page-family inspection supports an NAR-first design: `OddsTanFuku` for exact WIN,
+`OddsUmLenFuku` for exact QUINELLA, `OddsWide` for WIDE lower/upper ranges, and `Odds3LenFuku` for
+exact TRIO. Canonical v1 requests use exact official HTTPS origin, exact case-sensitive path, and
+only `k_babaCode`, `k_raceDate`, and `k_raceNo`; optional sort/display flags and mobile views are not
+fallback authority. JRA remains deferred pending a separately audited stable public prediction-time
+source/request grammar.
+
+The normalized design freezes race-scoped ascending `race_entry_id` selection identities, a typed
+positive-Decimal exact/range quote representation, complete batch evidence over the exactly
+captured provider-eligible field, and explicit quoted/suspended/unavailable states. Missing,
+unexpected, duplicate, unmapped, suspended, or nonnumeric expected combinations cannot yield a
+successful partial map. Later result state never rewrites prediction-time membership. WIDE capture
+is supported as range evidence, but lower, upper, and midpoint are all rejected as “exact market
+EV”; exact WIDE EV therefore remains unresolved.
+
+Raw capture is byte-preserving and separately archived. Body SHA identifies bytes; capture identity
+also binds request and observation time, so identical bytes observed later remain a fresh evidence
+capture. A future causal quote must satisfy `available_at <= observed_at <= captured_at <=
+information_cutoff < scheduled_start_at`, or the same chain without `available_at` when not proven.
+An official market-as-of label is retained separately and is not automatically treated as
+availability. Requests completing or archiving after cutoff are prediction-ineligible. There is no
+backdating, current-clock reconstruction, future/closing quote fallback, or cross-response odds
+assembly.
+
+Historical selection is frozen as `latest-observed-before-cutoff-fail-on-tie-v1`: exact-source and
+complete candidates are causally filtered, greatest observed time wins, exact duplicates may
+collapse, and distinct content at the same greatest time is an integrity ambiguity. Database row
+order, insertion order, current time, lexical content preference, and date fallback have no
+authority. Replay will eventually bind normalized batch, raw capture/body, request, parser, and
+policy identities.
+
+Implementation is split into raw capture/archive, live acquisition, pure parser/complete quote
+batch, normalized persistence/causal resolution, manifest/input integration, and later exact
+WIN/QUINELLA/TRIO EV/decision integration. Phase 32 is the only proposed next implementation and is
+limited to the NAR raw capture/archive boundary with exactly eight future Allowed Files:
+
+```text
+scripts/simulation/nar_market_odds_capture.py
+scripts/simulation/nar_market_odds_capture_archive_migration.py
+scripts/simulation/sqlite_nar_market_odds_capture_archive.py
+tests/test_nar_market_odds_capture.py
+tests/test_nar_market_odds_capture_archive_migration.py
+tests/test_sqlite_nar_market_odds_capture_archive.py
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+```
+
+Phase 32 has no HTTP, HTML parser, Decimal quote parsing, normalized market batch, resolver, EV,
+current clock, payout/settlement dependency, cache/latest API, or mutable archive behavior. The
+later-phase test ownership for cutoff crossing, parser completeness, scratch/suspension, and replay
+selection is explicitly recorded rather than simulated in the raw archive phase. This PREPARE
+changed only the two documentation files; it performed no production, test, migration, database,
+logs, stage, commit, or push action.
+
+## POST_V0_8_DAILY_REPLAY_31 APPROVAL
+
+`APPROVE_PHASE POST_V0_8_DAILY_REPLAY_31` accepted the existing design without a semantic or
+scope change. Status is `APPROVED_FOR_CODEX`; outcome remains `SPLIT_REQUIRED`; base remains
+`6912138d7f712431e9b522a5a6a024681bb1bea3` on `feature/post-v0.8-daily-replay`.
+
+NAR remains the sole first-provider path for prediction-time market evidence: exact positive
+Decimal WIN, QUINELLA, and TRIO quotes; WIDE lower/upper Decimal ranges only. WIDE lower, upper,
+and midpoint remain ineligible to be called exact market EV. JRA remains explicitly deferred;
+neither current final WIN capture nor settlement infrastructure establishes pre-race quote authority.
+
+The approved causal contract, complete-market boundary, canonical race-entry selection identity,
+append-only raw capture archive, and `latest-observed-before-cutoff-fail-on-tie-v1` replay policy
+remain frozen. Captures crossing the cutoff are ineligible even if observation began before cutoff.
+The dependency `COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE` remains open; this approval authorizes
+only the first raw-capture/archive implementation step toward it.
+
+The next approved-but-not-yet-executed phase is `POST_V0_8_DAILY_REPLAY_32`, `NAR Market Odds Raw
+Capture Archive Implementation`, with exactly eight Allowed Files recorded in CURRENT_PHASE. It
+remains limited to request identity, immutable exact bytes/captures, isolated archive migration, and
+exact-ID archive behavior. Parsing, complete-market validation, resolver/manifest integration, EV,
+strategy, scheduling, and JRA support remain out of scope.
+
+This approval modified only the two documentation files. No production, test, migration,
+database/**, logs/**, stage, commit, push, or Phase32 execution action occurred. Cached state is
+empty; blockers are none.
+
+## POST_V0_8_DAILY_REPLAY_31 EXACT-API PREPARE REVISION
+
+Phase32 correctly stopped before implementation because the first Phase31 draft froze only public
+direction. This docs-only revision returns Phase31 to `DRAFT_FOR_REVIEW`, keeps outcome
+`SPLIT_REQUIRED`, and freezes a complete implementable Phase32 contract at base
+`6912138d7f712431e9b522a5a6a024681bb1bea3`.
+
+The exact domain API now fixes the four `NARMarketOddsPageKind` members, immutable provider-only
+`NARMarketOddsRaceIdentity`, exact `NARMarketOddsRequestIdentity`, keyword-only request builder,
+and immutable `NARMarketOddsResponseCapture`. It freezes canonical official URLs, query order and
+uppercase `%2F`, one canonical JSON serializer, exact request/capture payloads, and the identity
+prefixes `nar-market-odds-request-v1:` and `nar-market-odds-capture-v1:`. The capture binds all
+approved headers and supplied UTC request/observation/capture times, preserves exact strict-UTF-8
+bytes, and owns no cutoff, scheduled start, available time, network, parser, or current clock.
+
+The exact domain error hierarchy and source/archive Protocol signatures are frozen. Missing exact
+lookup returns `None`. The concrete `SQLiteNARMarketOddsCaptureArchive` accepts one exact caller-
+owned SQLite connection, requires the explicit v1 schema, owns atomic writes, supports exact-ID
+load only, and reuses the existing repository validation/conflict/data-integrity exceptions. Exact
+duplicates are no-ops; immutable conflicts and stored corruption fail closed; bodies are deduplicated
+by exact response SHA; no repair, latest, fallback, update, delete, or replacement API exists.
+
+The isolated archive migration is exactly version 1 named
+`v001_nar_market_odds_capture_archive_schema`, with the five frozen public entrypoints. The exact
+object set, table/column order, body BLOB contract, restrictive body FK, unique evidence index, and
+hardened normalized-SQL/metadata/FK schema gate are now authoritative. Repository construction never
+migrates, and the dedicated archive remains outside the global simulation registry.
+
+Phase32 remains raw evidence only. It does not parse horse numbers, selections, odds, WIDE ranges,
+market completeness, or suspension; it calculates no EV and leaves
+`COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE` open. JRA, causal selection, replay integration,
+strategy, and T-5 scheduling remain later work. The exact eight Allowed Files are unchanged and the
+expanded test contract now directly covers domain identities, byte fidelity, timestamps, migration
+hardening, repository transactions/conflicts/corruption, and static boundaries.
+
+This PREPARE revision changed only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`. No
+production, test, migration, database/**, logs/**, stage, commit, push, or Phase32 execution action
+occurred. Blockers are none pending design review.
+
+## POST_V0_8_DAILY_REPLAY_31 REVISED APPROVAL
+
+`APPROVE_PHASE POST_V0_8_DAILY_REPLAY_31` approves the revised exact Phase32 contract. Status is
+`APPROVED_FOR_CODEX`; outcome remains `SPLIT_REQUIRED`; base remains
+`6912138d7f712431e9b522a5a6a024681bb1bea3` on `feature/post-v0.8-daily-replay`.
+
+The earlier Phase32 blocker is resolved: the exact enum, race identity, request identity/builder,
+response capture, canonical request and capture payloads, domain and repository error contracts,
+archive Protocol, concrete SQLite repository, v1 isolated migration entrypoints, schema objects,
+append-only conflict/idempotence rules, and strict exact-ID reconstruction are now frozen authority.
+The request and capture prefixes remain `nar-market-odds-request-v1:` and
+`nar-market-odds-capture-v1:`; migration authority remains version 1 named
+`v001_nar_market_odds_capture_archive_schema`.
+
+Phase32 remains raw evidence only: no network acquisition, parser, normalized quote/completeness,
+EV, replay resolver, strategy, scheduling, JRA, or WIDE exact-EV policy. The NAR isolated archive
+is intentionally outside the main migration registry. The dependency
+`COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE` remains open. The exact eight Phase32 Allowed Files
+are unchanged; expected implementation blockers are none.
+
+This approval modified only the two documentation files. No production, test, migration,
+database/**, logs/**, stage, commit, push, or Phase32 execution action occurred. Cached state is
+empty; blockers are none.
+
+## POST_V0_8_DAILY_REPLAY_32 IMPLEMENTATION
+
+Status: `READY_FOR_REVIEW`. Phase 32 implements the approved NAR-only raw market-odds capture
+boundary at base `6912138d7f712431e9b522a5a6a024681bb1bea3`. The exact public API comprises the
+four-member `NARMarketOddsPageKind`, immutable race/request/capture values, the canonical request
+builder, capture error hierarchy and source/archive Protocols, plus the connection-injected
+`SQLiteNARMarketOddsCaptureArchive`.
+
+Request identity uses the exact official NAR endpoint, fixed query order and uppercase `%2F`, one
+canonical JSON authority, SHA-256, and the `nar-market-odds-request-v1:` prefix. Capture identity
+binds the exact request digest, unmodified strict-UTF-8 response bytes through their SHA-256,
+response metadata, and explicit UTC request/observation/capture times under
+`requested_at <= observed_at <= captured_at`; it uses the `nar-market-odds-capture-v1:` prefix.
+There is no network or hidden clock.
+
+The isolated migration is version 1 named
+`v001_nar_market_odds_capture_archive_schema`. It creates exactly the migration registry, immutable
+body table, capture table, and unique evidence index frozen by Phase 31. The schema gate validates
+the exact SQL contract without erasing case-sensitive string semantics, full column metadata,
+primary keys, CHECKs, `WITHOUT ROWID`, index uniqueness/order, restrictive body FK, exact migration
+row, object set, and foreign-key integrity. Repository construction does not migrate or repair.
+
+The archive publishes with one owned atomic `BEGIN IMMEDIATE`, deduplicates exact bodies by SHA,
+accepts an exact duplicate idempotently, rejects same-ID or same-evidence immutable conflicts, and
+rolls back every failed publication. Exact-ID load reconstructs the public request/capture domains,
+recomputes both identities and body SHA, compares every stored scalar, checks evidence coherence,
+and returns `None` only for exact absence. It exposes no latest, fallback, update, delete, replace,
+repair, cutoff-selection, or resolver API.
+
+Verification: 35 dedicated Phase 32 tests pass with `ResourceWarning` treated as error; 230 related
+NAR capture/daily-target, Phase 25/27/28, Phase 30, repository, and migration tests pass. Full
+unittest discovery passes 3,203 tests. Focused compilation and forbidden-boundary searches pass.
+The full/related suites still emit only pre-existing unrelated SQLite connection ResourceWarnings;
+the dedicated Phase 32 suite is clean.
+
+Changes are exactly the eight approved files and remain unstaged. `database/**` and `logs/**` are
+unchanged; cached state is empty. Phase 32 parses no market quotes or WIDE range, computes no EV,
+implements no resolver or T-5 scheduler, and adds no JRA support. The dependency
+`COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE` remains open. Blockers are none, and Phase 33 was not
+prepared.
