@@ -9511,3 +9511,185 @@ The broad related/full suites emitted only the established unrelated unclosed-SQ
 the dedicated suite emitted none. No relevant pytest-only Phase 28 test exists outside unittest
 discovery. Phase 28 remains `READY_FOR_REVIEW`, blockers are none, changes remain unstaged and
 confined to the exact four Allowed Files, and database/** and logs/** are unchanged.
+
+`PREPARE_PHASE POST_V0_8_DAILY_REPLAY_29` completed as design only at base
+`6881cd86e12bd5c0eb986ff32f40d1f2736901ed`. Status is `DRAFT_FOR_REVIEW`; outcome is
+`SPLIT_REQUIRED`, with the explicit dependency
+`COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE`.
+
+The audit confirmed that current `ValueEngine` is WIN-only uncalibrated float softmax, while
+`BetGenerator` assigns combination candidates the heuristic `factorial(size) * product(WIN
+probability)`, leaves combination `expected_value` absent, and ranks them by the mean constituent
+WIN EV in `combination_score`. Current `StrategyConfig` schema v1 uses that heuristic and binds it
+into its strategy hash. The existing pipeline and immutable bet-plan snapshot have only WIN input
+odds and do not retain a complete candidate probability/quote/decision audit.
+
+A provider-independent, strict-order Plackett-Luce probability core is frozen for WIN, QUINELLA,
+WIDE, and TRIO. It derives positive weights from exact binary64 prediction scores under an explicit
+Decimal temperature and fixed precision-50 context, sums the exact ordered events for unordered
+pairs/triples, and exposes only uncalibrated `model_probability`. WIDE is the joint inclusion of a
+pair in the strict top three; official JRA/NAR rules and the third-place dead-heat exception are
+recorded, while tie probability/dividend effects remain outside model v1 and require a new version.
+
+No prediction-time QUINELLA/WIDE/TRIO official odds capture exists for JRA or NAR. Generic v008 odds
+rows lack the new complete capture/causal evidence contract and remain untrusted; post-result
+`PayoutPublication` is prohibited as odds. Future quote evidence must bind provider/race/selection,
+exact Decimal odds, complete market coverage, request/body identities, and
+`available_at <= observed_at <= captured_at <= information_cutoff <= scheduled_start_at`.
+
+The frozen term is `model_expected_value_ratio = model_probability * market_decimal_odds` (one is
+break-even gross return). It is not calibrated EV or a profitability claim. Probability, quote/EV,
+strategy BUY/SKIP, and stake allocation stay separate. Existing strategy-config v1 hashes and
+legacy recommendation meanings remain stable; formal per-bet-type EV/probability thresholds require
+a later versioned strategy-config integration. A separate immutable prediction-decision snapshot is
+also required because v009 persists only purchased bets.
+
+The next implementation is only Phase 30's pure probability core, with exact four-file scope:
+
+```text
+scripts/prediction/ranking_probability.py
+tests/test_ranking_probability.py
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+```
+
+Provider odds capture design/implementation, EV/strategy-v2 integration, decision-evidence
+persistence, and empirical calibration remain later phases. No production, test, schema, migration,
+database/**, logs/**, stage, commit, or push change was made during this PREPARE. Blockers to design
+review: none.
+
+Phase 29 PREPARE was revised after the requested focused audit of the existing WIN probability
+semantics. The one frozen Phase 30 latent-weight rule now accepts exact finite non-negative built-in
+float scores, converts each with `Decimal.from_float`, and derives
+`w_i = exp((v_i - max(v)) / T)` under the existing fixed Decimal context and one explicitly supplied
+positive Decimal temperature. Zero is valid; negative/non-finite/non-float scores, bool, duplicate or
+invalid race-entry identities, empty fields, and numerically unrepresentable strictly-positive
+weights fail closed. There is no artificial score upper cap and no alternate raw-weight entry point.
+Equal scores are exactly symmetric.
+
+The compatibility proof is frozen directly: the existing intended temperature-softmax WIN value is
+`exp((v_i-m)/T) / sum(exp((v_j-m)/T))`, while the Plackett-Luce first-place marginal is `w_i/sum(w)`,
+so the two are the same mathematical model probability. Existing v0.8 `ValueEngine` execution stays
+unchanged in Phase 30. A later formal integration must supply the single authoritative temperature,
+validate the `horse_id` to `race_entry_id` adapter once, and make its formal WIN path consume the
+Phase 30 result instead of running a second softmax. The legacy binary-float implementation remains a
+compatibility path, not a competing formal authority.
+
+The strict-ranking boundary is now explicit. Plackett-Luce v1 has no tie/dead-heat probability mass
+and adds no tie pseudo-probability. QUINELLA is the two first/second orders; TRIO is the six first-three
+orders; WIDE is the exact enumeration of every strict top-three order containing the chosen pair and
+one other entry. WIDE is not reduced to QUINELLA. Official JRA/NAR settlement remains independent,
+including the rule that a pair made only of the two horses tied for third is not a winning WIDE pair;
+JRA sale eligibility for WIDE at four or more starters is market evidence, not core probability.
+Accordingly `model_probability` and future `model_expected_value_ratio` remain explicitly
+uncalibrated strict-no-tie model quantities, not complete dead-heat-adjusted actuarial values.
+
+Phase 29 remains `DRAFT_FOR_REVIEW` with outcome `SPLIT_REQUIRED` and dependency
+`COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE`. Phase 30 remains the pure deterministic probability
+core only, with the same exact four Allowed Files. No implementation, tests, schema, migration,
+database/**, logs/**, stage, commit, or push action was performed. Blockers to design review: none.
+
+The resumed Phase 29 PREPARE freezes the remaining numerical boundary. Phase 30 owns a private,
+unexposed Decimal context template that is not mutated after initialization, with precision 50,
+`ROUND_HALF_EVEN`, `Emin=-999999`, `Emax=999999`,
+`capitals=1`, `clamp=0`, and explicit signal traps. Every probability arithmetic and Decimal
+canonicalization step runs inside `decimal.localcontext(...)`; exact score conversion uses
+`Decimal.from_float`, and the temperature is an exact positive finite `Decimal` with no implicit
+conversion or default. Ambient precision, rounding, flags, and repeated-call history cannot affect
+weights, probabilities, ordering, or SHA output. Dedicated Phase 30 tests must change the ambient
+context materially and prove exact output identity, as well as exact repeated-call determinism.
+
+WIN compatibility is now stated at the correct level. Phase 30 implements the same intended
+temperature-softmax mathematical model, so its PL first-place marginal is definitionally
+`w_i / sum(w)`. It does not promise bitwise or exact numeric identity with legacy binary-float
+`ValueEngine`/`math.exp`; any direct legacy regression comparison uses one explicit tolerance.
+Phase 30 is the new formal deterministic numerical authority, while legacy v0.8 remains untouched.
+A later integration must own raw `Prediction.score` normalization in one adapter, pass the single
+authoritative temperature, and route formal WIN consumption through Phase 30 without calculating a
+second softmax or normalization path. Phase 30 itself accepts only normalized finite non-negative
+built-in floats and does not import `ValueEngine`.
+
+All other Phase 29 decisions remain frozen: strict no-tie Plackett-Luce event enumeration,
+uncalibrated model terminology, the official dead-heat/settlement separation, and the market-odds
+dependency for end-to-end combination EV. Status remains `DRAFT_FOR_REVIEW`, outcome remains
+`SPLIT_REQUIRED`, and the Phase 30 Allowed Files remain the same exact four. This revision changed
+only the two documentation files; no implementation, test, stage, commit, push, database/**, or
+logs/** action occurred. Blockers to design review: none.
+
+`APPROVE_PHASE POST_V0_8_DAILY_REPLAY_29` accepted the existing Phase 29 design without semantic
+change. Status is now `APPROVED_FOR_CODEX`; outcome remains `SPLIT_REQUIRED`, and the explicit
+market dependency remains `COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE`. The approved next phase is
+limited to the pure deterministic strict-ranking Plackett-Luce probability core, with exactly four
+Allowed Files: `scripts/prediction/ranking_probability.py`,
+`tests/test_ranking_probability.py`, `docs/CURRENT_PHASE.md`, and
+`docs/LATEST_CODEX_REPORT.md`.
+
+The frozen numeric contract uses the private fixed Decimal context for all arithmetic and
+canonicalization, isolates output from ambient Decimal settings, and requires exact determinism
+within Phase 30. Its WIN first-place marginal is mathematically the existing intended
+temperature-softmax; it makes no bitwise legacy-float claim, and any legacy comparison is
+tolerance-based. The model remains strict no-tie ranking only: QUINELLA, TRIO, and WIDE retain their
+exact ordered-event definitions, while official dead-heat settlement remains independent.
+
+This approval modified only the two documentation files. No implementation, test, schema,
+migration, database/**, logs/**, staging, commit, or push action occurred. Cached state is empty;
+blockers are none. Phase 29 stops at `APPROVED_FOR_CODEX` pending a separate execution instruction.
+
+`EXECUTE POST_V0_8_DAILY_REPLAY_30` completed the pure deterministic strict-ranking probability
+core at base `6881cd86e12bd5c0eb986ff32f40d1f2736901ed`. Status is `READY_FOR_REVIEW`; blockers are none.
+The public API is exactly `RaceEntryModelScore`, `RaceEntryLatentWeight`,
+`BetSelectionModelProbability`, `PlackettLuceBetProbabilitySet`, and
+`calculate_plackett_luce_bet_probabilities(...)`.
+
+The implementation converts exact normalized non-negative built-in float scores with
+`Decimal.from_float`, derives stabilized positive Plackett-Luce weights, and performs all
+subtraction, exponential, ordered summation, multiplication, division, validation, and Decimal
+canonicalization inside the private precision-50 `ROUND_HALF_EVEN` context. Caller Decimal context
+changes and repeated calls produce exactly identical immutable values and SHA identities. The
+first-place marginal is the approved mathematical temperature-softmax; the dedicated legacy
+`ValueEngine` comparison uses an explicit `1e-15` float tolerance and makes no bitwise claim.
+
+One internal ordered-prefix calculation is reused for every event. QUINELLA sums its two possible
+first/second orders, TRIO sums all six selected first-three orders, and WIDE sums every strict
+top-three order containing the selected pair and one other entry. The generated candidates are
+canonical by `race_entry_id`, independent of input order, contain no duplicates, and expose no tie
+or dead-heat pseudo-probability. Empty fields, invalid identities/scores/temperature, duplicate
+entries, malformed derived values, and unrepresentable strictly-positive weights fail closed.
+
+Verification completed:
+
+```text
+Dedicated Phase 30 with ResourceWarning-as-error: 22 passed
+Phase 25/27/28 regression: 73 passed
+Prediction/value/generator/strategy/pipeline/selection/settlement regression: 82 passed
+Full unittest discovery: 3,166 passed
+Python compilation and static boundary checks: passed
+```
+
+The dedicated and focused related suites are warning-clean. Full discovery retains only the
+pre-existing unrelated unclosed-SQLite warnings. Static inspection confirms no ValueEngine,
+market-odds, EV, strategy, allocation, persistence, SQL, migration, network, current-clock, random,
+UUID, settlement, or payout dependency in the new production module. Changes remain unstaged and
+confined to the exact four Allowed Files; database/** and logs/** are unchanged. No stage, commit,
+push, or Phase 31 preparation occurred. The end-to-end dependency remains
+`COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE`.
+
+The sole material Phase 30 final-review finding is corrected without changing the public API or
+the approved strict-ranking model. Ordered-prefix denominators are recomputed from the exact
+remaining latent-weight set instead of propagated by rounded subtraction. Each ordered term is
+validated before accumulation. For mathematically complete events only, a final result above one
+is canonicalized to exact `Decimal(1)` when its excess is no greater than the fixed-context
+forward-error bound `gamma(n) = n*u/(1-n*u)`, with `u = 10**(1-50)` and `n` derived from the
+conservative count of rounded additions, divisions, and products. This is not a blind clamp:
+material excess such as `1.0001`, and any excess on a non-complete event, remains rejected.
+
+The reported reproductions now return exact probability one: the only pair in a two-entry
+QUINELLA, the only triple in a three-entry TRIO, and every pair in a three-entry WIDE. Dedicated
+coverage also proves the error-envelope boundary and materially-invalid rejection. Post-correction
+verification completed with 24/24 dedicated tests under ResourceWarning-as-error, 73/73 Phase
+25/27/28 regressions, 106/106 prediction/value/generator/strategy/pipeline/selection/settlement
+regressions, and 3,168/3,168 full unittest discovery. Compilation and static checks pass. The
+dedicated and focused suites remain warning-clean; the full suite emits only the pre-existing
+unrelated unclosed-SQLite warnings. Status remains `READY_FOR_REVIEW`; blockers are none. Changes
+remain unstaged and restricted to the exact four Allowed Files, with database/** and logs/**
+unchanged.
