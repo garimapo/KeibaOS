@@ -4,188 +4,157 @@ Status: `READY_FOR_REVIEW`
 
 ## Identity
 
-- Phase: `POST_V0_8_DAILY_REPLAY_36`
-- Name: `NAR Official Market Odds Raw Acquisition Harness Implementation`
-- Phase type: `IMPLEMENTATION`
-- Base Commit: `7f62cd0e0e91fd3fb2acdb62ad490d345c72a097`
+- Phase: `POST_V0_8_DAILY_REPLAY_38`
+- Name: `Controlled NAR Market Odds Source-Profile Fixture Acquisition and Qualification`
+- Phase type: `CONTROLLED_ACQUISITION_FIXTURE_QUALIFICATION`
+- Base Commit: `b1869296fe0b6a10698d2bac48ff85d22d8719d5`
 - Branch: `feature/post-v0.8-daily-replay`
-- Outcome: `IMPLEMENTED`
+- Result: `SOURCE_PROFILE_FIXTURES_READY`
 - Open dependency: `COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE`
 
-Phase 33 and Phase 34 remain `DESIGN_BLOCKED`: neither qualified exact OPEN raw source grammar.
-Phase 36 implements the Phase35-approved raw acquisition boundary without classifying OPEN, FINAL,
-suspended, unavailable, cancelled, scratched, or unknown HTML. Classification occurs only after exact
-raw bytes exist. No parser, Decimal, EV, archive write, fixture write, resolver, scheduler, or JRA work
-is authorized here.
+## Completed scope
 
-## Implementation scope
+Phase38 used the integrated Phase36 state-neutral one-request boundary to acquire exactly eight official NAR market-odds responses. The complete source-profile matrix is exactly four Phase32 page kinds by OPEN/FINAL, with one fixture per state and page kind. All raw bodies passed public-data safety review, exact-byte publication, Phase32 request/capture reconstruction, manifest identity, source-state qualification, and Git byte-preservation checks.
 
-Only the exact four files listed below may change. No fixtures, migrations, `database/**`, or `logs/**`
-may change. No stage, commit, or push is authorized.
+No production parser, normalized odds type, Decimal conversion, horse-number mapping, expected-selection enumeration, persistence, replay resolver, probability/EV integration, strategy, settlement, scheduler, or JRA support was added.
 
-## Read-only source qualification
+## Frozen acquisition plan and execution
 
-Read-only direct retrieval from the Phase32 canonical official URL succeeded: HTTP 200, exact effective
-URL, `Content-Type: text/html; charset=UTF-8`, no `Content-Encoding`, and strict UTF-8 Japanese bytes.
-No body was saved. A `Set-Cookie` response header was observed and is excluded from all capture/fixture
-metadata. Direct official HTTPS transport, Phase32 UTF-8, no compression, and exact effective-URL
-contracts are therefore compatible. This says nothing about source state or selector grammar.
-
-## Implemented Phase36 public API
-
-The implementation is library-only:
-no CLI, automatic crawl, filesystem publication, SQLite archive write, or live request in tests.
-
-```python
-class NARMarketOddsRawAcquisitionError(Exception): pass
-class NARMarketOddsRawAcquisitionValidationError(NARMarketOddsRawAcquisitionError): pass
-class NARMarketOddsRawAcquisitionTransportError(NARMarketOddsRawAcquisitionError): pass
-class NARMarketOddsRawAcquisitionUnsupportedError(NARMarketOddsRawAcquisitionError): pass
-
-@dataclass(frozen=True, slots=True)
-class NARMarketOddsRawAcquisitionTarget:
-    request_identity: NARMarketOddsRequestIdentity
-
-@dataclass(frozen=True, slots=True)
-class NARMarketOddsRawHTTPResponse:
-    effective_url: str
-    response_body: bytes
-    http_status: int
-    content_type: str | None
-    content_encoding: str | None
-    http_date: str | None
-    etag: str | None
-    last_modified: str | None
-    content_length: int | None
-
-class NARMarketOddsRawAcquisitionTransport(Protocol):
-    def fetch(self, *, request_identity: NARMarketOddsRequestIdentity,
-              requested_at: datetime) -> NARMarketOddsRawHTTPResponse: ...
-
-class NARMarketOddsRawAcquisitionClock(Protocol):
-    def now_utc(self) -> datetime: ...
-
-def acquire_nar_market_odds_raw_response(
-    *, target: NARMarketOddsRawAcquisitionTarget,
-    transport: NARMarketOddsRawAcquisitionTransport,
-    clock: NARMarketOddsRawAcquisitionClock,
-) -> NARMarketOddsResponseCapture: ...
-
-class RequestsNARMarketOddsRawAcquisitionTransport:
-    def fetch(self, *, request_identity: NARMarketOddsRequestIdentity,
-              requested_at: datetime) -> NARMarketOddsRawHTTPResponse: ...
-```
-
-`target.request_identity` is the exact Phase32 type; the harness reconstructs it from its page kind and
-race identity and requires equality. It accepts no arbitrary URL/path/host, horse name, current date,
-race discovery result, or JRA target. Consequently only Phase32 `ODDS_TAN_FUKU`, `ODDS_UM_LEN_FUKU`,
-`ODDS_WIDE`, and `ODDS_3_LEN_FUKU` can be requested. The returned object is constructed exactly as
-Phase32 `NARMarketOddsResponseCapture`; no alternative URL/body SHA/request/capture identity exists.
-
-`ValidationError` is malformed target, clock, transport value, or impossible harness input.
-`TransportError` is network/timeout/redirect/non-200/size failure. `UnsupportedError` is a syntactically
-valid official response outside the frozen raw profile. Phase32 errors map to validation or unsupported
-as appropriate; repository/parser error types never appear here.
-
-## Frozen one-request and timestamp contract
-
-One invocation makes exactly one canonical request, gets exactly one HTTP response, and returns one
-Phase32 capture. There is no retry, pagination, multi-request assembly, sleep, timestamp rewriting, or
-backdating. The injected clock is called exactly three times: immediately before dispatch
-(`requested_at`), immediately after full body/metadata return (`observed_at`), and immediately before
-Phase32 construction (`captured_at`). It must return exact timezone-aware datetimes already satisfying
-`requested_at <= observed_at <= captured_at`; Phase32 remains free of a hidden current clock.
-
-## Frozen HTTP, bytes, charset, and header contract
-
-`RequestsNARMarketOddsRawAcquisitionTransport` is the only concrete HTTP implementation. Per call it
-uses a fresh non-persistent `requests.Session`, `GET`, TLS verification, `stream=True`,
-`allow_redirects=False`, `HTTPAdapter(max_retries=0)`, and timeout `(10.0, 20.0)` seconds. It sends
-exactly `User-Agent: Mozilla/5.0`, `Accept: text/html,application/xhtml+xml`, and
-`Accept-Encoding: identity`; it sends no Cookie, Authorization, Referer, Origin, conditional request,
-authentication, POST, browser, or JavaScript state. It reads no more than `4 * 1024 * 1024` bytes with
-content decoding disabled.
-
-The only accepted URL is the regenerated Phase32 canonical URL at exact origin
-`https://www.keiba.go.jp`; the effective URL must equal it exactly. Any redirect, URL variation, or
-non-200 response is `TransportError`. Only exact `Content-Type: text/html; charset=UTF-8` and absent
-`Content-Encoding` or exact `identity` are accepted. Other encoding fails `UnsupportedError` before
-decode, preventing decompressed-byte/header contradiction. Body bytes pass unchanged to Phase32, which
-strictly validates UTF-8 and computes the authoritative SHA/length; no decode/re-encode, normalization,
-HTML parsing, or content transformation is permitted. `Content-Length`, if present, is a canonical
-non-negative decimal integer and must equal raw byte count.
-
-Only these headers are retained: `Content-Type`, `Content-Encoding`, `Date`, `ETag`, `Last-Modified`,
-and `Content-Length`, mapped to the identically intended Phase32 metadata fields. `Set-Cookie`, Cookie,
-Authorization, session/CSRF/request IDs, and all other headers are discarded and never written/logged.
-
-## Deferred fixture publication and state qualification
-
-Fixture publication is not in Phase36, so no fixture API, identity/prefix, manifest, path, or raw file
-is yet authorized. The acquisition function has no filesystem side effect. A separately prepared Phase37
-will review captured public bytes, publish immutable parser-source-profile fixtures, and qualify only
-then OPEN/FINAL/UNKNOWN state/profile grammar. Fixtures must not be auto-promoted to historical replay,
-prediction, T-5, EV, or settlement evidence. State cannot be inferred from filename, race date, or clock.
-
-## Allowed Files and verification
+The single plan was fixed before the first odds request:
 
 ```text
-scripts/simulation/nar_market_odds_raw_acquisition.py
-tests/test_nar_market_odds_raw_acquisition.py
+OPEN  baba_code=23 race_date=2026-09-11 race_no=3
+  ODDS_TAN_FUKU
+  ODDS_UM_LEN_FUKU
+  ODDS_WIDE
+  ODDS_3_LEN_FUKU
+FINAL baba_code=21 race_date=2026-09-10 race_no=11
+  ODDS_TAN_FUKU
+  ODDS_UM_LEN_FUKU
+  ODDS_WIDE
+  ODDS_3_LEN_FUKU
+```
+
+All eight calls used `build_nar_market_odds_request_identity(...)`, `NARMarketOddsRawAcquisitionTarget`, `RequestsNARMarketOddsRawAcquisitionTransport`, and `acquire_nar_market_odds_raw_response(...)`. Each slot used exactly one official HTTPS GET with no retry, no redirect, TLS verification, timeout `(10.0, 20.0)`, strict UTF-8, exact effective URL, absent/identity content encoding, and three actual UTC clock samples. Attempted: 8. Succeeded: 8. Retries: 0. No automatic target substitution occurred.
+
+## Canonical fixture matrix
+
+```text
+open/odds_tan_fuku
+  SHA-256 ce474a4da61427e915c2ee855b21e3130f2a039c7bd0b5a79080e412052d6966
+  bytes 32102
+open/odds_um_len_fuku
+  SHA-256 81e25a663d821d7c5d7040d531981b26d3c97d27002a0027262e11d4898c979f
+  bytes 31992
+open/odds_wide
+  SHA-256 3013966ede1be81527f4a92d271170503fb0ebabbc7d0a2665f307219f07663a
+  bytes 32495
+open/odds_3_len_fuku
+  SHA-256 1da75c015e2035c26b1d4669b8893ae8541f26d41ca5dd66f0653ca31617edff
+  bytes 37086
+final/odds_tan_fuku
+  SHA-256 266a3d3dad28c562a204173ed9247aea4ce4603a0dadc59edfb2e3baa7512e1f
+  bytes 37270
+final/odds_um_len_fuku
+  SHA-256 1fd4e50edd52bc24b3c9af77c09ef0e10a67187bb5812d345fe6a0858c48c1fe
+  bytes 37130
+final/odds_wide
+  SHA-256 3fad398e62187f3f9ba1647696bb4bccaf70d68157d219205faf38b629a7ca7c
+  bytes 38211
+final/odds_3_len_fuku
+  SHA-256 f0802ff769dbdf70455ce2f05c538674c369a4cc34afaf01b9e63674300618dd
+  bytes 50900
+```
+
+The exact real capture timestamps and Phase32 capture IDs are stored in the canonical manifest. No timestamp was edited, derived from race time, or backdated.
+
+## Qualification and source grammar
+
+Qualification method: `nar-market-odds-source-state-qualification-v1`.
+
+Each fixture has exactly one full `h4.odd_title` state heading under `article.raceCard > div.innerWrapper > div#odd_content > div.odd_header`. OPEN headings contain the exact page-family title plus an `HH:MM 現在` market-as-of label. FINAL headings contain the exact page-family title plus `最終`. The complete heading token, byte offset, occurrence count, bounded raw context and SHA-256, structural locator, market-container byte range and SHA-256, selection representation, and odds representation are recorded. Classification does not rely on filename, plan expectation, race time, clock, or an isolated token.
+
+The source-profile evidence establishes:
+
+- WIN: `table.odd_popular_table_02`; horse number and scalar WIN odds coexist with a separate PLACE range.
+- QUINELLA: `table#formation_renfuku.odd_table` plus ranking tables; pair keys are two horse numbers joined by ASCII hyphen; odds are scalar.
+- WIDE: `table#formation_quinella.odd_table` plus ranking tables; pair keys are two horse numbers joined by ASCII hyphen; the range is lower decimal, `<br>`, ASCII hyphen, upper decimal. It is not converted to a scalar.
+- TRIO: `table#formation_trio.odd_table` plus ranking tables; triple keys are three horse numbers joined by ASCII hyphens; odds are scalar.
+
+This is fixture source-grammar qualification only. No production selector or quote parser exists.
+
+## Manifest, safety, and reconstruction
+
+Manifest path:
+
+```text
+tests/fixtures/nar_market_odds/source_profiles/v1/manifest.json
+```
+
+It is exact canonical JSON schema v1, serialized as UTF-8 sorted-key compact JSON with no trailing newline. Its identity is:
+
+```text
+nar-market-odds-source-profile-fixture-set-v1:14c2ecdbe85ac1f673c015643eabd7d757d971c85cd60599d7dd6c576926e470
+```
+
+The identity digest excludes only its own `fixture_set_identity` field and binds the ordered eight fixture objects, schema version, purpose, raw digests/lengths, request/capture provenance, real timestamps, qualification evidence, structural audit, and safety result.
+
+Public-data safety method: `nar-market-odds-public-data-safety-review-v1`. Result: `approved_exact_public_bytes` for all eight response digests. The review found no session ID, authentication material, CSRF/XSRF token, credential, personalized account identifier, or private data. The pages contain only the known public Google custom-search identifier and public race display controls. `Set-Cookie` and all non-whitelisted response headers are excluded from the manifest. No response bytes were redacted or transformed.
+
+For every entry, the integrity test rebuilds the exact Phase32 request, reads the raw fixture bytes, reconstructs `NARMarketOddsResponseCapture`, and verifies request identity SHA-256, response SHA-256, byte length, canonical/effective URL, actual timestamps, and capture ID. Result: PASS for 8/8.
+
+## Git byte preservation
+
+`.gitattributes` contains only the approved new rule:
+
+```text
+tests/fixtures/nar_market_odds/source_profiles/v1/** -text -diff
+```
+
+All nine source-profile files report `text: unset` and `diff: unset`. For each HTML fixture, `git hash-object --path=<path>` equals `git hash-object --no-filters <path>`, proving the Git attribute pipeline would preserve the exact raw bytes without staging. Worktree SHA/length checks match the manifest for 8/8. Formal post-commit `git cat-file blob HEAD:<path>` verification remains required during integration because no stage or commit is authorized in Phase38 execution.
+
+The existing portable official-fixture test was changed only to require the two historical `.gitattributes` entries it owns instead of asserting obsolete whole-file equality. Existing raw-byte validations are unchanged.
+
+## Verification
+
+```text
+Phase38 fixture-integrity + portable-fixture tests: 8 passed
+same dedicated tests with ResourceWarning-as-error: 8 passed
+Phase36/Phase32 acquisition, capture, archive, migration: 63 passed, 74 subtests passed
+NAR source/fixture + Phase30 + Phase25/27/28 regressions: 158 passed, 132 subtests passed
+full unittest discovery: 3231 passed
+focused compilation/static boundary audit: passed
+Phase32 reconstruction/manifest identity: passed for 8/8
+Git attributes/would-be blob preservation: passed for 8/8
+```
+
+The full suite emitted only the existing unrelated SQLite `ResourceWarning`s. The dedicated Phase38 suite is clean when warnings are errors.
+
+## Allowed Files
+
+Exactly these 14 paths changed:
+
+```text
+.gitattributes
+tests/fixtures/nar_market_odds/source_profiles/v1/open/odds_tan_fuku.html
+tests/fixtures/nar_market_odds/source_profiles/v1/open/odds_um_len_fuku.html
+tests/fixtures/nar_market_odds/source_profiles/v1/open/odds_wide.html
+tests/fixtures/nar_market_odds/source_profiles/v1/open/odds_3_len_fuku.html
+tests/fixtures/nar_market_odds/source_profiles/v1/final/odds_tan_fuku.html
+tests/fixtures/nar_market_odds/source_profiles/v1/final/odds_um_len_fuku.html
+tests/fixtures/nar_market_odds/source_profiles/v1/final/odds_wide.html
+tests/fixtures/nar_market_odds/source_profiles/v1/final/odds_3_len_fuku.html
+tests/fixtures/nar_market_odds/source_profiles/v1/manifest.json
+tests/test_nar_market_odds_source_profile_fixtures.py
+tests/test_portable_official_replay_fixtures.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
 ```
 
-Tests use a fake transport and deterministic injected clock. They prove exact Phase32 request forwarding;
-one fetch/no retry; raw Japanese/non-ASCII preservation; timestamps; 200 acceptance; non-200,
-URL/redirect, content type/encoding, content-length, malformed clock, and transport failure rejection;
-whitelist mapping and Set-Cookie non-retention; no arbitrary URL/current target/backdating; and no
-parser, Decimal, EV, repository/archive, JRA, fixture, database, or log side effects.
+No Phase36 production file, database, log, other fixture, parser, or persistence file changed. Nothing is staged, committed, or pushed.
 
-Verification results:
+## Deferred state and stop condition
 
-```text
-dedicated Phase36 with ResourceWarning-as-error: 28 passed
-Phase32/NAR/Phase30/Phase25/27/28 related suite: 204 passed
-full unittest discovery: 3231 passed
-focused compilation/static audit: passed
-official one-target read-only smoke: passed (200, utf-8, no encoding, URL exact)
-```
+Phase33 remains `DESIGN_BLOCKED` until Phase38 is reviewed and integrated, after which it must be newly prepared against these exact fixtures. Phase34 is not formally resolved until Phase38 review/integration; after that it is resolved/superseded. `COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE` remains open because fixtures are parser-source-profile artifacts only, not causally valid replay/T-5/EV/decision evidence.
 
-The smoke body was neither displayed nor saved. The full/related suites emit pre-existing unrelated
-SQLite `ResourceWarning`s; the dedicated Phase36 suite is clean.
-
-Final review correction: `_canonical_request` now validates the exact Phase32 page-kind and race
-identity structure before reading nested fields or invoking the Phase32 builder. Target-derived
-Phase32 validation and malformed/missing race fields map to exact
-`NARMarketOddsRawAcquisitionValidationError`. Forged page-kind, forged race identity, and forged exact
-race identity with missing fields all fail before clock sampling or transport invocation; both counts
-remain zero.
-
-Focused re-review correction: the exact remaining reproducer removed
-`canonical_request_url` from the frozen Phase32 request object, causing dataclass equality to leak
-`AttributeError`. The narrow request boundary now safely reads and exact-type-checks every Phase32
-derived request field, then compares the supplied value with the independently re-derived Phase32
-request under structural error translation. Missing canonical URL, missing request digest, and a
-wrong-type canonical URL all produce exact `NARMarketOddsRawAcquisitionValidationError` before clock
-or transport use, with the original structural failure retained as cause where applicable.
-
-## Blocker-resolution sequence
-
-```text
-Phase35 design -> Phase36 fake-transport-tested harness -> Phase37 controlled official fixture review
-and source-state qualification -> revised Phase33 parser design -> pure parser implementation
-```
-
-OPEN selector grammar is not a Phase36 blocker. Transport blockers would only be inaccessible official
-HTTPS, non-UTF-8 bytes, incompatible effective URL, or unavoidable non-identity compression; none were
-found. Phase33/34 stay blocked pending actual fixture qualification.
-
-## Stop condition
-
-Before stopping: exact branch/base; exact four Allowed Files only; cached empty; `database/**`,
-`logs/**`, and fixture paths unchanged; `git diff --check` passes. The Phase34 blocker is bypassed by
-state-neutral raw acquisition. Phase33 and Phase34 remain `DESIGN_BLOCKED` pending Phase37's controlled
-fixture acquisition and qualification. The dependency remains open.
-
-Stop at `READY_FOR_REVIEW`; do not stage, commit, push, or prepare Phase37.
+Stop at `READY_FOR_REVIEW`. Do not integrate or prepare Phase39.

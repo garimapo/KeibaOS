@@ -2,3 +2,4 @@ tests/fixtures/historical_replay/official/jra/race_result_20250913_nakayama_04.c
 tests/fixtures/historical_replay/official/nar/race_mark_table_20260503_31_01.utf8.html -text -diff
 tests/fixtures/nar_daily_target_bootstrap/nar_home_supplier.utf8.html -text -diff
 tests/fixtures/nar_daily_target_bootstrap/monthly_convene_info_root_supplier.utf8.html -text -diff
+tests/fixtures/nar_market_odds/source_profiles/v1/** -text -diff

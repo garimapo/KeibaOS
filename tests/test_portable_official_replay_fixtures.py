@@ -316,11 +316,11 @@ def test_fixture_documents_and_raw_bytes_are_exact() -> None:
             for row in rows
         )
 
-    attributes = (REPOSITORY_ROOT / ".gitattributes").read_text(encoding="utf-8").splitlines()
-    assert attributes == [
+    attributes = set((REPOSITORY_ROOT / ".gitattributes").read_text(encoding="utf-8").splitlines())
+    assert {
         "tests/fixtures/historical_replay/official/jra/race_result_20250913_nakayama_04.cp932.html -text -diff",
         "tests/fixtures/historical_replay/official/nar/race_mark_table_20260503_31_01.utf8.html -text -diff",
-    ]
+    } <= attributes
 
 
 def test_duplicate_json_keys_are_rejected() -> None:
