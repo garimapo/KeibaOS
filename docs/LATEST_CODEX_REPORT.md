@@ -1,51 +1,66 @@
 # Latest Codex Report
 
-## POST_V0_8_DAILY_REPLAY_40 — Pure Deterministic NAR Market Odds Source Parser Implementation
+## POST_V0_8_DAILY_REPLAY_44 — NAR Race-Entry Status Raw Capture Bundle Implementation
 
-Status: `READY_FOR_REVIEW`
-Outcome: `SPLIT_REQUIRED`
-Base: `dfa9802644668bac9f5863099604b8bcb9713b52`
-Blockers: none
+Status: `APPROVED_FOR_COMMIT`
+Formal State: `FORMALLY_COMPLETE`
+Base: `972a1fb201ad360d1c729b120d5ac10aa1556a42`
+Branch: `feature/post-v0.8-daily-replay`
 
-Implemented the exact Phase39-approved pure boundary:
+Implementation review verdict: `PASS_FOR_INTEGRATION`.
 
-```python
-parse_nar_market_odds_source_capture(
-    *,
-    capture: NARMarketOddsResponseCapture,
-) -> NARMarketOddsSourceEvidence
-```
+Phase44 is formally integrated within its exact four-file scope. No live HTTP, parsing, future-information or eligibility inference, reconciliation, persistence, fixture publication, or subsequent-phase work occurred.
 
-The parser safely reconstructs the exact Phase32 capture, strict-decodes its authoritative UTF-8 bytes, and uses the existing BeautifulSoup `html.parser`. It has no arbitrary HTML/URL input, manifest runtime dependency, filesystem access, network, clock, database, persistence, participant reconciliation, replay/cutoff eligibility, probability, EV, strategy, scheduler, settlement, or JRA dependency.
+### Implemented boundary
 
-Implemented immutable `NARMarketOddsExactQuote`, `NARMarketOddsRangeQuote`, and `NARMarketOddsSourceEvidence`, with exact OPEN/FINAL, EXACT/RANGE, and UNVERIFIED enums and the approved parser exception hierarchy. Provider selections use canonical positive horse-number tuples. Scalar and WIDE endpoint tokens use direct `Decimal` construction after exact positive ASCII dotted-token validation. WIDE remains a lower/upper RANGE even when endpoints are equal.
+`scripts/simulation/nar_race_entry_status_raw_capture.py` implements the complete frozen public API: exact race/day scopes, DebaTable and RaceList page kinds, derived request identities, raw HTTP response and immutable capture evidence, closed two-document bundle, transport/clock protocols, concrete requests transport, request builder, bundle acquisition, and the five-class exception hierarchy.
 
-Authoritative source extraction is exact:
-
-- WIN: one `table.odd_popular_table_02`; horse number cell two and scalar WIN cell four; PLACE cells excluded.
-- QUINELLA: one partitioned `ul.odd_ranking`; 28 OPEN and 55 FINAL rows.
-- WIDE: one partitioned `ul.odd_ranking`; 28 OPEN and 55 FINAL ranges using lower text, literal `br`, and ASCII-hyphen upper text.
-- TRIO: one partitioned `ul.odd_ranking`; 56 OPEN and 165 FINAL rows.
-
-The `formation_*` controls are never quote inputs. Every authoritative row must validate; malformed, hidden, or duplicate canonical selections fail closed without partial evidence. `provider_horse_numbers` remains `None` and source completeness `UNVERIFIED`; Phase41 owns participant/race-entry reconciliation and causal completeness.
-
-The final review identified one MEDIUM visibility defect: node-local checks accepted a hidden state heading and a WIN authority beneath a `display:none` ancestor. The correction uses one narrow ancestor-chain visibility boundary from each authoritative heading/container through the exact market root. It rejects boolean `hidden`, ASCII-trimmed case-insensitive `aria-hidden="true"`, and case-insensitive inline `display: none` / `visibility: hidden` with narrow ASCII-whitespace tolerance. It does not inspect external CSS or class names and does not walk above the market root. Real-fixture mutations now cover a hidden heading, hidden WIN ancestor, hidden combination ancestor, `aria-hidden`, and `visibility:hidden`.
-
-Parser identity is `nar-market-odds-source-parser` / `v1`. Evidence uses the exact Phase39 canonical-JSON algorithm, context-free fixed Decimal text, deterministic lexical selection order, and prefix `nar-market-odds-source-evidence-v1:`. All eight fixture evidence IDs are pinned by tests and repeated parsing is exactly equal.
-
-Verification:
+DebaTable uses ordered `k_babaCode`, `k_raceDate`, `k_raceNo`. RaceList uses ordered `k_raceDate`, `k_babaCode`, is venue-day scoped, and contains no `k_raceNo` or fake null race number. Request, capture, and bundle identities use the approved literal canonical JSON, UTC six-digit `Z` timestamps, lowercase SHA-256 digests, and exact prefixes:
 
 ```text
-dedicated Phase40: 51 passed
-dedicated ResourceWarning-as-error: 51 passed
-Phase38/36/32 focused: 71 passed, 74 subtests passed
-Phase30 + Phase25/27/28 daily replay focused: 97 passed, 66 subtests passed
-all NAR test modules: 339 passed, 514 subtests passed
-full pytest: 3506 passed, 2841 subtests passed
-compilation/static forbidden-boundary audit: passed
-all 8 unchanged fixture evidence identities: unchanged and pinned
+nar-race-entry-status-request-v1:
+nar-race-entry-status-capture-v1:
+nar-race-entry-status-raw-bundle-v1:
 ```
 
-Exactly four approved paths are modified. Phase38 fixtures, manifest, `.gitattributes`, Phase32/36 production, database, and logs are unchanged. Cached state is empty; nothing is staged, committed, or pushed.
+The concrete transport creates one fresh `requests.Session` per document, disables environment/session inheritance and retries, uses exact HTTPS GET headers/options, disables redirects and transfer decoding, and reads raw bytes in bounded chunks. Raw Content-Length multiplicity comes only from `response.raw.headers.getlist`; duplicate equal or unequal values, unavailable multiplicity, noncanonical text, and byte-length mismatch fail closed. Only the six approved metadata fields survive. Low-level acquisition and cleanup failures map to the frozen hierarchy.
 
-Phase38 remains `FORMALLY_COMPLETE`; Phase34 remains resolved/superseded; the old Phase33 draft remains superseded. `COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE` remains open. No Phase41 work was prepared or started.
+Acquisition performs DebaTable then RaceList, at most two GETs, and exactly six injected clock samples on success. Deba failure suppresses RaceList; later failure never exposes an authoritative partial bundle. Individual timestamps remain authoritative and the bundle makes no atomic-provider-state claim.
+
+### Verification
+
+```text
+dedicated Phase44: 91 passed
+dedicated Phase44, ResourceWarning as error: 91 passed
+Phase36 / Phase32 capture-acquisition: 40 passed, 48 subtests passed
+Phase38 / Phase40 fixture-parser: 56 passed
+Phase30 ranking probability: 24 passed, 24 subtests passed
+Phase25/27/28 daily replay core: 51 passed, 23 subtests passed
+all NAR: 523 passed, 584 subtests passed (31 paths)
+full pytest: 3,597 passed, 2,841 subtests passed
+deterministic identity audit: PASS
+compile/static forbidden-boundary audit: PASS
+git diff --check: PASS
+```
+
+The frozen all-NAR wildcard did not expand when passed literally to pytest on Windows. The same two frozen filename patterns were then explicitly expanded by PowerShell to 31 paths; that complete scope passed. The production module contains no BeautifulSoup/DOM/body-semantic parser, filesystem/database writer, current wall-clock sampling, alternate network client, or JRA dependency.
+
+### State and Git gate
+
+Phase41 remains `DESIGN_BLOCKED`. Raw capture alone does not establish market eligibility. Both dependencies remain `OPEN`:
+
+```text
+COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE
+NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE
+```
+
+The exact changed paths are:
+
+```text
+scripts/simulation/nar_race_entry_status_raw_capture.py
+tests/test_nar_race_entry_status_raw_capture.py
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+```
+
+The integration commit is restricted to the exact four paths above. Phase32/36/40, fixtures, manifest, `.gitattributes`, `database/**`, and `logs/**` remain excluded. Commit, tree, parent, and remote verification are captured in the integration result. Blockers: none. Stop after formal integration; do not begin another phase.
