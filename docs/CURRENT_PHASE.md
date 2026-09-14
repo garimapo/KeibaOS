@@ -2,135 +2,184 @@
 
 ## Phase
 
-POST_V0_8_DAILY_REPLAY_53
+POST_V0_8_DAILY_REPLAY_56
 
 ## Name / state
 
-Tracked NAR Profile-B Qualification Diagnostics and Failure-Evidence Retention
+Tracked NAR Source-Profile Publication Contract v2 Support
 
-- Type: NO_NETWORK_SUPPORT_IMPLEMENTATION
+- Type: NO_NETWORK_TRACKED_CONTRACT_SUPPORT
 - Status: INTEGRATED_PENDING_REMOTE_VERIFICATION
-- Outcome: IMPLEMENTED_PROFILE_B_DIAGNOSTIC_SUPPORT
+- Outcome: IMPLEMENTED_PUBLICATION_CONTRACT_V2_SUPPORT
+- Review: PASS_FOR_INTEGRATION
 - Branch: feature/post-v0.8-daily-replay
-- Base: c796e45467184efad97f312c605a67c65865b21b
-- Predecessor: POST_V0_8_DAILY_REPLAY_52 — APPROVED_FOR_CODEX / PHASE52_DESIGN_REVIEW_PASS
+- Base: c9f704261cc37f95e12eb2fafa54f83b3055d944
+- Predecessor: POST_V0_8_DAILY_REPLAY_55 — APPROVED_FOR_CODEX
+- Design authority: PHASE55_DESIGN_REVIEW_PASS
+- v1: V1_PUBLICATION_CONTRACT_NOT_EXACTLY_RECOVERABLE
+- v2: VERSIONED_PUBLICATION_CONTRACT_REDESIGN_REQUIRED
+- Design Review: PHASE56_DESIGN_REVIEW_PASS
+- Implementation Manifest: exact approved six paths
+- Phase44 Changes: NOT_AUTHORIZED
+- Phase50 Changes: NOT_AUTHORIZED
+- Provider HTTP: NOT_AUTHORIZED
+- Phase57 Authorization: AUTHORIZATION_NOT_YET_ISSUED
+- Next permitted action: INDEPENDENT_REMOTE_VERIFICATION
 
-Design Review: PHASE53_DESIGN_REVIEW_PASS.
+Phase54 remains factually PHASE54_ACQUISITION_AUTHORIZATION_UNCONSUMED and contractually PHASE54_AUTHORIZATION_UNCONSUMED_BUT_UNUSABLE_FOR_V2. Phase57 authorization is NOT_YET_ISSUED. No Phase54 authority is used or consumed here.
 
-Review: PASS_FOR_INTEGRATION.
+## Exact Phase56 implementation manifest
 
-Next permitted action: INDEPENDENT_REMOTE_VERIFICATION.
+1. scripts/simulation/nar_race_entry_status_source_profile_profile_a.py — new pure Profile-A diagnostics.
+2. tests/test_nar_race_entry_status_source_profile_profile_a.py — new synthetic Profile-A tests.
+3. scripts/simulation/nar_race_entry_status_source_profile_publication_contract.py — new pure v2 identity, manifest, and safety support.
+4. tests/test_nar_race_entry_status_source_profile_publication_contract.py — new synthetic safety, identity, and manifest tests.
+5. docs/CURRENT_PHASE.md
+6. docs/LATEST_CODEX_REPORT.md
 
-Implementation manifest: scripts/simulation/nar_race_entry_status_source_profile_diagnostics.py; tests/test_nar_race_entry_status_source_profile_diagnostics.py; scripts/simulation/nar_race_entry_status_reacquisition_observability.py; tests/test_nar_race_entry_status_reacquisition_observability.py; docs/CURRENT_PHASE.md; docs/LATEST_CODEX_REPORT.md.
+No seventh path is authorized. Phase44, Phase50, Phase53, fixtures, .gitattributes, database, and logs are forbidden.
 
-Phase44 change: NOT_AUTHORIZED.
+## Ownership and boundaries
 
-Phase50 change: ADDITIVE_TYPED_RETENTION_ONLY.
+The Profile-A module owns only the deterministic ENTRY_LISTING_PRESENT grammar. The publication-contract module owns only publication-safety evaluation plus v2 fixture-set, qualification, and manifest build/validate semantics. Phase53 remains the sole Profile-B authority through ProfileBDiagnostics and diagnose_nar_race_entry_status_profile_b. Phase44 remains the sole acquisition/capture authority. Phase50 remains operational evidence only.
 
-Future Phase54: NEW_AUTHORIZATION_REQUIRED.
+Distinct authorities remain separate: formal raw/capture evidence; fixture-set identity; qualification identity; Profile-A diagnostics; Profile-B diagnostics; safety result; and Phase50 journal evidence. Neither a v2 artifact nor either Profile result proves MARKET_ELIGIBLE.
 
-## Historical invariants
+## Common v2 canonical form
 
-Phase51 remains SOURCE_PROFILE_FIXTURE_BLOCKED, PHASE51_ACQUISITION_AUTHORIZATION_CONSUMED_FAIL_CLOSED, and PHASE51_REACQUISITION_NOT_AUTHORIZED. Historical Profile-B root cause remains HISTORICAL_PROFILE_B_FAILURE_ROOT_CAUSE_UNRECOVERABLE_FROM_RETAINED_EVIDENCE. Confirmed gaps remain QUALIFICATION_IMPLEMENTATION_COLLAPSED_FAILURES and QUALIFICATION_PREDICATE_DIAGNOSTICS_NOT_RETAINED.
+Every canonical payload/manifest is exactly:
 
-Phase52 immediate direction is NO_NEW_ACQUISITION_YET. Future live work remains POST_V0_8_DAILY_REPLAY_54_REQUIRES_NEW_AUTHORIZATION. Phase41 remains DESIGN_BLOCKED. OPEN dependencies remain COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE and NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE. Neither Profile B nor Phase53 establishes MARKET_ELIGIBLE; WHOLE_MEETING_CANCELLATION and positive_market_eligibility remain UNSUPPORTED.
+~~~
+json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+~~~
 
-## Exact six Profile-B predicates
+SHA-256 is applied to those exact bytes. All identity digest text is lowercase hexadecimal. Exact type checks, exact closed key sets, canonical UTC text, canonical Phase44 identifiers, ordered documents, and canonical bytes are mandatory; any failure is fail-closed. run_id, journal sequence, PID, temp/repository path, machine/launcher state, raw body, headers/cookies, and arbitrary URL/query text are excluded.
 
-The identifiers and order are frozen. Profile B means only EXPLICIT_WITHDRAWAL_PRESENT.
+## Fixture-set v2
 
-| Order / identifier | Source and deterministic scope | PASS | FAIL | AMBIGUOUS | UNSUPPORTED | Safe fields |
-| --- | --- | --- | --- | --- | --- | --- |
-| 1 RACE_TABLE_SCOPE | strict-UTF-8 RaceList bytes parsed in the pure layer; `section.raceTable` schedule scope | approved scope evaluable | no scope | competing scopes | decode/required DOM unavailable | `race_table_scope_count` |
-| 2 UNIQUE_TARGET_6R | direct `tr.data`, first direct `td` normalized to target `6R` | count exactly 1 | count 0 | count >1 | direct row/cell unavailable | `target_race_no`, `target_6r_row_count` |
-| 3 DEBA_LINK_RELATIONSHIP | anchors only in the unique target row; parsed path exactly `/KeibaWeb/TodayRaceInfo/DebaTable` | count exactly 1 | count 0 | count >1 | href/path cannot be evaluated | `deba_relationship_count`, `deba_relationship_present` |
-| 4 DEBA_LINK_QUERY_BINDING | that relationship link has exactly one each target query date/no/baba | count exactly 1 | count 0 | count >1 | query multiplicity/value cannot be evaluated | `deba_query_binding_count`, `deba_query_binding_match` |
-| 5 WITHDRAWAL_ROW_SHAPE | `table.changeInfo tr.data`, exactly six direct `td` cells | candidate row evaluable | count 0 | competing qualifying candidates | required table/cells unavailable | `withdrawal_row_shape_count` |
-| 6 HORSE_14_WITHDRAWAL_ASSOCIATION | same direct cells 1/2/4 normalize to target `6R`, numeric 14, exact `出走取消` | count exactly 1 | count 0 | count >1 | numeric/status normalization impossible | `withdrawn_provider_horse_no`, `horse_14_withdrawal_count`, `withdrawal_label_match` |
+Prefix: nar-race-entry-status-source-profile-fixture-set-v2:.
 
-No title, time, horse-name, jockey, or recovery association exists. Predicate outcome vocabulary is exactly PASS, FAIL, AMBIGUOUS, UNSUPPORTED. Overall qualification is QUALIFIED only when all six are PASS, otherwise BLOCKED. `first_nonpass_predicate` is the earliest non-PASS predicate in this table order; terminal reason is QUALIFIED, FIRST_NONPASS_PREDICATE, or UNSUPPORTED_INPUT.
+The payload is frozen as schema, schema_version, provider, target, documents, and closed_bundle_identity. schema is nar-race-entry-status-source-profile-fixture-set; schema_version is exact int 2; provider is NAR; target is exact formal NARRaceEntryStatusRaceIdentity represented as baba_code canonical decimal text, race_date canonical ISO text, and positive race_no.
 
-## Input authority and pure tracked module
+documents is an exact two-element ordered list:
 
-Phase53 adds exactly `scripts/simulation/nar_race_entry_status_source_profile_diagnostics.py`. It is pure, deterministic, no-network, no database, no filesystem persistence, no clock, no environment dependency, and no mutable global state.
+| Field | Type / required | Provenance | Identity treatment |
+| --- | --- | --- | --- |
+| role | exact str; required | fixed deba_table, then race_list | included |
+| fixture_relative_path | exact str; required | fixed v2 path for matching role | included |
+| request_identity | exact canonical request id; required | CaptureMetadataSummary document | included |
+| capture_identity | exact canonical capture id; required | CaptureMetadataSummary document | included |
+| response_sha256 | 64 lowercase hex; required | CaptureMetadataSummary document | included |
+| response_byte_length | exact positive int; required | CaptureMetadataSummary document | included |
+| requested_at / observed_at / captured_at | canonical UTC text; each required | CaptureMetadataSummary document | included |
+| effective_url_matches_canonical | exact bool; required | CaptureMetadataSummary document | included |
 
-Its primary API is `diagnose_nar_race_entry_status_profile_b(*, race_list_bytes: bytes, target: NARRaceEntryStatusRaceIdentity) -> ProfileBDiagnostics`. `target` must be the exact immutable Phase44 public type; query values derive only from it. The frozen Profile-B horse/status values remain 14 and `出走取消`. Input bytes must strict-decode as UTF-8. The module uses already available BeautifulSoup with `html.parser`; direct-child traversal and the six frozen selectors/checks are deterministic. Decode failure and an unavailable required structure return the applicable UNSUPPORTED predicate result. The layer never repairs, normalizes into a new source body, or writes input.
+closed_bundle_identity is required canonical formal bundle id from CaptureMetadataSummary. Fixed paths are tests/fixtures/nar_race_entry_status/source_profiles/v2/baba_21__2025-01-01__race_06/deba_table.html and race_list.html. No body is included.
 
-## Immutable diagnostic result
+## Qualification v2
 
-`ProfileBDiagnostics` and `ProfileBPredicateResult` are frozen dataclasses/StrEnums. The canonical `profile_b_diagnostics_v1` representation has exactly:
+Prefix: nar-race-entry-status-source-profile-qualification-v2:.
 
-```json
-{
-  "schema_version": 1,
-  "profile": "EXPLICIT_WITHDRAWAL_PRESENT",
-  "overall_result": "QUALIFIED|BLOCKED",
-  "terminal_semantic": "EXPLICIT_WITHDRAWAL_PRESENT",
-  "target": {"baba_code": "21", "race_date": "2025-01-01", "race_no": 6},
-  "predicate_results": [{"identifier": "<frozen identifier>", "outcome": "PASS|FAIL|AMBIGUOUS|UNSUPPORTED", "safe_fields": {}}],
-  "first_nonpass_predicate": "<identifier>|null",
-  "terminal_reason": "QUALIFIED|FIRST_NONPASS_PREDICATE|UNSUPPORTED_INPUT"
-}
-```
+The payload has exactly schema, schema_version, provider, target, fixture_set_identity, profile_a, profile_b, and market_eligibility. schema is nar-race-entry-status-source-profile-qualification; schema_version is exact int 2; provider/target are the same canonical formal values; fixture_set_identity is the recomputed v2 identity; profile_a is ProfileADiagnostics.to_canonical_dict(); profile_b is the existing Phase53 ProfileBDiagnostics.to_canonical_dict(); market_eligibility is exact UNSUPPORTED.
 
-The six result records are ordered exactly as the table. Only the table's safe fields, exact identifiers/outcomes, bounded nonnegative integer counts, target 6, horse 14, and booleans are accepted. Raw HTML, DOM fragments, arbitrary source text, URLs/query strings, attributes, headers, cookies, credentials, tokens, sessions, account/user values, exception reprs, paths, and environment values are rejected.
+Profile-A therefore contributes its overall result, terminal semantic, all three ordered predicate results, and safe fields. Profile-B contributes its existing overall result, EXPLICIT_WITHDRAWAL_PRESENT terminal semantic where qualified, ordered six predicate diagnostics, and safe fields. Raw HTML and operational state are absent. A qualification semantic change changes this identity.
 
-No separate deterministic identity is added: canonical immutable result bytes plus the durable journal record are sufficient, while a new identity would create no additional authority and invite accidental cross-run use. Canonical bytes use `json.dumps(... ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")`; they exclude raw input, timestamps, run/PID/path, and runtime state.
+## Manifest v2
 
-## Capture metadata summary and journal composition
+The manifest root is a closed schema. Every field is required:
 
-The same module supplies `summarize_nar_race_entry_status_capture_bundle(*, bundle: NARRaceEntryStatusRawCaptureBundle) -> CaptureMetadataSummary`. It accepts only the exact Phase44 bundle type and fails closed if formal fields are missing or contradictory. It contains, for each role, request identity, capture identity, response SHA-256, byte length, requested_at/observed_at/captured_at in the existing UTC text format, and boolean `effective_url_matches_canonical`; it also contains the closed bundle identity. It does not contain raw bodies or URLs.
+| Field path | Type | Source/provenance | Validation |
+| --- | --- | --- | --- |
+| manifest_schema | str | fixed nar-race-entry-status-source-profile-fixture-manifest | exact |
+| manifest_schema_version | int | fixed 2 | exact |
+| acquisition_semantics | str | fixed CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET | exact |
+| provider | str | formal Phase44 target | exact NAR |
+| target.baba_code / race_date / race_no | str / str / int | formal Phase44 target | canonical target |
+| documents | two-item list | fixture-set v2 document payload | exact order and equality |
+| closed_bundle_identity | str | CaptureMetadataSummary | canonical/recomputed equality |
+| fixture_set_identity | str | fixture-set v2 builder | exact recomputation |
+| qualification_identity | str | qualification-v2 builder | exact recomputation |
+| publication_safety | object | safety evaluator canonical dict | closed schema / safe only |
+| profile_a | object | Profile-A canonical dict | closed schema / safe only |
+| profile_b | object | Phase53 canonical dict | exact existing Phase53 representation |
+| market_eligibility | str | fixed contract disclaimer | exact UNSUPPORTED |
 
-Responsibility remains separated:
+The manifest bytes use the common canonical form. Builder and validator both reconstruct expected objects from deterministic inputs; a noncanonical serialized input, wrong schema/version, missing/extra key, mismatched capture field, wrong identity, or wrong disclaimer raises a manifest validation error. No manifest field can claim MARKET_ELIGIBLE, historical availability, or a historical capture time.
 
-- Phase44 owns acquisition and all formal capture/bundle identities; its public API is unchanged.
-- The new Phase53 module owns Profile-B predicates and immutable safe source/capture summaries.
-- Phase50 observability owns durable generic execution evidence, not parsing.
-- Future orchestration composes publication safety, Profile A, Profile B diagnostics, capture metadata, and operational journal evidence without folding them into fixture identity.
+## Profile-A grammar and API
 
-Phase53 necessarily makes a narrow additive change to `scripts/simulation/nar_race_entry_status_reacquisition_observability.py`: new ordered evidence milestones `DEBA_CAPTURE_METADATA_RETAINED`, `RACELIST_CAPTURE_METADATA_RETAINED`, and `PROFILE_B_DIAGNOSTICS_RETAINED`, after CLOSED_BUNDLE_RETURNED and before IDENTITY_VERIFICATION_PASS. Their detail validators accept only the fixed safe capture fields above and the canonical profile_b_diagnostics_v1 object. This is evidence transport only; it does not import or execute the domain parser, alter Phase44, or change Phase50 public APIs. The future child computes the pure summaries and passes only validated values to the journal.
+Public symbols:
 
-## Phase53 implementation manifest
+| Symbol | Input / output | Responsibility |
+| --- | --- | --- |
+| ProfileAOutcome | stable PASS, FAIL, AMBIGUOUS, UNSUPPORTED enum | predicate vocabulary |
+| ProfileAPredicateIdentifier | ENTRY_TABLE_SCOPE, ORDINARY_HORSE_ROW_SHAPE, SELECTED_NON14_LISTING | frozen ordering |
+| ProfileADiagnostics | frozen canonical result; to_canonical_dict() and canonical_bytes() | safe qualification result |
+| diagnose_nar_race_entry_status_profile_a | exact bytes and exact NARRaceEntryStatusRaceIdentity -> ProfileADiagnostics | Phase57 qualification authority |
 
-1. `scripts/simulation/nar_race_entry_status_source_profile_diagnostics.py` — new pure diagnostics and capture-summary support.
-2. `scripts/simulation/nar_race_entry_status_reacquisition_observability.py` — narrow additive safe journal schema/validator/milestone support.
-3. `tests/test_nar_race_entry_status_source_profile_diagnostics.py` — new synthetic-only no-network tests.
-4. `tests/test_nar_race_entry_status_reacquisition_observability.py` — focused journal-schema retention regressions.
-5. `docs/CURRENT_PHASE.md`
-6. `docs/LATEST_CODEX_REPORT.md`
+Input authority is exact DebaTable raw bytes plus exact formal Phase44 target identity. The target scope is that formal identity bound to the formal DebaTable capture; no launcher-local inference or alternate page is allowed. The source strictly UTF-8 decodes, passes an html.parser tag-balance validation, then uses BeautifulSoup html.parser. Invalid UTF-8 or unmatched/unclosed non-void markup returns ordered UNSUPPORTED predicate results, never repaired markup.
 
-No Phase44 change is required: every retained field already exists on its public formal objects. Phase50 change is required only because the current journal has no typed place to retain capture summaries or predicate diagnostics after a child failure; a composition-side stdout or generic opaque blob would violate the durable allowlisted evidence contract.
+The frozen order and semantics are:
 
-## Synthetic test matrix
+1. ENTRY_TABLE_SCOPE: among article.raceCard descendant section.cardTable table elements, count tables containing a tr with exactly one direct td.horseNum. One PASS; zero FAIL; more than one AMBIGUOUS.
+2. ORDINARY_HORSE_ROW_SHAPE: every candidate selected-table row must have exactly one direct td.horseNum with an ASCII positive decimal and exactly one nonempty a.horseName[href]. No row FAIL; duplicate required node AMBIGUOUS; malformed element/number UNSUPPORTED.
+3. SELECTED_NON14_LISTING: eligible rows must have a horse number other than 14 and one row per number. Select the lowest numeric eligible horse. Zero FAIL; duplicate candidate number AMBIGUOUS; malformed input UNSUPPORTED.
 
-All inputs are inline/minimal synthetic HTML, named synthetic, not provider evidence and not source-profile fixtures. Tests cover: valid unique target 6R; missing/duplicate 6R; horse 14 withdrawal; horse 14 without withdrawal; withdrawal for another horse; nonnumeric horse; missing/malformed/multiple Deba relationship; wrong query binding; multiple withdrawal rows; ambiguous association; valid elements in the wrong scope; malformed source structure; deterministic repetition/order/first failure; raw/source-text exclusion; canonical result serialization; summary completeness; and missing/contradictory capture metadata failing closed. They also cover journal retention/validation of the three new events without network.
+Safe fields are exactly entry_table_scope_count; ordinary_row_count; and selected_non14_candidate_count plus selected_provider_horse_no (null unless PASS). The first non-PASS is the first non-PASS in this order. All PASS gives QUALIFIED and terminal semantic ENTRY_LISTING_PRESENT; otherwise BLOCKED and null terminal semantic. No raw source, name, link, URL, DOM, or MARKET_ELIGIBLE field is retained.
 
-Future EXECUTE order: focused Phase53 tests during development; relevant NAR regression once; full suite once only when ready. No HTTP in any test. Phase53 completion does not acquire data, qualify the target, publish fixtures, unblock Phase41, or authorize Phase54.
+## Publication safety grammar and API
 
-## PREPARE scope
+Public symbols:
 
-Only docs/CURRENT_PHASE.md and docs/LATEST_CODEX_REPORT.md change in this PREPARE. Forbidden: implementation, tests, fixtures, .gitattributes, HTTP, Phase44 entry, staging, commit, push, and Phase54. Required final check: git diff --check. Stop at DRAFT_FOR_REVIEW.
+| Symbol | Input / output | Responsibility |
+| --- | --- | --- |
+| PublicationSafetyOutcome | SAFE, UNSAFE, AMBIGUOUS, UNSUPPORTED enum | aggregate/category vocabulary |
+| PublicationSafetyCategory | five frozen categories in fixed order | stable result ordering |
+| RawFixturePublicationSafety | frozen result; to_canonical_dict() and canonical_bytes() | safe publication decision |
+| assess_nar_race_entry_status_raw_fixture_publication_safety | exact DebaTable bytes and exact RaceList bytes -> RawFixturePublicationSafety | in-memory publication gate |
+| SourceProfilePublicationContractError | explicit validation/identity/manifest errors | programmer and structural contract failures |
+| build_nar_race_entry_status_fixture_set_v2 / validate_nar_race_entry_status_fixture_set_v2 | exact target + CaptureMetadataSummary -> identity/value / independent validation | source-evidence identity |
+| build_nar_race_entry_status_qualification_v2 / validate_nar_race_entry_status_qualification_v2 | target + fixture-set + Profile-A + Phase53 Profile-B -> identity/value / independent validation | semantic identity |
+| build_nar_race_entry_status_manifest_v2 / validate_nar_race_entry_status_manifest_v2 | deterministic value objects -> canonical bytes/value; canonical bytes + deterministic inputs -> value | local manifest build/revalidation |
 
-## Phase53 approval record
+Both document bodies are strictly UTF-8 decoded and tag-balance checked. The evaluator inspects both roles and only attribute names/presence on meta, input, form, a, link, script, img, iframe; query parameter names/values in href, src, action; and header-style lines beginning authorization:, cookie:, set-cookie:. Attribute/query names are ASCII-lowercased with hyphen replaced by underscore.
 
-The six predicate identifiers, order, parser/input authority, immutable `profile_b_diagnostics_v1` result schema, no-identity decision, and separate capture-metadata summary are approved unchanged. Profile B remains only EXPLICIT_WITHDRAWAL_PRESENT; no predicate or aggregate result implies MARKET_ELIGIBLE.
+| Category | Exact tokens |
+| --- | --- |
+| NO_AUTHENTICATION_MATERIAL | authorization, authentication, password, credential, api_key, access_token, refresh_token, bearer |
+| NO_COOKIE_OR_SESSION_SECRET | cookie, set_cookie, session, session_id, sessionid, sid |
+| NO_CSRF_OR_SECRET_TOKEN | csrf, xsrf, token, secret, nonce |
+| NO_USER_ACCOUNT_IDENTIFIER | user, username, user_id, account, account_id, member, member_id, login_id, email |
+| NO_PERSONALIZATION_IDENTIFIER | personalization, personalised, my_page, mypage, preference, favorite, history |
 
-The only approved foundational change is the narrow additive Phase50 journal extension for DEBA_CAPTURE_METADATA_RETAINED, RACELIST_CAPTURE_METADATA_RETAINED, and PROFILE_B_DIAGNOSTICS_RETAINED. Existing schema/version, milestones, sequence/canonical/allowlist contracts, preflight, authorization semantics, stream classification, cleanup, and Phase44 mapping remain unchanged. If implementation needs any existing Phase50 semantic contract change, it must stop as IMPLEMENTATION_BLOCKED_PHASE50_CONTRACT_CHANGE_REQUIRED. Any Phase44 change stops as IMPLEMENTATION_BLOCKED_PHASE44_CHANGE_REQUIRED.
+A matched sensitive key with nonempty value is UNSAFE. Empty sensitive fields, malformed sensitive query encoding, and structurally indeterminate matching are AMBIGUOUS. No match is SAFE. Decode/structural failure is UNSUPPORTED. The aggregate is SAFE and raw_fixture_publication_safe true only if all five categories are SAFE; every other aggregate fails closed. Results contain only schema_version, result, raw_fixture_publication_safe, five ordered identifier/outcome/finding_count records. They never retain raw HTML, visible text, URL/query/value, secret, or exception repr.
 
-Synthetic Phase53 tests remain no-network and non-official. Phase53 completion does not authorize Phase54; Phase54 requires formal integration/verification of Phase53, all synthetic and retention tests, Phase50 preflight, import smoke, Git gate, and a new explicit one-shot authorization.
+## Error strategy
 
-## Phase53 implementation result
+Malformed/unsupported raw source returns a deterministic ordered diagnostic result. Exact-type violations, illegal value objects, malformed manifest structure, noncanonical serialization, and identity/provenance mismatch raise SourceProfilePublicationContractError. There is no coercion, partial qualification, fallback, or silently repaired object.
 
-The approved pure diagnostics module now implements the six frozen predicates in their exact order over strict-UTF-8 RaceList bytes plus exact formal Phase44 target identity. Its immutable `profile_b_diagnostics_v1` result retains only the approved safe counts/booleans and deterministic predicate outcomes, first non-PASS predicate, and terminal reason. Canonical bytes are repeatable; there is no separate diagnostic identity and no MARKET_ELIGIBLE semantic.
+## Future synthetic tests and execution economy
 
-The separate immutable capture-metadata summary is constructed only from a revalidated formal Phase44 bundle. It retains request/capture identities, SHA/length, all six UTC timestamps, closed-bundle identity, and effective-URL-match booleans, without raw bodies or URL values. Missing or contradictory formal metadata fails closed.
+Profile-A tests: valid listing; missing/duplicate target scope; missing/duplicate selected ordinary horse; nonnumeric horse; wrong scope; malformed DOM; invalid UTF-8; repeatability; canonical bytes; no raw/URL/MARKET_ELIGIBLE output.
 
-Phase50 observability now accepts only the three approved typed retention milestones in the frozen location: `DEBA_CAPTURE_METADATA_RETAINED`, `RACELIST_CAPTURE_METADATA_RETAINED`, and `PROFILE_B_DIAGNOSTICS_RETAINED`. Exact nested allowlists, types, identity formats, count bounds, timestamp/order checks, role checks, canonical JSON, and prerequisite ordering are enforced. Existing Phase50 journal version, existing events and meanings, preflight, authorization, stream, cleanup, and Phase44 observer mapping remain unchanged. Phase44 itself is unchanged.
+Safety tests: minimal safe Deba/RaceList; each category independently; multiple categories; ambiguous token-like field/query; malformed DOM; invalid UTF-8; repeatability; no raw source/value echo; aggregate fail-closed result.
 
-Verification passed without network: focused diagnostics 23 passed; affected Phase50 observability 83 passed; relevant NAR regression 540 passed plus 514 subtests; full repository suite 3,707 passed plus 2,841 subtests; static in-memory compile PASS; git diff --check PASS. Tests prove deterministic six-predicate ordering/outcomes and first non-PASS selection, raw/unsafe URL-query exclusion, capture metadata retention alongside qualification failure, strict rejection of unsafe fields by all three new events, and unchanged old Phase50 preflight behavior.
+Identity/manifest tests: canonical byte/identity repeatability; input mapping order immaterial; changed SHA, length, or capture id changes fixture identity; run_id/temp/repository paths cannot affect identities; Profile-A/Profile-B semantic changes change qualification identity; raw HTML absent; builder/validator round-trip; wrong schema, missing/extra key, wrong provenance/id/SHA/length, noncanonical bytes, operational field, and disclaimer mismatch fail closed; local reread validation has no network.
 
-Repository scope remains exactly the approved six paths; index remains empty. No HTTP, Phase44 acquisition, official fixture, manifest, `.gitattributes`, database/log, Phase54, stage, commit, or push action occurred. Phase51 remains blocked and consumed; Phase41 remains DESIGN_BLOCKED; Phase54 remains unauthorized.
+Future EXECUTE order: focused v2 tests; Phase53 interoperability only if affected; relevant NAR regression once; full suite once when otherwise ready. No broad test run occurs in PREPARE.
 
-## Phase53 integration record
+## Future success and authorization
 
-Phase53 is integrated locally and pending independent remote verification. The reviewed implementation remains exactly the six-path manifest: tracked six-predicate diagnostics, separate capture-metadata summary, and the three additive typed Phase50 retention events. Phase44 is unchanged; HTTP was not performed; Phase51 remains blocked/non-retryable; Phase41 remains DESIGN_BLOCKED; Phase54 is not authorized and requires a new one-shot acquisition authorization. This state is not FORMALLY_COMPLETE.
+Future Phase56 success is READY_FOR_REVIEW / IMPLEMENTED_PUBLICATION_CONTRACT_V2_SUPPORT. It requires all six-path support, focused and relevant/full tests, no network, clean index, and diff check PASS.
+
+Phase57 remains unauthorized until Phase56 is reviewed, integrated, independently remote-verified, and formally complete; then it needs PREPARE, review, APPROVE, and a new explicit one-shot authorization. Phase54 is never reused.
+
+Phase41 remains DESIGN_BLOCKED. COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE and NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE remain OPEN. Positive market eligibility and WHOLE_MEETING_CANCELLATION remain UNSUPPORTED.
+
+## Phase56 execution result
+
+The exact six-path implementation is integrated pending independent remote verification. The tracked Profile-A module implements the frozen three-predicate grammar and canonical safe result. The publication-contract module implements the five-category fail-closed safety gate, fixture-set-v2 and qualification-v2 canonical payload/identity build-validation symmetry, and closed canonical manifest-v2 build-validation symmetry. Phase53 remains the sole Profile-B authority; Phase44 and Phase50 are unchanged.
+
+Verification passed entirely without provider HTTP: focused Phase56 tests 46 passed (14 Profile-A and 32 publication-contract); Phase53 interoperability 23 passed; relevant NAR regression 690 passed plus 596 subtests; full repository suite 3,753 passed plus 2,841 subtests. Static no-network/source-safety checks, deterministic canonicalization checks, raw/secret exclusion checks, operational-metadata exclusion checks, MARKET_ELIGIBLE non-inference checks, and `git diff --check` passed.
+
+The repository delta is exactly the approved six paths. The index remains empty. No Phase44, Phase50, Phase53, fixture, `.gitattributes`, database, log, or generated-cache path changed. No provider data was acquired, Phase44 live acquisition was not entered, Phase54 authority remains factually unconsumed but unusable for v2, and Phase57 authorization remains not issued.

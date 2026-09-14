@@ -1,37 +1,49 @@
 # Latest Codex Report
 
-## POST_V0_8_DAILY_REPLAY_53 — INTEGRATION
+## POST_V0_8_DAILY_REPLAY_56 — INTEGRATION
 
-Formal Status: INTEGRATED_PENDING_REMOTE_VERIFICATION
+Status: INTEGRATED_PENDING_REMOTE_VERIFICATION
 
-Outcome: IMPLEMENTED_PROFILE_B_DIAGNOSTIC_SUPPORT
+Outcome: IMPLEMENTED_PUBLICATION_CONTRACT_V2_SUPPORT
 
 Review: PASS_FOR_INTEGRATION
 
-Base: c796e45467184efad97f312c605a67c65865b21b
+Base: c9f704261cc37f95e12eb2fafa54f83b3055d944
 
-Git preflight passed: branch `feature/post-v0.8-daily-replay`; local and remote HEAD both equal the base; staged/cached and untracked state were empty; only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` were modified initially; database/logs were unchanged.
+Authorized worktree: `C:\Users\garim\Desktop\KeibaOS-post-v0.8`
 
-Implemented the pure no-network diagnostics module with the exact ordered predicates `RACE_TABLE_SCOPE`, `UNIQUE_TARGET_6R`, `DEBA_LINK_RELATIONSHIP`, `DEBA_LINK_QUERY_BINDING`, `WITHDRAWAL_ROW_SHAPE`, and `HORSE_14_WITHDRAWAL_ASSOCIATION`. Authority is exact strict-UTF-8 RaceList bytes plus exact formal `NARRaceEntryStatusRaceIdentity`. Results are immutable canonical `profile_b_diagnostics_v1`, use only PASS/FAIL/AMBIGUOUS/UNSUPPORTED, deterministically select the first non-PASS predicate, retain only approved safe values, and add no separate identity. The only positive semantic is EXPLICIT_WITHDRAWAL_PRESENT; MARKET_ELIGIBLE is never emitted or inferred.
+The Git gate passed on `feature/post-v0.8-daily-replay`: local and remote HEAD both matched the base; the index and untracked state were initially empty; only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` were modified; database and logs were unchanged.
 
-Implemented a distinct immutable capture-metadata summary built only from a revalidated formal Phase44 bundle. It retains both request identities, both capture identities, both response SHA-256/length pairs, six UTC timestamps, the closed-bundle identity, and canonical-effective-URL booleans. It retains no body or URL and fails closed on missing or contradictory formal metadata. This summary remains separate from Profile-B semantics, Phase50 operational evidence, and future fixture identities.
+Implemented the pure deterministic tracked Profile-A authority with exact strict-UTF-8 DebaTable bytes plus exact formal Phase44 target identity as input. The frozen predicate order is `ENTRY_TABLE_SCOPE`, `ORDINARY_HORSE_ROW_SHAPE`, and `SELECTED_NON14_LISTING`; outcomes are PASS, FAIL, AMBIGUOUS, and UNSUPPORTED. All PASS alone produces QUALIFIED / ENTRY_LISTING_PRESENT. Results are immutable and canonical, first non-PASS selection is deterministic, and only allowlisted counts plus the selected numeric non-14 horse are retained. Raw HTML, horse names, links, arbitrary URL/query data, and MARKET_ELIGIBLE are absent.
 
-Added only the approved additive Phase50 milestones `DEBA_CAPTURE_METADATA_RETAINED`, `RACELIST_CAPTURE_METADATA_RETAINED`, and `PROFILE_B_DIAGNOSTICS_RETAINED`. Their nested payloads have strict typed allowlists and canonical validation; raw/source fields, arbitrary URL/query data, unexpected keys, wrong types, oversized counts, contradictory roles/results, and invalid ordering are rejected. Existing Phase50 schema/version, old events, preflight token/behavior, authorization rules, stdout/stderr handling, cleanup, and Phase44 bridge semantics remain unchanged. Phase44 was not modified.
+Implemented the pure v2 publication contract support. Publication safety evaluates both source roles against the exact five approved categories and fails closed unless every category is SAFE. Its immutable result retains only ordered category/outcome/count metadata and never echoes raw source or detected values. Fixture-set v2 and qualification v2 use the approved closed payloads, canonical JSON, SHA-256, lowercase identity families, and independent deterministic recomputation. Qualification v2 consumes the integrated Phase53 canonical `ProfileBDiagnostics` directly; Phase53 remains the sole Profile-B authority. Manifest v2 uses the approved closed schema, exact provenance, canonical bytes, identity recomputation, acquisition semantics, and exact `market_eligibility: UNSUPPORTED` disclaimer.
 
 Verification:
 
-- focused Phase53 diagnostics: 23 passed
-- affected Phase50 observability: 83 passed
-- relevant NAR regression: 540 passed, 514 subtests passed
-- full repository suite: 3,707 passed, 2,841 subtests passed
-- static in-memory compile: PASS
-- static no-network/safety checks: PASS
-- git diff --check: PASS
+- focused Profile-A tests: 14 passed
+- focused publication-contract tests: 32 passed
+- combined focused Phase56 tests: 46 passed
+- Phase53 interoperability: 23 passed
+- relevant NAR regression: 690 passed, 596 subtests passed
+- full repository suite: 3,753 passed, 2,841 subtests passed
+- static no-network and no-write audit: PASS
+- deterministic canonical payload/identity/manifest checks: PASS
+- raw source and secret-value exclusion checks: PASS
+- operational metadata exclusion from identities: PASS
+- MARKET_ELIGIBLE non-inference: PASS
+- `git diff --check`: PASS
 
-Tests prove deterministic outcomes/order for all six predicates and deterministic first non-PASS selection; canonical byte repeatability; absence of raw HTML and arbitrary unsafe URL/query text; capture metadata remains representable when qualification is blocked; all three Phase50 retention events reject unsafe fields; and the old Phase50 preflight behavior remains unchanged.
+Exact six-path delta:
 
-Exact six-path manifest: `scripts/simulation/nar_race_entry_status_source_profile_diagnostics.py`; `tests/test_nar_race_entry_status_source_profile_diagnostics.py`; `scripts/simulation/nar_race_entry_status_reacquisition_observability.py`; `tests/test_nar_race_entry_status_reacquisition_observability.py`; `docs/CURRENT_PHASE.md`; `docs/LATEST_CODEX_REPORT.md`.
+1. `scripts/simulation/nar_race_entry_status_source_profile_profile_a.py`
+2. `tests/test_nar_race_entry_status_source_profile_profile_a.py`
+3. `scripts/simulation/nar_race_entry_status_source_profile_publication_contract.py`
+4. `tests/test_nar_race_entry_status_source_profile_publication_contract.py`
+5. `docs/CURRENT_PHASE.md`
+6. `docs/LATEST_CODEX_REPORT.md`
 
-No HTTP was performed. Phase44 live acquisition was not entered. No official source evidence, fixture, manifest, `.gitattributes`, database/log, or Phase54 work occurred. Phase51 remains SOURCE_PROFILE_FIXTURE_BLOCKED and consumed/nonretryable; Phase41 remains DESIGN_BLOCKED; Phase54 has no authorization and requires a new one-shot acquisition authorization.
+Phase44, Phase50, and Phase53 are unchanged. No official fixture, `.gitattributes`, database, log, or generated-cache artifact changed. Provider HTTP was not performed and Phase44 live acquisition was not entered. Phase54 remains factually `PHASE54_ACQUISITION_AUTHORIZATION_UNCONSUMED` and contractually `PHASE54_AUTHORIZATION_UNCONSUMED_BUT_UNUSABLE_FOR_V2`. Phase57 remains `AUTHORIZATION_NOT_YET_ISSUED`. Phase41 remains `DESIGN_BLOCKED`; the two dependencies remain open; positive market eligibility and whole-meeting cancellation remain unsupported.
 
-Integration is pending independent remote verification and is not FORMALLY_COMPLETE. The local commit contains exactly the approved six paths; remote verification is required before any later phase may be considered.
+The reviewed six-path implementation passed final local scope and semantic audit: Profile-A has only ENTRY_LISTING_PRESENT as a positive terminal semantic; publication safety retains no source or secret values; both v2 identities use the approved prefixes and canonical SHA-256 payloads without operational metadata; manifest validation recomputes deterministic authority; and MARKET_ELIGIBLE is never inferred. Phase44, Phase50, and Phase53 are unchanged, and no provider-network path was added.
+
+The final integration must be independently remote-verified before Phase56 can become formally complete. Phase57 remains not authorized.
