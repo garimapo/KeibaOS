@@ -18,6 +18,51 @@ RUN_ID = "0123456789abcdef0123456789abcdef"
 UTC = timezone.utc
 REQUEST_ID = "nar-race-entry-status-request-v1:" + "a" * 64
 BUNDLE_ID = "nar-race-entry-status-raw-bundle-v1:" + "b" * 64
+CAPTURE_ID = "nar-race-entry-status-capture-v1:" + "9" * 64
+
+
+def _capture_metadata(role: str) -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "document_role": role,
+        "request_identity": REQUEST_ID,
+        "capture_identity": CAPTURE_ID,
+        "response_sha256": "c" * 64,
+        "response_byte_length": 123,
+        "requested_at": "2026-09-14T00:00:00.000000Z",
+        "observed_at": "2026-09-14T00:00:00.000001Z",
+        "captured_at": "2026-09-14T00:00:00.000002Z",
+        "effective_url_matches_canonical": True,
+        "closed_bundle_identity": BUNDLE_ID,
+    }
+
+
+def _profile_b_diagnostics() -> dict[str, object]:
+    fields = {
+        "RACE_TABLE_SCOPE": {"race_table_scope_count": 1},
+        "UNIQUE_TARGET_6R": {"target_race_no": 6, "target_6r_row_count": 1},
+        "DEBA_LINK_RELATIONSHIP": {"deba_relationship_count": 1, "deba_relationship_present": True},
+        "DEBA_LINK_QUERY_BINDING": {"deba_query_binding_count": 1, "deba_query_binding_match": True},
+        "WITHDRAWAL_ROW_SHAPE": {"withdrawal_row_shape_count": 1},
+        "HORSE_14_WITHDRAWAL_ASSOCIATION": {
+            "withdrawn_provider_horse_no": 14,
+            "horse_14_withdrawal_count": 1,
+            "withdrawal_label_match": True,
+        },
+    }
+    return {
+        "schema_version": 1,
+        "profile": "EXPLICIT_WITHDRAWAL_PRESENT",
+        "overall_result": "QUALIFIED",
+        "terminal_semantic": "EXPLICIT_WITHDRAWAL_PRESENT",
+        "target": {"baba_code": "21", "race_date": "2025-01-01", "race_no": 6},
+        "predicate_results": [
+            {"identifier": identifier, "outcome": "PASS", "safe_fields": safe_fields}
+            for identifier, safe_fields in fields.items()
+        ],
+        "first_nonpass_predicate": None,
+        "terminal_reason": "QUALIFIED",
+    }
 
 
 class _Clock:
@@ -99,6 +144,9 @@ def _details_for(milestone: subject.ObservationMilestone) -> dict[str, object]:
         subject.ObservationMilestone.RACELIST_HTTP_RESPONSE_RETURNED: {"request_identity": REQUEST_ID},
         subject.ObservationMilestone.RACELIST_RAW_RESPONSE_CONSTRUCTED: {"request_identity": REQUEST_ID, "response_sha256": "d" * 64, "response_byte_length": 456},
         subject.ObservationMilestone.CLOSED_BUNDLE_RETURNED: {"bundle_id": BUNDLE_ID},
+        subject.ObservationMilestone.DEBA_CAPTURE_METADATA_RETAINED: {"capture_metadata": _capture_metadata("deba_table")},
+        subject.ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED: {"capture_metadata": _capture_metadata("race_list")},
+        subject.ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED: {"profile_b_diagnostics": _profile_b_diagnostics()},
         subject.ObservationMilestone.IDENTITY_VERIFICATION_PASS: {"bundle_id": BUNDLE_ID},
         subject.ObservationMilestone.PUBLICATION_BEGIN: {"planned_path_count": 7},
         subject.ObservationMilestone.RAW_FIXTURES_WRITTEN: {"document_count": 2},
@@ -555,3 +603,114 @@ def test_module_has_no_network_database_or_raw_content_functionality() -> None:
         "set-cookie",
     ):
         assert forbidden not in lowered
+
+
+def test_three_typed_retention_events_round_trip_canonically(tmp_path: Path) -> None:
+    writer = _writer(tmp_path)
+    for milestone in subject.ObservationMilestone:
+        writer.append(milestone, _details_for(milestone))
+        if milestone is subject.ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED:
+            break
+    writer.close()
+
+    data = writer.path.read_bytes()
+    records = subject.validate_journal_bytes(data, expected_run_id=RUN_ID)
+    subject.validate_journal_semantics(records)
+    assert [record.milestone for record in records[-3:]] == [
+        subject.ObservationMilestone.DEBA_CAPTURE_METADATA_RETAINED,
+        subject.ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED,
+        subject.ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED,
+    ]
+    assert records[-3].details["capture_metadata"] == _capture_metadata("deba_table")
+    assert records[-2].details["capture_metadata"] == _capture_metadata("race_list")
+    assert records[-1].details["profile_b_diagnostics"] == _profile_b_diagnostics()
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "unexpected_capture_key",
+        "raw_capture_field",
+        "wrong_capture_type",
+        "wrong_role",
+        "unsafe_url",
+        "wrong_diagnostics_type",
+        "unexpected_diagnostics_key",
+        "raw_diagnostics_field",
+        "unsafe_predicate_key",
+        "wrong_predicate_type",
+        "oversized_predicate_value",
+        "inconsistent_first_failure",
+    ],
+)
+def test_typed_retention_events_reject_unsafe_or_invalid_fields(
+    tmp_path: Path,
+    mutation: str,
+) -> None:
+    writer = _writer(tmp_path)
+    if mutation.startswith(("unexpected_capture", "raw_capture", "wrong_capture", "wrong_role", "unsafe_url")):
+        metadata: object = _capture_metadata("deba_table")
+        if mutation == "unexpected_capture_key":
+            metadata["extra"] = "x"  # type: ignore[index]
+        elif mutation == "raw_capture_field":
+            metadata["response_body"] = "<html>"  # type: ignore[index]
+        elif mutation == "wrong_capture_type":
+            metadata["response_byte_length"] = "123"  # type: ignore[index]
+        elif mutation == "wrong_role":
+            metadata["document_role"] = "race_list"  # type: ignore[index]
+        else:
+            metadata["effective_url"] = "https://example.invalid/?token=secret"  # type: ignore[index]
+        milestone = subject.ObservationMilestone.DEBA_CAPTURE_METADATA_RETAINED
+        details = {"capture_metadata": metadata}
+    else:
+        diagnostics: object = _profile_b_diagnostics()
+        if mutation == "wrong_diagnostics_type":
+            diagnostics = []
+        elif mutation == "unexpected_diagnostics_key":
+            diagnostics["extra"] = "x"  # type: ignore[index]
+        elif mutation == "raw_diagnostics_field":
+            diagnostics["raw_html"] = "<html>"  # type: ignore[index]
+        elif mutation == "unsafe_predicate_key":
+            diagnostics["predicate_results"][0]["safe_fields"]["url"] = "https://example.invalid"  # type: ignore[index]
+        elif mutation == "wrong_predicate_type":
+            diagnostics["predicate_results"][0]["safe_fields"]["race_table_scope_count"] = "1"  # type: ignore[index]
+        elif mutation == "oversized_predicate_value":
+            diagnostics["predicate_results"][0]["safe_fields"]["race_table_scope_count"] = 10**100  # type: ignore[index]
+        else:
+            diagnostics["first_nonpass_predicate"] = "RACE_TABLE_SCOPE"  # type: ignore[index]
+        milestone = subject.ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED
+        details = {"profile_b_diagnostics": diagnostics}
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        writer.append(milestone, details)
+    writer.close()
+
+
+def test_retention_event_semantics_require_closed_bundle_and_order(tmp_path: Path) -> None:
+    writer = _writer(tmp_path)
+    writer.append(subject.ObservationMilestone.PARENT_EXECUTION_PREPARED, {"run_id": RUN_ID})
+    writer.append(
+        subject.ObservationMilestone.DEBA_CAPTURE_METADATA_RETAINED,
+        {"capture_metadata": _capture_metadata("deba_table")},
+    )
+    writer.close()
+    records = subject.validate_journal_bytes(writer.path.read_bytes())
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject.validate_journal_semantics(records)
+
+
+def test_existing_preflight_contract_is_unchanged_after_additive_events(tmp_path: Path) -> None:
+    writer = _writer(tmp_path)
+    _append_minimal_success(writer)
+    writer.close()
+    evidence = subject.retain_child_process_evidence(
+        return_code=0,
+        stdout=subject.PREFLIGHT_PASS_TOKEN.encode("ascii") + b"\n",
+        stderr=b"",
+        journal_bytes=writer.path.read_bytes(),
+        expected_run_id=RUN_ID,
+    )
+    assert subject.preflight_result(
+        child_evidence=evidence,
+        cleanup_succeeded=True,
+        bytecode_residue_absent=True,
+    ) == subject.PREFLIGHT_PASS_TOKEN

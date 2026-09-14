@@ -28,11 +28,13 @@ MAX_STRING_BYTES = 512
 MAX_RECORD_BYTES = 4096
 MAX_JOURNAL_BYTES = 131072
 MAX_PROCESS_STREAM_BYTES = 16384
+_MAX_SAFE_COUNT = 10_000
 
 _RUN_ID = re.compile(r"[0-9a-f]{32}\Z", flags=re.ASCII)
 _LOWER_HEX_64 = re.compile(r"[0-9a-f]{64}\Z", flags=re.ASCII)
 _UTC_TEXT = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}Z\Z", flags=re.ASCII)
 _REQUEST_ID = re.compile(r"nar-race-entry-status-request-v1:[0-9a-f]{64}\Z", flags=re.ASCII)
+_CAPTURE_ID = re.compile(r"nar-race-entry-status-capture-v1:[0-9a-f]{64}\Z", flags=re.ASCII)
 _BUNDLE_ID = re.compile(r"nar-race-entry-status-raw-bundle-v1:[0-9a-f]{64}\Z", flags=re.ASCII)
 _FIXTURE_SET_ID = re.compile(
     r"nar-race-entry-status-source-profile-fixture-set-v1:[0-9a-f]{64}\Z",
@@ -80,6 +82,9 @@ class ObservationMilestone(StrEnum):
     RACELIST_HTTP_RESPONSE_RETURNED = "RACELIST_HTTP_RESPONSE_RETURNED"
     RACELIST_RAW_RESPONSE_CONSTRUCTED = "RACELIST_RAW_RESPONSE_CONSTRUCTED"
     CLOSED_BUNDLE_RETURNED = "CLOSED_BUNDLE_RETURNED"
+    DEBA_CAPTURE_METADATA_RETAINED = "DEBA_CAPTURE_METADATA_RETAINED"
+    RACELIST_CAPTURE_METADATA_RETAINED = "RACELIST_CAPTURE_METADATA_RETAINED"
+    PROFILE_B_DIAGNOSTICS_RETAINED = "PROFILE_B_DIAGNOSTICS_RETAINED"
     IDENTITY_VERIFICATION_PASS = "IDENTITY_VERIFICATION_PASS"
     SAFETY_PASS = "SAFETY_PASS"
     PROFILE_A_QUALIFIED = "PROFILE_A_QUALIFIED"
@@ -115,6 +120,9 @@ _DETAIL_KEYS: dict[ObservationMilestone, frozenset[str]] = {
         {"request_identity", "response_sha256", "response_byte_length"},
     ),
     ObservationMilestone.CLOSED_BUNDLE_RETURNED: frozenset({"bundle_id"}),
+    ObservationMilestone.DEBA_CAPTURE_METADATA_RETAINED: frozenset({"capture_metadata"}),
+    ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED: frozenset({"capture_metadata"}),
+    ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED: frozenset({"profile_b_diagnostics"}),
     ObservationMilestone.IDENTITY_VERIFICATION_PASS: frozenset({"bundle_id"}),
     ObservationMilestone.SAFETY_PASS: frozenset(),
     ObservationMilestone.PROFILE_A_QUALIFIED: frozenset(),
@@ -228,6 +236,200 @@ def _exact_positive_int(value: object, name: str) -> int:
     return value
 
 
+def _exact_nonnegative_int(value: object, name: str) -> int:
+    if type(value) is not int or not 0 <= value <= _MAX_SAFE_COUNT:
+        raise _error(f"{name} must be an exact nonnegative int")
+    return value
+
+
+def _canonical_utc_detail(value: object, name: str) -> str:
+    text = _safe_string(value, name)
+    if _UTC_TEXT.fullmatch(text) is None:
+        raise _error(f"{name} must be canonical UTC text")
+    try:
+        parsed = datetime.strptime(text, "%Y-%m-%dT%H:%M:%S.%fZ")
+    except ValueError as error:
+        raise _error(f"{name} is invalid") from error
+    if parsed.strftime("%Y-%m-%dT%H:%M:%S.%fZ") != text:
+        raise _error(f"{name} is noncanonical")
+    return text
+
+
+def _validate_capture_metadata(value: object) -> dict[str, object]:
+    if type(value) is not dict:
+        raise _error("capture_metadata must be exact dict")
+    expected = {
+        "schema_version",
+        "document_role",
+        "request_identity",
+        "capture_identity",
+        "response_sha256",
+        "response_byte_length",
+        "requested_at",
+        "observed_at",
+        "captured_at",
+        "effective_url_matches_canonical",
+        "closed_bundle_identity",
+    }
+    if set(value) != expected:
+        raise _error("capture_metadata keys do not match the exact allowlist")
+    if value["schema_version"] != 1 or type(value["schema_version"]) is not int:
+        raise _error("capture_metadata schema_version must be exact 1")
+    role = _safe_string(value["document_role"], "document_role")
+    if role not in {"deba_table", "race_list"}:
+        raise _error("document_role is outside the exact allowlist")
+    request_identity = _safe_string(value["request_identity"], "request_identity")
+    if _REQUEST_ID.fullmatch(request_identity) is None:
+        raise _error("request_identity is noncanonical")
+    capture_identity = _safe_string(value["capture_identity"], "capture_identity")
+    if _CAPTURE_ID.fullmatch(capture_identity) is None:
+        raise _error("capture_identity is noncanonical")
+    response_sha256 = _safe_string(value["response_sha256"], "response_sha256")
+    if _LOWER_HEX_64.fullmatch(response_sha256) is None:
+        raise _error("response_sha256 is noncanonical")
+    response_byte_length = _exact_positive_int(value["response_byte_length"], "response_byte_length")
+    requested_at = _canonical_utc_detail(value["requested_at"], "requested_at")
+    observed_at = _canonical_utc_detail(value["observed_at"], "observed_at")
+    captured_at = _canonical_utc_detail(value["captured_at"], "captured_at")
+    if not requested_at <= observed_at <= captured_at:
+        raise _error("capture_metadata timestamps are out of order")
+    effective_match = value["effective_url_matches_canonical"]
+    if type(effective_match) is not bool or not effective_match:
+        raise _error("effective_url_matches_canonical must be exact true")
+    bundle_identity = _safe_string(value["closed_bundle_identity"], "closed_bundle_identity")
+    if _BUNDLE_ID.fullmatch(bundle_identity) is None:
+        raise _error("closed_bundle_identity is noncanonical")
+    return {
+        "schema_version": 1,
+        "document_role": role,
+        "request_identity": request_identity,
+        "capture_identity": capture_identity,
+        "response_sha256": response_sha256,
+        "response_byte_length": response_byte_length,
+        "requested_at": requested_at,
+        "observed_at": observed_at,
+        "captured_at": captured_at,
+        "effective_url_matches_canonical": effective_match,
+        "closed_bundle_identity": bundle_identity,
+    }
+
+
+_PROFILE_B_PREDICATES = (
+    "RACE_TABLE_SCOPE",
+    "UNIQUE_TARGET_6R",
+    "DEBA_LINK_RELATIONSHIP",
+    "DEBA_LINK_QUERY_BINDING",
+    "WITHDRAWAL_ROW_SHAPE",
+    "HORSE_14_WITHDRAWAL_ASSOCIATION",
+)
+_PROFILE_B_SAFE_FIELDS: dict[str, frozenset[str]] = {
+    "RACE_TABLE_SCOPE": frozenset({"race_table_scope_count"}),
+    "UNIQUE_TARGET_6R": frozenset({"target_race_no", "target_6r_row_count"}),
+    "DEBA_LINK_RELATIONSHIP": frozenset({"deba_relationship_count", "deba_relationship_present"}),
+    "DEBA_LINK_QUERY_BINDING": frozenset({"deba_query_binding_count", "deba_query_binding_match"}),
+    "WITHDRAWAL_ROW_SHAPE": frozenset({"withdrawal_row_shape_count"}),
+    "HORSE_14_WITHDRAWAL_ASSOCIATION": frozenset(
+        {"withdrawn_provider_horse_no", "horse_14_withdrawal_count", "withdrawal_label_match"},
+    ),
+}
+
+
+def _validate_profile_b_diagnostics(value: object) -> dict[str, object]:
+    if type(value) is not dict:
+        raise _error("profile_b_diagnostics must be exact dict")
+    expected = {
+        "schema_version",
+        "profile",
+        "overall_result",
+        "terminal_semantic",
+        "target",
+        "predicate_results",
+        "first_nonpass_predicate",
+        "terminal_reason",
+    }
+    if set(value) != expected:
+        raise _error("profile_b_diagnostics keys do not match the exact allowlist")
+    if value["schema_version"] != 1 or type(value["schema_version"]) is not int:
+        raise _error("profile_b_diagnostics schema_version must be exact 1")
+    if value["profile"] != "EXPLICIT_WITHDRAWAL_PRESENT" or type(value["profile"]) is not str:
+        raise _error("profile is outside the exact allowlist")
+    if value["terminal_semantic"] != "EXPLICIT_WITHDRAWAL_PRESENT" or type(value["terminal_semantic"]) is not str:
+        raise _error("terminal_semantic is outside the exact allowlist")
+    overall = value["overall_result"]
+    if type(overall) is not str or overall not in {"QUALIFIED", "BLOCKED"}:
+        raise _error("overall_result is outside the exact allowlist")
+    target = value["target"]
+    if type(target) is not dict or set(target) != {"baba_code", "race_date", "race_no"}:
+        raise _error("diagnostic target keys do not match the exact allowlist")
+    baba_code = _safe_string(target["baba_code"], "baba_code")
+    race_date = _safe_string(target["race_date"], "race_date")
+    race_no = _exact_positive_int(target["race_no"], "race_no")
+    if _BABA_CODE.fullmatch(baba_code) is None or _RACE_DATE.fullmatch(race_date) is None or race_no > 12:
+        raise _error("diagnostic target is noncanonical")
+    try:
+        datetime.strptime(race_date, "%Y-%m-%d")
+    except ValueError as error:
+        raise _error("diagnostic race_date is invalid") from error
+    results = value["predicate_results"]
+    if type(results) is not list or len(results) != len(_PROFILE_B_PREDICATES):
+        raise _error("predicate_results must be the exact six-result list")
+    normalized_results: list[dict[str, object]] = []
+    outcomes: list[str] = []
+    for expected_identifier, result in zip(_PROFILE_B_PREDICATES, results, strict=True):
+        if type(result) is not dict or set(result) != {"identifier", "outcome", "safe_fields"}:
+            raise _error("predicate result keys do not match the exact allowlist")
+        if result["identifier"] != expected_identifier or type(result["identifier"]) is not str:
+            raise _error("predicate result order or identifier is invalid")
+        outcome = result["outcome"]
+        if type(outcome) is not str or outcome not in {"PASS", "FAIL", "AMBIGUOUS", "UNSUPPORTED"}:
+            raise _error("predicate outcome is outside the exact allowlist")
+        safe_fields = result["safe_fields"]
+        if type(safe_fields) is not dict or frozenset(safe_fields) != _PROFILE_B_SAFE_FIELDS[expected_identifier]:
+            raise _error("predicate safe_fields do not match the exact allowlist")
+        normalized_fields: dict[str, object] = {}
+        for name, item in safe_fields.items():
+            if name in {"deba_relationship_present", "deba_query_binding_match", "withdrawal_label_match"}:
+                if type(item) is not bool:
+                    raise _error(f"{name} must be exact bool")
+            else:
+                _exact_nonnegative_int(item, name)
+                if name == "target_race_no" and item != race_no:
+                    raise _error("target_race_no must match the diagnostic target")
+                if name == "withdrawn_provider_horse_no" and item != 14:
+                    raise _error("withdrawn_provider_horse_no must be exact 14")
+            normalized_fields[name] = item
+        normalized_results.append(
+            {"identifier": expected_identifier, "outcome": outcome, "safe_fields": normalized_fields},
+        )
+        outcomes.append(outcome)
+    first_index = next((index for index, outcome in enumerate(outcomes) if outcome != "PASS"), None)
+    expected_first = None if first_index is None else _PROFILE_B_PREDICATES[first_index]
+    if value["first_nonpass_predicate"] != expected_first:
+        raise _error("first_nonpass_predicate is inconsistent with predicate order")
+    expected_overall = "QUALIFIED" if first_index is None else "BLOCKED"
+    if overall != expected_overall:
+        raise _error("overall_result is inconsistent with predicate outcomes")
+    expected_reason = (
+        "QUALIFIED"
+        if first_index is None
+        else "UNSUPPORTED_INPUT"
+        if "UNSUPPORTED" in outcomes
+        else "FIRST_NONPASS_PREDICATE"
+    )
+    if value["terminal_reason"] != expected_reason or type(value["terminal_reason"]) is not str:
+        raise _error("terminal_reason is inconsistent with predicate outcomes")
+    return {
+        "schema_version": 1,
+        "profile": "EXPLICIT_WITHDRAWAL_PRESENT",
+        "overall_result": overall,
+        "terminal_semantic": "EXPLICIT_WITHDRAWAL_PRESENT",
+        "target": {"baba_code": baba_code, "race_date": race_date, "race_no": race_no},
+        "predicate_results": normalized_results,
+        "first_nonpass_predicate": expected_first,
+        "terminal_reason": expected_reason,
+    }
+
+
 def _validate_detail(name: str, value: object, run_id: str) -> object:
     if name == "run_id":
         if _safe_string(value, name) != run_id:
@@ -235,6 +437,10 @@ def _validate_detail(name: str, value: object, run_id: str) -> object:
         return value
     if name in {"pid", "race_no", "response_byte_length", "planned_path_count", "document_count", "command_count"}:
         return _exact_positive_int(value, name)
+    if name == "capture_metadata":
+        return _validate_capture_metadata(value)
+    if name == "profile_b_diagnostics":
+        return _validate_profile_b_diagnostics(value)
     text = _safe_string(value, name)
     if name == "baba_code" and _BABA_CODE.fullmatch(text) is None:
         raise _error("baba_code is noncanonical")
@@ -293,6 +499,12 @@ def _record_payload(
     if frozenset(details) != expected_keys:
         raise _error("details keys do not match the milestone allowlist")
     normalized = {name: _validate_detail(name, value, run_id) for name, value in details.items()}
+    if milestone is ObservationMilestone.DEBA_CAPTURE_METADATA_RETAINED:
+        if normalized["capture_metadata"]["document_role"] != "deba_table":  # type: ignore[index]
+            raise _error("Deba capture metadata has the wrong document role")
+    if milestone is ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED:
+        if normalized["capture_metadata"]["document_role"] != "race_list":  # type: ignore[index]
+            raise _error("RaceList capture metadata has the wrong document role")
     return {
         "journal_schema": JOURNAL_SCHEMA,
         "schema_version": JOURNAL_SCHEMA_VERSION,
@@ -484,6 +696,20 @@ def validate_journal_semantics(records: tuple[JournalRecord, ...]) -> None:
         previous_rank = rank
     if ObservationMilestone.PHASE44_FUNCTION_ENTERED in seen and ObservationMilestone.PHASE44_CALL_ABOUT_TO_ENTER not in seen:
         raise _error("Phase44 entry lacks its durable authorization boundary")
+    retained = {
+        ObservationMilestone.DEBA_CAPTURE_METADATA_RETAINED,
+        ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED,
+        ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED,
+    }
+    if seen & retained and ObservationMilestone.CLOSED_BUNDLE_RETURNED not in seen:
+        raise _error("retained source evidence requires a closed bundle")
+    if ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED in seen and ObservationMilestone.DEBA_CAPTURE_METADATA_RETAINED not in seen:
+        raise _error("RaceList capture metadata requires prior Deba capture metadata")
+    if ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED in seen and not {
+        ObservationMilestone.DEBA_CAPTURE_METADATA_RETAINED,
+        ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED,
+    }.issubset(seen):
+        raise _error("Profile-B diagnostics require both capture metadata records")
     if ObservationMilestone.ROLLBACK_COMPLETE in seen and ObservationMilestone.ROLLBACK_BEGIN not in seen:
         raise _error("rollback completion lacks rollback start")
     if ObservationMilestone.ROLLBACK_BEGIN in seen and ObservationMilestone.PUBLICATION_BEGIN not in seen:
