@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager as _contextmanager
+from contextvars import ContextVar as _ContextVar
 from dataclasses import dataclass as _dataclass, field as _field
 from datetime import date as _date, datetime as _datetime, timezone as _timezone
 from enum import StrEnum as _StrEnum
@@ -71,6 +73,59 @@ class NARRaceEntryStatusRawCaptureUnsupportedResponseError(NARRaceEntryStatusRaw
 
 class NARRaceEntryStatusRawCaptureBundleIntegrityError(NARRaceEntryStatusRawCaptureError):
     """Raised when two otherwise valid captures cannot form one closed bundle."""
+
+
+@_dataclass(frozen=True, slots=True)
+class _RawCaptureObservationEvent:
+    """Safe private execution metadata; never raw HTTP content or headers."""
+
+    kind: str
+    page_kind: NARRaceEntryStatusPageKind | None = None
+    request_identity: str | None = None
+    response_sha256: str | None = None
+    response_byte_length: int | None = None
+    bundle_id: str | None = None
+
+
+class _RawCaptureObservationObserver(_Protocol):
+    def __call__(self, event: _RawCaptureObservationEvent) -> None: ...
+
+
+_RAW_CAPTURE_OBSERVER: _ContextVar[_RawCaptureObservationObserver | None] = _ContextVar(
+    "nar_race_entry_status_raw_capture_observer",
+    default=None,
+)
+
+
+@_contextmanager
+def _raw_capture_observer_scope(observer: _RawCaptureObservationObserver):
+    """Bind one private observer to the current context and always restore it."""
+
+    if not callable(observer):
+        raise _validation("raw capture observer must be callable")
+    token = _RAW_CAPTURE_OBSERVER.set(observer)
+    try:
+        yield
+    finally:
+        _RAW_CAPTURE_OBSERVER.reset(token)
+
+
+def _emit_raw_capture_observation(event: _RawCaptureObservationEvent) -> None:
+    """Emit synchronously; a bound observer failure stops the next boundary."""
+
+    observer = _RAW_CAPTURE_OBSERVER.get()
+    if observer is None:
+        return
+    try:
+        observer(event)
+    except Exception as error:
+        raise NARRaceEntryStatusRawCaptureTransportError(
+            "raw capture observation failed",
+        ) from error
+
+
+def _raw_capture_observer_is_bound() -> bool:
+    return _RAW_CAPTURE_OBSERVER.get() is not None
 
 
 def _validation(message: str) -> NARRaceEntryStatusRawCaptureValidationError:
@@ -645,6 +700,13 @@ class RequestsNARRaceEntryStatusRawCaptureTransport:
             session.trust_env = False
             session.headers.clear()
             session.mount("https://", _HTTPAdapter(max_retries=0))
+            _emit_raw_capture_observation(
+                _RawCaptureObservationEvent(
+                    kind="HTTP_GET_ATTEMPT_ABOUT_TO_START",
+                    page_kind=request.page_kind,
+                    request_identity=request.request_identity,
+                ),
+            )
             response = session.get(
                 request.canonical_request_url,
                 headers=dict(_REQUEST_HEADERS),
@@ -652,6 +714,13 @@ class RequestsNARRaceEntryStatusRawCaptureTransport:
                 allow_redirects=False,
                 verify=True,
                 timeout=(_CONNECT_TIMEOUT_SECONDS, _READ_TIMEOUT_SECONDS),
+            )
+            _emit_raw_capture_observation(
+                _RawCaptureObservationEvent(
+                    kind="HTTP_RESPONSE_RETURNED",
+                    page_kind=request.page_kind,
+                    request_identity=request.request_identity,
+                ),
             )
             status = response.status_code
             if type(status) is not int or isinstance(status, bool) or status != 200:
@@ -682,7 +751,7 @@ class RequestsNARRaceEntryStatusRawCaptureTransport:
             )
             raw.decode_content = False
             body = self._read_raw_body(raw, content_length)
-            return NARRaceEntryStatusRawHTTPResponse(
+            raw_response = NARRaceEntryStatusRawHTTPResponse(
                 effective_url=effective_url,
                 response_body=body,
                 http_status=status,
@@ -696,6 +765,17 @@ class RequestsNARRaceEntryStatusRawCaptureTransport:
                 ),
                 content_length=content_length,
             )
+            if _raw_capture_observer_is_bound():
+                _emit_raw_capture_observation(
+                    _RawCaptureObservationEvent(
+                        kind="RAW_RESPONSE_CONSTRUCTED",
+                        page_kind=request.page_kind,
+                        request_identity=request.request_identity,
+                        response_sha256=_sha256_bytes(body),
+                        response_byte_length=len(body),
+                    ),
+                )
+            return raw_response
         except NARRaceEntryStatusRawCaptureError:
             raise
         except _requests.RequestException as error:
@@ -785,6 +865,13 @@ def _transport_fetch(
     request: NARRaceEntryStatusRequestIdentity,
 ) -> object:
     try:
+        _emit_raw_capture_observation(
+            _RawCaptureObservationEvent(
+                kind="TRANSPORT_FETCH_ABOUT_TO_START",
+                page_kind=request.page_kind,
+                request_identity=request.request_identity,
+            ),
+        )
         return transport.fetch(request_identity=request)  # type: ignore[attr-defined]
     except NARRaceEntryStatusRawCaptureError:
         raise
@@ -845,6 +932,9 @@ def acquire_nar_race_entry_status_raw_capture_bundle(
 ) -> NARRaceEntryStatusRawCaptureBundle:
     """Acquire DebaTable then RaceList and return one closed in-memory bundle."""
 
+    _emit_raw_capture_observation(
+        _RawCaptureObservationEvent(kind="ACQUISITION_FUNCTION_ENTERED"),
+    )
     canonical_target = _canonical_race_identity(target)
     day_scope = NARRaceEntryStatusDayScope(
         baba_code=canonical_target.baba_code,
@@ -876,11 +966,18 @@ def acquire_nar_race_entry_status_raw_capture_bundle(
         observed_name="race_list_observed_at",
         captured_name="race_list_captured_at",
     )
-    return NARRaceEntryStatusRawCaptureBundle(
+    bundle = NARRaceEntryStatusRawCaptureBundle(
         target_race_identity=canonical_target,
         deba_table_capture=deba_capture,
         race_list_capture=race_list_capture,
     )
+    _emit_raw_capture_observation(
+        _RawCaptureObservationEvent(
+            kind="CLOSED_BUNDLE_CONSTRUCTED",
+            bundle_id=bundle.bundle_id,
+        ),
+    )
+    return bundle
 
 
 __all__ = (

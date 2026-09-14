@@ -659,6 +659,97 @@ def test_concrete_transport_uses_exact_options_and_preserves_raw_bytes(monkeypat
     assert response.closed and session.closed
 
 
+def test_private_observer_binding_is_nested_and_always_restored() -> None:
+    outer: list[subject._RawCaptureObservationEvent] = []
+    inner: list[subject._RawCaptureObservationEvent] = []
+    outer_event = subject._RawCaptureObservationEvent(kind="ACQUISITION_FUNCTION_ENTERED")
+    inner_event = subject._RawCaptureObservationEvent(kind="ACQUISITION_FUNCTION_ENTERED")
+
+    with subject._raw_capture_observer_scope(outer.append):
+        subject._emit_raw_capture_observation(outer_event)
+        with subject._raw_capture_observer_scope(inner.append):
+            subject._emit_raw_capture_observation(inner_event)
+        subject._emit_raw_capture_observation(outer_event)
+    subject._emit_raw_capture_observation(inner_event)
+
+    assert outer == [outer_event, outer_event]
+    assert inner == [inner_event]
+
+    with pytest.raises(RuntimeError, match="scope failure"):
+        with subject._raw_capture_observer_scope(outer.append):
+            raise RuntimeError("scope failure")
+    subject._emit_raw_capture_observation(outer_event)
+    assert outer == [outer_event, outer_event]
+
+
+def test_bound_observer_receives_exact_phase44_fake_transport_boundaries() -> None:
+    events: list[subject._RawCaptureObservationEvent] = []
+    transport = _Transport()
+    with subject._raw_capture_observer_scope(events.append):
+        bundle = acquire_nar_race_entry_status_raw_capture_bundle(
+            target=_target(),
+            transport=transport,
+            clock=_Clock(),
+        )
+
+    assert [event.kind for event in events] == [
+        "ACQUISITION_FUNCTION_ENTERED",
+        "TRANSPORT_FETCH_ABOUT_TO_START",
+        "TRANSPORT_FETCH_ABOUT_TO_START",
+        "CLOSED_BUNDLE_CONSTRUCTED",
+    ]
+    assert [event.page_kind for event in events[1:3]] == [
+        NARRaceEntryStatusPageKind.DEBA_TABLE,
+        NARRaceEntryStatusPageKind.RACE_LIST,
+    ]
+    assert events[-1].bundle_id == bundle.bundle_id
+
+
+def test_concrete_transport_observes_source_level_get_and_response_boundaries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = _request(NARRaceEntryStatusPageKind.DEBA_TABLE)
+    session = _install_session(
+        monkeypatch,
+        _HTTPResponse(request.canonical_request_url, lengths=[str(len(BODY))]),
+    )
+    events: list[subject._RawCaptureObservationEvent] = []
+    with subject._raw_capture_observer_scope(events.append):
+        raw = RequestsNARRaceEntryStatusRawCaptureTransport().fetch(request_identity=request)
+
+    assert [event.kind for event in events] == [
+        "HTTP_GET_ATTEMPT_ABOUT_TO_START",
+        "HTTP_RESPONSE_RETURNED",
+        "RAW_RESPONSE_CONSTRUCTED",
+    ]
+    assert len(session.get_calls) == 1
+    assert events[0].request_identity == request.request_identity
+    assert events[2].response_sha256 == hashlib.sha256(raw.response_body).hexdigest()
+    assert events[2].response_byte_length == len(raw.response_body)
+
+
+def test_pre_get_observer_failure_prevents_session_get_and_binding_is_restored(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = _request(NARRaceEntryStatusPageKind.DEBA_TABLE)
+    session = _install_session(monkeypatch, _HTTPResponse(request.canonical_request_url))
+
+    def fail_before_get(event: subject._RawCaptureObservationEvent) -> None:
+        if event.kind == "HTTP_GET_ATTEMPT_ABOUT_TO_START":
+            raise OSError("durability failed")
+
+    with pytest.raises(NARRaceEntryStatusRawCaptureTransportError) as caught:
+        with subject._raw_capture_observer_scope(fail_before_get):
+            RequestsNARRaceEntryStatusRawCaptureTransport().fetch(request_identity=request)
+    assert isinstance(caught.value.__cause__, OSError)
+    assert session.get_calls == []
+    assert session.closed
+
+    subject._emit_raw_capture_observation(
+        subject._RawCaptureObservationEvent(kind="ACQUISITION_FUNCTION_ENTERED"),
+    )
+
+
 @pytest.mark.parametrize("encoding", [None, "identity"])
 def test_concrete_transport_accepts_only_absent_or_identity_encoding(
     monkeypatch: pytest.MonkeyPatch,

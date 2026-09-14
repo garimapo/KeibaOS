@@ -1,0 +1,738 @@
+"""No-network execution observability for controlled NAR reacquisition.
+
+This module records control metadata only.  It does not acquire, parse, persist,
+or publish provider content.
+"""
+
+from __future__ import annotations
+
+from contextlib import contextmanager
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from enum import StrEnum
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+from typing import Callable, Iterator, Mapping
+
+from scripts.simulation import nar_race_entry_status_raw_capture as _raw_capture
+
+
+JOURNAL_SCHEMA = "nar-race-entry-status-reacquisition-observability-journal"
+JOURNAL_SCHEMA_VERSION = 1
+PREFLIGHT_PASS_TOKEN = "NAR_REACQUISITION_OBSERVABILITY_PREFLIGHT_PASS"
+FINAL_REPORT_PREFIX = "PHASE50_FINAL_REPORT:"
+MAX_STRING_BYTES = 512
+MAX_RECORD_BYTES = 4096
+MAX_JOURNAL_BYTES = 131072
+MAX_PROCESS_STREAM_BYTES = 16384
+
+_RUN_ID = re.compile(r"[0-9a-f]{32}\Z", flags=re.ASCII)
+_LOWER_HEX_64 = re.compile(r"[0-9a-f]{64}\Z", flags=re.ASCII)
+_UTC_TEXT = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}Z\Z", flags=re.ASCII)
+_REQUEST_ID = re.compile(r"nar-race-entry-status-request-v1:[0-9a-f]{64}\Z", flags=re.ASCII)
+_BUNDLE_ID = re.compile(r"nar-race-entry-status-raw-bundle-v1:[0-9a-f]{64}\Z", flags=re.ASCII)
+_FIXTURE_SET_ID = re.compile(
+    r"nar-race-entry-status-source-profile-fixture-set-v1:[0-9a-f]{64}\Z",
+    flags=re.ASCII,
+)
+_QUALIFICATION_ID = re.compile(
+    r"nar-race-entry-status-source-profile-qualification-v1:[0-9a-f]{64}\Z",
+    flags=re.ASCII,
+)
+_SAFE_ENUM = re.compile(r"[A-Z][A-Z0-9_]{0,127}\Z", flags=re.ASCII)
+_BABA_CODE = re.compile(r"[1-9][0-9]*\Z", flags=re.ASCII)
+_RACE_DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}\Z", flags=re.ASCII)
+_ALLOWED_OUTCOMES = frozenset(
+    {"READY_FOR_REVIEW", "SOURCE_PROFILE_FIXTURE_BLOCKED", "RECOVERY_PREFLIGHT_BLOCKED", "SYNTHETIC_SUCCESS", "SYNTHETIC_FAILURE"},
+)
+_ALLOWED_AUTHORIZATION_STATES = frozenset(
+    {"UNCONSUMED", "CONSUMED_FAIL_CLOSED", "CONSUMED_CONFIRMED"},
+)
+
+
+class NARReacquisitionObservabilityError(Exception):
+    """Base error for no-network observability support."""
+
+
+class NARReacquisitionObservabilityValidationError(NARReacquisitionObservabilityError):
+    """Raised when control metadata is not canonical or allowlisted."""
+
+
+class NARReacquisitionObservabilityJournalError(NARReacquisitionObservabilityError):
+    """Raised when durable journal I/O cannot be completed."""
+
+
+class ObservationMilestone(StrEnum):
+    PARENT_EXECUTION_PREPARED = "PARENT_EXECUTION_PREPARED"
+    LIVE_PROCESS_START = "LIVE_PROCESS_START"
+    TARGET_CONSTRUCTED = "TARGET_CONSTRUCTED"
+    PHASE44_CALL_ABOUT_TO_ENTER = "PHASE44_CALL_ABOUT_TO_ENTER"
+    PHASE44_FUNCTION_ENTERED = "PHASE44_FUNCTION_ENTERED"
+    DEBA_TRANSPORT_FETCH_ENTERED = "DEBA_TRANSPORT_FETCH_ENTERED"
+    DEBA_HTTP_GET_ATTEMPT_ABOUT_TO_START = "DEBA_HTTP_GET_ATTEMPT_ABOUT_TO_START"
+    DEBA_HTTP_RESPONSE_RETURNED = "DEBA_HTTP_RESPONSE_RETURNED"
+    DEBA_RAW_RESPONSE_CONSTRUCTED = "DEBA_RAW_RESPONSE_CONSTRUCTED"
+    RACELIST_TRANSPORT_FETCH_ENTERED = "RACELIST_TRANSPORT_FETCH_ENTERED"
+    RACELIST_HTTP_GET_ATTEMPT_ABOUT_TO_START = "RACELIST_HTTP_GET_ATTEMPT_ABOUT_TO_START"
+    RACELIST_HTTP_RESPONSE_RETURNED = "RACELIST_HTTP_RESPONSE_RETURNED"
+    RACELIST_RAW_RESPONSE_CONSTRUCTED = "RACELIST_RAW_RESPONSE_CONSTRUCTED"
+    CLOSED_BUNDLE_RETURNED = "CLOSED_BUNDLE_RETURNED"
+    IDENTITY_VERIFICATION_PASS = "IDENTITY_VERIFICATION_PASS"
+    SAFETY_PASS = "SAFETY_PASS"
+    PROFILE_A_QUALIFIED = "PROFILE_A_QUALIFIED"
+    PROFILE_B_QUALIFIED = "PROFILE_B_QUALIFIED"
+    PUBLICATION_BEGIN = "PUBLICATION_BEGIN"
+    RAW_FIXTURES_WRITTEN = "RAW_FIXTURES_WRITTEN"
+    MANIFEST_WRITTEN = "MANIFEST_WRITTEN"
+    DEDICATED_TEST_WRITTEN = "DEDICATED_TEST_WRITTEN"
+    REGRESSIONS_PASS = "REGRESSIONS_PASS"
+    ROLLBACK_BEGIN = "ROLLBACK_BEGIN"
+    ROLLBACK_COMPLETE = "ROLLBACK_COMPLETE"
+    LIVE_PROCESS_COMPLETE = "LIVE_PROCESS_COMPLETE"
+    PARENT_EVIDENCE_VALIDATION_PASS = "PARENT_EVIDENCE_VALIDATION_PASS"
+    PARENT_CLEANUP_COMPLETE = "PARENT_CLEANUP_COMPLETE"
+
+
+_DETAIL_KEYS: dict[ObservationMilestone, frozenset[str]] = {
+    ObservationMilestone.PARENT_EXECUTION_PREPARED: frozenset({"run_id"}),
+    ObservationMilestone.LIVE_PROCESS_START: frozenset({"pid"}),
+    ObservationMilestone.TARGET_CONSTRUCTED: frozenset({"baba_code", "race_date", "race_no"}),
+    ObservationMilestone.PHASE44_CALL_ABOUT_TO_ENTER: frozenset({"baba_code", "race_date", "race_no"}),
+    ObservationMilestone.PHASE44_FUNCTION_ENTERED: frozenset(),
+    ObservationMilestone.DEBA_TRANSPORT_FETCH_ENTERED: frozenset({"request_identity"}),
+    ObservationMilestone.DEBA_HTTP_GET_ATTEMPT_ABOUT_TO_START: frozenset({"request_identity"}),
+    ObservationMilestone.DEBA_HTTP_RESPONSE_RETURNED: frozenset({"request_identity"}),
+    ObservationMilestone.DEBA_RAW_RESPONSE_CONSTRUCTED: frozenset(
+        {"request_identity", "response_sha256", "response_byte_length"},
+    ),
+    ObservationMilestone.RACELIST_TRANSPORT_FETCH_ENTERED: frozenset({"request_identity"}),
+    ObservationMilestone.RACELIST_HTTP_GET_ATTEMPT_ABOUT_TO_START: frozenset({"request_identity"}),
+    ObservationMilestone.RACELIST_HTTP_RESPONSE_RETURNED: frozenset({"request_identity"}),
+    ObservationMilestone.RACELIST_RAW_RESPONSE_CONSTRUCTED: frozenset(
+        {"request_identity", "response_sha256", "response_byte_length"},
+    ),
+    ObservationMilestone.CLOSED_BUNDLE_RETURNED: frozenset({"bundle_id"}),
+    ObservationMilestone.IDENTITY_VERIFICATION_PASS: frozenset({"bundle_id"}),
+    ObservationMilestone.SAFETY_PASS: frozenset(),
+    ObservationMilestone.PROFILE_A_QUALIFIED: frozenset(),
+    ObservationMilestone.PROFILE_B_QUALIFIED: frozenset(),
+    ObservationMilestone.PUBLICATION_BEGIN: frozenset({"planned_path_count"}),
+    ObservationMilestone.RAW_FIXTURES_WRITTEN: frozenset({"document_count"}),
+    ObservationMilestone.MANIFEST_WRITTEN: frozenset(
+        {"fixture_set_identity", "qualification_identity"},
+    ),
+    ObservationMilestone.DEDICATED_TEST_WRITTEN: frozenset({"test_path"}),
+    ObservationMilestone.REGRESSIONS_PASS: frozenset({"command_count"}),
+    ObservationMilestone.ROLLBACK_BEGIN: frozenset(),
+    ObservationMilestone.ROLLBACK_COMPLETE: frozenset(),
+    ObservationMilestone.LIVE_PROCESS_COMPLETE: frozenset({"outcome", "authorization_state"}),
+    ObservationMilestone.PARENT_EVIDENCE_VALIDATION_PASS: frozenset({"journal_sha256"}),
+    ObservationMilestone.PARENT_CLEANUP_COMPLETE: frozenset(),
+}
+
+
+_MILESTONE_ORDER = {milestone: index for index, milestone in enumerate(ObservationMilestone)}
+_TOP_LEVEL_KEYS = frozenset(
+    {"journal_schema", "schema_version", "run_id", "sequence", "milestone", "occurred_at", "details"},
+)
+
+
+@dataclass(frozen=True, slots=True)
+class JournalRecord:
+    journal_schema: str
+    schema_version: int
+    run_id: str
+    sequence: int
+    milestone: ObservationMilestone
+    occurred_at: str
+    details: Mapping[str, object]
+
+
+@dataclass(frozen=True, slots=True)
+class ReconstructedExecution:
+    last_sequence: int
+    last_milestone: ObservationMilestone
+    authorization_state: str
+    publication_began: bool
+    rollback_state: str
+    semantic_complete: bool
+
+
+@dataclass(frozen=True, slots=True)
+class SanitizedProcessStream:
+    classification: str
+    present: bool
+    byte_length: int
+    sha256: str
+    safe_text: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class ChildProcessEvidence:
+    return_code: int
+    stdout: SanitizedProcessStream
+    stderr: SanitizedProcessStream
+    journal_syntactically_valid: bool
+    journal_semantically_valid: bool
+    execution: ReconstructedExecution | None
+
+
+def _error(message: str) -> NARReacquisitionObservabilityValidationError:
+    return NARReacquisitionObservabilityValidationError(message)
+
+
+def _canonical_json_bytes(payload: object) -> bytes:
+    try:
+        return json.dumps(
+            payload,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+    except (TypeError, ValueError, OverflowError) as error:
+        raise _error("journal record is not canonically serializable") from error
+
+
+def _utc_text(value: object) -> str:
+    if type(value) is not datetime or value.tzinfo is None or value.utcoffset() is None:
+        raise _error("operational clock must return an aware datetime")
+    try:
+        return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    except (OverflowError, ValueError) as error:
+        raise _error("operational clock value cannot be normalized") from error
+
+
+def _safe_string(value: object, name: str) -> str:
+    if type(value) is not str:
+        raise _error(f"{name} must be exact str")
+    try:
+        encoded = value.encode("utf-8")
+    except UnicodeEncodeError as error:
+        raise _error(f"{name} must be valid UTF-8") from error
+    if not encoded or len(encoded) > MAX_STRING_BYTES:
+        raise _error(f"{name} length is outside the allowlist")
+    if any(character in value for character in ("\r", "\n", "\x00")) or any(
+        ord(character) < 0x20 for character in value
+    ):
+        raise _error(f"{name} contains a control character")
+    return value
+
+
+def _exact_positive_int(value: object, name: str) -> int:
+    if type(value) is not int or value <= 0:
+        raise _error(f"{name} must be an exact positive int")
+    return value
+
+
+def _validate_detail(name: str, value: object, run_id: str) -> object:
+    if name == "run_id":
+        if _safe_string(value, name) != run_id:
+            raise _error("details run_id must match record run_id")
+        return value
+    if name in {"pid", "race_no", "response_byte_length", "planned_path_count", "document_count", "command_count"}:
+        return _exact_positive_int(value, name)
+    text = _safe_string(value, name)
+    if name == "baba_code" and _BABA_CODE.fullmatch(text) is None:
+        raise _error("baba_code is noncanonical")
+    if name == "race_date":
+        if _RACE_DATE.fullmatch(text) is None:
+            raise _error("race_date is noncanonical")
+        try:
+            datetime.strptime(text, "%Y-%m-%d")
+        except ValueError as error:
+            raise _error("race_date is invalid") from error
+    if name == "request_identity" and _REQUEST_ID.fullmatch(text) is None:
+        raise _error("request_identity is noncanonical")
+    if name == "response_sha256" and _LOWER_HEX_64.fullmatch(text) is None:
+        raise _error("response_sha256 is noncanonical")
+    if name == "bundle_id" and _BUNDLE_ID.fullmatch(text) is None:
+        raise _error("bundle_id is noncanonical")
+    if name == "fixture_set_identity" and _FIXTURE_SET_ID.fullmatch(text) is None:
+        raise _error("fixture_set_identity is noncanonical")
+    if name == "qualification_identity" and _QUALIFICATION_ID.fullmatch(text) is None:
+        raise _error("qualification_identity is noncanonical")
+    if name == "journal_sha256" and _LOWER_HEX_64.fullmatch(text) is None:
+        raise _error("journal_sha256 is noncanonical")
+    if name == "outcome" and text not in _ALLOWED_OUTCOMES:
+        raise _error("outcome is outside the exact allowlist")
+    if name == "authorization_state" and text not in _ALLOWED_AUTHORIZATION_STATES:
+        raise _error("authorization_state is outside the exact allowlist")
+    if name == "test_path" and text != "tests/test_nar_race_entry_status_source_profile_fixtures.py":
+        raise _error("test_path is not the approved repository-relative path")
+    return value
+
+
+def _record_payload(
+    *,
+    run_id: str,
+    sequence: int,
+    milestone: ObservationMilestone,
+    occurred_at: str,
+    details: Mapping[str, object],
+) -> dict[str, object]:
+    if type(run_id) is not str or _RUN_ID.fullmatch(run_id) is None:
+        raise _error("run_id must be 32 lowercase hexadecimal characters")
+    _exact_positive_int(sequence, "sequence")
+    if type(milestone) is not ObservationMilestone:
+        raise _error("milestone must be exact ObservationMilestone")
+    if type(occurred_at) is not str or _UTC_TEXT.fullmatch(occurred_at) is None:
+        raise _error("occurred_at must be canonical UTC text")
+    try:
+        parsed = datetime.strptime(occurred_at, "%Y-%m-%dT%H:%M:%S.%fZ")
+    except ValueError as error:
+        raise _error("occurred_at is invalid") from error
+    if parsed.strftime("%Y-%m-%dT%H:%M:%S.%fZ") != occurred_at:
+        raise _error("occurred_at is noncanonical")
+    if type(details) is not dict:
+        raise _error("details must be exact dict")
+    expected_keys = _DETAIL_KEYS[milestone]
+    if frozenset(details) != expected_keys:
+        raise _error("details keys do not match the milestone allowlist")
+    normalized = {name: _validate_detail(name, value, run_id) for name, value in details.items()}
+    return {
+        "journal_schema": JOURNAL_SCHEMA,
+        "schema_version": JOURNAL_SCHEMA_VERSION,
+        "run_id": run_id,
+        "sequence": sequence,
+        "milestone": milestone.value,
+        "occurred_at": occurred_at,
+        "details": normalized,
+    }
+
+
+class ObservabilityJournalWriter:
+    """Exclusive append-only durable writer for safe external control metadata."""
+
+    def __init__(
+        self,
+        *,
+        journal_path: Path,
+        repository_root: Path,
+        run_id: str,
+        clock: Callable[[], datetime],
+    ) -> None:
+        if not callable(clock):
+            raise _error("operational clock must be callable")
+        if not isinstance(journal_path, Path) or not isinstance(repository_root, Path):
+            raise _error("journal_path and repository_root must be pathlib paths")
+        resolved_repository = repository_root.resolve(strict=True)
+        resolved_journal = journal_path.resolve(strict=False)
+        if not resolved_journal.is_absolute() or resolved_journal == resolved_repository or resolved_repository in resolved_journal.parents:
+            raise _error("journal must be outside the repository worktree")
+        if not resolved_journal.parent.is_dir():
+            raise _error("journal parent directory must already exist")
+        if type(run_id) is not str or _RUN_ID.fullmatch(run_id) is None:
+            raise _error("run_id must be 32 lowercase hexadecimal characters")
+        self._path = resolved_journal
+        self._run_id = run_id
+        self._clock = clock
+        self._sequence = 0
+        self._stream = None
+        try:
+            self._stream = self._path.open("xb")
+        except OSError as error:
+            raise NARReacquisitionObservabilityJournalError("journal creation failed") from error
+
+    @property
+    def path(self) -> Path:
+        return self._path
+
+    @property
+    def run_id(self) -> str:
+        return self._run_id
+
+    @property
+    def sequence(self) -> int:
+        return self._sequence
+
+    def append(self, milestone: ObservationMilestone, details: Mapping[str, object]) -> JournalRecord:
+        if self._stream is None or self._stream.closed:
+            raise NARReacquisitionObservabilityJournalError("journal is closed")
+        try:
+            occurred_at = _utc_text(self._clock())
+        except NARReacquisitionObservabilityError:
+            raise
+        except Exception as error:
+            raise NARReacquisitionObservabilityJournalError("operational clock failed") from error
+        sequence = self._sequence + 1
+        payload = _record_payload(
+            run_id=self._run_id,
+            sequence=sequence,
+            milestone=milestone,
+            occurred_at=occurred_at,
+            details=dict(details),
+        )
+        record_bytes = _canonical_json_bytes(payload)
+        if len(record_bytes) > MAX_RECORD_BYTES:
+            raise _error("journal record exceeds the byte limit")
+        try:
+            self._stream.write(record_bytes + b"\n")
+            self._stream.flush()
+            os.fsync(self._stream.fileno())
+        except (OSError, ValueError) as error:
+            raise NARReacquisitionObservabilityJournalError("durable journal append failed") from error
+        self._sequence = sequence
+        return JournalRecord(
+            journal_schema=JOURNAL_SCHEMA,
+            schema_version=JOURNAL_SCHEMA_VERSION,
+            run_id=self._run_id,
+            sequence=sequence,
+            milestone=milestone,
+            occurred_at=occurred_at,
+            details=dict(payload["details"]),  # type: ignore[arg-type]
+        )
+
+    def close(self) -> None:
+        if self._stream is not None and not self._stream.closed:
+            try:
+                self._stream.close()
+            except OSError as error:
+                raise NARReacquisitionObservabilityJournalError("journal close failed") from error
+
+    def __enter__(self) -> ObservabilityJournalWriter:
+        return self
+
+    def __exit__(self, _exc_type: object, _exc: object, _traceback: object) -> None:
+        self.close()
+
+
+def validate_journal_bytes(value: bytes, *, expected_run_id: str | None = None) -> tuple[JournalRecord, ...]:
+    if type(value) is not bytes:
+        raise _error("journal must be exact bytes")
+    if not value or len(value) > MAX_JOURNAL_BYTES:
+        raise _error("journal size is outside the allowed range")
+    if not value.endswith(b"\n"):
+        raise _error("journal must end with exactly one LF-terminated record")
+    try:
+        text = value.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as error:
+        raise _error("journal is not strict UTF-8") from error
+    lines = text.splitlines(keepends=True)
+    if not lines or any(not line.endswith("\n") or line.endswith("\r\n") for line in lines):
+        raise _error("every journal record must end with one LF byte")
+    records: list[JournalRecord] = []
+    run_id: str | None = None
+    seen: set[ObservationMilestone] = set()
+    for expected_sequence, line in enumerate(lines, start=1):
+        encoded_line = line[:-1].encode("utf-8")
+        if not encoded_line or len(encoded_line) > MAX_RECORD_BYTES:
+            raise _error("journal record size is outside the allowed range")
+        try:
+            payload = json.loads(encoded_line)
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise _error("journal contains malformed JSON") from error
+        if type(payload) is not dict or frozenset(payload) != _TOP_LEVEL_KEYS:
+            raise _error("journal record top-level keys are not exact")
+        if _canonical_json_bytes(payload) != encoded_line:
+            raise _error("journal record is not canonical JSON")
+        if payload.get("journal_schema") != JOURNAL_SCHEMA or payload.get("schema_version") != JOURNAL_SCHEMA_VERSION:
+            raise _error("journal schema is unsupported")
+        payload_run_id = payload.get("run_id")
+        if type(payload_run_id) is not str or _RUN_ID.fullmatch(payload_run_id) is None:
+            raise _error("journal run_id is noncanonical")
+        if run_id is None:
+            run_id = payload_run_id
+        if payload_run_id != run_id or (expected_run_id is not None and payload_run_id != expected_run_id):
+            raise _error("journal run_id is inconsistent")
+        if payload.get("sequence") != expected_sequence or type(payload.get("sequence")) is not int:
+            raise _error("journal sequence must start at one and increase by one")
+        try:
+            milestone = ObservationMilestone(payload.get("milestone"))
+        except (TypeError, ValueError) as error:
+            raise _error("journal milestone is unknown") from error
+        if milestone in seen:
+            raise _error("journal milestone is duplicated")
+        seen.add(milestone)
+        normalized = _record_payload(
+            run_id=payload_run_id,
+            sequence=expected_sequence,
+            milestone=milestone,
+            occurred_at=payload.get("occurred_at"),  # type: ignore[arg-type]
+            details=payload.get("details"),  # type: ignore[arg-type]
+        )
+        if normalized != payload:
+            raise _error("journal record differs from its normalized form")
+        records.append(
+            JournalRecord(
+                journal_schema=JOURNAL_SCHEMA,
+                schema_version=JOURNAL_SCHEMA_VERSION,
+                run_id=payload_run_id,
+                sequence=expected_sequence,
+                milestone=milestone,
+                occurred_at=payload["occurred_at"],
+                details=dict(payload["details"]),
+            ),
+        )
+    return tuple(records)
+
+
+def validate_journal_semantics(records: tuple[JournalRecord, ...]) -> None:
+    if type(records) is not tuple or not records:
+        raise _error("journal records must be a nonempty exact tuple")
+    if records[0].milestone is not ObservationMilestone.PARENT_EXECUTION_PREPARED:
+        raise _error("journal must begin with PARENT_EXECUTION_PREPARED")
+    previous_rank = -1
+    seen = {record.milestone for record in records}
+    for record in records:
+        rank = _MILESTONE_ORDER[record.milestone]
+        if rank <= previous_rank:
+            raise _error("journal milestones are not in semantic order")
+        previous_rank = rank
+    if ObservationMilestone.PHASE44_FUNCTION_ENTERED in seen and ObservationMilestone.PHASE44_CALL_ABOUT_TO_ENTER not in seen:
+        raise _error("Phase44 entry lacks its durable authorization boundary")
+    if ObservationMilestone.ROLLBACK_COMPLETE in seen and ObservationMilestone.ROLLBACK_BEGIN not in seen:
+        raise _error("rollback completion lacks rollback start")
+    if ObservationMilestone.ROLLBACK_BEGIN in seen and ObservationMilestone.PUBLICATION_BEGIN not in seen:
+        raise _error("rollback cannot begin before publication")
+    if ObservationMilestone.PARENT_EVIDENCE_VALIDATION_PASS in seen and ObservationMilestone.LIVE_PROCESS_COMPLETE not in seen:
+        raise _error("parent validation requires child completion")
+    if ObservationMilestone.PARENT_CLEANUP_COMPLETE in seen and ObservationMilestone.PARENT_EVIDENCE_VALIDATION_PASS not in seen:
+        raise _error("parent cleanup requires validated evidence")
+
+
+def reconstruct_execution(records: tuple[JournalRecord, ...]) -> ReconstructedExecution:
+    validate_journal_semantics(records)
+    milestones = {record.milestone for record in records}
+    if ObservationMilestone.PHASE44_FUNCTION_ENTERED in milestones:
+        authorization = "CONSUMED_CONFIRMED"
+    elif ObservationMilestone.PHASE44_CALL_ABOUT_TO_ENTER in milestones:
+        authorization = "CONSUMED_FAIL_CLOSED"
+    else:
+        authorization = "UNCONSUMED"
+    if ObservationMilestone.ROLLBACK_COMPLETE in milestones:
+        rollback = "COMPLETE"
+    elif ObservationMilestone.ROLLBACK_BEGIN in milestones:
+        rollback = "STARTED_NOT_COMPLETED"
+    else:
+        rollback = "NOT_STARTED"
+    return ReconstructedExecution(
+        last_sequence=records[-1].sequence,
+        last_milestone=records[-1].milestone,
+        authorization_state=authorization,
+        publication_began=ObservationMilestone.PUBLICATION_BEGIN in milestones,
+        rollback_state=rollback,
+        semantic_complete=ObservationMilestone.LIVE_PROCESS_COMPLETE in milestones,
+    )
+
+
+def sanitize_process_stream(value: bytes) -> SanitizedProcessStream:
+    if type(value) is not bytes:
+        raise _error("process stream must be exact bytes")
+    digest = hashlib.sha256(value).hexdigest()
+    if not value:
+        return SanitizedProcessStream("EMPTY", False, 0, digest, None)
+    if len(value) > MAX_PROCESS_STREAM_BYTES:
+        return SanitizedProcessStream("OVERSIZED_REDACTED", True, len(value), digest, None)
+    try:
+        text = value.decode("utf-8", errors="strict")
+    except UnicodeDecodeError:
+        return SanitizedProcessStream("INVALID_UTF8", True, len(value), digest, None)
+    safe_text: str | None = None
+    classification = "UNCONTROLLED_OUTPUT_REDACTED"
+    if text == PREFLIGHT_PASS_TOKEN + "\n":
+        classification = "SAFE_PREFLIGHT_TOKEN"
+        safe_text = text
+    elif text.startswith(FINAL_REPORT_PREFIX) and text.endswith("\n") and text.count("\n") == 1:
+        encoded_payload = text[len(FINAL_REPORT_PREFIX) : -1].encode("utf-8")
+        try:
+            payload = json.loads(encoded_payload)
+        except json.JSONDecodeError:
+            payload = None
+        expected = {"schema_version", "outcome", "authorization_state", "last_sequence", "last_milestone"}
+        if type(payload) is dict and set(payload) == expected and _canonical_json_bytes(payload) == encoded_payload:
+            try:
+                _exact_positive_int(payload["last_sequence"], "last_sequence")
+                if _safe_string(payload["outcome"], "outcome") not in _ALLOWED_OUTCOMES:
+                    raise _error("outcome is outside the exact allowlist")
+                if _safe_string(payload["authorization_state"], "authorization_state") not in _ALLOWED_AUTHORIZATION_STATES:
+                    raise _error("authorization_state is outside the exact allowlist")
+                ObservationMilestone(_safe_string(payload["last_milestone"], "last_milestone"))
+            except NARReacquisitionObservabilityValidationError:
+                pass
+            else:
+                classification = "SAFE_FINAL_REPORT"
+                safe_text = text
+    return SanitizedProcessStream(classification, True, len(value), digest, safe_text)
+
+
+def retain_child_process_evidence(
+    *,
+    return_code: int,
+    stdout: bytes,
+    stderr: bytes,
+    journal_bytes: bytes,
+    expected_run_id: str,
+) -> ChildProcessEvidence:
+    if type(return_code) is not int:
+        raise _error("return_code must be exact int")
+    sanitized_stdout = sanitize_process_stream(stdout)
+    sanitized_stderr = sanitize_process_stream(stderr)
+    try:
+        records = validate_journal_bytes(journal_bytes, expected_run_id=expected_run_id)
+    except NARReacquisitionObservabilityValidationError:
+        return ChildProcessEvidence(
+            return_code,
+            sanitized_stdout,
+            sanitized_stderr,
+            False,
+            False,
+            None,
+        )
+    try:
+        execution = reconstruct_execution(records)
+    except NARReacquisitionObservabilityValidationError:
+        return ChildProcessEvidence(
+            return_code,
+            sanitized_stdout,
+            sanitized_stderr,
+            True,
+            False,
+            None,
+        )
+    return ChildProcessEvidence(
+        return_code,
+        sanitized_stdout,
+        sanitized_stderr,
+        True,
+        True,
+        execution,
+    )
+
+
+class Phase44ObservationBridge:
+    """Translate private Phase44 callbacks into safe durable milestones."""
+
+    def __init__(self, writer: ObservabilityJournalWriter) -> None:
+        if type(writer) is not ObservabilityJournalWriter:
+            raise _error("writer must be exact ObservabilityJournalWriter")
+        self._writer = writer
+        self._constructed_bundle_id: str | None = None
+
+    def __call__(self, event: _raw_capture._RawCaptureObservationEvent) -> None:
+        if type(event) is not _raw_capture._RawCaptureObservationEvent:
+            raise _error("Phase44 observation event has an unexpected type")
+        if event.kind == "CLOSED_BUNDLE_CONSTRUCTED":
+            if event.bundle_id is None or _BUNDLE_ID.fullmatch(event.bundle_id) is None:
+                raise _error("constructed bundle event is invalid")
+            self._constructed_bundle_id = event.bundle_id
+            return
+        page_prefix = {
+            _raw_capture.NARRaceEntryStatusPageKind.DEBA_TABLE: "DEBA",
+            _raw_capture.NARRaceEntryStatusPageKind.RACE_LIST: "RACELIST",
+        }.get(event.page_kind)
+        if event.kind == "ACQUISITION_FUNCTION_ENTERED":
+            if any(
+                value is not None
+                for value in (
+                    event.page_kind,
+                    event.request_identity,
+                    event.response_sha256,
+                    event.response_byte_length,
+                    event.bundle_id,
+                )
+            ):
+                raise _error("function-entry event carries unexpected metadata")
+            self._writer.append(ObservationMilestone.PHASE44_FUNCTION_ENTERED, {})
+            return
+        if page_prefix is None or event.request_identity is None:
+            raise _error("Phase44 page observation is incomplete")
+        milestone_name = {
+            "TRANSPORT_FETCH_ABOUT_TO_START": f"{page_prefix}_TRANSPORT_FETCH_ENTERED",
+            "HTTP_GET_ATTEMPT_ABOUT_TO_START": f"{page_prefix}_HTTP_GET_ATTEMPT_ABOUT_TO_START",
+            "HTTP_RESPONSE_RETURNED": f"{page_prefix}_HTTP_RESPONSE_RETURNED",
+            "RAW_RESPONSE_CONSTRUCTED": f"{page_prefix}_RAW_RESPONSE_CONSTRUCTED",
+        }.get(event.kind)
+        if milestone_name is None:
+            raise _error("Phase44 observation kind is unknown")
+        details: dict[str, object] = {"request_identity": event.request_identity}
+        if event.kind == "RAW_RESPONSE_CONSTRUCTED":
+            details["response_sha256"] = event.response_sha256
+            details["response_byte_length"] = event.response_byte_length
+        elif any(
+            value is not None
+            for value in (event.response_sha256, event.response_byte_length, event.bundle_id)
+        ):
+            raise _error("Phase44 boundary event carries unexpected metadata")
+        self._writer.append(ObservationMilestone(milestone_name), details)
+
+    def record_closed_bundle_returned(self, bundle_id: str) -> None:
+        if self._constructed_bundle_id is None or bundle_id != self._constructed_bundle_id:
+            raise _error("returned bundle does not match the observed constructed bundle")
+        self._writer.append(ObservationMilestone.CLOSED_BUNDLE_RETURNED, {"bundle_id": bundle_id})
+
+
+@contextmanager
+def bind_phase44_observer(writer: ObservabilityJournalWriter) -> Iterator[Phase44ObservationBridge]:
+    bridge = Phase44ObservationBridge(writer)
+    with _raw_capture._raw_capture_observer_scope(bridge):
+        yield bridge
+
+
+def validate_generated_source(source: str, filename: str = "<nar_reacquisition_observability_executor.py>") -> None:
+    if type(source) is not str or not source:
+        raise _error("generated source must be nonempty exact str")
+    if type(filename) is not str or not filename.startswith("<") or not filename.endswith(">"):
+        raise _error("generated source filename must be a synthetic bracketed name")
+    try:
+        compile(source, filename, "exec")
+    except (SyntaxError, ValueError, TypeError) as error:
+        raise _error("generated source failed the mandatory compile gate") from error
+
+
+def preflight_result(
+    *,
+    child_evidence: ChildProcessEvidence,
+    cleanup_succeeded: bool,
+    bytecode_residue_absent: bool,
+) -> str:
+    if type(child_evidence) is not ChildProcessEvidence:
+        raise _error("child_evidence must be exact ChildProcessEvidence")
+    if type(cleanup_succeeded) is not bool or type(bytecode_residue_absent) is not bool:
+        raise _error("preflight cleanup flags must be exact bool")
+    execution = child_evidence.execution
+    if not (
+        child_evidence.return_code == 0
+        and child_evidence.journal_syntactically_valid
+        and child_evidence.journal_semantically_valid
+        and execution is not None
+        and execution.semantic_complete
+        and child_evidence.stdout.classification == "SAFE_PREFLIGHT_TOKEN"
+        and cleanup_succeeded
+        and bytecode_residue_absent
+    ):
+        raise _error("observability preflight did not satisfy every approved gate")
+    return PREFLIGHT_PASS_TOKEN
+
+
+__all__ = (
+    "ChildProcessEvidence",
+    "FINAL_REPORT_PREFIX",
+    "JOURNAL_SCHEMA",
+    "JOURNAL_SCHEMA_VERSION",
+    "JournalRecord",
+    "MAX_JOURNAL_BYTES",
+    "MAX_PROCESS_STREAM_BYTES",
+    "MAX_RECORD_BYTES",
+    "MAX_STRING_BYTES",
+    "NARReacquisitionObservabilityError",
+    "NARReacquisitionObservabilityJournalError",
+    "NARReacquisitionObservabilityValidationError",
+    "ObservationMilestone",
+    "ObservabilityJournalWriter",
+    "PREFLIGHT_PASS_TOKEN",
+    "Phase44ObservationBridge",
+    "ReconstructedExecution",
+    "SanitizedProcessStream",
+    "bind_phase44_observer",
+    "preflight_result",
+    "reconstruct_execution",
+    "retain_child_process_evidence",
+    "sanitize_process_stream",
+    "validate_generated_source",
+    "validate_journal_bytes",
+    "validate_journal_semantics",
+)

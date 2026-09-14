@@ -1,66 +1,96 @@
 # Latest Codex Report
 
-## POST_V0_8_DAILY_REPLAY_44 — NAR Race-Entry Status Raw Capture Bundle Implementation
+## POST_V0_8_DAILY_REPLAY_50 — NAR Reacquisition Observability Support and Phase44 GET-Boundary Instrumentation
 
-Status: `APPROVED_FOR_COMMIT`
-Formal State: `FORMALLY_COMPLETE`
-Base: `972a1fb201ad360d1c729b120d5ac10aa1556a42`
-Branch: `feature/post-v0.8-daily-replay`
+Status: INTEGRATED_PENDING_REMOTE_VERIFICATION
 
-Implementation review verdict: `PASS_FOR_INTEGRATION`.
+Outcome: IMPLEMENTED_NO_NETWORK_OBSERVABILITY_SUPPORT
 
-Phase44 is formally integrated within its exact four-file scope. No live HTTP, parsing, future-information or eligibility inference, reconciliation, persistence, fixture publication, or subsequent-phase work occurred.
+Design review: PHASE50_DESIGN_REVIEW_PASS
 
-### Implemented boundary
+Integration review: PASS_FOR_INTEGRATION
 
-`scripts/simulation/nar_race_entry_status_raw_capture.py` implements the complete frozen public API: exact race/day scopes, DebaTable and RaceList page kinds, derived request identities, raw HTTP response and immutable capture evidence, closed two-document bundle, transport/clock protocols, concrete requests transport, request builder, bundle acquisition, and the five-class exception hierarchy.
+Next permitted action: REMOTE_VERIFICATION_REQUIRED
 
-DebaTable uses ordered `k_babaCode`, `k_raceDate`, `k_raceNo`. RaceList uses ordered `k_raceDate`, `k_babaCode`, is venue-day scoped, and contains no `k_raceNo` or fake null race number. Request, capture, and bundle identities use the approved literal canonical JSON, UTC six-digit `Z` timestamps, lowercase SHA-256 digests, and exact prefixes:
+Base: 8b5e6a04a42f8259f06f089f1cf932a1efbbd0e5
 
-```text
-nar-race-entry-status-request-v1:
-nar-race-entry-status-capture-v1:
-nar-race-entry-status-raw-bundle-v1:
-```
+Branch: feature/post-v0.8-daily-replay
 
-The concrete transport creates one fresh `requests.Session` per document, disables environment/session inheritance and retries, uses exact HTTPS GET headers/options, disables redirects and transfer decoding, and reads raw bytes in bounded chunks. Raw Content-Length multiplicity comes only from `response.raw.headers.getlist`; duplicate equal or unequal values, unavailable multiplicity, noncanonical text, and byte-length mismatch fail closed. Only the six approved metadata fields survive. Low-level acquisition and cleanup failures map to the frozen hierarchy.
+### Design decision
 
-Acquisition performs DebaTable then RaceList, at most two GETs, and exactly six injected clock samples on success. Deba failure suppresses RaceList; later failure never exposes an authoritative partial bundle. Individual timestamps remain authoritative and the bundle makes no atomic-provider-state claim.
+Option A is selected. A private, context-local Phase44 observer will dispatch safe events at function entry, transport-fetch boundary, immediate pre-session.get boundary, response return, raw-response construction, and closed-bundle construction. It is not exported in __all__; no public signature change is proposed. Unbound behavior is no-op and preserves Phase44 request, raw-byte, identity, clock, and lifecycle contracts.
 
-### Verification
+HTTP_GET_ATTEMPT_ABOUT_TO_START means only that the immediate next instruction is existing requests.Session.get. It is a truthful program-side boundary, not proof of wire-level send. Observer failure before that line prevents the request; later failure is fail-closed without retry.
 
-```text
-dedicated Phase44: 91 passed
-dedicated Phase44, ResourceWarning as error: 91 passed
-Phase36 / Phase32 capture-acquisition: 40 passed, 48 subtests passed
-Phase38 / Phase40 fixture-parser: 56 passed
-Phase30 ranking probability: 24 passed, 24 subtests passed
-Phase25/27/28 daily replay core: 51 passed, 23 subtests passed
-all NAR: 523 passed, 584 subtests passed (31 paths)
-full pytest: 3,597 passed, 2,841 subtests passed
-deterministic identity audit: PASS
-compile/static forbidden-boundary audit: PASS
-git diff --check: PASS
-```
+The support module will provide an OS-temp external UTF-8 canonical JSONL journal with strict sequence/key/value allowlists, append/flush/fsync durability, sanitized return-code/stdout/stderr retention, parent reconstruction, and verified cleanup. It owns no HTTP client or repository evidence persistence.
 
-The frozen all-NAR wildcard did not expand when passed literally to pytest on Windows. The same two frozen filename patterns were then explicitly expanded by PowerShell to 31 paths; that complete scope passed. The production module contains no BeautifulSoup/DOM/body-semantic parser, filesystem/database writer, current wall-clock sampling, alternate network client, or JRA dependency.
+PHASE44_CALL_ABOUT_TO_ENTER is fsynced before function invocation; its durable presence consumes authorization fail-closed. PHASE44_FUNCTION_ENTERED confirms entry. Return status, stderr presence, journal validity, and semantic outcome remain separate report dimensions.
 
-### State and Git gate
+Reserved future no-network preflight token:
 
-Phase41 remains `DESIGN_BLOCKED`. Raw capture alone does not establish market eligibility. Both dependencies remain `OPEN`:
+~~~text
+NAR_REACQUISITION_OBSERVABILITY_PREFLIGHT_PASS
+~~~
 
-```text
-COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE
-NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE
-```
+It is not emitted in PREPARE. Future tests are synthetic/no-network and cover exit/stderr variants, every milestone failure, journal corruption/canonicality/UTF-8/sequence/key/value/size cases, observer/durability/parent-validation/cleanup failures, no cache/pyc, deterministic safe reporting, and no-observer compatibility.
 
-The exact changed paths are:
+### Implemented paths
 
-```text
+~~~text
+scripts/simulation/nar_race_entry_status_reacquisition_observability.py
 scripts/simulation/nar_race_entry_status_raw_capture.py
+tests/test_nar_race_entry_status_reacquisition_observability.py
 tests/test_nar_race_entry_status_raw_capture.py
 docs/CURRENT_PHASE.md
 docs/LATEST_CODEX_REPORT.md
-```
+~~~
 
-The integration commit is restricted to the exact four paths above. Phase32/36/40, fixtures, manifest, `.gitattributes`, `database/**`, and `logs/**` remain excluded. Commit, tree, parent, and remote verification are captured in the integration result. Blockers: none. Stop after formal integration; do not begin another phase.
+No fixture, parser, reconciliation, database, dependency, manifest, or .gitattributes change is part of Phase50.
+
+Phase48 remains consumed fail-closed and non-retryable. Phase41 remains DESIGN_BLOCKED. Dependencies remain OPEN:
+
+~~~text
+COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE
+NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE
+~~~
+
+### Approval constraints
+
+Option A is approved. The eventual implementation may add only the prepared private, context-local Phase44 observer. It remains outside `__all__`; all existing public Phase44 symbols and public APIs remain unchanged.
+
+Dependency direction is frozen: private binding/emission lives in `nar_race_entry_status_raw_capture.py`; the higher-level `nar_race_entry_status_reacquisition_observability.py` binds and uses it. No upward dependency from raw capture, circular import, global mutable callback slot, or additional abstraction module is authorized.
+
+Context-local binding must use token-based restoration in `finally`; observer failure cannot leak a binding. `HTTP_GET_ATTEMPT_ABOUT_TO_START` is only the source-level point immediately before the existing `requests.Session.get()` call. It is not proof of network-wire, TCP/TLS, or provider receipt/processing; a crash after it leaves wire/provider state UNKNOWN.
+
+Bound observer failure is fail closed: a failed BEFORE event, including journal serialization/write/flush/fsync failure, prevents the corresponding boundary operation; immediate pre-GET failure prevents `Session.get()` and never retries. With no observer bound, Phase44 behavior is equivalent to current behavior, including identities, bytes, request behavior, lifecycle, error behavior, and semantic clock-call count. Observer timestamps do not consume the Phase44 clock.
+
+The approved journal remains external OS-temp canonical UTF-8 JSONL with one LF-terminated allowlisted safe record per line, append/flush/fsync durability, and parent validation before cleanup. `PHASE44_CALL_ABOUT_TO_ENTER` is durable before invocation: before it authorization is UNCONSUMED; after it authorization is CONSUMED_FAIL_CLOSED. Return code, sanitized stdout/stderr, journal syntactic and semantic validity, reconstructed milestones, authorization state, and outcome remain separate dimensions.
+
+`NAR_REACQUISITION_OBSERVABILITY_PREFLIGHT_PASS` remains reserved for a future approved synthetic no-network preflight. Phase50 does not authorize HTTP, enter a live Phase44 acquisition, prepare Phase51, retry Phase48, publish fixtures, stage, commit, or push.
+
+### Implementation and verification
+
+Phase44 now has the approved private `ContextVar` observer with token reset in `finally`. Events cover acquisition-function entry, transport-fetch entry, the source-level point immediately before `requests.Session.get()`, response return, raw-response construction, and closed-bundle construction. The support layer binds the private hook; Phase44 has no upward dependency and its public `__all__` and signatures remain unchanged.
+
+Bound callback or durable journal failure is fail closed. Tests prove immediate pre-GET failure prevents `Session.get()` and observer binding is restored after normal completion and exceptions. The marker remains a program-side pre-call fact only, never evidence of wire activity or provider receipt. Existing no-observer identities, raw bytes, clock counts, request behavior, session lifecycle, and errors remain covered by the Phase44 regression.
+
+The new support module implements worktree-external canonical UTF-8 JSONL records, exact LF termination, milestone/detail allowlists, sequence and semantic validation, write/flush/fsync durability, authorization reconstruction, safe process-stream classification, separate return-code/stdout/stderr dimensions, mandatory generated-source compile validation, and the synthetic preflight result gate. It journals no bodies, arbitrary headers, credentials, session/token/user data, environment data, or uncontrolled output.
+
+Verification results:
+
+~~~text
+focused Phase50 + Phase44: 160 passed
+Phase50 dedicated: 65 passed
+Phase50 dedicated, ResourceWarning as error: 65 passed
+Phase44 raw-capture: 95 passed
+relevant NAR regression (32 paths): 592 passed, 584 subtests passed
+full repository: 3,666 passed, 2,841 subtests passed
+static compile: PASS
+synthetic child .pyc/__pycache__ residue: none
+HTTP performed: no
+live Phase44 acquisition entered: no
+~~~
+
+Only older matching ignored bytecode artifacts dated 2026-09-12 exist in the repository. Phase50 generated no support-module/test bytecode and did not alter those pre-existing files.
+
+The integration commit is restricted to the approved six paths. Phase50 is not FORMALLY_COMPLETE: independent remote verification is required before any later phase. Phase41, Phase48 historical state, fixtures, dependencies, and Phase51 remain unchanged. No HTTP or live Phase44 acquisition occurred.
