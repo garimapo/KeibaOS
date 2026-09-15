@@ -86,7 +86,9 @@ class ObservationMilestone(StrEnum):
     RACELIST_CAPTURE_METADATA_RETAINED = "RACELIST_CAPTURE_METADATA_RETAINED"
     PROFILE_B_DIAGNOSTICS_RETAINED = "PROFILE_B_DIAGNOSTICS_RETAINED"
     IDENTITY_VERIFICATION_PASS = "IDENTITY_VERIFICATION_PASS"
+    PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED = "PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED"
     SAFETY_PASS = "SAFETY_PASS"
+    PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED = "PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED"
     PROFILE_A_QUALIFIED = "PROFILE_A_QUALIFIED"
     PROFILE_B_QUALIFIED = "PROFILE_B_QUALIFIED"
     PUBLICATION_BEGIN = "PUBLICATION_BEGIN"
@@ -124,7 +126,11 @@ _DETAIL_KEYS: dict[ObservationMilestone, frozenset[str]] = {
     ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED: frozenset({"capture_metadata"}),
     ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED: frozenset({"profile_b_diagnostics"}),
     ObservationMilestone.IDENTITY_VERIFICATION_PASS: frozenset({"bundle_id"}),
+    ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED: frozenset({"publication_safety"}),
     ObservationMilestone.SAFETY_PASS: frozenset(),
+    ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED: frozenset(
+        {"profile_a_blocked_diagnostics"},
+    ),
     ObservationMilestone.PROFILE_A_QUALIFIED: frozenset(),
     ObservationMilestone.PROFILE_B_QUALIFIED: frozenset(),
     ObservationMilestone.PUBLICATION_BEGIN: frozenset({"planned_path_count"}),
@@ -314,6 +320,152 @@ def _validate_capture_metadata(value: object) -> dict[str, object]:
     }
 
 
+_PUBLICATION_SAFETY_CATEGORIES = (
+    "NO_AUTHENTICATION_MATERIAL",
+    "NO_COOKIE_OR_SESSION_SECRET",
+    "NO_CSRF_OR_SECRET_TOKEN",
+    "NO_USER_ACCOUNT_IDENTIFIER",
+    "NO_PERSONALIZATION_IDENTIFIER",
+)
+_PUBLICATION_SAFETY_OUTCOMES = frozenset({"SAFE", "UNSAFE", "AMBIGUOUS", "UNSUPPORTED"})
+
+
+def _validate_publication_safety_blocked_result(value: object) -> dict[str, object]:
+    if type(value) is not dict:
+        raise _error("publication_safety must be exact dict")
+    expected = {"schema_version", "result", "raw_fixture_publication_safe", "category_results"}
+    if set(value) != expected:
+        raise _error("publication_safety keys do not match the exact allowlist")
+    if value["schema_version"] != 2 or type(value["schema_version"]) is not int:
+        raise _error("publication_safety schema_version must be exact 2")
+    results = value["category_results"]
+    if type(results) is not list or len(results) != len(_PUBLICATION_SAFETY_CATEGORIES):
+        raise _error("category_results must be the exact five-result list")
+    normalized_results: list[dict[str, object]] = []
+    outcomes: list[str] = []
+    for expected_identifier, result in zip(_PUBLICATION_SAFETY_CATEGORIES, results, strict=True):
+        if type(result) is not dict or set(result) != {"identifier", "outcome", "finding_count"}:
+            raise _error("publication safety category keys do not match the exact allowlist")
+        if result["identifier"] != expected_identifier or type(result["identifier"]) is not str:
+            raise _error("publication safety category order or identifier is invalid")
+        outcome = result["outcome"]
+        if type(outcome) is not str or outcome not in _PUBLICATION_SAFETY_OUTCOMES:
+            raise _error("publication safety category outcome is outside the exact allowlist")
+        finding_count = _exact_nonnegative_int(result["finding_count"], "finding_count")
+        normalized_results.append(
+            {"identifier": expected_identifier, "outcome": outcome, "finding_count": finding_count},
+        )
+        outcomes.append(outcome)
+    expected_result = (
+        "SAFE"
+        if all(outcome == "SAFE" for outcome in outcomes)
+        else "UNSAFE"
+        if "UNSAFE" in outcomes
+        else "UNSUPPORTED"
+        if "UNSUPPORTED" in outcomes
+        else "AMBIGUOUS"
+    )
+    result = value["result"]
+    if type(result) is not str or result != expected_result:
+        raise _error("publication safety aggregate result is inconsistent with category outcomes")
+    publication_safe = value["raw_fixture_publication_safe"]
+    if type(publication_safe) is not bool or publication_safe is not (expected_result == "SAFE"):
+        raise _error("raw_fixture_publication_safe is inconsistent with aggregate result")
+    if expected_result == "SAFE":
+        raise _error("blocked publication safety evidence cannot retain a SAFE result")
+    return {
+        "schema_version": 2,
+        "result": expected_result,
+        "raw_fixture_publication_safe": False,
+        "category_results": normalized_results,
+    }
+
+
+_PROFILE_A_PREDICATES = (
+    "ENTRY_TABLE_SCOPE",
+    "ORDINARY_HORSE_ROW_SHAPE",
+    "SELECTED_NON14_LISTING",
+)
+_PROFILE_A_SAFE_FIELDS: dict[str, frozenset[str]] = {
+    "ENTRY_TABLE_SCOPE": frozenset({"entry_table_scope_count"}),
+    "ORDINARY_HORSE_ROW_SHAPE": frozenset({"ordinary_row_count"}),
+    "SELECTED_NON14_LISTING": frozenset(
+        {"selected_non14_candidate_count", "selected_provider_horse_no"},
+    ),
+}
+_PROFILE_A_OUTCOMES = frozenset({"PASS", "FAIL", "AMBIGUOUS", "UNSUPPORTED"})
+
+
+def _validate_profile_a_blocked_diagnostics(value: object) -> dict[str, object]:
+    if type(value) is not dict:
+        raise _error("profile_a_blocked_diagnostics must be exact dict")
+    expected = {
+        "schema_version",
+        "profile",
+        "overall_result",
+        "terminal_semantic",
+        "predicate_results",
+        "first_nonpass_predicate",
+        "terminal_reason",
+    }
+    if set(value) != expected:
+        raise _error("profile_a_blocked_diagnostics keys do not match the exact allowlist")
+    if value["schema_version"] != 2 or type(value["schema_version"]) is not int:
+        raise _error("profile_a_blocked_diagnostics schema_version must be exact 2")
+    if value["profile"] != "ENTRY_LISTING_PRESENT" or type(value["profile"]) is not str:
+        raise _error("Profile-A semantic is outside the exact allowlist")
+    if value["overall_result"] != "BLOCKED" or type(value["overall_result"]) is not str:
+        raise _error("blocked Profile-A evidence must have exact BLOCKED overall_result")
+    if value["terminal_semantic"] is not None:
+        raise _error("blocked Profile-A terminal_semantic must be exact null")
+    results = value["predicate_results"]
+    if type(results) is not list or len(results) != len(_PROFILE_A_PREDICATES):
+        raise _error("Profile-A predicate_results must be the exact three-result list")
+    normalized_results: list[dict[str, object]] = []
+    outcomes: list[str] = []
+    for expected_identifier, result in zip(_PROFILE_A_PREDICATES, results, strict=True):
+        if type(result) is not dict or set(result) != {"identifier", "outcome", "safe_fields"}:
+            raise _error("Profile-A predicate result keys do not match the exact allowlist")
+        if result["identifier"] != expected_identifier or type(result["identifier"]) is not str:
+            raise _error("Profile-A predicate order or identifier is invalid")
+        outcome = result["outcome"]
+        if type(outcome) is not str or outcome not in _PROFILE_A_OUTCOMES:
+            raise _error("Profile-A predicate outcome is outside the exact allowlist")
+        safe_fields = result["safe_fields"]
+        if type(safe_fields) is not dict or frozenset(safe_fields) != _PROFILE_A_SAFE_FIELDS[expected_identifier]:
+            raise _error("Profile-A safe_fields do not match the exact allowlist")
+        normalized_fields: dict[str, object] = {}
+        for name, item in safe_fields.items():
+            if name == "selected_provider_horse_no":
+                if item is not None:
+                    raise _error("blocked Profile-A selected_provider_horse_no must be exact null")
+            else:
+                item = _exact_nonnegative_int(item, name)
+            normalized_fields[name] = item
+        normalized_results.append(
+            {"identifier": expected_identifier, "outcome": outcome, "safe_fields": normalized_fields},
+        )
+        outcomes.append(outcome)
+    first_index = next((index for index, outcome in enumerate(outcomes) if outcome != "PASS"), None)
+    if first_index is None:
+        raise _error("blocked Profile-A evidence requires a non-PASS predicate")
+    expected_first = _PROFILE_A_PREDICATES[first_index]
+    if value["first_nonpass_predicate"] != expected_first or type(value["first_nonpass_predicate"]) is not str:
+        raise _error("Profile-A first_nonpass_predicate is inconsistent with predicate order")
+    expected_reason = "UNSUPPORTED_INPUT" if "UNSUPPORTED" in outcomes else "FIRST_NONPASS_PREDICATE"
+    if value["terminal_reason"] != expected_reason or type(value["terminal_reason"]) is not str:
+        raise _error("Profile-A terminal_reason is inconsistent with predicate outcomes")
+    return {
+        "schema_version": 2,
+        "profile": "ENTRY_LISTING_PRESENT",
+        "overall_result": "BLOCKED",
+        "terminal_semantic": None,
+        "predicate_results": normalized_results,
+        "first_nonpass_predicate": expected_first,
+        "terminal_reason": expected_reason,
+    }
+
+
 _PROFILE_B_PREDICATES = (
     "RACE_TABLE_SCOPE",
     "UNIQUE_TARGET_6R",
@@ -439,6 +591,10 @@ def _validate_detail(name: str, value: object, run_id: str) -> object:
         return _exact_positive_int(value, name)
     if name == "capture_metadata":
         return _validate_capture_metadata(value)
+    if name == "publication_safety":
+        return _validate_publication_safety_blocked_result(value)
+    if name == "profile_a_blocked_diagnostics":
+        return _validate_profile_a_blocked_diagnostics(value)
     if name == "profile_b_diagnostics":
         return _validate_profile_b_diagnostics(value)
     text = _safe_string(value, name)
@@ -700,6 +856,8 @@ def validate_journal_semantics(records: tuple[JournalRecord, ...]) -> None:
         ObservationMilestone.DEBA_CAPTURE_METADATA_RETAINED,
         ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED,
         ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED,
+        ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED,
+        ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
     }
     if seen & retained and ObservationMilestone.CLOSED_BUNDLE_RETURNED not in seen:
         raise _error("retained source evidence requires a closed bundle")
@@ -710,6 +868,35 @@ def validate_journal_semantics(records: tuple[JournalRecord, ...]) -> None:
         ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED,
     }.issubset(seen):
         raise _error("Profile-B diagnostics require both capture metadata records")
+    capture_and_identity = {
+        ObservationMilestone.DEBA_CAPTURE_METADATA_RETAINED,
+        ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED,
+        ObservationMilestone.IDENTITY_VERIFICATION_PASS,
+    }
+    if (
+        ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED in seen
+        and not capture_and_identity.issubset(seen)
+    ):
+        raise _error("blocked publication safety evidence requires retained captures and verified identity")
+    if ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED in seen and not {
+        ObservationMilestone.TARGET_CONSTRUCTED,
+        ObservationMilestone.SAFETY_PASS,
+    }.issubset(seen):
+        raise _error("blocked Profile-A evidence requires the constructed target and successful safety gate")
+    if ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED in seen and seen & {
+        ObservationMilestone.SAFETY_PASS,
+        ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
+        ObservationMilestone.PROFILE_A_QUALIFIED,
+        ObservationMilestone.PROFILE_B_QUALIFIED,
+        ObservationMilestone.PUBLICATION_BEGIN,
+    }:
+        raise _error("blocked publication safety evidence contradicts later success progression")
+    if ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED in seen and seen & {
+        ObservationMilestone.PROFILE_A_QUALIFIED,
+        ObservationMilestone.PROFILE_B_QUALIFIED,
+        ObservationMilestone.PUBLICATION_BEGIN,
+    }:
+        raise _error("blocked Profile-A evidence contradicts later success progression")
     if ObservationMilestone.ROLLBACK_COMPLETE in seen and ObservationMilestone.ROLLBACK_BEGIN not in seen:
         raise _error("rollback completion lacks rollback start")
     if ObservationMilestone.ROLLBACK_BEGIN in seen and ObservationMilestone.PUBLICATION_BEGIN not in seen:

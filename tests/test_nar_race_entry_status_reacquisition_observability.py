@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from datetime import date, datetime, timedelta, timezone
 import hashlib
 import json
@@ -65,6 +66,72 @@ def _profile_b_diagnostics() -> dict[str, object]:
     }
 
 
+SAFETY_CATEGORIES = (
+    "NO_AUTHENTICATION_MATERIAL",
+    "NO_COOKIE_OR_SESSION_SECRET",
+    "NO_CSRF_OR_SECRET_TOKEN",
+    "NO_USER_ACCOUNT_IDENTIFIER",
+    "NO_PERSONALIZATION_IDENTIFIER",
+)
+
+
+def _publication_safety_result(
+    outcomes: tuple[str, str, str, str, str] = ("UNSAFE", "SAFE", "SAFE", "SAFE", "SAFE"),
+    *,
+    finding_count: int = 1,
+) -> dict[str, object]:
+    aggregate = (
+        "SAFE"
+        if all(outcome == "SAFE" for outcome in outcomes)
+        else "UNSAFE"
+        if "UNSAFE" in outcomes
+        else "UNSUPPORTED"
+        if "UNSUPPORTED" in outcomes
+        else "AMBIGUOUS"
+    )
+    return {
+        "schema_version": 2,
+        "result": aggregate,
+        "raw_fixture_publication_safe": aggregate == "SAFE",
+        "category_results": [
+            {"identifier": identifier, "outcome": outcome, "finding_count": finding_count}
+            for identifier, outcome in zip(SAFETY_CATEGORIES, outcomes, strict=True)
+        ],
+    }
+
+
+PROFILE_A_PREDICATES = (
+    "ENTRY_TABLE_SCOPE",
+    "ORDINARY_HORSE_ROW_SHAPE",
+    "SELECTED_NON14_LISTING",
+)
+
+
+def _profile_a_blocked_diagnostics(
+    outcomes: tuple[str, str, str] = ("PASS", "PASS", "FAIL"),
+    *,
+    count: int = 1,
+) -> dict[str, object]:
+    fields = (
+        {"entry_table_scope_count": count},
+        {"ordinary_row_count": count},
+        {"selected_non14_candidate_count": count, "selected_provider_horse_no": None},
+    )
+    first_index = next(index for index, outcome in enumerate(outcomes) if outcome != "PASS")
+    return {
+        "schema_version": 2,
+        "profile": "ENTRY_LISTING_PRESENT",
+        "overall_result": "BLOCKED",
+        "terminal_semantic": None,
+        "predicate_results": [
+            {"identifier": identifier, "outcome": outcome, "safe_fields": safe_fields}
+            for identifier, outcome, safe_fields in zip(PROFILE_A_PREDICATES, outcomes, fields, strict=True)
+        ],
+        "first_nonpass_predicate": PROFILE_A_PREDICATES[first_index],
+        "terminal_reason": "UNSUPPORTED_INPUT" if "UNSUPPORTED" in outcomes else "FIRST_NONPASS_PREDICATE",
+    }
+
+
 class _Clock:
     def __init__(self) -> None:
         self.value = datetime(2026, 9, 14, tzinfo=UTC)
@@ -100,6 +167,29 @@ def _append_minimal_success(writer: subject.ObservabilityJournalWriter) -> None:
         subject.ObservationMilestone.LIVE_PROCESS_COMPLETE,
         {"outcome": "SYNTHETIC_SUCCESS", "authorization_state": "UNCONSUMED"},
     )
+
+
+def _append_through_identity_verification(writer: subject.ObservabilityJournalWriter) -> None:
+    writer.append(subject.ObservationMilestone.PARENT_EXECUTION_PREPARED, {"run_id": RUN_ID})
+    writer.append(subject.ObservationMilestone.LIVE_PROCESS_START, {"pid": 123})
+    writer.append(
+        subject.ObservationMilestone.TARGET_CONSTRUCTED,
+        {"baba_code": "21", "race_date": "2025-01-01", "race_no": 6},
+    )
+    writer.append(subject.ObservationMilestone.CLOSED_BUNDLE_RETURNED, {"bundle_id": BUNDLE_ID})
+    writer.append(
+        subject.ObservationMilestone.DEBA_CAPTURE_METADATA_RETAINED,
+        {"capture_metadata": _capture_metadata("deba_table")},
+    )
+    writer.append(
+        subject.ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED,
+        {"capture_metadata": _capture_metadata("race_list")},
+    )
+    writer.append(
+        subject.ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED,
+        {"profile_b_diagnostics": _profile_b_diagnostics()},
+    )
+    writer.append(subject.ObservationMilestone.IDENTITY_VERIFICATION_PASS, {"bundle_id": BUNDLE_ID})
 
 
 def _canonical(payload: object) -> bytes:
@@ -148,6 +238,12 @@ def _details_for(milestone: subject.ObservationMilestone) -> dict[str, object]:
         subject.ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED: {"capture_metadata": _capture_metadata("race_list")},
         subject.ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED: {"profile_b_diagnostics": _profile_b_diagnostics()},
         subject.ObservationMilestone.IDENTITY_VERIFICATION_PASS: {"bundle_id": BUNDLE_ID},
+        subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED: {
+            "publication_safety": _publication_safety_result(),
+        },
+        subject.ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED: {
+            "profile_a_blocked_diagnostics": _profile_a_blocked_diagnostics(),
+        },
         subject.ObservationMilestone.PUBLICATION_BEGIN: {"planned_path_count": 7},
         subject.ObservationMilestone.RAW_FIXTURES_WRITTEN: {"document_count": 2},
         subject.ObservationMilestone.MANIFEST_WRITTEN: {
@@ -318,7 +414,28 @@ def test_parent_reconstructs_every_confirmed_failure_boundary(
     last_milestone: subject.ObservationMilestone,
 ) -> None:
     writer = _writer(tmp_path)
-    for milestone in subject.ObservationMilestone:
+    blocking = {
+        subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED,
+        subject.ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
+    }
+    if last_milestone is subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED:
+        milestones = tuple(
+            milestone
+            for milestone in subject.ObservationMilestone
+            if subject._MILESTONE_ORDER[milestone]
+            <= subject._MILESTONE_ORDER[subject.ObservationMilestone.IDENTITY_VERIFICATION_PASS]
+            and milestone not in blocking
+        ) + (last_milestone,)
+    elif last_milestone is subject.ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED:
+        milestones = tuple(
+            milestone
+            for milestone in subject.ObservationMilestone
+            if milestone not in blocking
+            and subject._MILESTONE_ORDER[milestone] <= subject._MILESTONE_ORDER[subject.ObservationMilestone.SAFETY_PASS]
+        ) + (last_milestone,)
+    else:
+        milestones = tuple(milestone for milestone in subject.ObservationMilestone if milestone not in blocking)
+    for milestone in milestones:
         writer.append(milestone, _details_for(milestone))
         if milestone is last_milestone:
             break
@@ -714,3 +831,355 @@ def test_existing_preflight_contract_is_unchanged_after_additive_events(tmp_path
         cleanup_succeeded=True,
         bytecode_residue_absent=True,
     ) == subject.PREFLIGHT_PASS_TOKEN
+
+
+@pytest.mark.parametrize(
+    "outcomes",
+    [
+        ("UNSAFE", "SAFE", "SAFE", "SAFE", "SAFE"),
+        ("AMBIGUOUS", "SAFE", "SAFE", "SAFE", "SAFE"),
+        ("UNSUPPORTED", "SAFE", "SAFE", "SAFE", "SAFE"),
+    ],
+)
+def test_publication_safety_blocked_result_round_trips_canonically(
+    tmp_path: Path,
+    outcomes: tuple[str, str, str, str, str],
+) -> None:
+    safety = _publication_safety_result(outcomes)
+    writer = _writer(tmp_path)
+    writer.append(
+        subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED,
+        {"publication_safety": safety},
+    )
+    writer.close()
+
+    data = writer.path.read_bytes()
+    records = subject.validate_journal_bytes(data, expected_run_id=RUN_ID)
+    assert records[0].details == {"publication_safety": safety}
+    assert data == _canonical(_record(
+        milestone="PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED",
+        details={"publication_safety": safety},
+    )) + b"\n"
+
+
+def test_publication_safety_blocked_result_rejects_safe_result(tmp_path: Path) -> None:
+    writer = _writer(tmp_path)
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        writer.append(
+            subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED,
+            {"publication_safety": _publication_safety_result(("SAFE",) * 5)},
+        )
+    writer.close()
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "wrong_type",
+        "missing_field",
+        "extra_field",
+        "category_missing",
+        "category_extra",
+        "category_order",
+        "category_identifier",
+        "category_outcome",
+        "aggregate",
+        "safe_boolean",
+        "negative_count",
+        "oversized_count",
+        "wrong_count_type",
+        "raw_source",
+        "secret_value",
+        "url_query",
+    ],
+)
+def test_publication_safety_blocked_result_rejects_invalid_or_unsafe_shape(
+    tmp_path: Path,
+    mutation: str,
+) -> None:
+    value: object = _publication_safety_result()
+    if mutation == "wrong_type":
+        value = []
+    else:
+        value = copy.deepcopy(value)
+        assert type(value) is dict
+        categories = value["category_results"]
+        assert type(categories) is list
+        if mutation == "missing_field":
+            del value["result"]
+        elif mutation == "extra_field":
+            value["matched_text"] = "synthetic"
+        elif mutation == "category_missing":
+            categories.pop()
+        elif mutation == "category_extra":
+            categories.append(copy.deepcopy(categories[-1]))
+        elif mutation == "category_order":
+            categories[0], categories[1] = categories[1], categories[0]
+        elif mutation == "category_identifier":
+            categories[0]["identifier"] = "UNKNOWN"  # type: ignore[index]
+        elif mutation == "category_outcome":
+            categories[0]["outcome"] = "BLOCKED"  # type: ignore[index]
+        elif mutation == "aggregate":
+            value["result"] = "AMBIGUOUS"
+        elif mutation == "safe_boolean":
+            value["raw_fixture_publication_safe"] = True
+        elif mutation == "negative_count":
+            categories[0]["finding_count"] = -1  # type: ignore[index]
+        elif mutation == "oversized_count":
+            categories[0]["finding_count"] = 10001  # type: ignore[index]
+        elif mutation == "wrong_count_type":
+            categories[0]["finding_count"] = "1"  # type: ignore[index]
+        elif mutation == "raw_source":
+            categories[0]["raw_html"] = "<html>"  # type: ignore[index]
+        elif mutation == "secret_value":
+            categories[0]["token"] = "synthetic-secret"  # type: ignore[index]
+        else:
+            categories[0]["url"] = "https://invalid.example/?query=value"  # type: ignore[index]
+    writer = _writer(tmp_path)
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        writer.append(
+            subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED,
+            {"publication_safety": value},
+        )
+    writer.close()
+
+
+@pytest.mark.parametrize(
+    "outcomes",
+    [
+        ("PASS", "PASS", "FAIL"),
+        ("PASS", "PASS", "AMBIGUOUS"),
+        ("PASS", "UNSUPPORTED", "UNSUPPORTED"),
+    ],
+)
+def test_profile_a_blocked_diagnostics_round_trips_canonically(
+    tmp_path: Path,
+    outcomes: tuple[str, str, str],
+) -> None:
+    diagnostics = _profile_a_blocked_diagnostics(outcomes)
+    writer = _writer(tmp_path)
+    writer.append(
+        subject.ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
+        {"profile_a_blocked_diagnostics": diagnostics},
+    )
+    writer.close()
+
+    data = writer.path.read_bytes()
+    records = subject.validate_journal_bytes(data, expected_run_id=RUN_ID)
+    assert records[0].details == {"profile_a_blocked_diagnostics": diagnostics}
+    assert diagnostics["predicate_results"][2]["safe_fields"]["selected_provider_horse_no"] is None  # type: ignore[index]
+    assert data == _canonical(_record(
+        milestone="PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED",
+        details={"profile_a_blocked_diagnostics": diagnostics},
+    )) + b"\n"
+
+
+def test_profile_a_blocked_diagnostics_rejects_qualified_result(tmp_path: Path) -> None:
+    diagnostics = _profile_a_blocked_diagnostics()
+    diagnostics["overall_result"] = "QUALIFIED"
+    diagnostics["terminal_semantic"] = "ENTRY_LISTING_PRESENT"
+    diagnostics["first_nonpass_predicate"] = None
+    diagnostics["terminal_reason"] = "QUALIFIED"
+    for result in diagnostics["predicate_results"]:  # type: ignore[union-attr]
+        result["outcome"] = "PASS"
+    writer = _writer(tmp_path)
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        writer.append(
+            subject.ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
+            {"profile_a_blocked_diagnostics": diagnostics},
+        )
+    writer.close()
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "wrong_type",
+        "missing_field",
+        "extra_field",
+        "missing_predicate",
+        "extra_predicate",
+        "predicate_order",
+        "predicate_identifier",
+        "predicate_outcome",
+        "wrong_safe_fields",
+        "negative_count",
+        "oversized_count",
+        "wrong_count_type",
+        "numeric_selected_horse",
+        "first_failure",
+        "terminal_reason",
+        "terminal_semantic",
+        "raw_source",
+        "url_query",
+    ],
+)
+def test_profile_a_blocked_diagnostics_rejects_invalid_or_unsafe_shape(
+    tmp_path: Path,
+    mutation: str,
+) -> None:
+    value: object = _profile_a_blocked_diagnostics()
+    if mutation == "wrong_type":
+        value = []
+    else:
+        value = copy.deepcopy(value)
+        assert type(value) is dict
+        predicates = value["predicate_results"]
+        assert type(predicates) is list
+        if mutation == "missing_field":
+            del value["profile"]
+        elif mutation == "extra_field":
+            value["source_text"] = "synthetic"
+        elif mutation == "missing_predicate":
+            predicates.pop()
+        elif mutation == "extra_predicate":
+            predicates.append(copy.deepcopy(predicates[-1]))
+        elif mutation == "predicate_order":
+            predicates[0], predicates[1] = predicates[1], predicates[0]
+        elif mutation == "predicate_identifier":
+            predicates[0]["identifier"] = "UNKNOWN"  # type: ignore[index]
+        elif mutation == "predicate_outcome":
+            predicates[2]["outcome"] = "BLOCKED"  # type: ignore[index]
+        elif mutation == "wrong_safe_fields":
+            predicates[0]["safe_fields"] = {"ordinary_row_count": 1}  # type: ignore[index]
+        elif mutation == "negative_count":
+            predicates[0]["safe_fields"]["entry_table_scope_count"] = -1  # type: ignore[index]
+        elif mutation == "oversized_count":
+            predicates[0]["safe_fields"]["entry_table_scope_count"] = 10001  # type: ignore[index]
+        elif mutation == "wrong_count_type":
+            predicates[0]["safe_fields"]["entry_table_scope_count"] = "1"  # type: ignore[index]
+        elif mutation == "numeric_selected_horse":
+            predicates[2]["safe_fields"]["selected_provider_horse_no"] = 3  # type: ignore[index]
+        elif mutation == "first_failure":
+            value["first_nonpass_predicate"] = "ENTRY_TABLE_SCOPE"
+        elif mutation == "terminal_reason":
+            value["terminal_reason"] = "UNSUPPORTED_INPUT"
+        elif mutation == "terminal_semantic":
+            value["terminal_semantic"] = "ENTRY_LISTING_PRESENT"
+        elif mutation == "raw_source":
+            predicates[0]["safe_fields"]["raw_html"] = "<html>"  # type: ignore[index]
+        else:
+            predicates[0]["safe_fields"]["url"] = "https://invalid.example/?query=value"  # type: ignore[index]
+    writer = _writer(tmp_path)
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        writer.append(
+            subject.ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
+            {"profile_a_blocked_diagnostics": value},
+        )
+    writer.close()
+
+
+def test_blocked_retention_complete_records_fit_approved_bounds() -> None:
+    safety = _publication_safety_result(("UNSUPPORTED",) * 5, finding_count=10000)
+    profile_a = _profile_a_blocked_diagnostics(("UNSUPPORTED",) * 3, count=10000)
+    safety_record = _canonical(_record(
+        131072,
+        milestone="PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED",
+        details={"publication_safety": safety},
+    )) + b"\n"
+    profile_a_record = _canonical(_record(
+        131072,
+        milestone="PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED",
+        details={"profile_a_blocked_diagnostics": profile_a},
+    )) + b"\n"
+
+    assert len(safety_record) == 847 <= subject.MAX_RECORD_BYTES
+    assert len(profile_a_record) == 883 <= subject.MAX_RECORD_BYTES
+
+
+def test_safety_blocked_path_is_durable_terminal_failure_evidence(tmp_path: Path) -> None:
+    writer = _writer(tmp_path)
+    _append_through_identity_verification(writer)
+    writer.append(
+        subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED,
+        {"publication_safety": _publication_safety_result()},
+    )
+    writer.append(
+        subject.ObservationMilestone.LIVE_PROCESS_COMPLETE,
+        {"outcome": "SOURCE_PROFILE_FIXTURE_BLOCKED", "authorization_state": "CONSUMED_CONFIRMED"},
+    )
+    writer.close()
+    subject.validate_journal_semantics(subject.validate_journal_bytes(writer.path.read_bytes()))
+
+
+def test_profile_a_blocked_path_is_durable_terminal_failure_evidence(tmp_path: Path) -> None:
+    writer = _writer(tmp_path)
+    _append_through_identity_verification(writer)
+    writer.append(subject.ObservationMilestone.SAFETY_PASS, {})
+    writer.append(
+        subject.ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
+        {"profile_a_blocked_diagnostics": _profile_a_blocked_diagnostics()},
+    )
+    writer.append(
+        subject.ObservationMilestone.LIVE_PROCESS_COMPLETE,
+        {"outcome": "SOURCE_PROFILE_FIXTURE_BLOCKED", "authorization_state": "CONSUMED_CONFIRMED"},
+    )
+    writer.close()
+    subject.validate_journal_semantics(subject.validate_journal_bytes(writer.path.read_bytes()))
+
+
+@pytest.mark.parametrize(
+    ("blocked", "later"),
+    [
+        (
+            subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED,
+            subject.ObservationMilestone.SAFETY_PASS,
+        ),
+        (
+            subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED,
+            subject.ObservationMilestone.PROFILE_A_QUALIFIED,
+        ),
+        (
+            subject.ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
+            subject.ObservationMilestone.PROFILE_A_QUALIFIED,
+        ),
+        (
+            subject.ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
+            subject.ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED,
+        ),
+        (
+            subject.ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
+            subject.ObservationMilestone.PUBLICATION_BEGIN,
+        ),
+    ],
+)
+def test_blocked_retention_rejects_contradictory_success_progression(
+    tmp_path: Path,
+    blocked: subject.ObservationMilestone,
+    later: subject.ObservationMilestone,
+) -> None:
+    writer = _writer(tmp_path)
+    _append_through_identity_verification(writer)
+    if blocked is subject.ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED:
+        writer.append(subject.ObservationMilestone.SAFETY_PASS, {})
+    writer.append(blocked, _details_for(blocked))
+    writer.append(later, _details_for(later))
+    writer.close()
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        records = subject.validate_journal_bytes(writer.path.read_bytes())
+        subject.validate_journal_semantics(records)
+
+
+def test_normal_success_path_remains_valid_without_blocked_events(tmp_path: Path) -> None:
+    writer = _writer(tmp_path)
+    blocked = {
+        subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED,
+        subject.ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
+    }
+    for milestone in subject.ObservationMilestone:
+        if milestone not in blocked:
+            writer.append(milestone, _details_for(milestone))
+    writer.close()
+    records = subject.validate_journal_bytes(writer.path.read_bytes())
+    subject.validate_journal_semantics(records)
+    seen = {record.milestone for record in records}
+    assert subject.ObservationMilestone.SAFETY_PASS in seen
+    assert subject.ObservationMilestone.PROFILE_A_QUALIFIED in seen
+    assert subject.PREFLIGHT_PASS_TOKEN == "NAR_REACQUISITION_OBSERVABILITY_PREFLIGHT_PASS"
+
+
+def test_phase58_additions_are_closed_no_network_evidence_validators() -> None:
+    source = Path(subject.__file__).read_text(encoding="utf-8")
+    assert "nar_race_entry_status_source_profile_profile_a" not in source
+    assert "nar_race_entry_status_source_profile_publication_contract" not in source
+    assert subject.JOURNAL_SCHEMA_VERSION == 1

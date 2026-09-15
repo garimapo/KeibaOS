@@ -2,184 +2,179 @@
 
 ## Phase
 
-POST_V0_8_DAILY_REPLAY_56
+POST_V0_8_DAILY_REPLAY_58
 
 ## Name / state
 
-Tracked NAR Source-Profile Publication Contract v2 Support
+Tracked Phase57 Safety and Profile-A Failure-Evidence Durability Support — Design Revision 1
 
-- Type: NO_NETWORK_TRACKED_CONTRACT_SUPPORT
+- Type: NO_NETWORK_OBSERVABILITY_DURABILITY_DESIGN
 - Status: INTEGRATED_PENDING_REMOTE_VERIFICATION
-- Outcome: IMPLEMENTED_PUBLICATION_CONTRACT_V2_SUPPORT
-- Review: PASS_FOR_INTEGRATION
+- Outcome: IMPLEMENTED_PHASE57_FAILURE_EVIDENCE_DURABILITY_SUPPORT
 - Branch: feature/post-v0.8-daily-replay
-- Base: c9f704261cc37f95e12eb2fafa54f83b3055d944
-- Predecessor: POST_V0_8_DAILY_REPLAY_55 — APPROVED_FOR_CODEX
-- Design authority: PHASE55_DESIGN_REVIEW_PASS
-- v1: V1_PUBLICATION_CONTRACT_NOT_EXACTLY_RECOVERABLE
-- v2: VERSIONED_PUBLICATION_CONTRACT_REDESIGN_REQUIRED
-- Design Review: PHASE56_DESIGN_REVIEW_PASS
-- Implementation Manifest: exact approved six paths
+- Base: 3f4703c559ec24b52962c423efd62e919301f5da
+- Predecessor: POST_V0_8_DAILY_REPLAY_57 — DESIGN_BLOCKED
+- Authorization: no Phase58 live authority; `PHASE57_ACQUISITION_AUTHORIZATION_NOT_YET_ISSUED`
+- Provider HTTP: 0
+- Phase44 live acquisition: NOT_AUTHORIZED
+
+- Revision: PHASE58_DESIGN_REVISION_1
+- Design Review: PHASE58_DESIGN_REVIEW_PASS
+- Formal Status: INTEGRATED_PENDING_REMOTE_VERIFICATION
+- Review: PASS_FOR_INTEGRATION
+- Implementation Manifest: four approved paths
 - Phase44 Changes: NOT_AUTHORIZED
-- Phase50 Changes: NOT_AUTHORIZED
-- Provider HTTP: NOT_AUTHORIZED
-- Phase57 Authorization: AUTHORIZATION_NOT_YET_ISSUED
-- Next permitted action: INDEPENDENT_REMOTE_VERIFICATION
+- Phase53 Changes: NOT_AUTHORIZED
+- Phase56 Changes: NOT_AUTHORIZED
+- Provider HTTP: 0
+- Phase57 Authorization: NOT_YET_ISSUED
+- Remote Verification: REQUIRED
 
-Phase54 remains factually PHASE54_ACQUISITION_AUTHORIZATION_UNCONSUMED and contractually PHASE54_AUTHORIZATION_UNCONSUMED_BUT_UNUSABLE_FOR_V2. Phase57 authorization is NOT_YET_ISSUED. No Phase54 authority is used or consumed here.
+The authorized worktree is `C:\Users\garim\Desktop\KeibaOS-post-v0.8`. Phase54 remains `PHASE54_AUTHORIZATION_UNCONSUMED_BUT_UNUSABLE_FOR_V2`. Phase57 is not authorized.
 
-## Exact Phase56 implementation manifest
+## Frozen Phase57 blockers and revised principle
 
-1. scripts/simulation/nar_race_entry_status_source_profile_profile_a.py — new pure Profile-A diagnostics.
-2. tests/test_nar_race_entry_status_source_profile_profile_a.py — new synthetic Profile-A tests.
-3. scripts/simulation/nar_race_entry_status_source_profile_publication_contract.py — new pure v2 identity, manifest, and safety support.
-4. tests/test_nar_race_entry_status_source_profile_publication_contract.py — new synthetic safety, identity, and manifest tests.
-5. docs/CURRENT_PHASE.md
-6. docs/LATEST_CODEX_REPORT.md
+Phase57 remains blocked for `DESIGN_BLOCKED_SAFETY_FAILURE_EVIDENCE_NOT_DURABLE` and `DESIGN_BLOCKED_PROFILE_A_FAILURE_EVIDENCE_NOT_DURABLE`. Existing durable evidence remains capture metadata through `DEBA_CAPTURE_METADATA_RETAINED` and `RACELIST_CAPTURE_METADATA_RETAINED`, and Profile-B diagnostics through `PROFILE_B_DIAGNOSTICS_RETAINED`.
 
-No seventh path is authorized. Phase44, Phase50, Phase53, fixtures, .gitattributes, database, and logs are forbidden.
+Phase58 resolves only the two missing failure domains. Existing success milestones remain success evidence and are not duplicated:
 
-## Ownership and boundaries
+1. a Phase56 safety result of `SAFE` is evidenced by `SAFETY_PASS`;
+2. a non-`SAFE` safety result is retained by one new typed event before fail-closed cleanup;
+3. a qualified Profile-A result is evidenced by `PROFILE_A_QUALIFIED`;
+4. a blocked Profile-A result is retained by one new typed event before fail-closed cleanup.
 
-The Profile-A module owns only the deterministic ENTRY_LISTING_PRESENT grammar. The publication-contract module owns only publication-safety evaluation plus v2 fixture-set, qualification, and manifest build/validate semantics. Phase53 remains the sole Profile-B authority through ProfileBDiagnostics and diagnose_nar_race_entry_status_profile_b. Phase44 remains the sole acquisition/capture authority. Phase50 remains operational evidence only.
+`SAFETY_PASS` and `PROFILE_A_QUALIFIED` establish that their respective gates passed. They do not reconstruct a complete domain result and do not need to retain success-only diagnostics. Complete in-memory canonical results remain available for a successful manifest/publication path; a failed Phase57 run only needs to establish that an earlier gate passed or identify the exact blocking gate safely.
 
-Distinct authorities remain separate: formal raw/capture evidence; fixture-set identity; qualification identity; Profile-A diagnostics; Profile-B diagnostics; safety result; and Phase50 journal evidence. Neither a v2 artifact nor either Profile result proves MARKET_ELIGIBLE.
+## Verified Profile-A blocked invariant
 
-## Common v2 canonical form
+For every result emitted by the tracked public evaluator `diagnose_nar_race_entry_status_profile_a`, `overall_result == BLOCKED` implies that `SELECTED_NON14_LISTING.safe_fields.selected_provider_horse_no` is exactly `null`.
 
-Every canonical payload/manifest is exactly:
+The implementation proves this by control flow: a non-PASS table scope forces shape and listing to `UNSUPPORTED` with `selected = None`; a non-PASS row shape forces listing to `UNSUPPORTED` with `selected = None`; no eligible ordinary horse and duplicate eligible horses likewise set `selected = None`; only the all-PASS branch assigns `selected = min(eligible)`, which makes the overall result `QUALIFIED`. The focused Profile-A tests cover each blocking source category and assert their non-PASS outcomes/blocked result. The Phase58 validator will independently require `null`, so a forged numeric value cannot enter the journal.
 
+This statement concerns canonical outputs of the sole approved evaluator, not arbitrary construction of private implementation objects. No Phase56 production or test change is required to support the Phase58 event contract.
+
+## New exact typed Phase50 retention events
+
+Phase50 remains an operational observability layer. It must not import or execute Phase56 evaluators or parsers. It may only validate already-computed, safe, closed canonical projections with local structural allowlists.
+
+### `PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED`
+
+This event is permitted only for a Phase56 non-safe result. Its details object has exactly one key, `publication_safety`, whose value is exactly:
+
+~~~json
+{
+  "schema_version": 2,
+  "result": "UNSAFE|AMBIGUOUS|UNSUPPORTED",
+  "raw_fixture_publication_safe": false,
+  "category_results": [
+    {"identifier": "NO_AUTHENTICATION_MATERIAL", "outcome": "SAFE|UNSAFE|AMBIGUOUS|UNSUPPORTED", "finding_count": 0},
+    {"identifier": "NO_COOKIE_OR_SESSION_SECRET", "outcome": "SAFE|UNSAFE|AMBIGUOUS|UNSUPPORTED", "finding_count": 0},
+    {"identifier": "NO_CSRF_OR_SECRET_TOKEN", "outcome": "SAFE|UNSAFE|AMBIGUOUS|UNSUPPORTED", "finding_count": 0},
+    {"identifier": "NO_USER_ACCOUNT_IDENTIFIER", "outcome": "SAFE|UNSAFE|AMBIGUOUS|UNSUPPORTED", "finding_count": 0},
+    {"identifier": "NO_PERSONALIZATION_IDENTIFIER", "outcome": "SAFE|UNSAFE|AMBIGUOUS|UNSUPPORTED", "finding_count": 0}
+  ]
+}
 ~~~
-json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+
+The category order is exact. Every `finding_count` is an exact integer in `0..10000`. The validator rederives the aggregate: all SAFE gives SAFE; otherwise any UNSAFE gives UNSAFE; otherwise any UNSUPPORTED gives UNSUPPORTED; otherwise AMBIGUOUS. It rederives the boolean as true only for SAFE and rejects SAFE from this blocking event. Phase56 has no primary-category field; parent reporting must deterministically derive the first non-SAFE category from the fixed order rather than persist a caller-controlled duplicate.
+
+### `PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED`
+
+This event is permitted only for a Phase56 Profile-A blocked result. Its details object has exactly one key, `profile_a_blocked_diagnostics`. The value is the closed, target-free blocked projection below:
+
+~~~json
+{
+  "schema_version": 2,
+  "profile": "ENTRY_LISTING_PRESENT",
+  "overall_result": "BLOCKED",
+  "terminal_semantic": null,
+  "predicate_results": [
+    {"identifier": "ENTRY_TABLE_SCOPE", "outcome": "PASS|FAIL|AMBIGUOUS|UNSUPPORTED", "safe_fields": {"entry_table_scope_count": 0}},
+    {"identifier": "ORDINARY_HORSE_ROW_SHAPE", "outcome": "PASS|FAIL|AMBIGUOUS|UNSUPPORTED", "safe_fields": {"ordinary_row_count": 0}},
+    {"identifier": "SELECTED_NON14_LISTING", "outcome": "PASS|FAIL|AMBIGUOUS|UNSUPPORTED", "safe_fields": {"selected_non14_candidate_count": 0, "selected_provider_horse_no": null}}
+  ],
+  "first_nonpass_predicate": "ENTRY_TABLE_SCOPE|ORDINARY_HORSE_ROW_SHAPE|SELECTED_NON14_LISTING",
+  "terminal_reason": "UNSUPPORTED_INPUT|FIRST_NONPASS_PREDICATE"
+}
 ~~~
 
-SHA-256 is applied to those exact bytes. All identity digest text is lowercase hexadecimal. Exact type checks, exact closed key sets, canonical UTC text, canonical Phase44 identifiers, ordered documents, and canonical bytes are mandatory; any failure is fail-closed. run_id, journal sequence, PID, temp/repository path, machine/launcher state, raw body, headers/cookies, and arbitrary URL/query text are excluded.
+The event deliberately omits `target`. The preceding `TARGET_CONSTRUCTED` record already establishes the target under the same run ID. Parent validation must bind this record to that same run ID and to the preceding canonical target record; it must not accept a blocked Profile-A event without that predecessor. Omitting the redundant target makes the durable event smaller without losing run-level audit binding.
 
-## Fixture-set v2
+The validator requires exactly three ordered predicate records and their exact field sets; all count fields are exact integers in `0..10000`; `selected_provider_horse_no` is exactly null; `first_nonpass_predicate` is non-null and must equal the earliest non-PASS predicate; and `terminal_reason` is `UNSUPPORTED_INPUT` iff any predicate is UNSUPPORTED, otherwise `FIRST_NONPASS_PREDICATE`. It rejects QUALIFIED, a terminal semantic, an all-PASS result, or every extra field.
 
-Prefix: nar-race-entry-status-source-profile-fixture-set-v2:.
+## Exact ordering, durability, and parent contract
 
-The payload is frozen as schema, schema_version, provider, target, documents, and closed_bundle_identity. schema is nar-race-entry-status-source-profile-fixture-set; schema_version is exact int 2; provider is NAR; target is exact formal NARRaceEntryStatusRaceIdentity represented as baba_code canonical decimal text, race_date canonical ISO text, and positive race_no.
+`JOURNAL_SCHEMA_VERSION` remains `1`. Phase53 added typed retained milestones without changing this version, and Phase58 remains strictly additive: no prior event, canonical JSON rule, observer mapping, preflight token, authorization accounting, cleanup rule, or existing semantic rule changes.
 
-documents is an exact two-element ordered list:
+The enum must insert the new milestones without changing the relative rank of any existing milestone:
 
-| Field | Type / required | Provenance | Identity treatment |
-| --- | --- | --- | --- |
-| role | exact str; required | fixed deba_table, then race_list | included |
-| fixture_relative_path | exact str; required | fixed v2 path for matching role | included |
-| request_identity | exact canonical request id; required | CaptureMetadataSummary document | included |
-| capture_identity | exact canonical capture id; required | CaptureMetadataSummary document | included |
-| response_sha256 | 64 lowercase hex; required | CaptureMetadataSummary document | included |
-| response_byte_length | exact positive int; required | CaptureMetadataSummary document | included |
-| requested_at / observed_at / captured_at | canonical UTC text; each required | CaptureMetadataSummary document | included |
-| effective_url_matches_canonical | exact bool; required | CaptureMetadataSummary document | included |
+1. `CLOSED_BUNDLE_RETURNED`
+2. `DEBA_CAPTURE_METADATA_RETAINED`
+3. `RACELIST_CAPTURE_METADATA_RETAINED`
+4. existing `PROFILE_B_DIAGNOSTICS_RETAINED`
+5. `IDENTITY_VERIFICATION_PASS`
+6. safety evaluation:
+   - SAFE: existing `SAFETY_PASS`;
+   - otherwise: `PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED`, then fail closed.
+7. Profile-A evaluation after safety PASS:
+   - QUALIFIED: existing `PROFILE_A_QUALIFIED`;
+   - otherwise: `PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED`, then fail closed.
+8. existing `PROFILE_B_QUALIFIED` only when the retained Profile-B result is qualified.
+9. `PUBLICATION_BEGIN` only after every success gate.
 
-closed_bundle_identity is required canonical formal bundle id from CaptureMetadataSummary. Fixed paths are tests/fixtures/nar_race_entry_status/source_profiles/v2/baba_21__2025-01-01__race_06/deba_table.html and race_list.html. No body is included.
+Each blocked event uses the existing writer path: canonical JSON serialization, one LF, write, flush, and `fsync`. Only after a successful append may the child clean raw bytes or terminate for that blocked gate. The semantic validator must permit a blocked event followed only by terminal operational evidence (`LIVE_PROCESS_COMPLETE`, parent validation, and cleanup), require the existing capture/identity/safety predecessors as applicable, and reject contradictory `SAFETY_PASS`, `PROFILE_A_QUALIFIED`, `PROFILE_B_QUALIFIED`, or `PUBLICATION_BEGIN` after blocked evidence. Parent validation must check run-ID continuity, sequence/rank monotonicity, closed details, target-predecessor binding, first blocking milestone, and absence of contradictory success evidence.
 
-## Qualification v2
+## Finite payload and full-record bounds
 
-Prefix: nar-race-entry-status-source-profile-qualification-v2:.
+All new nested fields are fixed allowlist strings, booleans, null, or counts bounded by the existing Phase50 bound of 10000. The former unbounded selected-provider-horse value is structurally impossible in the blocked event.
 
-The payload has exactly schema, schema_version, provider, target, fixture_set_identity, profile_a, profile_b, and market_eligibility. schema is nar-race-entry-status-source-profile-qualification; schema_version is exact int 2; provider/target are the same canonical formal values; fixture_set_identity is the recomputed v2 identity; profile_a is ProfileADiagnostics.to_canonical_dict(); profile_b is the existing Phase53 ProfileBDiagnostics.to_canonical_dict(); market_eligibility is exact UNSUPPORTED.
+Using canonical JSON, every category outcome at its longest permitted spelling, all counts at 10000, a six-digit sequence (the journal's 131072-byte total cap makes a larger sequence unattainable), a 32-character run ID, and canonical UTC text:
 
-Profile-A therefore contributes its overall result, terminal semantic, all three ordered predicate results, and safe fields. Profile-B contributes its existing overall result, EXPLICIT_WITHDRAWAL_PRESENT terminal semantic where qualified, ordered six predicate diagnostics, and safe fields. Raw HTML and operational state are absent. A qualification semantic change changes this identity.
+| Event | Inner canonical projection | Details wrapper | Complete JSON record | Record plus required LF | Margin to 4096 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED` | 552 | 575 | 846 | 847 | 3249 |
+| `PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED` | 581 | 615 | 882 | 883 | 3213 |
 
-## Manifest v2
+The existing writer and reader separately enforce `MAX_RECORD_BYTES = 4096`; the finite field bounds above ensure the new details themselves cannot exhaust it. No Phase50 limit change is needed.
 
-The manifest root is a closed schema. Every field is required:
+## Test plan and implementation scope
 
-| Field path | Type | Source/provenance | Validation |
-| --- | --- | --- | --- |
-| manifest_schema | str | fixed nar-race-entry-status-source-profile-fixture-manifest | exact |
-| manifest_schema_version | int | fixed 2 | exact |
-| acquisition_semantics | str | fixed CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET | exact |
-| provider | str | formal Phase44 target | exact NAR |
-| target.baba_code / race_date / race_no | str / str / int | formal Phase44 target | canonical target |
-| documents | two-item list | fixture-set v2 document payload | exact order and equality |
-| closed_bundle_identity | str | CaptureMetadataSummary | canonical/recomputed equality |
-| fixture_set_identity | str | fixture-set v2 builder | exact recomputation |
-| qualification_identity | str | qualification-v2 builder | exact recomputation |
-| publication_safety | object | safety evaluator canonical dict | closed schema / safe only |
-| profile_a | object | Profile-A canonical dict | closed schema / safe only |
-| profile_b | object | Phase53 canonical dict | exact existing Phase53 representation |
-| market_eligibility | str | fixed contract disclaimer | exact UNSUPPORTED |
+Focused Phase50 tests must prove:
 
-The manifest bytes use the common canonical form. Builder and validator both reconstruct expected objects from deterministic inputs; a noncanonical serialized input, wrong schema/version, missing/extra key, mismatched capture field, wrong identity, or wrong disclaimer raises a manifest validation error. No manifest field can claim MARKET_ELIGIBLE, historical availability, or a historical capture time.
+- acceptance and durable canonical round-trip for non-SAFE blocked safety results, including all five category outcomes; SAFE rejection; aggregate/boolean rederivation; bounded counts; rejection of extra/raw/secret/arbitrary text/URL fields; full-record size; and unchanged `SAFETY_PASS` and preflight token;
+- acceptance of blocked Profile-A FAIL, AMBIGUOUS, and UNSUPPORTED results; QUALIFIED rejection; required null selected horse; numeric selected-horse rejection; fixed predicate order; earliest-non-PASS and terminal-reason rederivation; bounded counts; closed-schema/raw/URL rejection; full-record size; durable round-trip; and unchanged `PROFILE_A_QUALIFIED`;
+- retained capture/Profile-B behavior, old journal/preflight validity, monotonic ordering, and no network.
 
-## Profile-A grammar and API
+The exact Phase58 implementation manifest is four paths:
 
-Public symbols:
+1. `scripts/simulation/nar_race_entry_status_reacquisition_observability.py`
+2. `tests/test_nar_race_entry_status_reacquisition_observability.py`
+3. `docs/CURRENT_PHASE.md`
+4. `docs/LATEST_CODEX_REPORT.md`
 
-| Symbol | Input / output | Responsibility |
-| --- | --- | --- |
-| ProfileAOutcome | stable PASS, FAIL, AMBIGUOUS, UNSUPPORTED enum | predicate vocabulary |
-| ProfileAPredicateIdentifier | ENTRY_TABLE_SCOPE, ORDINARY_HORSE_ROW_SHAPE, SELECTED_NON14_LISTING | frozen ordering |
-| ProfileADiagnostics | frozen canonical result; to_canonical_dict() and canonical_bytes() | safe qualification result |
-| diagnose_nar_race_entry_status_profile_a | exact bytes and exact NARRaceEntryStatusRaceIdentity -> ProfileADiagnostics | Phase57 qualification authority |
+No Phase44, Phase53, or Phase56 production/test change is required. Future execution order is focused observability tests, minimal Phase56 interoperability checks if needed, relevant NAR regression, and one full suite when otherwise ready.
 
-Input authority is exact DebaTable raw bytes plus exact formal Phase44 target identity. The target scope is that formal identity bound to the formal DebaTable capture; no launcher-local inference or alternate page is allowed. The source strictly UTF-8 decodes, passes an html.parser tag-balance validation, then uses BeautifulSoup html.parser. Invalid UTF-8 or unmatched/unclosed non-void markup returns ordered UNSUPPORTED predicate results, never repaired markup.
+## Future boundary
 
-The frozen order and semantics are:
+Phase58 implemented both blocked-only retention events with closed local validators and existing canonical write/flush/fsync durability. `PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED` rejects SAFE results and retains only the bounded five-category non-safe result. `PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED` rejects QUALIFIED results and numeric selected-horse values, requires the exact three predicates, and retains only the target-free bounded blocked projection. Complete maximum records including LF remain 847 and 883 bytes respectively.
 
-1. ENTRY_TABLE_SCOPE: among article.raceCard descendant section.cardTable table elements, count tables containing a tr with exactly one direct td.horseNum. One PASS; zero FAIL; more than one AMBIGUOUS.
-2. ORDINARY_HORSE_ROW_SHAPE: every candidate selected-table row must have exactly one direct td.horseNum with an ASCII positive decimal and exactly one nonempty a.horseName[href]. No row FAIL; duplicate required node AMBIGUOUS; malformed element/number UNSUPPORTED.
-3. SELECTED_NON14_LISTING: eligible rows must have a horse number other than 14 and one row per number. Select the lowest numeric eligible horse. Zero FAIL; duplicate candidate number AMBIGUOUS; malformed input UNSUPPORTED.
+Existing `SAFETY_PASS`, `PROFILE_A_QUALIFIED`, capture retention, Profile-B retention, journal schema version 1, and the exact preflight token are unchanged. Phase44, Phase53, and Phase56 are unchanged. Static inspection confirms that Phase50 gained no Phase56 domain import, provider-network path, database access, or raw-provider persistence.
 
-Safe fields are exactly entry_table_scope_count; ordinary_row_count; and selected_non14_candidate_count plus selected_provider_horse_no (null unless PASS). The first non-PASS is the first non-PASS in this order. All PASS gives QUALIFIED and terminal semantic ENTRY_LISTING_PRESENT; otherwise BLOCKED and null terminal semantic. No raw source, name, link, URL, DOM, or MARKET_ELIGIBLE field is retained.
+Verification completed with 137 focused observability tests passing, 301 relevant NAR tests passing, and the full repository suite passing with 3807 tests and 2841 subtests. Provider HTTP remained zero and Phase44 live acquisition was not entered.
 
-## Publication safety grammar and API
+After Phase58 is formally complete, Phase57 must return to PREPARE/review. It still requires explicit APPROVE and a new one-shot Phase57 authorization; none is issued automatically. Phase41 remains `DESIGN_BLOCKED`; `positive_market_eligibility` and `WHOLE_MEETING_CANCELLATION` remain `UNSUPPORTED`.
 
-Public symbols:
+## Approved implementation contract
 
-| Symbol | Input / output | Responsibility |
-| --- | --- | --- |
-| PublicationSafetyOutcome | SAFE, UNSAFE, AMBIGUOUS, UNSUPPORTED enum | aggregate/category vocabulary |
-| PublicationSafetyCategory | five frozen categories in fixed order | stable result ordering |
-| RawFixturePublicationSafety | frozen result; to_canonical_dict() and canonical_bytes() | safe publication decision |
-| assess_nar_race_entry_status_raw_fixture_publication_safety | exact DebaTable bytes and exact RaceList bytes -> RawFixturePublicationSafety | in-memory publication gate |
-| SourceProfilePublicationContractError | explicit validation/identity/manifest errors | programmer and structural contract failures |
-| build_nar_race_entry_status_fixture_set_v2 / validate_nar_race_entry_status_fixture_set_v2 | exact target + CaptureMetadataSummary -> identity/value / independent validation | source-evidence identity |
-| build_nar_race_entry_status_qualification_v2 / validate_nar_race_entry_status_qualification_v2 | target + fixture-set + Profile-A + Phase53 Profile-B -> identity/value / independent validation | semantic identity |
-| build_nar_race_entry_status_manifest_v2 / validate_nar_race_entry_status_manifest_v2 | deterministic value objects -> canonical bytes/value; canonical bytes + deterministic inputs -> value | local manifest build/revalidation |
+Allowed files are exactly:
 
-Both document bodies are strictly UTF-8 decoded and tag-balance checked. The evaluator inspects both roles and only attribute names/presence on meta, input, form, a, link, script, img, iframe; query parameter names/values in href, src, action; and header-style lines beginning authorization:, cookie:, set-cookie:. Attribute/query names are ASCII-lowercased with hyphen replaced by underscore.
+1. `scripts/simulation/nar_race_entry_status_reacquisition_observability.py`
+2. `tests/test_nar_race_entry_status_reacquisition_observability.py`
+3. `docs/CURRENT_PHASE.md`
+4. `docs/LATEST_CODEX_REPORT.md`
 
-| Category | Exact tokens |
-| --- | --- |
-| NO_AUTHENTICATION_MATERIAL | authorization, authentication, password, credential, api_key, access_token, refresh_token, bearer |
-| NO_COOKIE_OR_SESSION_SECRET | cookie, set_cookie, session, session_id, sessionid, sid |
-| NO_CSRF_OR_SECRET_TOKEN | csrf, xsrf, token, secret, nonce |
-| NO_USER_ACCOUNT_IDENTIFIER | user, username, user_id, account, account_id, member, member_id, login_id, email |
-| NO_PERSONALIZATION_IDENTIFIER | personalization, personalised, my_page, mypage, preference, favorite, history |
+Forbidden: every other repository path; Phase44, Phase53, and Phase56 changes; fixtures; `.gitattributes`; provider HTTP; Phase44 live acquisition; Phase57 authorization issuance; Phase54 authorization consumption; staging; commit; and push.
 
-A matched sensitive key with nonempty value is UNSAFE. Empty sensitive fields, malformed sensitive query encoding, and structurally indeterminate matching are AMBIGUOUS. No match is SAFE. Decode/structural failure is UNSUPPORTED. The aggregate is SAFE and raw_fixture_publication_safe true only if all five categories are SAFE; every other aggregate fails closed. Results contain only schema_version, result, raw_fixture_publication_safe, five ordered identifier/outcome/finding_count records. They never retain raw HTML, visible text, URL/query/value, secret, or exception repr.
+Required execution tests: focused Phase50 observability tests; only minimal no-network Phase56 interoperability if necessary; relevant NAR regression; and the full repository suite once when otherwise ready. The implementation must prove both blocked events reject closed-schema violations and unsafe data, preserve existing `SAFETY_PASS`, `PROFILE_A_QUALIFIED`, capture retention, Profile-B retention, and preflight behavior, retain no raw/secret data, and preserve journal schema version 1.
 
-## Error strategy
-
-Malformed/unsupported raw source returns a deterministic ordered diagnostic result. Exact-type violations, illegal value objects, malformed manifest structure, noncanonical serialization, and identity/provenance mismatch raise SourceProfilePublicationContractError. There is no coercion, partial qualification, fallback, or silently repaired object.
-
-## Future synthetic tests and execution economy
-
-Profile-A tests: valid listing; missing/duplicate target scope; missing/duplicate selected ordinary horse; nonnumeric horse; wrong scope; malformed DOM; invalid UTF-8; repeatability; canonical bytes; no raw/URL/MARKET_ELIGIBLE output.
-
-Safety tests: minimal safe Deba/RaceList; each category independently; multiple categories; ambiguous token-like field/query; malformed DOM; invalid UTF-8; repeatability; no raw source/value echo; aggregate fail-closed result.
-
-Identity/manifest tests: canonical byte/identity repeatability; input mapping order immaterial; changed SHA, length, or capture id changes fixture identity; run_id/temp/repository paths cannot affect identities; Profile-A/Profile-B semantic changes change qualification identity; raw HTML absent; builder/validator round-trip; wrong schema, missing/extra key, wrong provenance/id/SHA/length, noncanonical bytes, operational field, and disclaimer mismatch fail closed; local reread validation has no network.
-
-Future EXECUTE order: focused v2 tests; Phase53 interoperability only if affected; relevant NAR regression once; full suite once when otherwise ready. No broad test run occurs in PREPARE.
-
-## Future success and authorization
-
-Future Phase56 success is READY_FOR_REVIEW / IMPLEMENTED_PUBLICATION_CONTRACT_V2_SUPPORT. It requires all six-path support, focused and relevant/full tests, no network, clean index, and diff check PASS.
-
-Phase57 remains unauthorized until Phase56 is reviewed, integrated, independently remote-verified, and formally complete; then it needs PREPARE, review, APPROVE, and a new explicit one-shot authorization. Phase54 is never reused.
-
-Phase41 remains DESIGN_BLOCKED. COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE and NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE remain OPEN. Positive market eligibility and WHOLE_MEETING_CANCELLATION remain UNSUPPORTED.
-
-## Phase56 execution result
-
-The exact six-path implementation is integrated pending independent remote verification. The tracked Profile-A module implements the frozen three-predicate grammar and canonical safe result. The publication-contract module implements the five-category fail-closed safety gate, fixture-set-v2 and qualification-v2 canonical payload/identity build-validation symmetry, and closed canonical manifest-v2 build-validation symmetry. Phase53 remains the sole Profile-B authority; Phase44 and Phase50 are unchanged.
-
-Verification passed entirely without provider HTTP: focused Phase56 tests 46 passed (14 Profile-A and 32 publication-contract); Phase53 interoperability 23 passed; relevant NAR regression 690 passed plus 596 subtests; full repository suite 3,753 passed plus 2,841 subtests. Static no-network/source-safety checks, deterministic canonicalization checks, raw/secret exclusion checks, operational-metadata exclusion checks, MARKET_ELIGIBLE non-inference checks, and `git diff --check` passed.
-
-The repository delta is exactly the approved six paths. The index remains empty. No Phase44, Phase50, Phase53, fixture, `.gitattributes`, database, log, or generated-cache path changed. No provider data was acquired, Phase44 live acquisition was not entered, Phase54 authority remains factually unconsumed but unusable for v2, and Phase57 authorization remains not issued.
+Integration state: `INTEGRATED_PENDING_REMOTE_VERIFICATION`. Do not mark Phase58 formally complete, issue Phase57 authorization, or advance phases until independent remote verification is explicitly recorded.
