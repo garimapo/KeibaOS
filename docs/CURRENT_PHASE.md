@@ -2,181 +2,178 @@
 
 ## Phase
 
-`POST_V0_8_DAILY_REPLAY_59`
+`POST_V0_8_DAILY_REPLAY_57`
+
+## Revision
+
+`PHASE57_REPREPARE_AFTER_PHASE58_PHASE59`
 
 ## Title
 
-Phase50 v2 Publication Identity Observability Compatibility Support
+Controlled NAR Source-Profile v2 Reacquisition and Publication
 
 ## Status
 
-`INTEGRATED_PENDING_REMOTE_VERIFICATION`
+`DRAFT_FOR_REVIEW`
 
 ## Outcome
 
-`IMPLEMENTED_PHASE50_V2_PUBLICATION_IDENTITY_COMPATIBILITY`
+`DESIGN_BLOCKED_PHASE57_PUBLICATION_MANIFEST_AUTHORITY_UNAVAILABLE`
 
-## Approved design basis
+## Execution state
 
-- Formal Status: `APPROVED_FOR_CODEX`
-- Design Review: `PHASE59_DESIGN_REVIEW_PASS`
-- Integration Review: `PASS_FOR_INTEGRATION`.
-- Remote Verification: `REQUIRED`.
-- Current next action: independent remote verification; do not begin Phase57.
-- Phase44 changes: `NOT_AUTHORIZED`.
-- Phase53 changes: `NOT_AUTHORIZED`.
-- Phase56 changes: `NOT_AUTHORIZED`.
-- Provider HTTP: `NOT_AUTHORIZED`.
+- Phase57 execution state: `DESIGN_BLOCKED`.
+- Tracked blocker: `PHASE57_PUBLICATION_MANIFEST_AUTHORITY_UNAVAILABLE`.
+- Next required support: `POST_V0_8_DAILY_REPLAY_60`, a new reviewed tracked publication-plan and binary-preservation authority phase.
+- Next action after this docs-only integration: Phase60 PREPARE only after independent remote verification.
+- Phase57 is not formally complete, authorized, ready for execution, or ready for live work.
 
-## Implementation result
-
-- The confirmed `PHASE57_V2_MANIFEST_OBSERVABILITY_IDENTITY_INCOMPATIBLE` blocker is resolved and integrated locally, pending independent remote verification.
-- Fixture-set and qualification identities now accept only the exact canonical v1 or v2 families frozen by this phase.
-- Private Phase50 validators return canonical text plus derived exact version `1` or `2`; `MANIFEST_WRITTEN` requires the two derived versions to match.
-- `v1/v1` and `v2/v2` pairs are accepted; `v1/v2` and `v2/v1` pairs are rejected fail-closed.
-- Historical v1 acceptance remains only `LEXICALLY_CANONICAL_HISTORICAL_OBSERVABILITY_VALUE`; `V1_PUBLICATION_CONTRACT_NOT_EXACTLY_RECOVERABLE` remains unchanged.
-- `MANIFEST_WRITTEN` and its keys, `JOURNAL_SCHEMA_VERSION = 1`, milestone ordering, Phase58 durability events, and `LIVE_PROCESS_COMPLETE` outcomes are unchanged.
-- Phase44, Phase53, and Phase56 are unchanged. Provider HTTP and Phase44 live acquisition both remain zero/not entered.
-
-## Verification evidence
-
-- Focused Phase50 observability: `170 passed`.
-- Relevant no-network NAR regression: `334 passed`.
-- Full repository suite: `3840 passed, 2841 subtests passed`.
-- Added-lines no-network/no-domain-import/no-market-inference audit: PASS.
-- Repository delta: exactly the four approved implementation-manifest paths.
-- Staging: empty; no untracked paths; `git diff --check`: PASS.
-
-## Authority and Git basis
+## Git and predecessor basis
 
 - Authorized worktree: `C:\Users\garim\Desktop\KeibaOS-post-v0.8`
 - Branch: `feature/post-v0.8-daily-replay`
-- Base HEAD: `be508d64c1004406445b2a5cdf33da37bdf2354d`
-- Predecessor: Phase58, `FORMALLY_COMPLETE`
-- Phase58 commit/tree: `be508d64c1004406445b2a5cdf33da37bdf2354d` / `ff9890c9289349408ad62522e3b6a20c7359da96`
-- Phase44 remains the sole acquisition authority; Phase50 remains operational observability only; Phase56 remains the sole v2 publication-identity authority.
+- Base/local/remote HEAD: `4de9849e87538bf1d6b83cdaba48430d2993885a`
+- The required Phase56, Phase58, and Phase59 `FORMALLY_COMPLETE` states are accepted as the current user-supplied phase-state authority for this re-PREPARE.
+- Their prior in-tree reports remain historical integration reports and must not be treated as a substitute for the current user-supplied formal-completion declaration.
 
-## Authorization and acquisition state
+## Authorization and target
 
-- Phase54: `PHASE54_AUTHORIZATION_UNCONSUMED_BUT_UNUSABLE_FOR_V2`.
-- Phase57: `DESIGN_BLOCKED`; `PHASE57_ACQUISITION_AUTHORIZATION_NOT_YET_ISSUED`.
-- Provider HTTP: `0`; Phase44 live acquisition: not entered.
-- Phase59 issues and consumes no authorization and performs no live work.
+- Phase54: `PHASE54_AUTHORIZATION_UNCONSUMED_BUT_UNUSABLE_FOR_V2`; it must never be reused.
+- Phase57 at PREPARE entry: `PHASE57_ACQUISITION_AUTHORIZATION_NOT_YET_ISSUED`.
+- No Phase57 authorization is issued or consumed by this PREPARE.
+- Frozen future target: provider `NAR`; `baba_code=21`; `race_date=2025-01-01`; `race_no=6`.
+- Frozen Phase44-only collection order: `DebaTable` then `RaceList`; maximum provider GET attempts: `2`; no retry, fallback, discovery, alternate target/provider, partial return, or second Phase44 attempt.
+- Future evidence is `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`; it establishes neither historical bytes/availability/cutoff nor historical market eligibility or backdated response time.
 
-## Confirmed compatibility blocker
+## Reconfirmed integrated authorities
 
-`PHASE57_V2_MANIFEST_OBSERVABILITY_IDENTITY_INCOMPATIBLE`
+### Phase58 durability
 
-At `be508d64c1004406445b2a5cdf33da37bdf2354d`, Phase50's local lexical validators in `scripts/simulation/nar_race_entry_status_reacquisition_observability.py` accept only these exact historical strings:
+Phase50 contains the additive, typed milestones:
 
-- `nar-race-entry-status-source-profile-fixture-set-v1:<64 lowercase hexadecimal characters>`
-- `nar-race-entry-status-source-profile-qualification-v1:<64 lowercase hexadecimal characters>`
+- `PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED`: accepts only a closed, bounded, non-SAFE Phase56 safety projection and is durable through the canonical journal writer's write → flush → fsync path.
+- `PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED`: accepts only a closed, bounded, BLOCKED Profile-A projection; its selected provider horse number is exactly null; it uses the same durability path.
+- Existing `SAFETY_PASS` and `PROFILE_A_QUALIFIED` remain success-only milestones.
 
-`MANIFEST_WRITTEN` uses those validators for its unchanged detail keys, `fixture_set_identity` and `qualification_identity`. Phase56's tracked publication contract instead emits the formally complete v2 families:
+The former Safety and Profile-A blocked-result durability gaps are therefore closed. A non-SAFE Safety result or BLOCKED Profile-A result can be retained before raw cleanup.
 
-- `nar-race-entry-status-source-profile-fixture-set-v2:<64 lowercase hexadecimal characters>`
-- `nar-race-entry-status-source-profile-qualification-v2:<64 lowercase hexadecimal characters>`
+### Phase59 v2 manifest observability
 
-The v1-only Phase50 validators would reject the v2 identity strings before a future Phase57 manifest could be durably journaled.
+`MANIFEST_WRITTEN` keeps its exact keys, `fixture_set_identity` and `qualification_identity`, and `JOURNAL_SCHEMA_VERSION = 1`. Its private local validators now accept exactly v1 or v2 lowercase-hex identity strings, derive versions `1` or `2`, accept `v1/v1` and `v2/v2`, and reject either mixed pair. This closes the prior `PHASE57_V2_MANIFEST_OBSERVABILITY_IDENTITY_INCOMPATIBLE` blocker.
 
-## Frozen Phase59 scope
+Acceptance of v1 is only `LEXICALLY_CANONICAL_HISTORICAL_OBSERVABILITY_VALUE`; it does not imply `V1_PUBLICATION_CONTRACT_RECOVERED`. `V1_PUBLICATION_CONTRACT_NOT_EXACTLY_RECOVERABLE` remains frozen.
 
-Phase59 is a strictly additive, no-network Phase50 lexical/structural compatibility change. It will not construct or recompute either identity, evaluate Phase56 payloads, decide semantic validity, redefine v1 or v2, parse provider data, acquire source data, or change manifest semantics. Phase56 remains the sole authority for v2 identity construction and semantic validation.
+## Actual Phase50 order and valid future live sequence
 
-Historical v1 lexical acceptance means only “lexically canonical historical observability value.” It does not establish that the unresolved v1 publication contract was complete or semantically valid.
+The integrated enum order is authoritative and must not be reordered:
 
-### Exact lexical acceptance
+1. `CLOSED_BUNDLE_RETURNED`
+2. `DEBA_CAPTURE_METADATA_RETAINED`
+3. `RACELIST_CAPTURE_METADATA_RETAINED`
+4. `PROFILE_B_DIAGNOSTICS_RETAINED`
+5. `IDENTITY_VERIFICATION_PASS`
+6. `PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED`
+7. `SAFETY_PASS`
+8. `PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED`
+9. `PROFILE_A_QUALIFIED`
+10. `PROFILE_B_QUALIFIED`
+11. `PUBLICATION_BEGIN`
+12. `RAW_FIXTURES_WRITTEN`
+13. `MANIFEST_WRITTEN`
+14. `DEDICATED_TEST_WRITTEN`
+15. `REGRESSIONS_PASS`
+16. `LIVE_PROCESS_COMPLETE`
+17. `PARENT_EVIDENCE_VALIDATION_PASS`
+18. `PARENT_CLEANUP_COMPLETE`
 
-Fixture-set identity accepts exactly one of:
+The required future sequence is compatible:
 
-- `nar-race-entry-status-source-profile-fixture-set-v1:[0-9a-f]{64}`
-- `nar-race-entry-status-source-profile-fixture-set-v2:[0-9a-f]{64}`
+1. After a closed Phase44 bundle, construct Phase53 `CaptureMetadataSummary` and durably retain both document metadata records.
+2. Evaluate the exact RaceList raw bytes with the sole Phase53 Profile-B diagnostic function and durably emit `PROFILE_B_DIAGNOSTICS_RETAINED`. This preserves diagnostic evidence; it is not yet a success decision.
+3. Validate the formal bundle/target/capture identities and emit `IDENTITY_VERIFICATION_PASS` only on exact success.
+4. Evaluate Phase56 safety. Emit `SAFETY_PASS` only for SAFE; otherwise durably emit the Phase58 safety-blocked event and stop fail-closed.
+5. Evaluate Phase56 Profile-A. Emit `PROFILE_A_QUALIFIED` only for QUALIFIED / `ENTRY_LISTING_PRESENT`; otherwise durably emit the Phase58 Profile-A-blocked event and stop fail-closed.
+6. Inspect the already-retained Phase53 diagnostic; emit `PROFILE_B_QUALIFIED` only for QUALIFIED / `EXPLICIT_WITHDRAWAL_PRESENT`, otherwise stop fail-closed using retained diagnostics.
 
-Qualification identity accepts exactly one of:
+Current semantic validation permits that early Profile-B retention: it requires closed-bundle and both capture records, but does not treat retention as Profile-B qualification. It also rejects later success progression after either new blocked event.
 
-- `nar-race-entry-status-source-profile-qualification-v1:[0-9a-f]{64}`
-- `nar-race-entry-status-source-profile-qualification-v2:[0-9a-f]{64}`
+## Proposed no-network pre-live gate
 
-The match is whole-string ASCII only. Other versions, uppercase hexadecimal, a digest of any other length, missing digest, suffix text, whitespace, newline, malformed prefixes, and arbitrary text are rejected. The implementation uses explicit v1/v2 alternatives, not a permissive version pattern.
+Before a future Phase57 authorization-consumption boundary, complete with provider HTTP `0`, no Phase44 live entry, and authorization still unconsumed:
 
-`MANIFEST_WRITTEN` keeps its milestone name, two detail keys, ordering, and meaning unchanged. A private local helper may derive a validated version from each identity solely to apply the frozen pair rule; it exposes no new public Phase50 API and imports no Phase56 production module.
+1. Git/worktree/expected-HEAD validation and final cleanliness recheck.
+2. Generated preflight source compile validation.
+3. Phase50 synthetic observability preflight; exact binary comparison with `b"NAR_REACQUISITION_OBSERVABILITY_PREFLIGHT_PASS\n"` only, final byte `0A`, no CRLF, stripping, or normalization.
+4. Preflight journal/evidence validation and cleanup of preflight/generated artifacts.
+5. Strict explicit repository-root validation, sentinel checks, and `sys.path[0]` insertion before imports.
+6. Import smoke proving Phase44, Phase50, Phase53, Phase56 Profile-A, and Phase56 publication-contract modules originate under the one authorized worktree, not cwd, an alternate checkout, copied modules, or an installed substitute.
+7. Minimal deterministic v2 self-checks, including Phase58 blocked-event support and a Phase59 v2/v2 placeholder `MANIFEST_WRITTEN` acceptance plus mixed-pair rejection.
+8. Future live-child generated source compile validation.
 
-### Pair compatibility decision
+## Future authorization and acquisition evidence
 
-Only `v1/v1` and `v2/v2` pairs are accepted. `v1/v2` and `v2/v1` pairs are rejected fail-closed.
+Future APPROVE alone may change Phase57 to `PHASE57_ACQUISITION_AUTHORIZATION_UNCONSUMED`. Immediately before the single Phase44 closed-bundle call, the canonical `PHASE44_CALL_ABOUT_TO_ENTER` record must write, flush, and fsync. Only then is authorization `PHASE57_ACQUISITION_AUTHORIZATION_CONSUMED_FAIL_CLOSED`; it is never restored, retried, or reused.
 
-Targeted history for the Phase50 module and its focused tests finds only the original same-version v1 pair introduced at `c796e45467184efad97f312c605a67c65865b21b`; no tracked evidence requires mixed-version journal readability. Phase56 defines qualification v2 against fixture-set v2 identity, so a mixed pair is structurally suspicious even when each individual string is lexical-valid.
+The one successful acquisition must prove exactly one Phase44 entry, each Deba and RaceList transport/pre-GET/response-return/raw-construction event once, and one closed-bundle return. A pre-GET event alone never proves provider receipt; completed request claims require response-return evidence.
 
-## Journal compatibility
+Capture retention uses Phase53 `CaptureMetadataSummary`, retaining only role, request/capture identity, SHA-256, byte length, three timestamps, effective/canonical URL match boolean, and closed-bundle identity. No raw body, URL/query, or secret enters the journal.
 
-- `JOURNAL_SCHEMA_VERSION` remains `1`.
-- `MAX_RECORD_BYTES` remains `4096`.
-- `MANIFEST_WRITTEN` detail keys remain exactly `fixture_set_identity` and `qualification_identity`.
-- Existing v1 journal records remain readable.
-- Phase58 blocked-event semantics and all existing retention event semantics remain unchanged.
+## Qualification, v2 identities, and manifest
 
-This is an additive lexical compatibility extension: detail keys and milestone semantics do not change, so no journal migration or version bump is required.
+- Phase44 formal identity verification checks the exact target, roles/order, request/capture IDs, SHA/length, six timestamps, bundle identity, effective URL canonical-match booleans, and DebaTable → RaceList relation.
+- Phase56 safety is the sole five-category evaluator. SAFE emits `SAFETY_PASS`; every other outcome is durably retained through Phase58 then stops.
+- Phase56 Profile-A is the sole `ENTRY_LISTING_PRESENT` evaluator. QUALIFIED emits `PROFILE_A_QUALIFIED`; every BLOCKED result is durably retained through Phase58 then stops. Neither path implies `MARKET_ELIGIBLE`.
+- Phase53 is the sole Profile-B evaluator with its six frozen predicates. Its early retained result is reused for the later `PROFILE_B_QUALIFIED` decision; it is never reimplemented in launcher code.
+- Phase56 builds and independently validates fixture-set v2 and qualification v2 identities. Fixture-set construction uses the exact formal capture summary and its two fixed v2 fixture-relative paths; qualification uses target, fixture-set, canonical Profile-A and Profile-B results, and `market_eligibility=UNSUPPORTED`.
+- Phase56 builds and independently validates manifest v2 in memory before publication. It requires `manifest_schema=nar-race-entry-status-source-profile-fixture-manifest`, schema version `2`, `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`, and `market_eligibility=UNSUPPORTED`.
+- After binary manifest reread/revalidation, Phase59 accepts the required v2/v2 `MANIFEST_WRITTEN` pair.
 
-## Frozen Phase50 milestone order
+## Publication and cleanup design pending authority recovery
 
-The current enum order, which Phase59 must not change, is:
+If an exact publication-path authority is established, `PUBLICATION_BEGIN` may occur only after complete bundle, both capture records, retained Profile-B diagnostics, identity verification, SAFE/`SAFETY_PASS`, qualified Profile-A, qualified Profile-B, validated v2 identities, in-memory validated manifest, exact path-plan validation, and an armed rollback plan.
 
-1. `PROFILE_B_DIAGNOSTICS_RETAINED`
-2. `IDENTITY_VERIFICATION_PASS`
-3. `PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED`
-4. `SAFETY_PASS`
-5. `PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED`
-6. `PROFILE_A_QUALIFIED`
-7. `PROFILE_B_QUALIFIED`
-8. `PUBLICATION_BEGIN`
-9. `RAW_FIXTURES_WRITTEN`
-10. `MANIFEST_WRITTEN`
+Captured fixture bytes must be binary-written without decode/re-encode, newline conversion, redaction, formatting, or parser round-trip; binary reread, equality, SHA-256, and byte length must then pass before `RAW_FIXTURES_WRITTEN`. Any post-begin local failure must journal `ROLLBACK_BEGIN` and `ROLLBACK_COMPLETE`, restore only the approved publication paths to exact pre-run state, never restore authorization or reacquire, and retain truthful safe failure evidence. Pre-begin failure leaves official publication paths untouched; safe evidence is retained before transient raw bytes, child source, journal after parent validation, temp files, and run cache residue are removed.
 
-## Live-process outcome audit
+## Unresolved tracked publication authority
 
-The existing Phase50 `LIVE_PROCESS_COMPLETE` vocabulary is sufficient without change:
+The Phase56 tracked contract freezes only these v2 fixture-relative paths:
 
-- successful publication path: `READY_FOR_REVIEW`
-- source-profile blocked path: `SOURCE_PROFILE_FIXTURE_BLOCKED`
-- preflight blocked path: `RECOVERY_PREFLIGHT_BLOCKED`
+1. `tests/fixtures/nar_race_entry_status/source_profiles/v2/baba_21__2025-01-01__race_06/deba_table.html`
+2. `tests/fixtures/nar_race_entry_status/source_profiles/v2/baba_21__2025-01-01__race_06/race_list.html`
 
-The remaining synthetic outcomes are `SYNTHETIC_SUCCESS` and `SYNTHETIC_FAILURE`. No `PHASE57_LIVE_PROCESS_OUTCOME_VOCABULARY_INCOMPATIBLE` blocker is present.
+Targeted tracked-history searches found no committed authority for the asserted seven-path Phase57 publication manifest, for `tests/test_nar_race_entry_status_source_profile_v2_fixtures.py`, or for the required v2 binary rule `tests/fixtures/nar_race_entry_status/source_profiles/v2/**/*.html -text`. The current `.gitattributes` has a distinct v1 market-odds rule but no v2 source-profile rule.
 
-## Future implementation manifest
+Therefore this PREPARE cannot truthfully reaffirm that the exact seven paths were already frozen, nor claim that the absent v2 `.gitattributes` rule is already active. The proposed seven-path list from the re-PREPARE instruction is not silently adopted as historical tracked authority.
 
-Exactly four paths are authorized for a later Phase59 EXECUTE:
+Required resolution: an explicit reviewed publication-manifest decision must establish the seven exact paths, including the official v2 test path and exact v2 `.gitattributes` line, or provide the authoritative tracked source that already froze them. Until then, future Phase57 cannot enter `PUBLICATION_BEGIN` and must not receive live authorization.
 
-1. `scripts/simulation/nar_race_entry_status_reacquisition_observability.py`
-2. `tests/test_nar_race_entry_status_reacquisition_observability.py`
-3. `docs/CURRENT_PHASE.md`
-4. `docs/LATEST_CODEX_REPORT.md`
+## Completion-outcome and parent-evidence design
 
-No Phase44, Phase53, or Phase56 file; fixture; `.gitattributes` file; database; log; or additional path is authorized. A fifth path requires `DESIGN_BLOCKED_SCOPE_EXPANSION_REQUIRED`.
+Current Phase50 outcomes are sufficient and unchanged:
 
-## Required future tests
+- successful publication: `READY_FOR_REVIEW`
+- source-profile block: `SOURCE_PROFILE_FIXTURE_BLOCKED`
+- preflight/recovery block: `RECOVERY_PREFLIGHT_BLOCKED`
 
-- Each identity family: canonical v1 and v2 accept; v3, uppercase digest, short/long digest, malformed prefix, and trailing text reject.
-- `MANIFEST_WRITTEN`: v1/v1 and v2/v2 accept; either mixed pair rejects; malformed fixture or qualification identity rejects; detail keys stay exact; canonical journal round-trip and existing record bound hold.
-- Existing Phase58 blocked-event tests, the exact preflight token, journal schema version, and milestone ordering remain unchanged.
-- Test economy: focused observability tests, one relevant no-network NAR observability/publication-contract regression, then one full suite when otherwise ready.
+The parent must retain/report only safe supported evidence: authorization boundary/state, Phase44 and completion counts, capture/request identities, SHA/length/timestamps/bundle identity, retained Profile-B diagnostics, identity status, retained Safety/Profile-A outcomes, identities if safely available, manifest state, publication/rollback/cleanup state. It must never report raw bodies, secret values, cookie/credential data, arbitrary provider text, or arbitrary URL/query values.
 
-## Future success boundary
+## Approval-readiness answers
 
-`POST_V0_8_DAILY_REPLAY_59` may become:
-
-- Status: `READY_FOR_REVIEW`
-- Outcome: `IMPLEMENTED_PHASE50_V2_PUBLICATION_IDENTITY_COMPATIBILITY`
-
-Only after v1 lexical compatibility is preserved, both v2 identity shapes are accepted, the same-version pair rule is enforced, `MANIFEST_WRITTEN` keys/meaning and journal schema remain unchanged, Phase58 support remains unchanged, required no-network tests pass, the exact four-path delta is present, the index is empty, and `git diff --check` passes.
+| Item | Result | Basis |
+| --- | --- | --- |
+| A. Phase58 Safety/Profile-A durability blockers closed | YES | Both blocked-only typed, fsynced events are integrated. |
+| B. Phase59 v2 `MANIFEST_WRITTEN` incompatibility closed | YES | Exact v2/v2 pair is accepted; mixed pairs reject. |
+| C. Actual Phase50 order compatible | YES | Early Profile-B retention then late qualification fits current semantic validation. |
+| D. Completion outcomes sufficient | YES | Existing success/source-profile/preflight values map truthfully. |
+| E. Exact seven-path manifest still frozen and valid | NO | No committed tracked authority for the full seven-path manifest was found. |
+| F. v2 binary rule still correct and active | NO | The proposed rule is plausible but not tracked or active; it cannot be asserted as frozen. |
+| G. Post-acquisition failures can preserve required existing safe evidence | YES | Capture, Profile-B, blocked Safety, and blocked Profile-A evidence are durably retained before cleanup; rollback is defined for post-begin failure. |
+| H. Additional tracked support/authority phase required | YES | A reviewed tracked publication-manifest/binary-attributes authority decision is required before live approval. |
 
 ## Persistent constraints
 
-- Phase41 remains `DESIGN_BLOCKED`.
-- `positive_market_eligibility = UNSUPPORTED`.
-- `WHOLE_MEETING_CANCELLATION = UNSUPPORTED`.
-- Open: `COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE` and `NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE`.
-- No Phase50 identity string establishes `MARKET_ELIGIBLE`.
-
-## Review boundary
-
-Integration is pending independent remote verification. Phase59 must not be marked formally complete locally before that verification. No authorization, provider HTTP, Phase44 live entry, fixture publication, or Phase57 restart occurred.
+- Phase41: `DESIGN_BLOCKED`.
+- `positive_market_eligibility = UNSUPPORTED`; `WHOLE_MEETING_CANCELLATION = UNSUPPORTED`.
+- Open: `COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE`; `NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE`.
+- No source-profile fixture or observability identity establishes `MARKET_ELIGIBLE`.
+- PREPARE creates no Python, tests, fixtures, attributes change, provider HTTP, Phase44 entry, authorization, staging, commit, or push.
