@@ -76,6 +76,42 @@ def _capture_metadata(role: str) -> dict[str, object]:
     }
 
 
+def _strict_structure_recovery_diagnostics() -> dict[str, object]:
+    return {
+        "schema": "nar-race-entry-status-strict-structure-recovery-diagnostics",
+        "schema_version": 1,
+        "document_results": [{
+            "document_role": role, "failure_kind": "END_TAG_MISMATCH",
+            "event_index": 10000, "stack_depth": 10000,
+            "expected_open_tag": "OTHER_OR_CUSTOM", "observed_end_tag": "OTHER_OR_CUSTOM",
+            "tolerant_parse": "PASS",
+        } for role in ("deba_table", "race_list")],
+    }
+
+
+def _candidate_ancestry_recovery_diagnostics(count: int = 1) -> dict[str, object]:
+    return {
+        "schema": "nar-race-entry-status-profile-b-candidate-ancestry-recovery-diagnostics",
+        "schema_version": 1,
+        "target": {"baba_code": "21", "race_date": "2025-01-01", "race_no": 6},
+        "race_table_scope_count": 1, "target_candidate_count": count,
+        "candidate_details_complete": count <= 8,
+        "candidate_results": [{
+            "candidate_ordinal": ordinal, "nearest_table_role": "CHANGE_INFO_TABLE",
+            "inside_change_info_table": True,
+            "nested_table_depth_within_race_scope": 10000,
+            "direct_schedule_table_descendant": False,
+        } for ordinal in range(1, count + 1)] if count <= 8 else [],
+    }
+
+
+def _structural_stage_recovery_diagnostics() -> dict[str, object]:
+    payload = _safety_recovery_diagnostics()
+    for role in payload["document_results"]:
+        role.update(utf8_decode="PASS", strict_structure="FAIL")
+    return payload
+
+
 def _profile_b_diagnostics() -> dict[str, object]:
     fields = {
         "RACE_TABLE_SCOPE": {"race_table_scope_count": 1},
@@ -276,8 +312,10 @@ def _details_for(milestone: subject.ObservationMilestone) -> dict[str, object]:
         subject.ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED: {"capture_metadata": _capture_metadata("race_list")},
         subject.ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED: {"profile_b_diagnostics": _profile_b_diagnostics()},
         subject.ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED: {"profile_b_recovery_diagnostics": _profile_b_recovery_diagnostics()},
+        subject.ObservationMilestone.PROFILE_B_CANDIDATE_ANCESTRY_RECOVERY_DIAGNOSTICS_RETAINED: {"profile_b_candidate_ancestry_recovery_diagnostics": _candidate_ancestry_recovery_diagnostics()},
         subject.ObservationMilestone.IDENTITY_VERIFICATION_PASS: {"bundle_id": BUNDLE_ID},
-        subject.ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED: {"publication_safety_recovery_diagnostics": _safety_recovery_diagnostics()},
+        subject.ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED: {"publication_safety_recovery_diagnostics": _structural_stage_recovery_diagnostics()},
+        subject.ObservationMilestone.STRICT_STRUCTURE_RECOVERY_DIAGNOSTICS_RETAINED: {"strict_structure_recovery_diagnostics": _strict_structure_recovery_diagnostics()},
         subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED: {
             "publication_safety": _publication_safety_result(),
         },
@@ -524,8 +562,12 @@ def test_phase59_identity_compatibility_preserves_observability_contracts() -> N
         subject.ObservationMilestone.RAW_FIXTURES_WRITTEN,
         subject.ObservationMilestone.MANIFEST_WRITTEN,
     )
-    start = list(subject.ObservationMilestone).index(expected_order[0])
-    assert tuple(subject.ObservationMilestone)[start : start + len(expected_order)] == expected_order
+    historical_order = tuple(m for m in subject.ObservationMilestone if m not in {
+        subject.ObservationMilestone.PROFILE_B_CANDIDATE_ANCESTRY_RECOVERY_DIAGNOSTICS_RETAINED,
+        subject.ObservationMilestone.STRICT_STRUCTURE_RECOVERY_DIAGNOSTICS_RETAINED,
+    })
+    start = historical_order.index(expected_order[0])
+    assert historical_order[start : start + len(expected_order)] == expected_order
     assert subject.JOURNAL_SCHEMA_VERSION == 1
     assert subject.PREFLIGHT_PASS_TOKEN == "NAR_REACQUISITION_OBSERVABILITY_PREFLIGHT_PASS"
     assert subject._ALLOWED_OUTCOMES == frozenset(
@@ -1566,6 +1608,8 @@ def test_recovery_milestone_order_and_historical_phase57_shape(tmp_path: Path) -
     recovery = {
         subject.ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED,
         subject.ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED,
+        subject.ObservationMilestone.PROFILE_B_CANDIDATE_ANCESTRY_RECOVERY_DIAGNOSTICS_RETAINED,
+        subject.ObservationMilestone.STRICT_STRUCTURE_RECOVERY_DIAGNOSTICS_RETAINED,
     }
     old = tuple(m for m in subject.ObservationMilestone if m not in recovery)
     historical = tuple(m for m in old if subject._MILESTONE_ORDER[m] <= subject._MILESTONE_ORDER[subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED]) + (
@@ -1614,10 +1658,11 @@ def test_recovery_valid_chronology_and_out_of_order_rejected(tmp_path: Path) -> 
     wrong = records[:-2] + (records[-1], records[-2])
     with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
         subject.validate_journal_semantics(wrong)
-    assert [r.milestone for r in records[-5:]] == [
+    assert [r.milestone for r in records[-6:]] == [
         subject.ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED,
         subject.ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED,
         subject.ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED,
+        subject.ObservationMilestone.PROFILE_B_CANDIDATE_ANCESTRY_RECOVERY_DIAGNOSTICS_RETAINED,
         subject.ObservationMilestone.IDENTITY_VERIFICATION_PASS,
         subject.ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED,
     ]
@@ -1653,3 +1698,229 @@ def test_phase50_safety_recovery_all_stage_combinations(decode: str, structure: 
     else:
         with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
             subject._validate_publication_safety_recovery_diagnostics(payload)
+
+
+@pytest.mark.parametrize("family", ["strict", "ancestry"])
+def test_phase66_exact_event_details_and_payload_round_trip(family: str) -> None:
+    milestone = (subject.ObservationMilestone.STRICT_STRUCTURE_RECOVERY_DIAGNOSTICS_RETAINED
+                 if family == "strict" else subject.ObservationMilestone.PROFILE_B_CANDIDATE_ANCESTRY_RECOVERY_DIAGNOSTICS_RETAINED)
+    details = _details_for(milestone)
+    record = _canonical(_record(milestone=milestone.value, details=details)) + b"\n"
+    assert dict(subject.validate_journal_bytes(record)[0].details) == details
+    for wrong in ({}, {**details, "extra": 1}, {"unrelated": next(iter(details.values()))}):
+        with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+            subject.validate_journal_bytes(_canonical(_record(milestone=milestone.value, details=wrong)) + b"\n")
+
+
+@pytest.mark.parametrize("where,key,value", [
+    ("top", "schema", "wrong"), ("top", "schema_version", 2),
+    ("top", "schema_version", True), ("top", "extra", "provider text"),
+    ("role", "document_role", "race_list"), ("role", "failure_kind", "FAIL"),
+    ("role", "event_index", -1), ("role", "event_index", 10001),
+    ("role", "event_index", True), ("role", "stack_depth", -1),
+    ("role", "stack_depth", 10001), ("role", "stack_depth", False),
+    ("role", "expected_open_tag", "custom-provider-tag"),
+    ("role", "observed_end_tag", "div"), ("role", "tolerant_parse", "NOT_RUN"),
+    ("role", "expected_open_tag", None), ("role", "stack_depth", 0),
+    ("role", "event_index", 0), ("role", "extra", "provider text"),
+])
+def test_phase66_strict_nested_validation_rejects(where: str, key: str, value: object) -> None:
+    payload = _strict_structure_recovery_diagnostics()
+    (payload if where == "top" else payload["document_results"][0])[key] = value
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject._validate_strict_structure_recovery_diagnostics(payload)
+
+
+@pytest.mark.parametrize("kind,index,depth,expected,observed", [
+    ("PASS", 0, 0, None, None),
+    ("END_TAG_EMPTY_STACK", 1, 0, None, "DIV"),
+    ("END_TAG_MISMATCH", 2, 1, "OTHER_OR_CUSTOM", "OTHER_OR_CUSTOM"),
+    ("UNCLOSED_STACK_AT_CLOSE", 1, 1, "DIV", None),
+])
+def test_phase66_strict_independent_state_machine(kind, index, depth, expected, observed) -> None:
+    payload = _strict_structure_recovery_diagnostics()
+    role = payload["document_results"][0]
+    role.update(failure_kind=kind, event_index=index, stack_depth=depth,
+                expected_open_tag=expected, observed_end_tag=observed)
+    assert subject._validate_strict_structure_recovery_diagnostics(payload) == payload
+    role["observed_end_tag"] = "DIV" if observed is None else None
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject._validate_strict_structure_recovery_diagnostics(payload)
+
+
+@pytest.mark.parametrize("where,key,value", [
+    ("top", "schema", "wrong"), ("top", "schema_version", 2),
+    ("top", "schema_version", True), ("top", "extra", "raw class"),
+    ("top", "target_candidate_count", 2), ("top", "race_table_scope_count", 0),
+    ("top", "race_table_scope_count", 10001), ("top", "target_candidate_count", True),
+    ("top", "candidate_details_complete", False), ("top", "candidate_details_complete", 1),
+    ("candidate", "candidate_ordinal", 2), ("candidate", "candidate_ordinal", True),
+    ("candidate", "nearest_table_role", "provider-class"),
+    ("candidate", "nested_table_depth_within_race_scope", -1),
+    ("candidate", "nested_table_depth_within_race_scope", 10001),
+    ("candidate", "nested_table_depth_within_race_scope", True),
+    ("candidate", "nested_table_depth_within_race_scope", 0),
+    ("candidate", "inside_change_info_table", False),
+    ("candidate", "inside_change_info_table", 1),
+    ("candidate", "direct_schedule_table_descendant", True),
+    ("candidate", "direct_schedule_table_descendant", 0),
+    ("candidate", "extra", "provider-class"),
+])
+def test_phase66_ancestry_nested_validation_rejects(where: str, key: str, value: object) -> None:
+    payload = _candidate_ancestry_recovery_diagnostics()
+    (payload if where == "top" else payload["candidate_results"][0])[key] = value
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject._validate_profile_b_candidate_ancestry_recovery_diagnostics(payload)
+
+
+@pytest.mark.parametrize("role,depth,inside,direct", [
+    ("NO_TABLE", 0, False, False), ("RACE_SCHEDULE_TABLE", 1, False, True),
+    ("CHANGE_INFO_TABLE", 1, True, False), ("OTHER_TABLE", 2, False, False),
+    ("OTHER_TABLE", 2, True, False),
+])
+def test_phase66_ancestry_independent_invariants(role, depth, inside, direct) -> None:
+    payload = _candidate_ancestry_recovery_diagnostics()
+    payload["candidate_results"][0].update(nearest_table_role=role,
+        nested_table_depth_within_race_scope=depth, inside_change_info_table=inside,
+        direct_schedule_table_descendant=direct)
+    assert subject._validate_profile_b_candidate_ancestry_recovery_diagnostics(payload) == payload
+    payload["candidate_results"][0]["direct_schedule_table_descendant"] = not direct
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject._validate_profile_b_candidate_ancestry_recovery_diagnostics(payload)
+
+
+def test_phase66_ancestry_bounds_cardinality_scope_and_target() -> None:
+    for count in (0, 8, 9, 10000):
+        payload = _candidate_ancestry_recovery_diagnostics(count)
+        assert subject._validate_profile_b_candidate_ancestry_recovery_diagnostics(payload) == payload
+    overflow = _candidate_ancestry_recovery_diagnostics(9)
+    overflow["candidate_results"] = _candidate_ancestry_recovery_diagnostics(8)["candidate_results"] + [_candidate_ancestry_recovery_diagnostics()["candidate_results"][0]]
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject._validate_profile_b_candidate_ancestry_recovery_diagnostics(overflow)
+    for scope in (0, 2):
+        payload = _candidate_ancestry_recovery_diagnostics(0)
+        payload.update(race_table_scope_count=scope, candidate_details_complete=False)
+        assert subject._validate_profile_b_candidate_ancestry_recovery_diagnostics(payload) == payload
+    for target in ({"baba_code": "21", "race_date": "2025-1-1", "race_no": 6},
+                   {"baba_code": "21", "race_date": "2025-01-01", "race_no": True},
+                   {"baba_code": "21", "race_date": "2025-01-01", "race_no": 6, "raw": "text"}):
+        payload = _candidate_ancestry_recovery_diagnostics()
+        payload["target"] = target
+        with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+            subject._validate_profile_b_candidate_ancestry_recovery_diagnostics(payload)
+
+
+def _phase66_records(tmp_path: Path, *, historical: bool = False):
+    writer = _writer(tmp_path)
+    new = {subject.ObservationMilestone.PROFILE_B_CANDIDATE_ANCESTRY_RECOVERY_DIAGNOSTICS_RETAINED,
+           subject.ObservationMilestone.STRICT_STRUCTURE_RECOVERY_DIAGNOSTICS_RETAINED}
+    for milestone in subject.ObservationMilestone:
+        if historical and milestone in new:
+            continue
+        writer.append(milestone, _details_for(milestone))
+        if milestone is subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED:
+            break
+    writer.append(subject.ObservationMilestone.LIVE_PROCESS_COMPLETE,
+                  {"outcome": "SOURCE_PROFILE_FIXTURE_BLOCKED", "authorization_state": "CONSUMED_FAIL_CLOSED"})
+    writer.append(subject.ObservationMilestone.PARENT_EVIDENCE_VALIDATION_PASS, {"journal_sha256": "0" * 64})
+    writer.append(subject.ObservationMilestone.PARENT_CLEANUP_COMPLETE, {})
+    writer.close()
+    return subject.validate_journal_bytes(writer.path.read_bytes())
+
+
+def test_phase66_valid_order_and_phase64_historical_24_record_shape(tmp_path: Path) -> None:
+    records = _phase66_records(tmp_path)
+    subject.validate_journal_semantics(records)
+    assert len(records) == 26
+    historical_path = tmp_path / "historical"
+    historical_path.mkdir()
+    historical = _phase66_records(historical_path, historical=True)
+    subject.validate_journal_semantics(historical)
+    assert len(historical) == 24
+    assert not subject.reconstruct_execution(historical).publication_began
+    # Synthetic milestone-shape regression, not a claim to read external safe-final bytes.
+    assert subject.JOURNAL_SCHEMA_VERSION == 1
+    assert subject._ALLOWED_OUTCOMES == frozenset({"READY_FOR_REVIEW", "SOURCE_PROFILE_FIXTURE_BLOCKED",
+        "RECOVERY_PREFLIGHT_BLOCKED", "SYNTHETIC_SUCCESS", "SYNTHETIC_FAILURE"})
+
+
+@pytest.mark.parametrize("move,reference,before", [
+    ("PROFILE_B_CANDIDATE_ANCESTRY_RECOVERY_DIAGNOSTICS_RETAINED", "PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED", True),
+    ("PROFILE_B_CANDIDATE_ANCESTRY_RECOVERY_DIAGNOSTICS_RETAINED", "IDENTITY_VERIFICATION_PASS", False),
+    ("STRICT_STRUCTURE_RECOVERY_DIAGNOSTICS_RETAINED", "PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED", True),
+    ("STRICT_STRUCTURE_RECOVERY_DIAGNOSTICS_RETAINED", "PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED", False),
+])
+def test_phase66_milestone_order_violations(tmp_path: Path, move, reference, before) -> None:
+    records = list(_phase66_records(tmp_path))
+    moved = next(r for r in records if r.milestone.value == move)
+    records.remove(moved)
+    index = next(i for i, r in enumerate(records) if r.milestone.value == reference)
+    records.insert(index if before else index + 1, moved)
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject.validate_journal_semantics(tuple(records))
+
+
+@pytest.mark.parametrize("event,prerequisite", [
+    ("PROFILE_B_CANDIDATE_ANCESTRY_RECOVERY_DIAGNOSTICS_RETAINED", "PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED"),
+    ("STRICT_STRUCTURE_RECOVERY_DIAGNOSTICS_RETAINED", "PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED"),
+])
+def test_phase66_required_supplemental_predecessor(tmp_path: Path, event, prerequisite) -> None:
+    records = _phase66_records(tmp_path)
+    assert any(r.milestone.value == event for r in records)
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject.validate_journal_semantics(tuple(r for r in records if r.milestone.value != prerequisite))
+
+
+def test_phase66_maximum_valid_canonical_records(tmp_path: Path) -> None:
+    strict = _strict_structure_recovery_diagnostics()
+    for role in strict["document_results"]:
+        role["failure_kind"] = "UNCLOSED_STACK_AT_CLOSE"
+        role["observed_end_tag"] = None
+    # Compare every valid maximum-metadata state: mismatch may encode longer tags.
+    strict_variants = [strict, _strict_structure_recovery_diagnostics()]
+    ancestry = _candidate_ancestry_recovery_diagnostics(8)
+    ancestry["target"] = {"baba_code": "9" * 512, "race_date": "9999-12-31", "race_no": 10000}
+    measured = []
+    for milestone, key, variants, validator in [
+        (subject.ObservationMilestone.STRICT_STRUCTURE_RECOVERY_DIAGNOSTICS_RETAINED,
+         "strict_structure_recovery_diagnostics", strict_variants, subject._validate_strict_structure_recovery_diagnostics),
+        (subject.ObservationMilestone.PROFILE_B_CANDIDATE_ANCESTRY_RECOVERY_DIAGNOSTICS_RETAINED,
+         "profile_b_candidate_ancestry_recovery_diagnostics", [ancestry], subject._validate_profile_b_candidate_ancestry_recovery_diagnostics),
+    ]:
+        sizes = []
+        for payload in variants:
+            validator(payload)
+            encoded = _canonical(_record(131072, milestone=milestone.value, details={key: payload})) + b"\n"
+            # A standalone journal starts at 1; measure with the established
+            # conservative six-digit envelope as in the Phase63 size regression.
+            standalone = _canonical(_record(milestone=milestone.value, details={key: payload})) + b"\n"
+            subject.validate_journal_bytes(standalone)
+            external = tmp_path / f"{key}-{len(sizes)}"
+            external.mkdir()
+            writer = _writer(external)
+            writer.append(milestone, {key: payload})
+            writer.close()
+            assert writer.path.read_bytes() == standalone
+            sizes.append(len(encoded))
+        measured.append(max(sizes))
+    assert all(size <= subject.MAX_RECORD_BYTES == 4096 for size in measured)
+    assert measured == [837, 2598]
+    print("Phase66 maximum canonical JSONL bytes including LF:", measured)
+
+
+@pytest.mark.parametrize("family", ["strict", "ancestry"])
+def test_phase66_cross_event_evidence_contradictions(tmp_path: Path, family: str) -> None:
+    records = _phase66_records(tmp_path)
+    # Alter an individually valid payload, retaining the original sequence/order.
+    encoded = [json.loads(_canonical(_record(r.sequence, milestone=r.milestone.value,
+                                             details=dict(r.details)))) for r in records]
+    if family == "strict":
+        payload = next(r for r in encoded if r["milestone"] == "PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED")
+        payload["details"]["publication_safety_recovery_diagnostics"]["document_results"][0].update(
+            utf8_decode="FAIL", strict_structure="NOT_REACHED")
+    else:
+        payload = next(r for r in encoded if r["milestone"] == "PROFILE_B_CANDIDATE_ANCESTRY_RECOVERY_DIAGNOSTICS_RETAINED")
+        payload["details"]["profile_b_candidate_ancestry_recovery_diagnostics"]["target"]["race_no"] = 7
+    validated = subject.validate_journal_bytes(b"".join(_canonical(r) + b"\n" for r in encoded))
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject.validate_journal_semantics(validated)

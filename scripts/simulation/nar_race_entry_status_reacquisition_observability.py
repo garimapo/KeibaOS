@@ -92,8 +92,10 @@ class ObservationMilestone(StrEnum):
     RACELIST_CAPTURE_METADATA_RETAINED = "RACELIST_CAPTURE_METADATA_RETAINED"
     PROFILE_B_DIAGNOSTICS_RETAINED = "PROFILE_B_DIAGNOSTICS_RETAINED"
     PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED = "PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED"
+    PROFILE_B_CANDIDATE_ANCESTRY_RECOVERY_DIAGNOSTICS_RETAINED = "PROFILE_B_CANDIDATE_ANCESTRY_RECOVERY_DIAGNOSTICS_RETAINED"
     IDENTITY_VERIFICATION_PASS = "IDENTITY_VERIFICATION_PASS"
     PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED = "PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED"
+    STRICT_STRUCTURE_RECOVERY_DIAGNOSTICS_RETAINED = "STRICT_STRUCTURE_RECOVERY_DIAGNOSTICS_RETAINED"
     PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED = "PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED"
     SAFETY_PASS = "SAFETY_PASS"
     PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED = "PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED"
@@ -134,8 +136,10 @@ _DETAIL_KEYS: dict[ObservationMilestone, frozenset[str]] = {
     ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED: frozenset({"capture_metadata"}),
     ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED: frozenset({"profile_b_diagnostics"}),
     ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED: frozenset({"profile_b_recovery_diagnostics"}),
+    ObservationMilestone.PROFILE_B_CANDIDATE_ANCESTRY_RECOVERY_DIAGNOSTICS_RETAINED: frozenset({"profile_b_candidate_ancestry_recovery_diagnostics"}),
     ObservationMilestone.IDENTITY_VERIFICATION_PASS: frozenset({"bundle_id"}),
     ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED: frozenset({"publication_safety_recovery_diagnostics"}),
+    ObservationMilestone.STRICT_STRUCTURE_RECOVERY_DIAGNOSTICS_RETAINED: frozenset({"strict_structure_recovery_diagnostics"}),
     ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED: frozenset({"publication_safety"}),
     ObservationMilestone.SAFETY_PASS: frozenset(),
     ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED: frozenset(
@@ -709,6 +713,121 @@ def _validate_profile_b_recovery_diagnostics(value: object) -> dict[str, object]
     }
 
 
+def _validate_strict_structure_recovery_diagnostics(value: object) -> dict[str, object]:
+    if type(value) is not dict or set(value) != {"schema", "schema_version", "document_results"}:
+        raise _error("strict recovery keys are not exact")
+    if type(value["schema"]) is not str or value["schema"] != "nar-race-entry-status-strict-structure-recovery-diagnostics":
+        raise _error("strict recovery schema is unsupported")
+    if type(value["schema_version"]) is not int or value["schema_version"] != 1:
+        raise _error("strict recovery version must be exact 1")
+    results = value["document_results"]
+    if type(results) is not list or len(results) != 2:
+        raise _error("strict recovery requires exactly two results")
+    tags = frozenset({
+        "HTML", "HEAD", "TITLE", "BODY", "MAIN", "HEADER", "FOOTER", "NAV", "ARTICLE",
+        "SECTION", "ASIDE", "DIV", "H1", "H2", "H3", "H4", "H5", "H6", "P", "SPAN",
+        "A", "STRONG", "EM", "B", "I", "U", "UL", "OL", "LI", "DL", "DT", "DD",
+        "TABLE", "CAPTION", "COLGROUP", "THEAD", "TBODY", "TFOOT", "TR", "TH", "TD",
+        "FORM", "FIELDSET", "LEGEND", "LABEL", "BUTTON", "SELECT", "OPTGROUP", "OPTION",
+        "TEXTAREA", "SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "DETAILS", "SUMMARY",
+        "FIGURE", "FIGCAPTION", "PICTURE", "CANVAS", "VIDEO", "AUDIO", "OBJECT", "MAP",
+        "FONT", "CENTER", "OTHER_OR_CUSTOM",
+    })
+    keys = {"document_role", "failure_kind", "event_index", "stack_depth", "expected_open_tag", "observed_end_tag", "tolerant_parse"}
+    normalized = []
+    for role, result in zip(("deba_table", "race_list"), results, strict=True):
+        if type(result) is not dict or set(result) != keys:
+            raise _error("strict recovery result keys are not exact")
+        if type(result["document_role"]) is not str or result["document_role"] != role:
+            raise _error("strict recovery role order is invalid")
+        kind = result["failure_kind"]
+        if type(kind) is not str or kind not in {"PASS", "END_TAG_EMPTY_STACK", "END_TAG_MISMATCH", "UNCLOSED_STACK_AT_CLOSE"}:
+            raise _error("strict recovery failure kind is invalid")
+        index = _exact_nonnegative_int(result["event_index"], "event_index")
+        depth = _exact_nonnegative_int(result["stack_depth"], "stack_depth")
+        expected, observed = result["expected_open_tag"], result["observed_end_tag"]
+        for tag in (expected, observed):
+            if tag is not None and (type(tag) is not str or tag not in tags):
+                raise _error("strict recovery tag is invalid")
+        tolerant = result["tolerant_parse"]
+        if type(tolerant) is not str or tolerant not in {"PASS", "FAIL"}:
+            raise _error("strict recovery tolerant parse is invalid")
+        valid = {
+            "PASS": depth == 0 and expected is None and observed is None,
+            "END_TAG_EMPTY_STACK": index >= 1 and depth == 0 and expected is None and observed is not None,
+            "END_TAG_MISMATCH": index >= 1 and depth >= 1 and expected is not None and observed is not None,
+            "UNCLOSED_STACK_AT_CLOSE": depth >= 1 and expected is not None and observed is None,
+        }
+        if not valid[kind]:
+            raise _error("strict recovery fields are contradictory")
+        normalized.append(dict(result))
+    return {"schema": value["schema"], "schema_version": 1, "document_results": normalized}
+
+
+def _validate_profile_b_candidate_ancestry_recovery_diagnostics(value: object) -> dict[str, object]:
+    keys = {"schema", "schema_version", "target", "race_table_scope_count", "target_candidate_count", "candidate_details_complete", "candidate_results"}
+    if type(value) is not dict or set(value) != keys:
+        raise _error("ancestry recovery keys are not exact")
+    if type(value["schema"]) is not str or value["schema"] != "nar-race-entry-status-profile-b-candidate-ancestry-recovery-diagnostics":
+        raise _error("ancestry recovery schema is unsupported")
+    if type(value["schema_version"]) is not int or value["schema_version"] != 1:
+        raise _error("ancestry recovery version must be exact 1")
+    target = value["target"]
+    if type(target) is not dict or set(target) != {"baba_code", "race_date", "race_no"}:
+        raise _error("ancestry recovery target keys are not exact")
+    baba = _safe_string(target["baba_code"], "baba_code")
+    race_date = _safe_string(target["race_date"], "race_date")
+    race_no = _exact_nonnegative_int(target["race_no"], "race_no")
+    if race_no == 0 or _BABA_CODE.fullmatch(baba) is None or _RACE_DATE.fullmatch(race_date) is None:
+        raise _error("ancestry recovery target is noncanonical")
+    try:
+        parsed_date = datetime.strptime(race_date, "%Y-%m-%d").date()
+        _raw_capture.NARRaceEntryStatusRaceIdentity(baba, parsed_date, race_no)
+    except (ValueError, _raw_capture.NARRaceEntryStatusRawCaptureError):
+        raise _error("ancestry recovery target is invalid") from None
+    if parsed_date.isoformat() != race_date:
+        raise _error("ancestry recovery date is noncanonical")
+    scope_count = _exact_nonnegative_int(value["race_table_scope_count"], "race_table_scope_count")
+    count = _exact_nonnegative_int(value["target_candidate_count"], "target_candidate_count")
+    complete = value["candidate_details_complete"]
+    if type(complete) is not bool:
+        raise _error("ancestry recovery completeness must be exact bool")
+    results = value["candidate_results"]
+    if type(results) is not list or len(results) > 8:
+        raise _error("ancestry recovery detail bound is invalid")
+    if complete != (scope_count == 1 and count <= 8):
+        raise _error("ancestry recovery completeness is inconsistent")
+    if (complete and len(results) != count) or (not complete and results):
+        raise _error("ancestry recovery cardinality is inconsistent")
+    if scope_count != 1 and count != 0:
+        raise _error("ancestry recovery requires unique scope")
+    result_keys = {"candidate_ordinal", "nearest_table_role", "inside_change_info_table", "nested_table_depth_within_race_scope", "direct_schedule_table_descendant"}
+    normalized = []
+    for ordinal, result in enumerate(results, 1):
+        if type(result) is not dict or set(result) != result_keys:
+            raise _error("ancestry recovery candidate keys are not exact")
+        if type(result["candidate_ordinal"]) is not int or result["candidate_ordinal"] != ordinal:
+            raise _error("ancestry recovery ordinals are not contiguous")
+        role = result["nearest_table_role"]
+        if type(role) is not str or role not in {"NO_TABLE", "RACE_SCHEDULE_TABLE", "CHANGE_INFO_TABLE", "OTHER_TABLE"}:
+            raise _error("ancestry recovery table role is invalid")
+        inside, direct = result["inside_change_info_table"], result["direct_schedule_table_descendant"]
+        if type(inside) is not bool or type(direct) is not bool:
+            raise _error("ancestry recovery booleans must be exact bool")
+        depth = _exact_nonnegative_int(result["nested_table_depth_within_race_scope"], "table_depth")
+        valid = {"NO_TABLE": depth == 0 and not inside and not direct,
+                 "RACE_SCHEDULE_TABLE": depth == 1 and not inside and direct,
+                 "CHANGE_INFO_TABLE": depth >= 1 and inside and not direct,
+                 "OTHER_TABLE": depth >= 2 and not direct}
+        if not valid[role]:
+            raise _error("ancestry recovery fields are contradictory")
+        normalized.append(dict(result))
+    return {"schema": value["schema"], "schema_version": 1,
+            "target": {"baba_code": baba, "race_date": race_date, "race_no": race_no},
+            "race_table_scope_count": scope_count, "target_candidate_count": count,
+            "candidate_details_complete": complete, "candidate_results": normalized}
+
+
 def _validate_detail(name: str, value: object, run_id: str) -> object:
     if name == "run_id":
         if _safe_string(value, name) != run_id:
@@ -728,6 +847,10 @@ def _validate_detail(name: str, value: object, run_id: str) -> object:
         return _validate_profile_b_recovery_diagnostics(value)
     if name == "publication_safety_recovery_diagnostics":
         return _validate_publication_safety_recovery_diagnostics(value)
+    if name == "strict_structure_recovery_diagnostics":
+        return _validate_strict_structure_recovery_diagnostics(value)
+    if name == "profile_b_candidate_ancestry_recovery_diagnostics":
+        return _validate_profile_b_candidate_ancestry_recovery_diagnostics(value)
     if name == "fixture_set_identity":
         return _validate_fixture_set_identity(value)[0]
     if name == "qualification_identity":
@@ -993,7 +1116,9 @@ def validate_journal_semantics(records: tuple[JournalRecord, ...]) -> None:
         ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED,
         ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED,
         ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED,
+        ObservationMilestone.PROFILE_B_CANDIDATE_ANCESTRY_RECOVERY_DIAGNOSTICS_RETAINED,
         ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED,
+        ObservationMilestone.STRICT_STRUCTURE_RECOVERY_DIAGNOSTICS_RETAINED,
         ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED,
         ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
     }
@@ -1024,6 +1149,27 @@ def validate_journal_semantics(records: tuple[JournalRecord, ...]) -> None:
         and not capture_and_identity.issubset(seen)
     ):
         raise _error("Safety recovery requires retained captures and verified identity")
+    if ObservationMilestone.PROFILE_B_CANDIDATE_ANCESTRY_RECOVERY_DIAGNOSTICS_RETAINED in seen:
+        if ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED not in seen:
+            raise _error("candidate ancestry requires Phase63 Profile-B recovery")
+        by_milestone = {record.milestone: record for record in records}
+        ancestry = by_milestone[ObservationMilestone.PROFILE_B_CANDIDATE_ANCESTRY_RECOVERY_DIAGNOSTICS_RETAINED].details["profile_b_candidate_ancestry_recovery_diagnostics"]
+        recovery = by_milestone[ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED].details["profile_b_recovery_diagnostics"]
+        for name in ("target", "race_table_scope_count", "target_candidate_count", "candidate_details_complete"):
+            if ancestry[name] != recovery[name]:
+                raise _error("candidate ancestry contradicts Phase63 recovery")
+    if ObservationMilestone.STRICT_STRUCTURE_RECOVERY_DIAGNOSTICS_RETAINED in seen:
+        if ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED not in seen:
+            raise _error("strict recovery requires Phase63 Safety recovery")
+        by_milestone = {record.milestone: record for record in records}
+        stages = by_milestone[ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED].details["publication_safety_recovery_diagnostics"]["document_results"]
+        structures = by_milestone[ObservationMilestone.STRICT_STRUCTURE_RECOVERY_DIAGNOSTICS_RETAINED].details["strict_structure_recovery_diagnostics"]["document_results"]
+        for stage, structure in zip(stages, structures, strict=True):
+            strict_pass = structure["failure_kind"] == "PASS"
+            if stage["utf8_decode"] != "PASS" or stage["strict_structure"] != ("PASS" if strict_pass else "FAIL"):
+                raise _error("strict recovery contradicts Phase63 stages")
+            if strict_pass and stage["beautifulsoup_parse"] != structure["tolerant_parse"]:
+                raise _error("strict recovery contradicts Phase63 DOM parse")
     if (
         ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED in seen
         and not capture_and_identity.issubset(seen)
