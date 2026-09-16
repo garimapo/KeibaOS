@@ -36,13 +36,13 @@ _UTC_TEXT = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.
 _REQUEST_ID = re.compile(r"nar-race-entry-status-request-v1:[0-9a-f]{64}\Z", flags=re.ASCII)
 _CAPTURE_ID = re.compile(r"nar-race-entry-status-capture-v1:[0-9a-f]{64}\Z", flags=re.ASCII)
 _BUNDLE_ID = re.compile(r"nar-race-entry-status-raw-bundle-v1:[0-9a-f]{64}\Z", flags=re.ASCII)
-_FIXTURE_SET_ID = re.compile(
-    r"nar-race-entry-status-source-profile-fixture-set-v1:[0-9a-f]{64}\Z",
-    flags=re.ASCII,
+_FIXTURE_SET_ID_BY_VERSION = (
+    (1, re.compile(r"nar-race-entry-status-source-profile-fixture-set-v1:[0-9a-f]{64}\Z", flags=re.ASCII)),
+    (2, re.compile(r"nar-race-entry-status-source-profile-fixture-set-v2:[0-9a-f]{64}\Z", flags=re.ASCII)),
 )
-_QUALIFICATION_ID = re.compile(
-    r"nar-race-entry-status-source-profile-qualification-v1:[0-9a-f]{64}\Z",
-    flags=re.ASCII,
+_QUALIFICATION_ID_BY_VERSION = (
+    (1, re.compile(r"nar-race-entry-status-source-profile-qualification-v1:[0-9a-f]{64}\Z", flags=re.ASCII)),
+    (2, re.compile(r"nar-race-entry-status-source-profile-qualification-v2:[0-9a-f]{64}\Z", flags=re.ASCII)),
 )
 _SAFE_ENUM = re.compile(r"[A-Z][A-Z0-9_]{0,127}\Z", flags=re.ASCII)
 _BABA_CODE = re.compile(r"[1-9][0-9]*\Z", flags=re.ASCII)
@@ -234,6 +234,22 @@ def _safe_string(value: object, name: str) -> str:
     ):
         raise _error(f"{name} contains a control character")
     return value
+
+
+def _validate_fixture_set_identity(value: object) -> tuple[str, int]:
+    text = _safe_string(value, "fixture_set_identity")
+    for version, pattern in _FIXTURE_SET_ID_BY_VERSION:
+        if pattern.fullmatch(text) is not None:
+            return text, version
+    raise _error("fixture_set_identity is noncanonical")
+
+
+def _validate_qualification_identity(value: object) -> tuple[str, int]:
+    text = _safe_string(value, "qualification_identity")
+    for version, pattern in _QUALIFICATION_ID_BY_VERSION:
+        if pattern.fullmatch(text) is not None:
+            return text, version
+    raise _error("qualification_identity is noncanonical")
 
 
 def _exact_positive_int(value: object, name: str) -> int:
@@ -597,6 +613,10 @@ def _validate_detail(name: str, value: object, run_id: str) -> object:
         return _validate_profile_a_blocked_diagnostics(value)
     if name == "profile_b_diagnostics":
         return _validate_profile_b_diagnostics(value)
+    if name == "fixture_set_identity":
+        return _validate_fixture_set_identity(value)[0]
+    if name == "qualification_identity":
+        return _validate_qualification_identity(value)[0]
     text = _safe_string(value, name)
     if name == "baba_code" and _BABA_CODE.fullmatch(text) is None:
         raise _error("baba_code is noncanonical")
@@ -613,10 +633,6 @@ def _validate_detail(name: str, value: object, run_id: str) -> object:
         raise _error("response_sha256 is noncanonical")
     if name == "bundle_id" and _BUNDLE_ID.fullmatch(text) is None:
         raise _error("bundle_id is noncanonical")
-    if name == "fixture_set_identity" and _FIXTURE_SET_ID.fullmatch(text) is None:
-        raise _error("fixture_set_identity is noncanonical")
-    if name == "qualification_identity" and _QUALIFICATION_ID.fullmatch(text) is None:
-        raise _error("qualification_identity is noncanonical")
     if name == "journal_sha256" and _LOWER_HEX_64.fullmatch(text) is None:
         raise _error("journal_sha256 is noncanonical")
     if name == "outcome" and text not in _ALLOWED_OUTCOMES:
@@ -661,6 +677,11 @@ def _record_payload(
     if milestone is ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED:
         if normalized["capture_metadata"]["document_role"] != "race_list":  # type: ignore[index]
             raise _error("RaceList capture metadata has the wrong document role")
+    if milestone is ObservationMilestone.MANIFEST_WRITTEN:
+        _, fixture_version = _validate_fixture_set_identity(normalized["fixture_set_identity"])
+        _, qualification_version = _validate_qualification_identity(normalized["qualification_identity"])
+        if fixture_version != qualification_version:
+            raise _error("manifest identity versions must match")
     return {
         "journal_schema": JOURNAL_SCHEMA,
         "schema_version": JOURNAL_SCHEMA_VERSION,

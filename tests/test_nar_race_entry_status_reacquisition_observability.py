@@ -20,6 +20,10 @@ UTC = timezone.utc
 REQUEST_ID = "nar-race-entry-status-request-v1:" + "a" * 64
 BUNDLE_ID = "nar-race-entry-status-raw-bundle-v1:" + "b" * 64
 CAPTURE_ID = "nar-race-entry-status-capture-v1:" + "9" * 64
+FIXTURE_ID_V1 = "nar-race-entry-status-source-profile-fixture-set-v1:" + "e" * 64
+FIXTURE_ID_V2 = "nar-race-entry-status-source-profile-fixture-set-v2:" + "e" * 64
+QUALIFICATION_ID_V1 = "nar-race-entry-status-source-profile-qualification-v1:" + "f" * 64
+QUALIFICATION_ID_V2 = "nar-race-entry-status-source-profile-qualification-v2:" + "f" * 64
 
 
 def _capture_metadata(role: str) -> dict[str, object]:
@@ -247,8 +251,8 @@ def _details_for(milestone: subject.ObservationMilestone) -> dict[str, object]:
         subject.ObservationMilestone.PUBLICATION_BEGIN: {"planned_path_count": 7},
         subject.ObservationMilestone.RAW_FIXTURES_WRITTEN: {"document_count": 2},
         subject.ObservationMilestone.MANIFEST_WRITTEN: {
-            "fixture_set_identity": "nar-race-entry-status-source-profile-fixture-set-v1:" + "e" * 64,
-            "qualification_identity": "nar-race-entry-status-source-profile-qualification-v1:" + "f" * 64,
+            "fixture_set_identity": FIXTURE_ID_V1,
+            "qualification_identity": QUALIFICATION_ID_V1,
         },
         subject.ObservationMilestone.DEDICATED_TEST_WRITTEN: {"test_path": "tests/test_nar_race_entry_status_source_profile_fixtures.py"},
         subject.ObservationMilestone.REGRESSIONS_PASS: {"command_count": 4},
@@ -271,6 +275,140 @@ def test_journal_writes_canonical_lf_records_and_round_trips(tmp_path: Path) -> 
     records = subject.validate_journal_bytes(data, expected_run_id=RUN_ID)
     assert records == (first, second)
     subject.validate_journal_semantics(records)
+
+
+def _manifest_record_bytes(fixture_identity: object, qualification_identity: object) -> bytes:
+    payload = _record(
+        milestone="MANIFEST_WRITTEN",
+        details={
+            "fixture_set_identity": fixture_identity,
+            "qualification_identity": qualification_identity,
+        },
+    )
+    return _canonical(payload) + b"\n"
+
+
+@pytest.mark.parametrize(
+    ("fixture_identity", "qualification_identity"),
+    [
+        (FIXTURE_ID_V1, QUALIFICATION_ID_V1),
+        (FIXTURE_ID_V2, QUALIFICATION_ID_V2),
+    ],
+)
+def test_manifest_written_accepts_only_canonical_same_version_identity_pairs(
+    fixture_identity: str,
+    qualification_identity: str,
+) -> None:
+    data = _manifest_record_bytes(fixture_identity, qualification_identity)
+    records = subject.validate_journal_bytes(data, expected_run_id=RUN_ID)
+    assert records[0].details == {
+        "fixture_set_identity": fixture_identity,
+        "qualification_identity": qualification_identity,
+    }
+    assert len(data) - 1 <= subject.MAX_RECORD_BYTES
+    assert subject._DETAIL_KEYS[subject.ObservationMilestone.MANIFEST_WRITTEN] == frozenset(
+        {"fixture_set_identity", "qualification_identity"},
+    )
+
+
+@pytest.mark.parametrize(
+    ("fixture_identity", "qualification_identity"),
+    [
+        (FIXTURE_ID_V1, QUALIFICATION_ID_V2),
+        (FIXTURE_ID_V2, QUALIFICATION_ID_V1),
+    ],
+)
+def test_manifest_written_rejects_mixed_identity_versions(
+    fixture_identity: str,
+    qualification_identity: str,
+) -> None:
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject.validate_journal_bytes(
+            _manifest_record_bytes(fixture_identity, qualification_identity),
+            expected_run_id=RUN_ID,
+        )
+
+
+@pytest.mark.parametrize(
+    "fixture_identity",
+    [
+        "nar-race-entry-status-source-profile-fixture-set-v0:" + "e" * 64,
+        "nar-race-entry-status-source-profile-fixture-set-v3:" + "e" * 64,
+        "nar-race-entry-status-source-profile-fixture-set-v2:" + "E" * 64,
+        "NAR-race-entry-status-source-profile-fixture-set-v2:" + "e" * 64,
+        "nar-race-entry-status-source-profile-fixture-set-v2:" + "e" * 63,
+        "nar-race-entry-status-source-profile-fixture-set-v2:" + "e" * 65,
+        "nar-race-entry-status-source-profile-fixture-set-v2:" + "g" * 64,
+        "nar-race-entry-status-source-profile-fixture-set-v2:",
+        "nar-race-entry-status-source-profile-fixture-v2:" + "e" * 64,
+        FIXTURE_ID_V2 + "suffix",
+        " " + FIXTURE_ID_V2,
+        FIXTURE_ID_V2 + " ",
+        FIXTURE_ID_V2 + "\n",
+        FIXTURE_ID_V2 + "\r",
+    ],
+)
+def test_manifest_written_rejects_noncanonical_fixture_identity(fixture_identity: str) -> None:
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject.validate_journal_bytes(
+            _manifest_record_bytes(fixture_identity, QUALIFICATION_ID_V2),
+            expected_run_id=RUN_ID,
+        )
+
+
+@pytest.mark.parametrize(
+    "qualification_identity",
+    [
+        "nar-race-entry-status-source-profile-qualification-v0:" + "f" * 64,
+        "nar-race-entry-status-source-profile-qualification-v3:" + "f" * 64,
+        "nar-race-entry-status-source-profile-qualification-v2:" + "F" * 64,
+        "NAR-race-entry-status-source-profile-qualification-v2:" + "f" * 64,
+        "nar-race-entry-status-source-profile-qualification-v2:" + "f" * 63,
+        "nar-race-entry-status-source-profile-qualification-v2:" + "f" * 65,
+        "nar-race-entry-status-source-profile-qualification-v2:" + "g" * 64,
+        "nar-race-entry-status-source-profile-qualification-v2:",
+        "nar-race-entry-status-source-profile-qualifier-v2:" + "f" * 64,
+        QUALIFICATION_ID_V2 + "suffix",
+        " " + QUALIFICATION_ID_V2,
+        QUALIFICATION_ID_V2 + " ",
+        QUALIFICATION_ID_V2 + "\n",
+        QUALIFICATION_ID_V2 + "\r",
+    ],
+)
+def test_manifest_written_rejects_noncanonical_qualification_identity(qualification_identity: str) -> None:
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject.validate_journal_bytes(
+            _manifest_record_bytes(FIXTURE_ID_V2, qualification_identity),
+            expected_run_id=RUN_ID,
+        )
+
+
+def test_phase59_identity_compatibility_preserves_observability_contracts() -> None:
+    expected_order = (
+        subject.ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED,
+        subject.ObservationMilestone.IDENTITY_VERIFICATION_PASS,
+        subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED,
+        subject.ObservationMilestone.SAFETY_PASS,
+        subject.ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
+        subject.ObservationMilestone.PROFILE_A_QUALIFIED,
+        subject.ObservationMilestone.PROFILE_B_QUALIFIED,
+        subject.ObservationMilestone.PUBLICATION_BEGIN,
+        subject.ObservationMilestone.RAW_FIXTURES_WRITTEN,
+        subject.ObservationMilestone.MANIFEST_WRITTEN,
+    )
+    start = list(subject.ObservationMilestone).index(expected_order[0])
+    assert tuple(subject.ObservationMilestone)[start : start + len(expected_order)] == expected_order
+    assert subject.JOURNAL_SCHEMA_VERSION == 1
+    assert subject.PREFLIGHT_PASS_TOKEN == "NAR_REACQUISITION_OBSERVABILITY_PREFLIGHT_PASS"
+    assert subject._ALLOWED_OUTCOMES == frozenset(
+        {
+            "READY_FOR_REVIEW",
+            "SOURCE_PROFILE_FIXTURE_BLOCKED",
+            "RECOVERY_PREFLIGHT_BLOCKED",
+            "SYNTHETIC_SUCCESS",
+            "SYNTHETIC_FAILURE",
+        },
+    )
 
 
 def test_journal_path_must_be_external_and_creation_is_exclusive(tmp_path: Path) -> None:
