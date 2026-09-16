@@ -2,70 +2,48 @@
 
 ## Phase
 
-`POST_V0_8_DAILY_REPLAY_60`
+`POST_V0_8_DAILY_REPLAY_57`
 
-## State
+## Revision and result
 
-- Status: `INTEGRATED_PENDING_REMOTE_VERIFICATION`
-- Design review: `PHASE60_DESIGN_REVIEW_PASS`
-- Outcome: `IMPLEMENTED_V2_PUBLICATION_PLAN_AND_BINARY_PRESERVATION_AUTHORITY`
-- Activity: reviewed integration pending independent remote verification.
-- Authorized worktree: `C:\Users\garim\Desktop\KeibaOS-post-v0.8`.
-- Branch and base/local/remote HEAD: `feature/post-v0.8-daily-replay` / `dba42a8135a9a0a66f9239e46b7cee36d90591bf`.
-- Initial index/untracked state was empty and the worktree was clean. Database and logs are unchanged.
+- Revision: `PHASE57_FINAL_REPREPARE_AFTER_PHASE60`.
+- Formal status: `APPROVED_FOR_CODEX`.
+- Design review: `PHASE57_FINAL_DESIGN_REVIEW_PASS`.
+- Outcome: `READY_FOR_APPROVAL`.
+- Activity: approval documentation and one new, unconsumed Phase57 authorization only.
+- Authorized worktree and base/local/remote HEAD: `C:\Users\garim\Desktop\KeibaOS-post-v0.8` / `6cc7ee3dc28c9e1b88b0e0c940103765d875e7a3`.
+- Index and untracked state are empty; worktree was clean before PREPARE. Database and logs are unchanged.
 
-## Accepted blocker and prospective resolution
+## Dependency and authority audit
 
-Phase57 remains `DESIGN_BLOCKED_TRACKED` with `PHASE57_PUBLICATION_MANIFEST_AUTHORITY_UNAVAILABLE`. Phase56 froze only the two v2 raw paths; no earlier tracked authority froze a complete Phase57 publication delta, dedicated v2 test path, or entry-status-v2 binary rule. Phase60 does not rewrite history. It defines `PHASE60_PUBLICATION_PLAN_AUTHORITY_EFFECTIVE_FROM_INTEGRATION`: only a formally complete Phase60 is authority for a later Phase57 re-PREPARE.
+The user-supplied formal dependency state accepts Phase56, Phase58, Phase59, and Phase60 as formally complete. Phase58’s fsynced blocked Safety/Profile-A events, Phase59’s v2/v2 `MANIFEST_WRITTEN` compatibility, and Phase60’s target-specific plan plus active binary rule are all present. Phase60 is prospective only and does not backfill earlier authority.
 
-Phase58/59 are accepted formal dependencies and remain unchanged: blocked Safety/Profile-A evidence is fsynced before cleanup, and `MANIFEST_WRITTEN` accepts v2/v2 identities.
+The exact target is `NAR / 21 / 2025-01-01 / 6`; Phase44 alone may later acquire one closed bundle in DebaTable → RaceList order with at most two GETs. Current acquisition remains `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`; market eligibility remains unsupported.
 
-## Implemented plan and binary baseline
+Phase60 fixes the exact six future live paths, four `CREATE_ONLY` then the two documentation paths `MODIFY_EXISTING`. `.gitattributes` is `VALIDATE_ONLY`. The tracked rule `tests/fixtures/nar_race_entry_status/source_profiles/v2/**/*.html -text -diff` resolves both frozen fixture paths to `text: unset` and `diff: unset`.
 
-The pure no-network module is target-specific to `NAR / 21 / 2025-01-01 / 6`. It accepts validated Phase56 `FixtureSetV2` only, derives the two raw paths solely from Phase56 canonical document records, and exposes build/validate of a frozen plan. No additional plan identity was added; Phase56 retains all semantic identity authority.
+## Executable live design
 
-The exact future Phase57 live delta is:
+The actual Phase50 ordering supports retained Phase53 Profile-B diagnostics before identity verification, followed by Safety, Profile-A, and only then Profile-B qualification. Phase58 blocked outcomes are fsynced before raw cleanup; Phase59 accepts the later v2/v2 manifest identity pair. The full no-network preflight validates repository/module origins, generated source, binary-LF preflight token, synthetic journal evidence, Phase58/59/60 support, attributes, path state, and live-child compile before durable authorization consumption.
 
-1. `tests/fixtures/nar_race_entry_status/source_profiles/v2/baba_21__2025-01-01__race_06/deba_table.html`
-2. `tests/fixtures/nar_race_entry_status/source_profiles/v2/baba_21__2025-01-01__race_06/race_list.html`
-3. `tests/fixtures/nar_race_entry_status/source_profiles/v2/baba_21__2025-01-01__race_06/manifest.json`
-4. `tests/test_nar_race_entry_status_source_profile_v2_fixtures.py`
-5. `docs/CURRENT_PHASE.md`
-6. `docs/LATEST_CODEX_REPORT.md`
+The one-shot boundary is canonical `PHASE44_CALL_ABOUT_TO_ENTER` journal append → flush → fsync → one Phase44 call. After that boundary authorization is permanently consumed fail-closed. Phase44/53/56/60 each retain their sole responsibilities: formal capture, metadata/Profile-B, Safety/Profile-A/v2 identities/manifest, and publication planning respectively.
 
-Raw fixtures, manifest, and test are `CREATE_ONLY`; docs are `MODIFY_EXISTING`. Target-local manifest co-location prevents a future root collision. Future Phase57 validates but never modifies/rolls back Phase60 baseline `.gitattributes`.
+No publication occurs before all durable capture/Profile-B records, identity/Safety/Profile-A/Profile-B success, Phase56 v2 validation, Phase60 plan/attribute/path validation, and rollback arming. Binary fixture rereads, manifest reread/revalidation, one dedicated no-network fixture test, relevant NAR regression, and one full suite are required on the future success path. Pre-begin failures preserve safe evidence then clean transient material; post-begin failure rolls back exactly the six Phase57 paths and never Phase60 baseline or authorization.
 
-Phase60’s exact support delta is `.gitattributes`, `scripts/simulation/nar_race_entry_status_source_profile_publication_plan.py`, `tests/test_nar_race_entry_status_source_profile_publication_plan.py`, and the two docs.
+`LIVE_PROCESS_COMPLETE` mapping is frozen: `READY_FOR_REVIEW` success, `SOURCE_PROFILE_FIXTURE_BLOCKED` source-profile block, and `RECOVERY_PREFLIGHT_BLOCKED` pre-live/acquisition-integrity/recovery block. The prospective successful outcome is `CONTROLLED_REACQUISITION_AND_SOURCE_PROFILE_V2_PUBLICATION_COMPLETE`.
 
-The exact active attribute line is:
+## Approval readiness
 
-```text
-tests/fixtures/nar_race_entry_status/source_profiles/v2/**/*.html -text -diff
-```
+All final gates pass: Phase58 durability YES; Phase59 compatibility YES; Phase60 formal usability/binary rule YES; Phase50 ordering/vocabulary YES; safe pre-begin evidence and exact post-begin rollback YES; no-network pre-live gates YES; no further support phase required. The final design is approved for Codex.
 
-It preserves bytes through `-text` and follows the repository raw-fixture convention with `-diff`. Git `check-attr` reports `text: unset` and `diff: unset` for both frozen raw paths, and all prior attribute rules remain present.
+## Persistent state and final checks
 
-## Safety and verification
-
-Plan validation rejects non-string, absolute, traversal/dot, control-character, duplicate, and out-of-allowlist paths. Before Phase57 `PUBLICATION_BEGIN`, it must validate target, Phase56-path agreement, exact role/order/count, absent create-only artifacts, existing docs, attributes, and rollback snapshot. Rollback can affect only the six Phase57 paths; never Phase60 baseline support.
-
-The later dedicated no-network fixture test is frozen to verify raw SHA/length, target/role order, Phase56 fixture/qualification recomputation, manifest canonicality/validation, Safety SAFE, Profile-A/Profile-B qualification and Profile-B `EXPLICIT_WITHDRAWAL_PRESENT`, current-acquisition semantics, and `market_eligibility=UNSUPPORTED`.
-
-Test results:
-
-- Focused Phase60 plan: `29 passed`.
-- Existing Phase56 publication contract: `32 passed`.
-- Relevant Phase50/53/56 NAR regression: `268 passed`.
-- Full repository suite: `3869 passed, 2841 subtests passed`.
-- Static no-network/no-write/no-Git-mutation/no-market-eligibility audit: PASS.
-
-The exact delta is `.gitattributes`, the new plan module/test, and the two docs. No official fixture or dedicated future fixture test exists. Phase44, Phase50, Phase53, and Phase56 are unchanged.
-
-- Phase57: `DESIGN_BLOCKED`; `PHASE57_ACQUISITION_AUTHORIZATION_NOT_YET_ISSUED`.
+- Phase57 previous state: `PHASE57_ACQUISITION_AUTHORIZATION_NOT_YET_ISSUED`.
+- Phase57 current state: `PHASE57_ACQUISITION_AUTHORIZATION_UNCONSUMED` for exactly `NAR / 21 / 2025-01-01 / 6`, one Phase44 closed-bundle call, DebaTable → RaceList, maximum two GETs.
 - Phase54: `PHASE54_AUTHORIZATION_UNCONSUMED_BUT_UNUSABLE_FOR_V2`.
 - Phase41: `DESIGN_BLOCKED`.
 - `positive_market_eligibility = UNSUPPORTED`; `WHOLE_MEETING_CANCELLATION = UNSUPPORTED`.
 - Open: `COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE`; `NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE`.
-- Provider HTTP: `0`; Phase44 live acquisition: not entered.
-- No provider HTTP occurred; Phase44 live acquisition was not entered; no authorization was issued or consumed.
-- Remote verification is required before Phase60 can be formally complete. Phase57 is not restarted or authorized.
+- Provider HTTP: `0`; Phase44 live acquisition: not entered; the new authorization has not been consumed.
+- Live execution: `NOT_STARTED`.
+- Tests: not run; approval only. No source/test/fixture/attribute modification, authorization consumption, staging, commit, or push occurred. Next permitted action: `EXECUTE_ONE_SHOT_AFTER_INDEPENDENT_REMOTE_VERIFICATION`.
