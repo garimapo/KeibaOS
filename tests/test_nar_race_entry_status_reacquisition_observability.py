@@ -24,6 +24,8 @@ FIXTURE_ID_V1 = "nar-race-entry-status-source-profile-fixture-set-v1:" + "e" * 6
 FIXTURE_ID_V2 = "nar-race-entry-status-source-profile-fixture-set-v2:" + "e" * 64
 QUALIFICATION_ID_V1 = "nar-race-entry-status-source-profile-qualification-v1:" + "f" * 64
 QUALIFICATION_ID_V2 = "nar-race-entry-status-source-profile-qualification-v2:" + "f" * 64
+DEDICATED_TEST_PATH_V1 = "tests/test_nar_race_entry_status_source_profile_fixtures.py"
+DEDICATED_TEST_PATH_V2 = "tests/test_nar_race_entry_status_source_profile_v2_fixtures.py"
 
 
 def _capture_metadata(role: str) -> dict[str, object]:
@@ -254,7 +256,7 @@ def _details_for(milestone: subject.ObservationMilestone) -> dict[str, object]:
             "fixture_set_identity": FIXTURE_ID_V1,
             "qualification_identity": QUALIFICATION_ID_V1,
         },
-        subject.ObservationMilestone.DEDICATED_TEST_WRITTEN: {"test_path": "tests/test_nar_race_entry_status_source_profile_fixtures.py"},
+        subject.ObservationMilestone.DEDICATED_TEST_WRITTEN: {"test_path": DEDICATED_TEST_PATH_V1},
         subject.ObservationMilestone.REGRESSIONS_PASS: {"command_count": 4},
         subject.ObservationMilestone.LIVE_PROCESS_COMPLETE: {"outcome": "SYNTHETIC_FAILURE", "authorization_state": "CONSUMED_CONFIRMED"},
         subject.ObservationMilestone.PARENT_EVIDENCE_VALIDATION_PASS: {"journal_sha256": "0" * 64},
@@ -286,6 +288,96 @@ def _manifest_record_bytes(fixture_identity: object, qualification_identity: obj
         },
     )
     return _canonical(payload) + b"\n"
+
+
+def _dedicated_test_record_bytes(test_path: object, details: dict[str, object] | None = None) -> bytes:
+    payload = _record(
+        milestone="DEDICATED_TEST_WRITTEN",
+        details={"test_path": test_path} if details is None else details,
+    )
+    return _canonical(payload) + b"\n"
+
+
+@pytest.mark.parametrize(
+    ("test_path", "expected_record_bytes"),
+    [(DEDICATED_TEST_PATH_V1, 322), (DEDICATED_TEST_PATH_V2, 325)],
+)
+def test_dedicated_test_written_accepts_exact_closed_path_union(
+    test_path: str,
+    expected_record_bytes: int,
+) -> None:
+    data = _dedicated_test_record_bytes(test_path)
+    records = subject.validate_journal_bytes(data, expected_run_id=RUN_ID)
+
+    assert records[0].milestone is subject.ObservationMilestone.DEDICATED_TEST_WRITTEN
+    assert records[0].details == {"test_path": test_path}
+    assert len(data) == expected_record_bytes < subject.MAX_RECORD_BYTES
+
+
+@pytest.mark.parametrize(
+    "test_path",
+    [
+        "tests/test_nar_race_entry_status_source_profile_v3_fixtures.py",
+        "tests/arbitrary_third_test.py",
+        DEDICATED_TEST_PATH_V1 + ".bak",
+        DEDICATED_TEST_PATH_V2 + ".bak",
+        "test/test_nar_race_entry_status_source_profile_v2_fixtures.py",
+        "/" + DEDICATED_TEST_PATH_V2,
+        "C:/" + DEDICATED_TEST_PATH_V2,
+        DEDICATED_TEST_PATH_V2.replace("/", "\\"),
+        " " + DEDICATED_TEST_PATH_V2,
+        DEDICATED_TEST_PATH_V2 + " ",
+        DEDICATED_TEST_PATH_V2 + "\n",
+        DEDICATED_TEST_PATH_V2 + "\r",
+        DEDICATED_TEST_PATH_V2 + "\x00",
+        DEDICATED_TEST_PATH_V2 + "\x1f",
+        "tests/../" + DEDICATED_TEST_PATH_V2,
+    ],
+)
+def test_dedicated_test_written_rejects_every_path_outside_closed_union(test_path: str) -> None:
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject.validate_journal_bytes(
+            _dedicated_test_record_bytes(test_path),
+            expected_run_id=RUN_ID,
+        )
+
+
+@pytest.mark.parametrize("details", [{}, {"test_path": DEDICATED_TEST_PATH_V2, "extra": "forbidden"}])
+def test_dedicated_test_written_requires_exact_detail_key(details: dict[str, object]) -> None:
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject.validate_journal_bytes(
+            _dedicated_test_record_bytes(DEDICATED_TEST_PATH_V2, details),
+            expected_run_id=RUN_ID,
+        )
+
+
+def test_phase61_dedicated_test_path_compatibility_preserves_phase50_contracts() -> None:
+    expected_order = (
+        subject.ObservationMilestone.RAW_FIXTURES_WRITTEN,
+        subject.ObservationMilestone.MANIFEST_WRITTEN,
+        subject.ObservationMilestone.DEDICATED_TEST_WRITTEN,
+        subject.ObservationMilestone.REGRESSIONS_PASS,
+    )
+    start = list(subject.ObservationMilestone).index(expected_order[0])
+
+    assert tuple(subject.ObservationMilestone)[start : start + len(expected_order)] == expected_order
+    assert subject._DETAIL_KEYS[subject.ObservationMilestone.DEDICATED_TEST_WRITTEN] == frozenset({"test_path"})
+    assert subject._DEDICATED_TEST_PATHS == frozenset({DEDICATED_TEST_PATH_V1, DEDICATED_TEST_PATH_V2})
+    assert subject.JOURNAL_SCHEMA_VERSION == 1
+    assert subject.MAX_STRING_BYTES == 512
+    assert subject.MAX_RECORD_BYTES == 4096
+    assert subject.MAX_JOURNAL_BYTES == 131072
+    assert subject.MAX_PROCESS_STREAM_BYTES == 16384
+    assert subject.PREFLIGHT_PASS_TOKEN == "NAR_REACQUISITION_OBSERVABILITY_PREFLIGHT_PASS"
+    assert subject._ALLOWED_OUTCOMES == frozenset(
+        {
+            "READY_FOR_REVIEW",
+            "SOURCE_PROFILE_FIXTURE_BLOCKED",
+            "RECOVERY_PREFLIGHT_BLOCKED",
+            "SYNTHETIC_SUCCESS",
+            "SYNTHETIC_FAILURE",
+        },
+    )
 
 
 @pytest.mark.parametrize(

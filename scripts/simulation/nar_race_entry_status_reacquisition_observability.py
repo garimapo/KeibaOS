@@ -53,6 +53,12 @@ _ALLOWED_OUTCOMES = frozenset(
 _ALLOWED_AUTHORIZATION_STATES = frozenset(
     {"UNCONSUMED", "CONSUMED_FAIL_CLOSED", "CONSUMED_CONFIRMED"},
 )
+_DEDICATED_TEST_PATHS = frozenset(
+    {
+        "tests/test_nar_race_entry_status_source_profile_fixtures.py",
+        "tests/test_nar_race_entry_status_source_profile_v2_fixtures.py",
+    },
+)
 
 
 class NARReacquisitionObservabilityError(Exception):
@@ -639,7 +645,7 @@ def _validate_detail(name: str, value: object, run_id: str) -> object:
         raise _error("outcome is outside the exact allowlist")
     if name == "authorization_state" and text not in _ALLOWED_AUTHORIZATION_STATES:
         raise _error("authorization_state is outside the exact allowlist")
-    if name == "test_path" and text != "tests/test_nar_race_entry_status_source_profile_fixtures.py":
+    if name == "test_path" and text not in _DEDICATED_TEST_PATHS:
         raise _error("test_path is not the approved repository-relative path")
     return value
 
