@@ -91,7 +91,9 @@ class ObservationMilestone(StrEnum):
     DEBA_CAPTURE_METADATA_RETAINED = "DEBA_CAPTURE_METADATA_RETAINED"
     RACELIST_CAPTURE_METADATA_RETAINED = "RACELIST_CAPTURE_METADATA_RETAINED"
     PROFILE_B_DIAGNOSTICS_RETAINED = "PROFILE_B_DIAGNOSTICS_RETAINED"
+    PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED = "PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED"
     IDENTITY_VERIFICATION_PASS = "IDENTITY_VERIFICATION_PASS"
+    PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED = "PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED"
     PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED = "PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED"
     SAFETY_PASS = "SAFETY_PASS"
     PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED = "PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED"
@@ -131,7 +133,9 @@ _DETAIL_KEYS: dict[ObservationMilestone, frozenset[str]] = {
     ObservationMilestone.DEBA_CAPTURE_METADATA_RETAINED: frozenset({"capture_metadata"}),
     ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED: frozenset({"capture_metadata"}),
     ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED: frozenset({"profile_b_diagnostics"}),
+    ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED: frozenset({"profile_b_recovery_diagnostics"}),
     ObservationMilestone.IDENTITY_VERIFICATION_PASS: frozenset({"bundle_id"}),
+    ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED: frozenset({"publication_safety_recovery_diagnostics"}),
     ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED: frozenset({"publication_safety"}),
     ObservationMilestone.SAFETY_PASS: frozenset(),
     ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED: frozenset(
@@ -604,6 +608,107 @@ def _validate_profile_b_diagnostics(value: object) -> dict[str, object]:
     }
 
 
+def _validate_publication_safety_recovery_diagnostics(value: object) -> dict[str, object]:
+    if type(value) is not dict or set(value) != {"schema", "schema_version", "document_results"}:
+        raise _error("Safety recovery keys are not exact")
+    if type(value["schema"]) is not str or value["schema"] != "nar-race-entry-status-publication-safety-recovery-diagnostics":
+        raise _error("Safety recovery schema is unsupported")
+    if type(value["schema_version"]) is not int or value["schema_version"] != 1:
+        raise _error("Safety recovery version must be exact 1")
+    results = value["document_results"]
+    if type(results) is not list or len(results) != 2:
+        raise _error("Safety recovery requires exactly two document results")
+    states = {
+        ("FAIL", "NOT_REACHED", "NOT_REACHED"), ("PASS", "FAIL", "NOT_REACHED"),
+        ("PASS", "PASS", "PASS"), ("PASS", "PASS", "FAIL"),
+    }
+    normalized = []
+    for role, result in zip(("deba_table", "race_list"), results, strict=True):
+        if type(result) is not dict or set(result) != {"document_role", "utf8_decode", "strict_structure", "beautifulsoup_parse"}:
+            raise _error("Safety recovery result keys are not exact")
+        if type(result["document_role"]) is not str or result["document_role"] != role:
+            raise _error("Safety recovery role order is invalid")
+        stages = tuple(result[name] for name in ("utf8_decode", "strict_structure", "beautifulsoup_parse"))
+        if any(type(stage) is not str for stage in stages) or stages not in states:
+            raise _error("Safety recovery stage state is impossible")
+        normalized.append(dict(result))
+    return {"schema": value["schema"], "schema_version": 1, "document_results": normalized}
+
+
+def _validate_profile_b_recovery_diagnostics(value: object) -> dict[str, object]:
+    keys = {
+        "schema", "schema_version", "target", "race_table_scope_count", "target_candidate_count",
+        "candidate_details_complete", "candidate_results", "all_candidate_safe_projections_equal",
+    }
+    if type(value) is not dict or set(value) != keys:
+        raise _error("Profile-B recovery keys are not exact")
+    if type(value["schema"]) is not str or value["schema"] != "nar-race-entry-status-profile-b-recovery-diagnostics":
+        raise _error("Profile-B recovery schema is unsupported")
+    if type(value["schema_version"]) is not int or value["schema_version"] != 1:
+        raise _error("Profile-B recovery version must be exact 1")
+    target = value["target"]
+    if type(target) is not dict or set(target) != {"baba_code", "race_date", "race_no"}:
+        raise _error("Profile-B recovery target keys are not exact")
+    baba = _safe_string(target["baba_code"], "baba_code")
+    race_date = _safe_string(target["race_date"], "race_date")
+    race_no = _exact_nonnegative_int(target["race_no"], "race_no")
+    if race_no == 0 or _BABA_CODE.fullmatch(baba) is None or _RACE_DATE.fullmatch(race_date) is None:
+        raise _error("Profile-B recovery target is noncanonical")
+    try:
+        parsed_date = datetime.strptime(race_date, "%Y-%m-%d").date()
+        _raw_capture.NARRaceEntryStatusRaceIdentity(baba, parsed_date, race_no)
+    except (ValueError, _raw_capture.NARRaceEntryStatusRawCaptureError):
+        raise _error("Profile-B recovery target is invalid") from None
+    if parsed_date.isoformat() != race_date:
+        raise _error("Profile-B recovery date is noncanonical")
+    scope_count = _exact_nonnegative_int(value["race_table_scope_count"], "race_table_scope_count")
+    candidate_count = _exact_nonnegative_int(value["target_candidate_count"], "target_candidate_count")
+    complete = value["candidate_details_complete"]
+    equal = value["all_candidate_safe_projections_equal"]
+    if type(complete) is not bool or type(equal) is not bool:
+        raise _error("Profile-B recovery booleans must be exact bool")
+    results = value["candidate_results"]
+    if type(results) is not list or len(results) > 8:
+        raise _error("Profile-B recovery candidate results exceed the exact bound")
+    count_keys = (
+        "direct_cell_count", "anchor_count", "deba_path_link_count", "deba_href_unsupported_count",
+        "canonical_target_query_match_count", "canonical_query_unsupported_count",
+    )
+    result_keys = set(count_keys) | {"candidate_ordinal", "canonical_target_query_match"}
+    normalized = []
+    projections = []
+    for ordinal, result in enumerate(results, start=1):
+        if type(result) is not dict or set(result) != result_keys:
+            raise _error("Profile-B recovery candidate keys are not exact")
+        if type(result["candidate_ordinal"]) is not int or result["candidate_ordinal"] != ordinal:
+            raise _error("Profile-B recovery candidate ordinal is noncontiguous")
+        counts = tuple(_exact_nonnegative_int(result[name], name) for name in count_keys)
+        match = result["canonical_target_query_match"]
+        if type(match) is not bool or match != (result["canonical_target_query_match_count"] >= 1):
+            raise _error("Profile-B recovery query boolean is inconsistent")
+        projections.append(counts + (match,))
+        normalized.append(dict(result))
+    if complete:
+        if scope_count != 1 or candidate_count != len(results):
+            raise _error("Profile-B recovery complete cardinality is inconsistent")
+    elif results or equal:
+        raise _error("Profile-B recovery incomplete results must be empty and nonassertive")
+    elif scope_count == 1 and candidate_count <= 8:
+        raise _error("Profile-B recovery reachable bounded details must be complete")
+    if scope_count != 1 and candidate_count != 0:
+        raise _error("Profile-B recovery candidate discovery requires a unique scope")
+    expected_equal = bool(projections) and all(projection == projections[0] for projection in projections)
+    if equal != expected_equal:
+        raise _error("Profile-B recovery safe-projection equality is inconsistent")
+    return {
+        "schema": value["schema"], "schema_version": 1,
+        "target": {"baba_code": baba, "race_date": race_date, "race_no": race_no},
+        "race_table_scope_count": scope_count, "target_candidate_count": candidate_count,
+        "candidate_details_complete": complete, "candidate_results": normalized,
+        "all_candidate_safe_projections_equal": equal,
+    }
+
+
 def _validate_detail(name: str, value: object, run_id: str) -> object:
     if name == "run_id":
         if _safe_string(value, name) != run_id:
@@ -619,6 +724,10 @@ def _validate_detail(name: str, value: object, run_id: str) -> object:
         return _validate_profile_a_blocked_diagnostics(value)
     if name == "profile_b_diagnostics":
         return _validate_profile_b_diagnostics(value)
+    if name == "profile_b_recovery_diagnostics":
+        return _validate_profile_b_recovery_diagnostics(value)
+    if name == "publication_safety_recovery_diagnostics":
+        return _validate_publication_safety_recovery_diagnostics(value)
     if name == "fixture_set_identity":
         return _validate_fixture_set_identity(value)[0]
     if name == "qualification_identity":
@@ -883,6 +992,8 @@ def validate_journal_semantics(records: tuple[JournalRecord, ...]) -> None:
         ObservationMilestone.DEBA_CAPTURE_METADATA_RETAINED,
         ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED,
         ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED,
+        ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED,
+        ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED,
         ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED,
         ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
     }
@@ -900,6 +1011,19 @@ def validate_journal_semantics(records: tuple[JournalRecord, ...]) -> None:
         ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED,
         ObservationMilestone.IDENTITY_VERIFICATION_PASS,
     }
+    if ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED in seen:
+        if ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED not in seen:
+            raise _error("Profile-B recovery requires retained normal diagnostics")
+        by_milestone = {record.milestone: record for record in records}
+        recovery_target = by_milestone[ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED].details["profile_b_recovery_diagnostics"]["target"]
+        normal_target = by_milestone[ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED].details["profile_b_diagnostics"]["target"]
+        if recovery_target != normal_target:
+            raise _error("Profile-B recovery target contradicts normal diagnostics")
+    if (
+        ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED in seen
+        and not capture_and_identity.issubset(seen)
+    ):
+        raise _error("Safety recovery requires retained captures and verified identity")
     if (
         ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED in seen
         and not capture_and_identity.issubset(seen)

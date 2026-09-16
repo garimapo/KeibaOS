@@ -28,6 +28,38 @@ DEDICATED_TEST_PATH_V1 = "tests/test_nar_race_entry_status_source_profile_fixtur
 DEDICATED_TEST_PATH_V2 = "tests/test_nar_race_entry_status_source_profile_v2_fixtures.py"
 
 
+def _profile_b_recovery_diagnostics(count: int = 1, *, maximal: bool = False) -> dict[str, object]:
+    candidates = []
+    if count <= 8:
+        for ordinal in range(1, count + 1):
+            candidates.append({
+                "candidate_ordinal": ordinal, "direct_cell_count": 10000 if maximal else 2,
+                "anchor_count": 10000 if maximal else 1,
+                "deba_path_link_count": 10000 if maximal else 1,
+                "deba_href_unsupported_count": 10000 if maximal else 0,
+                "canonical_target_query_match_count": 10000 if maximal else 1,
+                "canonical_query_unsupported_count": 10000 if maximal else 0,
+                "canonical_target_query_match": True,
+            })
+    return {
+        "schema": "nar-race-entry-status-profile-b-recovery-diagnostics", "schema_version": 1,
+        "target": {"baba_code": "21", "race_date": "2025-01-01", "race_no": 6},
+        "race_table_scope_count": 1, "target_candidate_count": count,
+        "candidate_details_complete": count <= 8, "candidate_results": candidates,
+        "all_candidate_safe_projections_equal": 1 <= count <= 8,
+    }
+
+
+def _safety_recovery_diagnostics() -> dict[str, object]:
+    return {
+        "schema": "nar-race-entry-status-publication-safety-recovery-diagnostics", "schema_version": 1,
+        "document_results": [{
+            "document_role": role, "utf8_decode": "FAIL",
+            "strict_structure": "NOT_REACHED", "beautifulsoup_parse": "NOT_REACHED",
+        } for role in ("deba_table", "race_list")],
+    }
+
+
 def _capture_metadata(role: str) -> dict[str, object]:
     return {
         "schema_version": 1,
@@ -243,7 +275,9 @@ def _details_for(milestone: subject.ObservationMilestone) -> dict[str, object]:
         subject.ObservationMilestone.DEBA_CAPTURE_METADATA_RETAINED: {"capture_metadata": _capture_metadata("deba_table")},
         subject.ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED: {"capture_metadata": _capture_metadata("race_list")},
         subject.ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED: {"profile_b_diagnostics": _profile_b_diagnostics()},
+        subject.ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED: {"profile_b_recovery_diagnostics": _profile_b_recovery_diagnostics()},
         subject.ObservationMilestone.IDENTITY_VERIFICATION_PASS: {"bundle_id": BUNDLE_ID},
+        subject.ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED: {"publication_safety_recovery_diagnostics": _safety_recovery_diagnostics()},
         subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED: {
             "publication_safety": _publication_safety_result(),
         },
@@ -478,7 +512,9 @@ def test_manifest_written_rejects_noncanonical_qualification_identity(qualificat
 def test_phase59_identity_compatibility_preserves_observability_contracts() -> None:
     expected_order = (
         subject.ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED,
+        subject.ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED,
         subject.ObservationMilestone.IDENTITY_VERIFICATION_PASS,
+        subject.ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED,
         subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED,
         subject.ObservationMilestone.SAFETY_PASS,
         subject.ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
@@ -1413,3 +1449,207 @@ def test_phase58_additions_are_closed_no_network_evidence_validators() -> None:
     assert "nar_race_entry_status_source_profile_profile_a" not in source
     assert "nar_race_entry_status_source_profile_publication_contract" not in source
     assert subject.JOURNAL_SCHEMA_VERSION == 1
+
+
+@pytest.mark.parametrize("milestone", [
+    subject.ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED,
+    subject.ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED,
+])
+def test_recovery_records_roundtrip_with_exact_detail_keys(tmp_path: Path, milestone: subject.ObservationMilestone) -> None:
+    details = _details_for(milestone)
+    writer = _writer(tmp_path)
+    writer.append(milestone, details)
+    writer.close()
+    records = subject.validate_journal_bytes(writer.path.read_bytes(), expected_run_id=RUN_ID)
+    assert records[0].details == details
+    assert subject._DETAIL_KEYS[milestone] == frozenset(details)
+
+
+@pytest.mark.parametrize("milestone", [
+    subject.ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED,
+    subject.ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED,
+])
+@pytest.mark.parametrize("mutation", ["missing", "extra", "schema", "version", "version_two", "raw", "nested_type"])
+def test_recovery_records_reject_detail_and_schema_mutations(milestone: subject.ObservationMilestone, mutation: str) -> None:
+    details = _details_for(milestone)
+    key = next(iter(details))
+    if mutation == "missing":
+        details = {}
+    elif mutation == "extra":
+        details["extra"] = 1
+    elif mutation == "schema":
+        details[key]["schema"] = "wrong"
+    elif mutation == "version":
+        details[key]["schema_version"] = True
+    elif mutation == "version_two":
+        details[key]["schema_version"] = 2
+    elif mutation == "raw":
+        details[key]["raw_html"] = "<synthetic>"
+    else:
+        details[key] = b"raw"
+    data = _canonical(_record(milestone=milestone.value, details=details)) + b"\n" if mutation != "nested_type" else None
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        if data is not None:
+            subject.validate_journal_bytes(data)
+        else:
+            subject._record_payload(run_id=RUN_ID, sequence=1, milestone=milestone, occurred_at="2026-09-14T00:00:00.000000Z", details=details)
+
+
+@pytest.mark.parametrize("mutation", ["state", "role_order", "missing_role", "extra_field", "stage_type"])
+def test_safety_recovery_nested_validation_is_independent(mutation: str) -> None:
+    payload = _safety_recovery_diagnostics()
+    results = payload["document_results"]
+    if mutation == "state":
+        results[0]["strict_structure"] = "PASS"
+    elif mutation == "role_order":
+        results.reverse()
+    elif mutation == "missing_role":
+        results.pop()
+    elif mutation == "extra_field":
+        results[0]["text"] = "private"
+    else:
+        results[0]["utf8_decode"] = 1
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject._validate_publication_safety_recovery_diagnostics(payload)
+
+
+@pytest.mark.parametrize("mutation", [
+    "cardinality", "nine_details", "incomplete_details", "overflow_complete", "ordinal",
+    "equal", "match_boolean", "count_type", "count_bound", "extra_candidate_field",
+    "target_extra", "target_date", "target_type", "complete_type",
+])
+def test_profile_b_recovery_nested_validation_is_independent(mutation: str) -> None:
+    payload = _profile_b_recovery_diagnostics()
+    results = payload["candidate_results"]
+    if mutation == "cardinality":
+        payload["target_candidate_count"] = 2
+    elif mutation == "nine_details":
+        payload = _profile_b_recovery_diagnostics(8)
+        payload["candidate_results"].append(copy.deepcopy(payload["candidate_results"][-1]))
+        payload["target_candidate_count"] = 9
+    elif mutation == "incomplete_details":
+        payload["candidate_details_complete"] = False
+    elif mutation == "overflow_complete":
+        payload = _profile_b_recovery_diagnostics(9)
+        payload["candidate_details_complete"] = True
+    elif mutation == "ordinal":
+        results[0]["candidate_ordinal"] = 2
+    elif mutation == "equal":
+        payload["all_candidate_safe_projections_equal"] = False
+    elif mutation == "match_boolean":
+        results[0]["canonical_target_query_match"] = False
+    elif mutation == "count_type":
+        results[0]["anchor_count"] = True
+    elif mutation == "count_bound":
+        results[0]["anchor_count"] = 10001
+    elif mutation == "extra_candidate_field":
+        results[0]["href"] = "private"
+    elif mutation == "target_extra":
+        payload["target"]["provider_text"] = "private"
+    elif mutation == "target_date":
+        payload["target"]["race_date"] = "2025-02-30"
+    elif mutation == "target_type":
+        payload["target"]["race_no"] = True
+    else:
+        payload["candidate_details_complete"] = 1
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject._validate_profile_b_recovery_diagnostics(payload)
+
+
+@pytest.mark.parametrize("count", [0, 1, 2, 8, 9])
+def test_recovery_candidate_cardinality_and_overflow_are_valid(count: int) -> None:
+    payload = _profile_b_recovery_diagnostics(count)
+    assert subject._validate_profile_b_recovery_diagnostics(payload) == payload
+
+
+def test_recovery_milestone_order_and_historical_phase57_shape(tmp_path: Path) -> None:
+    recovery = {
+        subject.ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED,
+        subject.ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED,
+    }
+    old = tuple(m for m in subject.ObservationMilestone if m not in recovery)
+    historical = tuple(m for m in old if subject._MILESTONE_ORDER[m] <= subject._MILESTONE_ORDER[subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED]) + (
+        subject.ObservationMilestone.LIVE_PROCESS_COMPLETE,
+        subject.ObservationMilestone.PARENT_EVIDENCE_VALIDATION_PASS,
+        subject.ObservationMilestone.PARENT_CLEANUP_COMPLETE,
+    )
+    assert len(historical) == 22
+    writer = _writer(tmp_path)
+    for milestone in historical:
+        details = _details_for(milestone)
+        if milestone is subject.ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED:
+            normal = details["profile_b_diagnostics"]
+            normal["overall_result"] = "BLOCKED"
+            normal["first_nonpass_predicate"] = "UNIQUE_TARGET_6R"
+            normal["terminal_reason"] = "UNSUPPORTED_INPUT"
+            normal["predicate_results"][1]["outcome"] = "AMBIGUOUS"
+            normal["predicate_results"][1]["safe_fields"]["target_6r_row_count"] = 2
+            for index in (2, 3):
+                normal["predicate_results"][index]["outcome"] = "UNSUPPORTED"
+                for key, value in normal["predicate_results"][index]["safe_fields"].items():
+                    normal["predicate_results"][index]["safe_fields"][key] = False if type(value) is bool else 0
+        elif milestone is subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED:
+            details = {"publication_safety": _publication_safety_result(("UNSUPPORTED",) * 5)}
+        elif milestone is subject.ObservationMilestone.LIVE_PROCESS_COMPLETE:
+            details["outcome"] = "SOURCE_PROFILE_FIXTURE_BLOCKED"
+        writer.append(milestone, details)
+    writer.close()
+    records = subject.validate_journal_bytes(writer.path.read_bytes())
+    execution = subject.reconstruct_execution(records)
+    assert execution.authorization_state == "CONSUMED_CONFIRMED"
+    assert execution.last_milestone is subject.ObservationMilestone.PARENT_CLEANUP_COMPLETE
+    assert not execution.publication_began
+    assert not recovery.intersection(r.milestone for r in records)
+
+
+def test_recovery_valid_chronology_and_out_of_order_rejected(tmp_path: Path) -> None:
+    writer = _writer(tmp_path)
+    for milestone in subject.ObservationMilestone:
+        writer.append(milestone, _details_for(milestone))
+        if milestone is subject.ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED:
+            break
+    writer.close()
+    records = subject.validate_journal_bytes(writer.path.read_bytes())
+    subject.validate_journal_semantics(records)
+    wrong = records[:-2] + (records[-1], records[-2])
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject.validate_journal_semantics(wrong)
+    assert [r.milestone for r in records[-5:]] == [
+        subject.ObservationMilestone.RACELIST_CAPTURE_METADATA_RETAINED,
+        subject.ObservationMilestone.PROFILE_B_DIAGNOSTICS_RETAINED,
+        subject.ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED,
+        subject.ObservationMilestone.IDENTITY_VERIFICATION_PASS,
+        subject.ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED,
+    ]
+
+
+def test_recovery_worst_case_records_fit_unchanged_limits() -> None:
+    profile_b = _profile_b_recovery_diagnostics(8, maximal=True)
+    profile_b["target"] = {"baba_code": "9" * 512, "race_date": "9999-12-31", "race_no": 10000}
+    subject._validate_profile_b_recovery_diagnostics(profile_b)
+    safety = _safety_recovery_diagnostics()
+    subject._validate_publication_safety_recovery_diagnostics(safety)
+    for milestone, key, payload in [
+        (subject.ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED, "profile_b_recovery_diagnostics", profile_b),
+        (subject.ObservationMilestone.PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED, "publication_safety_recovery_diagnostics", safety),
+    ]:
+        record = _canonical(_record(131072, milestone=milestone.value, details={key: payload})) + b"\n"
+        expected_size = 3177 if key == "profile_b_recovery_diagnostics" else 677
+        assert len(record) == expected_size <= subject.MAX_RECORD_BYTES == 4096
+    oversized = _canonical(_record(10**3000, milestone=subject.ObservationMilestone.PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED.value, details={"profile_b_recovery_diagnostics": profile_b})) + b"\n"
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject.validate_journal_bytes(oversized)
+
+
+@pytest.mark.parametrize("decode", ["PASS", "FAIL", "NOT_REACHED"])
+@pytest.mark.parametrize("structure", ["PASS", "FAIL", "NOT_REACHED"])
+@pytest.mark.parametrize("parse", ["PASS", "FAIL", "NOT_REACHED"])
+def test_phase50_safety_recovery_all_stage_combinations(decode: str, structure: str, parse: str) -> None:
+    payload = _safety_recovery_diagnostics()
+    payload["document_results"][0].update(utf8_decode=decode, strict_structure=structure, beautifulsoup_parse=parse)
+    valid = {("FAIL", "NOT_REACHED", "NOT_REACHED"), ("PASS", "FAIL", "NOT_REACHED"), ("PASS", "PASS", "PASS"), ("PASS", "PASS", "FAIL")}
+    if (decode, structure, parse) in valid:
+        assert subject._validate_publication_safety_recovery_diagnostics(payload) == payload
+    else:
+        with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+            subject._validate_publication_safety_recovery_diagnostics(payload)
