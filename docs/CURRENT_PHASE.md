@@ -1,163 +1,103 @@
 # Current Phase
 
-## Phase
+## Identity
 
-`POST_V0_8_DAILY_REPLAY_63`
+- Phase: `POST_V0_8_DAILY_REPLAY_64`
+- Title: `Controlled NAR Diagnostic-Only Reacquisition`
+- Base HEAD: `5b85d54a39c6b7d3e6c036cc0d479ba24e0a1797`
+- Branch: `feature/post-v0.8-daily-replay`
+- Required dependency: `POST_V0_8_DAILY_REPLAY_63` is formally complete at the matching integrated commit and tree `6ebbe16b0d56e86a237e28cde38c489fc81a5310`.
 
-## Title
+## Status and objective
 
-Tracked Safe Root-Cause Diagnostic Support
+- Formal Status: `APPROVED_FOR_CODEX`.
+- Tracking State: `APPROVED_UNCONSUMED_TRACKED`.
+- Design Review: `PHASE64_DIAGNOSTIC_ONLY_REACQUISITION_DESIGN_REVIEW_PASS`.
+- Outcome: `APPROVED_DIAGNOSTIC_ONLY_REACQUISITION`.
+- Project objective: `CONTROLLED_REACQUISITION_FOR_SAFE_ROOT_CAUSE_DIAGNOSTICS`.
+- During APPROVE and approval-state tracking: provider HTTP `0`, Phase44 calls `0`, GET attempts `0`, `PHASE44_CALL_ABOUT_TO_ENTER` not written, and fixture/publication writes `0`.
+- The sole future target is `NAR / 21 / 2025-01-01 / 6`, with `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`. It asserts neither historical availability/bytes/timing/cutoff nor market eligibility.
 
-## Status and outcome
+## Immutable prior state and future authority
 
-- Status: `INTEGRATED_PENDING_REMOTE_VERIFICATION`.
-- Design review: `PHASE63_DESIGN_REVIEW_PASS`.
-- Implementation review: `PHASE63_IMPLEMENTATION_REVIEW_PASS`.
-- Base HEAD / Phase62 integration commit: `0c4098b8f34905b14d1f53ea59a1d8c26d31203d`.
-- Required dependency: `POST_V0_8_DAILY_REPLAY_62` is formally complete.
-- Branch: `feature/post-v0.8-daily-replay`.
-- Outcome: `IMPLEMENTED_TRACKED_SAFE_ROOT_CAUSE_DIAGNOSTICS`.
-- Remote verification: `REQUIRED`.
-- Phase63 observability support is implemented. No future live recovery diagnostics have been collected; no acquisition or publication is authorized.
-- Provider HTTP: `0`; Phase44: not entered; acquisition authorization issued: `NO`.
+- Phase57 remains `POST_AUTHORIZATION_STOP`; its outcome is `SOURCE_PROFILE_FIXTURE_BLOCKED`, authorization is `PHASE57_ACQUISITION_AUTHORIZATION_CONSUMED_FAIL_CLOSED`, and retry is `FORBIDDEN`. It cannot be restored, reused, renewed, transferred, or used for Phase44 again.
+- Phase64 authorization before APPROVE: `NONE`. Issued authorization: `PHASE64_DIAGNOSTIC_ACQUISITION_AUTHORIZATION_UNCONSUMED`, bound to support HEAD `5b85d54a39c6b7d3e6c036cc0d479ba24e0a1797`, the frozen target, and this one diagnostic-only objective. It is target-specific, phase-specific, one-shot, and nontransferable; it is neither Phase57 nor Phase54 authority.
+- Future authority is Phase44 only: one closed-bundle call maximum, DebaTable then RaceList, provider GET cap `2`. Retry, discovery, fallback, direct provider HTTP, alternate provider/target, manual requests, and partial bundles are forbidden.
+- The only consumption boundary is `PHASE44_CALL_ABOUT_TO_ENTER` → canonical append → flush → fsync → exactly one Phase44 call. Before it, authorization is factually unconsumed; afterwards it is permanently fail-closed.
+- `market_eligibility`, `positive_market_eligibility`, and `WHOLE_MEETING_CANCELLATION` remain `UNSUPPORTED`. No backdated live response is asserted.
 
-## Immutable Phase57 evidence
+## Phase63 authority and pre-live gates
 
-Phase57 remains `POST_AUTHORIZATION_STOP` with `SOURCE_PROFILE_FIXTURE_BLOCKED` and authorization `PHASE57_ACQUISITION_AUTHORIZATION_CONSUMED_FAIL_CLOSED`. It cannot be restored, retried, reused, transferred, or authorize another Phase44 call.
+- Explicit-root import inspection resolves Phase44, Phase50, Phase53 ordinary Profile-B, Phase56 Safety, and Phase63 recovery diagnostics only inside the authorized worktree.
+- Phase63 provides exactly `PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED` and `PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED`; `JOURNAL_SCHEMA_VERSION = 1`, `MAX_RECORD_BYTES = 4096`, and `MAX_RETAINED_CANDIDATE_DETAILS = 8`. Historical v1 journals, including the Phase57 22-record blocked shape, remain tested/readable without optional recovery events.
 
-- Target and semantics: `NAR / 21 / 2025-01-01 / 6`; `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`.
-- Phase44 calls: `1`; GET attempts: `2`; Deba response returns: `1`; RaceList response returns: `1`; closed bundle and identity verification: present / `PASS`.
-- Publication began: `NO`; rollback: `NOT_REQUIRED`; retry: `FORBIDDEN`.
-- Safe-final run ID: `77ed0459fe004d0abc74739d023e8a10`; bytes: `11110`; SHA-256: `e4c14a18c73127232efbc6e6f36aab7a9e37cdb3ccd4361b3bcd906f29c9b46f`.
+All no-network gates must pass before consumption:
 
-The existing safe evidence proves only Safety `UNSUPPORTED` with all five category outcomes `UNSUPPORTED` and finding counts `0`. The direct outer collapse classes are exactly strict UTF-8 decode failure, Profile-A strict HTML-structure `ValueError`, and BeautifulSoup `ParserRejectedMarkup`. Locally caught `urlsplit(...)` and strict `parse_qsl(...)` `ValueError`s create bounded local ambiguous evidence; they are not direct `_unsupported_safety()` causes.
+1. Worktree/branch/local/remote HEAD, empty index, no untracked paths, and clean tree.
+2. Explicit-root authority binding; exact target construction; Phase44/50/53/56/63 imports.
+3. Synthetic old-journal and recovery-event validation; recovery-order validation; worst-case record-size check; Phase63 Safety valid/impossible-state checks; Profile-B `<=8` and `>8` checks; Phase57 historical compatibility.
+4. Generated preflight/live-child compilation; unique OS temporary directory; exact token check against `b"NAR_REACQUISITION_OBSERVABILITY_PREFLIGHT_PASS\\n"` with no stripping, normalization, CRLF, or text-mode conversion; cleanup and final clean-tree validation.
 
-Therefore `SAFETY_ROOT_CAUSE_NOT_IDENTIFIABLE_FROM_CURRENT_SAFE_EVIDENCE` and `CURRENT_SAFE_EVIDENCE_INSUFFICIENT_FOR_DIRECT_SAFETY_FIX` remain frozen. No known failing document or failure class is claimed.
+## Future live order and diagnostic retention
 
-Profile-B remains `BLOCKED`: `RACE_TABLE_SCOPE=PASS`, `UNIQUE_TARGET_6R=AMBIGUOUS` with `target_6r_row_count=2`, derived `DEBA_LINK_RELATIONSHIP=UNSUPPORTED` and `DEBA_LINK_QUERY_BINDING=UNSUPPORTED`, while `WITHDRAWAL_ROW_SHAPE=PASS` and `HORSE_14_WITHDRAWAL_ASSOCIATION=PASS`. The two Deba-link outcomes are downstream dependency results, not independent incompatibilities.
+`PARENT_EXECUTION_PREPARED` → `LIVE_PROCESS_START` → `TARGET_CONSTRUCTED` → durable `PHASE44_CALL_ABOUT_TO_ENTER` → Phase44 Deba/RaceList transport, GET, response, and raw milestones → `CLOSED_BUNDLE_RETURNED` → both capture metadata records → `PROFILE_B_DIAGNOSTICS_RETAINED` → `PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED` → `IDENTITY_VERIFICATION_PASS` → `PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED` → normal Safety branch.
 
-`PROFILE_B_ROOT_CAUSE_NOT_IDENTIFIABLE_FROM_CURRENT_SAFE_EVIDENCE` and `CURRENT_SAFE_EVIDENCE_INSUFFICIENT_FOR_DIRECT_PROFILE_B_GRAMMAR_FIX` remain frozen. There is no approved row selection, deduplication, or qualification relaxation.
+- Profile-B recovery uses exact RaceList bytes before cleanup and retains only its bounded schema: scope/candidate counts, completeness, at most eight ordered safe candidate projections, and safe-projection equality. It retains no row text or href/query value and selects no candidate.
+- Safety recovery uses exact Deba/RaceList bytes and retains only ordered parser-stage tuples. It never replaces Phase56 Safety.
+- Both recovery events use canonical append → flush → fsync before transient raw cleanup.
+- Normal Phase56 Safety is unchanged: non-`SAFE` emits `PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED`; `SAFE` emits `SAFETY_PASS`. Ordinary Profile-B is unchanged and `PROFILE_B_QUALIFIED` is emitted only when its actual grammar qualifies.
 
-`ADDITIONAL_SAFE_DIAGNOSTIC_CAPTURE_REQUIRED` remains true; implementation of diagnostic support does not identify the old raw documents' root causes.
+## Exact terminal-outcome contract
 
-## Implemented bounded recovery diagnostics
+Phase50 validates `LIVE_PROCESS_COMPLETE` against its fixed outcome allowlist but does not require publication milestones for `READY_FOR_REVIEW` and does not couple an outcome value to publication. The exact mapping is:
 
-Phase63 adds one pure deterministic module, `scripts/simulation/nar_race_entry_status_source_profile_recovery_diagnostics.py`. It accepts exact in-memory bytes and a formal target, and has no network, clock, filesystem, database, subprocess, publication, environment, randomness, or Git responsibility. It produces immutable typed results and canonical bounded metadata only.
+| Branch | Terminal evidence | Outcome |
+| --- | --- | --- |
+| Pre-boundary no-network gate failure | no live call; authorization factually unconsumed | no `LIVE_PROCESS_COMPLETE` |
+| Post-boundary Phase44, bundle, metadata, identity, or recovery-integrity failure | retain available safe evidence; no publication | `RECOVERY_PREFLIGHT_BLOCKED` |
+| Normal Safety non-`SAFE` | safety recovery and canonical blocked Safety evidence retained | `SOURCE_PROFILE_FIXTURE_BLOCKED` |
+| Safety `SAFE`, ordinary Profile-B `BLOCKED` | `SAFETY_PASS` and ordinary/recovery Profile-B evidence retained | `SOURCE_PROFILE_FIXTURE_BLOCKED` |
+| Safety `SAFE`, ordinary Profile-B `QUALIFIED` | all recovery, identity, capture, Safety-pass, and safe-final evidence retained; no publication | `READY_FOR_REVIEW` |
 
-### Publication-Safety recovery diagnostics v1
+`READY_FOR_REVIEW` in the last branch means ready for diagnostic review only, never fixture publication. `SOURCE_PROFILE_FIXTURE_BLOCKED` is used only for a real unchanged Safety/Profile-B block; `RECOVERY_PREFLIGHT_BLOCKED` only for preflight, acquisition-integrity, or recovery failure. Existing Phase50 vocabulary is sufficient; no support phase is needed. Phase56 Profile-A is not required, because no manifest or publication path is entered.
 
-Schema: `nar-race-entry-status-publication-safety-recovery-diagnostics`; schema version: exact integer `1`. Its ordered exact document roles are `deba_table`, then `race_list`. Every role result has only:
+## No-publication, safe-final, and cleanup contract
 
-- `document_role`: one of those exact roles;
-- `utf8_decode`: `PASS` or `FAIL`;
-- `strict_structure`: `PASS`, `FAIL`, or `NOT_REACHED`;
-- `beautifulsoup_parse`: `PASS`, `FAIL`, or `NOT_REACHED`.
+- The future run must never emit `PUBLICATION_BEGIN`, `RAW_FIXTURES_WRITTEN`, `MANIFEST_WRITTEN`, `DEDICATED_TEST_WRITTEN`, or `REGRESSIONS_PASS`; it must not create fixtures, manifest, or fixture test. Publication rollback is therefore unnecessary.
+- Repository paths remain unchanged. Journal, generated source, streams, raw bytes, and safe-final output live only in a unique OS temporary directory; the child does not edit documentation.
+- Canonical safe-final JSON contains only schema/version, run ID, starting HEAD, target, authorization final state, Phase44/GET counts, safe capture metadata, ordinary and recovery Profile-B results, Safety recovery, normal Safety result or Safety-pass fact, terminal evidence, journal SHA-256/safe records, parent validation, and cleanup status. It contains no raw HTML, arbitrary URL/query, credentials, cookies, or secrets.
+- The parent independently validates one run, boundary durability, one Phase44 entry, at most two GETs, response/closed-bundle evidence, captures, ordinary/recovery Profile-B, identity, recovery/normal Safety, absence of publication milestones, outcome truthfulness, and no contradictions. Only after safe-final and parent validation may transient raw bytes be destroyed.
 
-The function `diagnose_nar_race_entry_status_publication_safety_recovery` uses the same authorities as Safety: `bytes.decode("utf-8", errors="strict")`, Phase56/Profile-A `_validate_html_structure`, and `BeautifulSoup(source, "html.parser")`. It maps only `UnicodeDecodeError` at decode, `ValueError` at strict structure, and `ParserRejectedMarkup` at BeautifulSoup. Unexpected errors produce a fixed validation error without original exception text or context; no stage outcome is invented. The exact top-level canonical keys are `schema`, `schema_version`, and `document_results`.
+## Sufficiency and changed-provider-state handling
 
-Exact valid stage combinations are:
+- Safety root-cause review requires each role’s exact `utf8_decode`, `strict_structure`, and `beautifulsoup_parse` tuple.
+- Profile-B review requires scope/candidate count, completeness, bounded candidate details when count is at most eight, and safe-projection equality. More than eight candidates is valid but explicitly incomplete, never a grammar decision.
+- The provider may differ from Phase57: Safety can pass or fail elsewhere; candidate count can differ; Profile-B can qualify. New hashes/lengths are current-acquisition evidence only and never prove historical identity.
 
-1. decode `FAIL` → strict structure `NOT_REACHED` → BeautifulSoup `NOT_REACHED`;
-2. decode `PASS`, strict structure `FAIL` → BeautifulSoup `NOT_REACHED`;
-3. decode `PASS`, strict structure `PASS` → BeautifulSoup exactly `PASS` or `FAIL`.
+## Approval readiness
 
-All other combinations are rejected. This records parser-stage reachability only; it does not return Safety `SAFE`, `UNSAFE`, `AMBIGUOUS`, or `UNSUPPORTED`, and does not replace Phase56 Safety.
+| A. Phase63 formally complete | YES |
+| B. Clean tracked baseline | YES |
+| C. Exact target frozen | YES |
+| D. Phase44 one-shot contract valid | YES |
+| E. Phase63 recovery events available | YES |
+| F. Pre-live gates complete | YES |
+| G. Authorization boundary complete | YES |
+| H. Evidence sufficiency defined | YES |
+| I. Safe-final design complete | YES |
+| J. No-publication contract complete | YES |
+| K. Truthful Phase50 terminal mapping complete | YES |
+| L. Additional support phase required | NO |
 
-### Profile-B recovery diagnostics v1
+## Scope and stop condition
 
-Schema: `nar-race-entry-status-profile-b-recovery-diagnostics`; schema version: exact integer `1`. It uses the current Profile-B target discovery boundary without selecting a row: `section.raceTable`, `tr.data`, direct `td` cells, and the first direct cell normalized exactly to `{race_no}R`.
+- PREPARE may modify only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`.
+- No Phase44, Phase50, Phase63, Phase53, Phase56, Phase60, Phase61, fixture, `.gitattributes`, database, log, test, authorization, or network change is authorized.
+- Phase44 changes required: `NO`; Phase50 changes required: `NO`; Phase63 changes required: `NO`.
+- Phase54 remains `PHASE54_AUTHORIZATION_UNCONSUMED_BUT_UNUSABLE_FOR_V2`; Phase41 remains `DESIGN_BLOCKED`. Open constraints remain `COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE` and `NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE`.
 
-The function `diagnose_nar_race_entry_status_profile_b_recovery` returns exact top-level keys `schema`, `schema_version`, `target`, `race_table_scope_count`, `target_candidate_count`, `candidate_details_complete`, `candidate_results`, and `all_candidate_safe_projections_equal`. Target keys are exactly `baba_code`, `race_date`, and `race_no`. The equality field is `false` for zero candidates, `true` for one complete candidate, compares all approved projections excluding ordinal for two or more complete candidates, and is `false` whenever details are incomplete. No provider text participates in the comparison.
+This docs-only tracking commit does not change executable acquisition, observability, or publication behavior; authorization remains bound to support HEAD `5b85d54a39c6b7d3e6c036cc0d479ba24e0a1797`. Independent remote verification is required before execution. Do not execute, acquire, or consume authorization in this integration.
 
-Each deterministic DOM-order candidate result has exactly:
+## Next recommended action
 
-- `candidate_ordinal` (one-based, contiguous);
-- `direct_cell_count`;
-- `anchor_count`;
-- `deba_path_link_count`;
-- `deba_href_unsupported_count`;
-- `canonical_target_query_match_count`;
-- `canonical_query_unsupported_count`;
-- `canonical_target_query_match`.
-
-All counts are exact nonnegative integers bounded by `10000`; all booleans are exact bools. The only source constant inspected is `/KeibaWeb/TodayRaceInfo/DebaTable`. A candidate increments `deba_href_unsupported_count` for an anchor with an `href` attribute whose value is not exact `str`, or whose `urlparse` raises `TypeError` or `ValueError`. Missing `href` and a parseable non-Deba path do not increment it. A parseable exact-Deba-path link increments `deba_path_link_count`; only then can strict `parse_qs(..., strict_parsing=True)` failure increment `canonical_query_unsupported_count`.
-
-For parseable exact-Deba-path links, strict `parse_qs` uses `keep_blank_values=True` and `strict_parsing=True`. A canonical query is exactly the mapping `k_babaCode=[target.baba_code]`, `k_raceDate=[target.race_date.strftime("%Y/%m/%d")]`, and `k_raceNo=[str(target.race_no)]`. Only its count and the boolean are retained. As explicitly specified by EXECUTE, `canonical_target_query_match` is exactly `canonical_target_query_match_count >= 1`. Non-string href or URL-parse `TypeError/ValueError` increments only the href unsupported count; strict-query `TypeError/ValueError` increments only the exact Deba-path query unsupported count.
-
-`MAX_RETAINED_CANDIDATE_DETAILS` is exactly `8`. With one race-table scope and `0..8` candidates, details are complete and retain every candidate. With `9..10000` candidates, `candidate_details_complete=false`, `candidate_results=[]`, and `all_candidate_safe_projections_equal=false`; no prefix is silently retained. The PREPARE-frozen unavailable-discovery representation is retained for decoding/parser rejection or a nonunique scope: target count zero, incomplete details, empty results, and equality false. It does not assert that unavailable rows were absent. Counts above `10000` fail closed; formal provider codes are also limited to `512` UTF-8 bytes and target race numbers to `10000`.
-
-No row text, horse name, anchor text, href, host, scheme, fragment, arbitrary path, query text, class, raw HTML, source snippet, exception text, selected candidate, preferred candidate, canonical candidate, or deduplicated candidate appears in the result. The recovery diagnostic cannot change ordinary Profile-B output.
-
-### Canonical form
-
-Both result families are frozen dataclasses with exact field/key allowlists, exact enum/type validation, tuple ordering, and canonical UTF-8 bytes from `json.dumps(..., ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)`. They expose only canonical dictionaries and canonical bytes. No free-form provider-derived string is accepted or emitted.
-
-## Implemented durable Phase50 support
-
-Two typed milestones are required; existing fields are not overloaded:
-
-| Milestone | Exact detail keys |
-| --- | --- |
-| `PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED` | `{"profile_b_recovery_diagnostics"}` |
-| `PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED` | `{"publication_safety_recovery_diagnostics"}` |
-
-The exact new order is:
-
-`RACELIST_CAPTURE_METADATA_RETAINED` → `PROFILE_B_DIAGNOSTICS_RETAINED` → `PROFILE_B_RECOVERY_DIAGNOSTICS_RETAINED` → `IDENTITY_VERIFICATION_PASS` → `PUBLICATION_SAFETY_RECOVERY_DIAGNOSTICS_RETAINED` → (`PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED` or `SAFETY_PASS`) → all existing later milestones in their present relative order.
-
-Safety recovery diagnostics are always emitted before the normal Safety branch during a future diagnostic run. Both recovery events use normal append → flush → fsync durability before any transient raw cleanup. Phase50 validates exact detail keys, nested schema/version, enum values, field keys, bool/int types, `0..10000` bounds, candidate ordinal continuity, count/detail consistency, the Safety stage invariants, canonical serialization, and the `4096`-byte record limit. Raw bytes are rejected as journal detail values.
-
-`JOURNAL_SCHEMA_VERSION` remains exact `1`: this is additive optional milestone support with no change to record top-level schema, existing event names, existing detail keys, or their relative ordering. The new reader accepts historical journals that omit the new records, including the valid Phase57 blocked journal; there is no migration, rewrite, or new-event requirement for historical evidence. Adding the milestones preserves the rank of every existing milestone relative to every other existing milestone.
-
-No completion vocabulary changes. A future diagnostic run uses `SOURCE_PROFILE_FIXTURE_BLOCKED` for an unchanged Safety/Profile-B qualification block and `RECOVERY_PREFLIGHT_BLOCKED` for pre-live, acquisition-integrity, or recovery failure. `CONTROLLED_REACQUISITION_FOR_SAFE_ROOT_CAUSE_DIAGNOSTICS` is a future project objective only—not a Phase50 outcome, authorization, or publication authority.
-
-## Future run and raw cleanup contract
-
-After Phase63 is formally complete, a later phase may separately PREPARE, review, and APPROVE one new Phase44-only diagnostic reacquisition for this unchanged target. It must retain normal capture metadata and Profile-B diagnostics, then Profile-B recovery diagnostics, verify identity, retain Safety recovery diagnostics, run normal Phase56 Safety, retain the normal blocked/pass result, and stop fail-closed under unchanged qualification semantics. It has no automatic publication requirement.
-
-Transient raw bytes must be destroyed only after both recovery results, all normal safe evidence, and parent validation are durably retained. The previous raw bytes cannot be reconstructed from hashes, diagnostics, or internet guesses.
-
-`NO_ADDITIONAL_TRACKED_SAFE_EVIDENCE_ARTIFACT_REQUIRED` is chosen. The Phase62 tracked documents already preserve the immutable run ID, safe-final fingerprint, target, authorization and transport facts, capture metadata, Profile-B and Safety facts, outcome, and evidence limits. The OS-temp safe-final file is not project storage and no seventh implementation path is justified.
-
-## Exact implementation boundary and verification
-
-The exact six changed paths are:
-
-1. `scripts/simulation/nar_race_entry_status_source_profile_recovery_diagnostics.py`
-2. `tests/test_nar_race_entry_status_source_profile_recovery_diagnostics.py`
-3. `scripts/simulation/nar_race_entry_status_reacquisition_observability.py`
-4. `tests/test_nar_race_entry_status_reacquisition_observability.py`
-5. `docs/CURRENT_PHASE.md`
-6. `docs/LATEST_CODEX_REPORT.md`
-
-Phase44 change required: `NO`; Phase53 ordinary semantics changed: `NO`; Phase56 semantics changed: `NO`; Phase60/61 changed: `NO`. No fixture, `.gitattributes`, database, or logs path is in scope.
-
-Focused tests must cover valid and per-role failed Safety stages; impossible stage states; deterministic/no-exception-text canonical bytes; zero/one/two/overflow target candidates; deterministic candidate DOM order; each safe candidate count/boolean; malformed or non-string href/query bounded counters; no retained URL/query; candidate ordinal and count consistency; and ordinary Profile-B invariance.
-
-Phase50 tests must cover both events, exact detail keys, malformed nested schemas, invalid Safety stage combinations, candidate mismatch, oversized records, ordering, old journals without recovery events, the historical Phase57 blocked journal, preflight, unchanged Phase58/59/61 behavior, and unchanged `LIVE_PROCESS_COMPLETE` vocabulary. Static audit proves the new module has no HTTP, socket, filesystem, subprocess, database, clock, randomness, environment, or Git operation.
-
-## Implemented verification results and stop condition
-
-- Recovery focused command: `python -m pytest -q tests/test_nar_race_entry_status_source_profile_recovery_diagnostics.py`: `80 passed`.
-- Phase50 focused command: `python -m pytest -q tests/test_nar_race_entry_status_reacquisition_observability.py`: `262 passed`.
-- Relevant NAR command: `python -m pytest -q tests/test_nar_race_entry_status_source_profile_recovery_diagnostics.py tests/test_nar_race_entry_status_reacquisition_observability.py tests/test_nar_race_entry_status_source_profile_diagnostics.py tests/test_nar_race_entry_status_source_profile_profile_a.py tests/test_nar_race_entry_status_source_profile_publication_contract.py tests/test_nar_race_entry_status_source_profile_publication_plan.py`: `440 passed`.
-- Final full-suite command: `python -m pytest -q`: `4041 passed, 2841 subtests passed`; failed: `0`.
-- Full suite ran initially once (`4038 passed, 2841 subtests passed`), then once after three narrowly added tests exposed unexpected-exception text propagation. Fixed diagnostic errors suppress original exception context; focused/relevant tests and the final full suite pass.
-- Maximal recovery JSONL measurements including LF: Profile-B `3177` bytes; Safety `677` bytes. The tests use eight candidate records at count bound `10000`, a `512`-byte provider code, race number `10000`, canonical date, and sequence `131072`. `MAX_RECORD_BYTES=4096` remains unchanged.
-- ParserRejectedMarkup branches are tested by controlled parser substitution and bounded typed-state validation. No natural input inducing this stage rejection after the strict structure gate was established; there is no claim that the old provider bytes had that failure.
-- Static AST/import and added-diff audit: `PASS`; no provider HTTP or acquisition call was added. Exact nested validation and the existing durable writer are used; the writer itself is unchanged.
-- Phase44/53/56/60 files and `.gitattributes` are unchanged. Phase58/59 Safety-blocked/identity semantics, Phase61 dedicated-test path compatibility, bounds, outcomes, and token are unchanged and covered by passing Phase50 tests.
-- Staged: empty; untracked: only the approved new module and its test. No new pyc/cache files were created. `git diff --check`: `PASS`.
-
-Stop at `INTEGRATED_PENDING_REMOTE_VERIFICATION`. Remote verification is required; do not mark the phase formally complete, prepare a new acquisition, acquire, or issue authorization.
-
-## Persistent constraints
-
-- Phase54: `PHASE54_AUTHORIZATION_UNCONSUMED_BUT_UNUSABLE_FOR_V2`.
-- Phase41: `DESIGN_BLOCKED`.
-- `market_eligibility`, `positive_market_eligibility`, and `WHOLE_MEETING_CANCELLATION`: `UNSUPPORTED`.
-- Open: `COMBINATION_EV_REQUIRES_MARKET_ODDS_CAPTURE`; `NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE`.
-
-## Next permitted action
-
-`INDEPENDENT_REMOTE_VERIFICATION`.
+`EXECUTE_DIAGNOSTIC_ONE_SHOT_AFTER_INDEPENDENT_REMOTE_VERIFICATION`.
