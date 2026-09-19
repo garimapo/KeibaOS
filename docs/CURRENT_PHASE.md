@@ -5,8 +5,11 @@
 - Phase: `POST_V0_8_DAILY_REPLAY_68`
 - Title: `Hardened Structural Diagnostic Reacquisition After Phase67 Runner Block`
 - Branch: `feature/post-v0.8-daily-replay`
-- Current tracked/Base HEAD: `394aae12a7613f74212084756480a6af0338d2eb`
+- Approval Base HEAD: `394aae12a7613f74212084756480a6af0338d2eb`
+- Authorization Record Commit: `954b39f3ba319d958339469498d5ff27333c43ca`
 - Executable support HEAD: `d49adc20cd75b7975947cdc956bdfbf293852ef6`
+- State: `APPROVED_UNCONSUMED_TRACKED`
+- Authorization Tracking State: `APPROVED_UNCONSUMED_TRACKED`
 - Formal Status: `APPROVED_FOR_CODEX`
 - Design Review: `PHASE68_HARDENED_RUNNER_DESIGN_REVIEW_PASS`
 - Outcome: `APPROVED_HARDENED_STRUCTURAL_DIAGNOSTIC_ONE_SHOT_REACQUISITION`

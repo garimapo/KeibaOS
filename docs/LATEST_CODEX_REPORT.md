@@ -2,7 +2,9 @@
 
 ## Phase68 approval
 
-Phase `POST_V0_8_DAILY_REPLAY_68`, `Hardened Structural Diagnostic Reacquisition After Phase67 Runner Block`, is `APPROVED_FOR_CODEX` after `PHASE68_HARDENED_RUNNER_DESIGN_REVIEW_PASS`. Its outcome is `APPROVED_HARDENED_STRUCTURAL_DIAGNOSTIC_ONE_SHOT_REACQUISITION`, with diagnostic contract `HARDENED_RUNNER_STRUCTURAL_DIAGNOSTIC_CONTRACT_COMPLETE`. The current tracking/Base HEAD is `394aae12a7613f74212084756480a6af0338d2eb`; executable support remains `d49adc20cd75b7975947cdc956bdfbf293852ef6`.
+Phase `POST_V0_8_DAILY_REPLAY_68`, `Hardened Structural Diagnostic Reacquisition After Phase67 Runner Block`, is `APPROVED_FOR_CODEX` after `PHASE68_HARDENED_RUNNER_DESIGN_REVIEW_PASS`. Its outcome is `APPROVED_HARDENED_STRUCTURAL_DIAGNOSTIC_ONE_SHOT_REACQUISITION`, with diagnostic contract `HARDENED_RUNNER_STRUCTURAL_DIAGNOSTIC_CONTRACT_COMPLETE`. Approval Base HEAD is `394aae12a7613f74212084756480a6af0338d2eb`; Authorization Record Commit is `954b39f3ba319d958339469498d5ff27333c43ca`; executable support remains `d49adc20cd75b7975947cdc956bdfbf293852ef6`.
+
+State and Authorization Tracking State are both `APPROVED_UNCONSUMED_TRACKED`. This corrects the tracking-state documentation only; it is neither a new authorization nor an execution event.
 
 This approval issues exactly `PHASE68_STRUCTURAL_DIAGNOSTIC_ACQUISITION_AUTHORIZATION_UNCONSUMED`, bound only to Phase68, NAR / 21 / 2025-01-01 / 6, `CONTROLLED_REACQUISITION_FOR_STRICT_STRUCTURE_AND_CANDIDATE_ANCESTRY_DIAGNOSTICS_WITH_VALIDATED_RUNNER_ADAPTER`, and executable support HEAD `d49adc20cd75b7975947cdc956bdfbf293852ef6`. It is phase-, target-, purpose-, and support-HEAD-specific; one-shot; nontransferable; and nonrenewable after consumption. Its only consumed state is `PHASE68_STRUCTURAL_DIAGNOSTIC_ACQUISITION_AUTHORIZATION_CONSUMED_FAIL_CLOSED`.
 
