@@ -432,6 +432,9 @@ _PROFILE_A_OUTCOMES = frozenset({"PASS", "FAIL", "AMBIGUOUS", "UNSUPPORTED"})
 def _validate_profile_a_blocked_diagnostics(value: object) -> dict[str, object]:
     if type(value) is not dict:
         raise _error("profile_a_blocked_diagnostics must be exact dict")
+    schema_version = value.get("schema_version")
+    if type(schema_version) is not int or schema_version not in {2, 3}:
+        raise _error("profile_a_blocked_diagnostics schema_version is unsupported")
     expected = {
         "schema_version",
         "profile",
@@ -441,11 +444,28 @@ def _validate_profile_a_blocked_diagnostics(value: object) -> dict[str, object]:
         "first_nonpass_predicate",
         "terminal_reason",
     }
+    if schema_version == 3:
+        expected.add("target")
     if set(value) != expected:
         raise _error("profile_a_blocked_diagnostics keys do not match the exact allowlist")
-    schema_version = value["schema_version"]
-    if type(schema_version) is not int or schema_version not in {2, 3}:
-        raise _error("profile_a_blocked_diagnostics schema_version is unsupported")
+    target: dict[str, object] | None = None
+    if schema_version == 3:
+        target_value = value["target"]
+        if type(target_value) is not dict or set(target_value) != {"baba_code", "race_date", "race_no"}:
+            raise _error("Profile-A v3 target keys do not match the exact allowlist")
+        baba_code = _safe_string(target_value["baba_code"], "baba_code")
+        race_date = _safe_string(target_value["race_date"], "race_date")
+        race_no = _exact_positive_int(target_value["race_no"], "race_no")
+        if _BABA_CODE.fullmatch(baba_code) is None or _RACE_DATE.fullmatch(race_date) is None or race_no > 12:
+            raise _error("Profile-A v3 target is noncanonical")
+        try:
+            parsed_date = datetime.strptime(race_date, "%Y-%m-%d").date()
+            _raw_capture.NARRaceEntryStatusRaceIdentity(baba_code, parsed_date, race_no)
+        except (ValueError, _raw_capture.NARRaceEntryStatusRawCaptureError) as error:
+            raise _error("Profile-A v3 target is invalid") from error
+        if parsed_date.isoformat() != race_date:
+            raise _error("Profile-A v3 target race_date is noncanonical")
+        target = {"baba_code": baba_code, "race_date": race_date, "race_no": race_no}
     if value["profile"] != "ENTRY_LISTING_PRESENT" or type(value["profile"]) is not str:
         raise _error("Profile-A semantic is outside the exact allowlist")
     if value["overall_result"] != "BLOCKED" or type(value["overall_result"]) is not str:
@@ -489,7 +509,7 @@ def _validate_profile_a_blocked_diagnostics(value: object) -> dict[str, object]:
     expected_reason = "UNSUPPORTED_INPUT" if "UNSUPPORTED" in outcomes else "FIRST_NONPASS_PREDICATE"
     if value["terminal_reason"] != expected_reason or type(value["terminal_reason"]) is not str:
         raise _error("Profile-A terminal_reason is inconsistent with predicate outcomes")
-    return {
+    normalized: dict[str, object] = {
         "schema_version": schema_version,
         "profile": "ENTRY_LISTING_PRESENT",
         "overall_result": "BLOCKED",
@@ -498,6 +518,9 @@ def _validate_profile_a_blocked_diagnostics(value: object) -> dict[str, object]:
         "first_nonpass_predicate": expected_first,
         "terminal_reason": expected_reason,
     }
+    if target is not None:
+        normalized["target"] = target
+    return normalized
 
 
 _PROFILE_B_PREDICATES = (
@@ -1185,6 +1208,15 @@ def validate_journal_semantics(records: tuple[JournalRecord, ...]) -> None:
         ObservationMilestone.SAFETY_PASS,
     }.issubset(seen):
         raise _error("blocked Profile-A evidence requires the constructed target and successful safety gate")
+    if ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED in seen:
+        by_milestone = {record.milestone: record for record in records}
+        profile_a = by_milestone[ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED].details[
+            "profile_a_blocked_diagnostics"
+        ]
+        if profile_a["schema_version"] == 3 and profile_a["target"] != dict(
+            by_milestone[ObservationMilestone.TARGET_CONSTRUCTED].details
+        ):
+            raise _error("Profile-A v3 blocked target contradicts the constructed target")
     if ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED in seen and seen & {
         ObservationMilestone.SAFETY_PASS,
         ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,

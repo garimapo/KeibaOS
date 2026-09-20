@@ -1,39 +1,44 @@
 # Latest Codex Report
 
-## Phase70 approval
+## Phase71 implementation report
 
-Phase: `POST_V0_8_DAILY_REPLAY_70`
+Phase: `POST_V0_8_DAILY_REPLAY_71`
 
-State: `APPROVED_UNCONSUMED_TRACKED`
+State: `IMPLEMENTED_FOR_REVIEW`
 
-Authorization Tracking State: `APPROVED_UNCONSUMED_TRACKED`
+Outcome: `READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`
 
-Approval Base HEAD: `79d6faaa30a54840232c0b73cd0e4ce1451a088e`
+Support Repair: `PHASE50_PROFILE_A_V3_TARGET_CONTRACT_REPAIRED`
 
-Executable Support HEAD: `79d6faaa30a54840232c0b73cd0e4ce1451a088e`
+Starting tracking HEAD: `4c18597eac7ec8b180650c89acddbe88f0294047`
 
-Formal Status: `APPROVED_FOR_CODEX`
+Previous executable support HEAD: `79d6faaa30a54840232c0b73cd0e4ce1451a088e`
 
-Design Review: `PHASE70_VALIDATION_DESIGN_REVIEW_PASS`
+Phase50 now preserves the historical schema-2 targetless blocked Profile-A payload contract while requiring the real canonical `target` object for schema 3. Schema 3 accepts no missing or extra target keys and validates canonical `baba_code`, exact valid `YYYY-MM-DD` `race_date`, and an exact positive `race_no` bounded to `1..12`, without coercion or normalization.
 
-Outcome: `APPROVED_VERSIONED_SOURCE_PROFILE_FRESH_CURRENT_VALIDATION`
+Phase50 journal semantics additionally require a schema-3 blocked Profile-A target to equal the journal's `TARGET_CONSTRUCTED` record exactly. Mismatch in baba code, race date, or race number fails closed. Unsupported versions remain rejected. The top-level journal schema, ordering, limits, acquisition behavior, and all other qualification/recovery authorities are unchanged.
 
-Authorization: `PHASE70_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_UNCONSUMED`
+Changed paths are exactly:
 
-`POST_V0_8_DAILY_REPLAY_70` is approved at the tracked/executable support HEAD above. Phase69 is frozen as `FORMALLY_COMPLETE` with `PHASE69_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`.
+1. `scripts/simulation/nar_race_entry_status_reacquisition_observability.py`
+2. `tests/test_nar_race_entry_status_reacquisition_observability.py`
+3. `docs/CURRENT_PHASE.md`
+4. `docs/LATEST_CODEX_REPORT.md`
 
-The planned one-shot validation concerns the current NAR target `21 / 2025-01-01 / 6` only. Its authority is Profile-B v2 (`diagnose_nar_race_entry_status_profile_b_v2`), Profile-A v3 (`diagnose_nar_race_entry_status_profile_a_v3`), and Safety v3 (`assess_nar_race_entry_status_raw_fixture_publication_safety_v3`). Desired results are QUALIFIED / QUALIFIED / SAFE, but no result is assumed.
+Verification completed:
 
-Phase50 support is sufficient without tracked changes: Profile-B nested schemas `{1,2}`, blocked Profile-A `{2,3}`, and blocked Safety `{2,3}` are accepted while preserving incoming versions; journal schema remains `1`. Phase63 and Phase66 remain supplemental recovery evidence. FixtureSetV3 and QualificationV3 are not required for this no-publication run; SourceProfileManifestV3 is prohibited.
+- `python -m pytest tests/test_nar_race_entry_status_reacquisition_observability.py -q`: `355 passed in 3.05s`.
+- `python -m pytest tests/test_nar_race_entry_status_source_profile_profile_a.py tests/test_nar_race_entry_status_source_profile_recovery_diagnostics.py tests/test_nar_race_entry_status_source_profile_structural_recovery_diagnostics.py -q`: `249 passed in 0.71s`.
+- `python -m pytest -q`: `4309 passed, 2841 subtests passed in 28.82s`.
 
-The future runner will follow the hardened external pattern: isolated `-I -B` process, authorized path bootstrap, KeibaAI exclusion, verified origins, corrected Git output/exit-code guard, one generated/compiled runner, shared capture adapter, and one shared dry/live post-acquisition processor. A synthetic no-network dry-run must pass the Profile-B v2, Profile-A v3, Safety v3, Phase50 versioned-payload, full reconstruction, capture identity, no-network, and unchanged-runner gates before any authorization boundary.
+The representative schema-3 blocked Profile-A record is `923` bytes excluding LF (`924` including LF), below `MAX_RECORD_BYTES = 4096`. The representative seven-record journal is `2695` bytes, below `MAX_JOURNAL_BYTES = 131072`.
 
-Issued authorization: `PHASE70_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_UNCONSUMED`; reserved consumed state: `PHASE70_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_CONSUMED_FAIL_CLOSED`. It is one-shot and bound to Phase70, the frozen target, `FRESH_CURRENT_VALIDATION_OF_VERSIONED_NAR_SOURCE_PROFILE_AUTHORITY`, current-acquisition semantics, and the support HEAD. The future durable boundary remains `PHASE44_CALL_ABOUT_TO_ENTER` → append → flush → fsync → exactly one Phase44 call. Caps remain Deba 1 GET, RaceList 1 GET, total 2, in that order, with no retry.
+No provider request occurred: Provider HTTP `0`, Phase44 `0`, GET `0`. No acquisition authorization was issued. No fixture, manifest, publication artifact, raw provider content, database, or log was created.
 
-Two additional no-network Phase50 probes are mandatory before the real boundary: a schema-3 blocked Safety V3 payload retained through the actual `PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED` path, and a schema-3 blocked Profile-A V3 payload retained through the actual `PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED` path. Each must reconstruct with schema version 3 retained unchanged. Required gates are `PHASE50_SAFETY_V3_BLOCKED_PAYLOAD_PASS` and `PHASE50_PROFILE_A_V3_BLOCKED_PAYLOAD_PASS`, in addition to every previously specified dry-run, capture-metadata, no-network, and runner-parity gate.
+Phase70 authorization remains formally unconsumed:
 
-No publication is planned or authorized. No manifest or V3 fixture object needs construction. Safe-final and raw cleanup remain external and bounded; current-byte comparison may never establish historical availability. During APPROVE, Provider HTTP, Phase44, and GET are `0`; synthetic and live runs are `NOT RUN`; the boundary is not written and authorization is not consumed.
+`PHASE70_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_UNCONSUMED`
 
-Readiness A–R: all `YES`. No tracked support change is required. Only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` changed.
+Because the executable support HEAD changes with this repair, its execution eligibility is `INVALIDATED_BY_EXECUTABLE_SUPPORT_HEAD_CHANGE`. It is unusable and must not be reused or rebound; it was not marked consumed.
 
-Next permitted action: `TRACK_PHASE70_AUTHORIZATION_STATE_THEN_INDEPENDENT_REMOTE_VERIFICATION`.
+Next permitted action: `CHATGPT_REVIEW_PHASE71_IMPLEMENTATION`.

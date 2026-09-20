@@ -13,6 +13,7 @@ import pytest
 
 from scripts.simulation import nar_race_entry_status_raw_capture as raw_capture
 from scripts.simulation import nar_race_entry_status_reacquisition_observability as subject
+from scripts.simulation import nar_race_entry_status_source_profile_profile_a as profile_a
 
 
 RUN_ID = "0123456789abcdef0123456789abcdef"
@@ -196,7 +197,7 @@ def _profile_a_blocked_diagnostics(
         {"selected_non14_candidate_count": count, "selected_provider_horse_no": None},
     )
     first_index = next(index for index, outcome in enumerate(outcomes) if outcome != "PASS")
-    return {
+    payload: dict[str, object] = {
         "schema_version": schema_version,
         "profile": "ENTRY_LISTING_PRESENT",
         "overall_result": "BLOCKED",
@@ -208,6 +209,9 @@ def _profile_a_blocked_diagnostics(
         "first_nonpass_predicate": PROFILE_A_PREDICATES[first_index],
         "terminal_reason": "UNSUPPORTED_INPUT" if "UNSUPPORTED" in outcomes else "FIRST_NONPASS_PREDICATE",
     }
+    if schema_version == 3:
+        payload["target"] = {"baba_code": "21", "race_date": "2025-01-01", "race_no": 6}
+    return payload
 
 
 class _Clock:
@@ -1199,6 +1203,55 @@ def test_profile_a_supported_versions_are_retained(version: int) -> None:
     assert subject._validate_profile_a_blocked_diagnostics(value)["schema_version"] == version
 
 
+def test_profile_a_v2_blocked_payload_remains_targetless_and_rejects_target() -> None:
+    historical = _profile_a_blocked_diagnostics(schema_version=2)
+    assert "target" not in subject._validate_profile_a_blocked_diagnostics(historical)
+
+    targetful = copy.deepcopy(historical)
+    targetful["target"] = {"baba_code": "21", "race_date": "2025-01-01", "race_no": 6}
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject._validate_profile_a_blocked_diagnostics(targetful)
+
+
+def test_actual_profile_a_v3_blocked_canonical_payload_is_accepted_directly() -> None:
+    target = raw_capture.NARRaceEntryStatusRaceIdentity("21", date(2025, 1, 1), 6)
+    result = profile_a.diagnose_nar_race_entry_status_profile_a_v3(
+        deba_table_bytes=b"<html><body></body></html>",
+        target=target,
+    )
+
+    payload = result.to_canonical_dict()
+    assert payload["overall_result"] == "BLOCKED"
+    assert subject._validate_profile_a_blocked_diagnostics(payload) == payload
+
+
+def test_profile_a_v3_blocked_payload_requires_target() -> None:
+    value = _profile_a_blocked_diagnostics(schema_version=3)
+    del value["target"]
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject._validate_profile_a_blocked_diagnostics(value)
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        {"baba_code": "21", "race_date": "2025-01-01"},
+        {"baba_code": "21", "race_date": "2025-01-01", "race_no": 6, "extra": 1},
+        {"baba_code": "021", "race_date": "2025-01-01", "race_no": 6},
+        {"baba_code": "21", "race_date": "2025-1-01", "race_no": 6},
+        {"baba_code": "21", "race_date": "2025-02-30", "race_no": 6},
+        {"baba_code": "21", "race_date": "2025-01-01", "race_no": True},
+        {"baba_code": "21", "race_date": "2025-01-01", "race_no": 0},
+        {"baba_code": "21", "race_date": "2025-01-01", "race_no": 13},
+    ],
+)
+def test_profile_a_v3_blocked_payload_rejects_noncanonical_target(target: dict[str, object]) -> None:
+    value = _profile_a_blocked_diagnostics(schema_version=3)
+    value["target"] = target
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject._validate_profile_a_blocked_diagnostics(value)
+
+
 @pytest.mark.parametrize("version", [1, 2])
 def test_profile_b_supported_versions_are_retained(version: int) -> None:
     value = _profile_b_diagnostics(schema_version=version)
@@ -1481,6 +1534,60 @@ def test_profile_a_blocked_path_is_durable_terminal_failure_evidence(tmp_path: P
     )
     writer.close()
     subject.validate_journal_semantics(subject.validate_journal_bytes(writer.path.read_bytes()))
+
+
+def test_profile_a_v3_blocked_target_matches_constructed_target(tmp_path: Path) -> None:
+    writer = _writer(tmp_path)
+    _append_through_identity_verification(writer)
+    writer.append(subject.ObservationMilestone.SAFETY_PASS, {})
+    writer.append(
+        subject.ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
+        {"profile_a_blocked_diagnostics": _profile_a_blocked_diagnostics(schema_version=3)},
+    )
+    writer.append(
+        subject.ObservationMilestone.LIVE_PROCESS_COMPLETE,
+        {"outcome": "SOURCE_PROFILE_FIXTURE_BLOCKED", "authorization_state": "CONSUMED_CONFIRMED"},
+    )
+    writer.close()
+
+    journal_bytes = writer.path.read_bytes()
+    assert max(len(line) for line in journal_bytes.splitlines(keepends=True)) <= subject.MAX_RECORD_BYTES == 4096
+    assert len(journal_bytes) <= subject.MAX_JOURNAL_BYTES == 131072
+    records = subject.validate_journal_bytes(journal_bytes)
+    subject.validate_journal_semantics(records)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("baba_code", "22"),
+        ("race_date", "2025-01-02"),
+        ("race_no", 7),
+    ],
+)
+def test_profile_a_v3_blocked_target_mismatch_fails_semantics(
+    tmp_path: Path,
+    field: str,
+    value: object,
+) -> None:
+    writer = _writer(tmp_path)
+    _append_through_identity_verification(writer)
+    writer.append(subject.ObservationMilestone.SAFETY_PASS, {})
+    payload = _profile_a_blocked_diagnostics(schema_version=3)
+    payload["target"][field] = value  # type: ignore[index]
+    writer.append(
+        subject.ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
+        {"profile_a_blocked_diagnostics": payload},
+    )
+    writer.append(
+        subject.ObservationMilestone.LIVE_PROCESS_COMPLETE,
+        {"outcome": "SOURCE_PROFILE_FIXTURE_BLOCKED", "authorization_state": "CONSUMED_CONFIRMED"},
+    )
+    writer.close()
+
+    records = subject.validate_journal_bytes(writer.path.read_bytes())
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        subject.validate_journal_semantics(records)
 
 
 @pytest.mark.parametrize(
