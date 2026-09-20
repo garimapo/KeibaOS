@@ -30,7 +30,7 @@ Phase77 is `FORMALLY_COMPLETE` with `PHASE77_IMPLEMENTATION_REMOTE_VERIFICATION_
 
 This APPROVE activity performed no provider HTTP, Phase44, GET, synthetic/live run, publication, boundary write, staging, commit, or push. Authorization consumed: `NO`. The only modified paths are the two Phase documents; staged and untracked remain empty.
 
-Next permitted action: `TRACK_PHASE76_AUTHORIZATION_STATE_THEN_INDEPENDENT_REMOTE_VERIFICATION`.
+Next permitted action: `INDEPENDENT_REMOTE_VERIFICATION_BEFORE_PHASE76_EXECUTE`.
 
 ---
 
