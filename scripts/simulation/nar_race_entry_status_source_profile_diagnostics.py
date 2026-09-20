@@ -347,11 +347,17 @@ def _normalized_cell(cell: _Tag) -> str:
 
 def _has_exact_class_token(node: _Tag, token: str) -> bool:
     value = node.get("class")
+    if value is None:
+        return False
     if type(value) is str:
-        return value == token
-    if type(value) is list:
-        return any(type(item) is str and item == token for item in value)
-    return False
+        values = value.split()
+    elif isinstance(value, (list, tuple)):
+        values = value
+    else:
+        raise _validation("table class representation is invalid")
+    if any(type(item) is not str for item in values):
+        raise _validation("table class representation is invalid")
+    return token in values
 
 
 def _is_v2_schedule_domain_row(row: _Tag, scope: _Tag) -> bool:

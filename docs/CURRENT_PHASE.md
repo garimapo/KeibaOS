@@ -1,83 +1,63 @@
 # Current Phase
 
-## Phase72 approved authorization
+## Phase73 implementation
 
-- Phase: `POST_V0_8_DAILY_REPLAY_72`
-- Title: `Reauthorized Fresh-Current Validation After Phase50 Profile-A V3 Contract Repair`
+- Phase: `POST_V0_8_DAILY_REPLAY_73`
+- Title: `Profile-B V2 ChangeInfo Class-Token Compatibility Repair`
 - Branch: `feature/post-v0.8-daily-replay`
-- Current / executable support HEAD: `b29e98259a3186f905220b0d66eae24597458059`
-- Support tree: `04acbe48a554a1dd16548d4df8449f1775e3acbf`
-- Approval Base HEAD: `b29e98259a3186f905220b0d66eae24597458059`
-- State: `APPROVED_UNCONSUMED_TRACKED`
-- Authorization Tracking State: `APPROVED_UNCONSUMED_TRACKED`
-- Formal Status: `APPROVED_FOR_CODEX`
-- Design Review: `PHASE72_VALIDATION_DESIGN_REVIEW_PASS`
-- Outcome: `APPROVED_REAUTHORIZED_VERSIONED_SOURCE_PROFILE_VALIDATION`
-- Validation Contract: `REAUTHORIZED_VERSIONED_SOURCE_PROFILE_VALIDATION_CONTRACT_COMPLETE`
-- Allowed files in this preparation: `docs/CURRENT_PHASE.md`, `docs/LATEST_CODEX_REPORT.md`
+- Starting tracking HEAD: `c8a9db01e1c6075dd028c4ed0fa4a77d6ea48eb2`
+- Previous executable support HEAD: `b29e98259a3186f905220b0d66eae24597458059`
+- State: `IMPLEMENTED_FOR_REVIEW`
+- Outcome: `READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`
+- Support Repair: `PROFILE_B_V2_CHANGEINFO_CLASS_TOKEN_REPAIRED`
+- Allowed files: `scripts/simulation/nar_race_entry_status_source_profile_diagnostics.py`, `tests/test_nar_race_entry_status_source_profile_diagnostics.py`, `docs/CURRENT_PHASE.md`, `docs/LATEST_CODEX_REPORT.md`
+
+## Frozen Phase72 result
+
+- State: `POST_AUTHORIZATION_STOP`
+- Phase50 outcome: `RECOVERY_PREFLIGHT_BLOCKED`
+- Authorization: `PHASE72_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_CONSUMED_FAIL_CLOSED`
+- Execution Integrity: `PASS`
+- Evidence review: `PHASE72_VERSIONED_VALIDATION_EVIDENCE_REVIEW_PASS_WITH_TRACKED_SUPPORT_DEFECT`
+- Exact blocker: `PROFILE_B_STRUCTURAL_CONSISTENCY`
+- Provider HTTP / Phase44 / GET: `2 / 1 / 2`
+- Post-boundary retries: `0`
+- Publication: `NO`
+- Safety v3 live: `NOT_REACHED`
+- Profile-A v3 live: `NOT_REACHED`
+
+Phase72 reproduced the previously retained current bytes. This is only `CURRENT_ACQUISITION_BYTES_REPRODUCED`; it does not establish historical source availability, provider state, timing, cutoff, or market eligibility. The consumed Phase72 authorization may never be retried or reused.
+
+## Root cause and repair
+
+The root cause is `PROFILE_B_V2_BEAUTIFULSOUP_CLASS_TOKEN_TYPE_COMPATIBILITY`. Profile-B v2 previously accepted only an exact built-in `list` for parsed class collections. BeautifulSoup supplies a list-compatible class collection, so a sole `table.changeInfo` ancestor was not recognized and was incorrectly admitted to the schedule domain.
+
+Profile-B v2 now uses the same low-level class-token grammar independently implemented by Phase66: absent class is not a match; an exact string is whitespace-tokenized; list/tuple-compatible parsed collections, including subclasses, are accepted; every token must be an exact string; and unsupported representations fail closed. Matching remains exact and case-sensitive. `changeInformation` and `CHANGEINFO` do not match `changeInfo`.
+
+The v2 schedule-domain contract remains: exactly one table ancestor before the selected `section.raceTable`, and that table must not contain the exact `changeInfo` token. The independent withdrawal domain and its `table.changeInfo` traversal are unchanged. Profile-B v1 remains frozen with recursive historical behavior. Profile-B v2 remains schema version `2`.
+
+## Verification
+
+- Profile-B diagnostics: `38 passed`
+- Phase66 structural recovery: `152 passed`
+- Phase63 recovery diagnostics: `80 passed`
+- Phase50 observability: `355 passed`
+- Profile-A: `17 passed`
+- Safety/publication contract: `49 passed`
+- Full repository: `4321 passed, 2841 subtests passed`
+- Representative Profile-B v2 canonical diagnostics: `1037 bytes`
+- Representative Phase50 record: `1318 / 4096 bytes`
+- Journal schema: unchanged at `1`
 - Provider HTTP / Phase44 / GET: `0 / 0 / 0`
-- Authorization: `PHASE72_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_UNCONSUMED`
-- Authorization consumed: `NO`
-- Boundary: `NOT WRITTEN`
+- Acquisition authorization issued: `NONE`
+- Publication: `NO`
 
-## Frozen predecessor states
+The live-shape regression proves one direct schedule row plus one sole `changeInfo` row produces a qualified Profile-B v2 result with one schedule candidate, while Profile-B v1 retains two candidates and `AMBIGUOUS`. The regression suite also covers BeautifulSoup list-compatible class values, multi-token exact matching, exact-token negatives, nested ordinary tables, fail-closed unknown representations, withdrawal-domain preservation, and an eight-case parity matrix against Phase66 structural classification.
 
-- Phase71 is `FORMALLY_COMPLETE`, with support repair `PHASE50_PROFILE_A_V3_TARGET_CONTRACT_REPAIRED` and review `PHASE71_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`.
-- Phase70 is `PRE_AUTHORIZATION_STOP` with outcome `NOT_PRODUCED_PREBOUNDARY`, boundary absent, Provider HTTP / Phase44 / GET all `0`.
-- Phase70 authorization remains `PHASE70_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_UNCONSUMED`, but its execution eligibility is `INVALIDATED_BY_EXECUTABLE_SUPPORT_HEAD_CHANGE`. It must never be reused, consumed, rebound, transferred, or treated as Phase72 authority.
+Phase50, Phase63, Phase66, Profile-A, and Safety remain unchanged. No network, process, database, filesystem-write, fixture, manifest, publication, or authorization capability was added.
 
-## Phase72 authorization
+## Stop condition
 
-Issued authorization:
+Phase73 is implemented for review but is not formally complete until independent remote verification. A future validation requires a new authorization bound to the newly reviewed executable support HEAD.
 
-- `PHASE72_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_UNCONSUMED`
-- `PHASE72_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_CONSUMED_FAIL_CLOSED`
-
-The authorization is newly issued for Phase72 and binds exactly to target `NAR / 21 / 2025-01-01 / 6`, purpose `FRESH_CURRENT_VALIDATION_AFTER_PHASE71_PROFILE_A_V3_TARGET_REPAIR`, semantics `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`, and support HEAD `b29e98259a3186f905220b0d66eae24597458059`. It is one-shot, phase-specific, target-specific, purpose-specific, support-HEAD-specific, nontransferable, and nonrenewable after consumption.
-
-## Qualification and Phase50 authority
-
-Future qualification uses only Profile-B v2 (`diagnose_nar_race_entry_status_profile_b_v2`, schema `2`), Profile-A v3 (`diagnose_nar_race_entry_status_profile_a_v3`, schema `3`), and Safety v3 (`assess_nar_race_entry_status_raw_fixture_publication_safety_v3`, schema `3`). Phase63 and Phase66 remain supplemental only.
-
-Phase50 retains journal schema `1` and supports Profile-B `{1,2}`, blocked Profile-A `{2,3}`, blocked Safety `{2,3}`, and fixture/qualification identities v1/v2/v3. Schema-2 blocked Profile-A is historical and targetless; target is forbidden. Schema-3 blocked Profile-A requires the exact canonical target and Phase50 requires it to equal `TARGET_CONSTRUCTED` exactly.
-
-## Future pre-live design
-
-The later runner is generated once outside the repository, compiled once, and used unchanged for synthetic and live modes. It retains one capture-metadata adapter and one shared post-acquisition processor. It runs under a fresh `-I -B` interpreter with explicit repository bootstrap, KeibaAI exclusion, no preloaded `scripts` modules, package-path exclusivity, module-origin checks, and the exact LF preflight token `NAR_REACQUISITION_OBSERVABILITY_PREFLIGHT_PASS\n`.
-
-The synthetic main path must exercise Profile-B v2, Phase63 recovery, Phase66 ancestry, structural consistency, identity, Phase63 Safety recovery, Phase66 strict recovery, strict consistency, Safety v3 SAFE, Profile-A v3 QUALIFIED, Profile-B qualification, and real Phase50 reconstruction without network or publication.
-
-Two separate synthetic blocked probes are mandatory: a schema-3 non-SAFE Safety payload and an actual `ProfileADiagnosticsV3` blocked canonical payload, passed directly to Phase50 without stripping its target. The latter must retain schema `3`, retain the target, equal `TARGET_CONSTRUCTED`, reconstruct semantically, and establish `PHASE71_PROFILE_A_V3_TARGET_CONTRACT_INTEGRATION_PASS`.
-
-Required gates are:
-
-- `PROFILE_B_V2_DRY_RUN_PASS`
-- `PROFILE_A_V3_DRY_RUN_PASS`
-- `SAFETY_V3_DRY_RUN_PASS`
-- `PHASE50_VERSIONED_PAYLOAD_DRY_RUN_PASS`
-- `PHASE50_SAFETY_V3_BLOCKED_PAYLOAD_PASS`
-- `PHASE50_PROFILE_A_V3_BLOCKED_PAYLOAD_PASS`
-- `PHASE71_PROFILE_A_V3_TARGET_CONTRACT_INTEGRATION_PASS`
-- `RUNNER_FULL_VERSIONED_POST_ACQUISITION_DRY_RUN_PASS`
-- `DRY_RUN_NO_NETWORK_PASS`
-- `DRY_RUN_LIVE_LOGIC_PARITY_PASS`
-- `CAPTURE_METADATA_EXACT_11_KEYS_PASS`
-- `CLOSED_BUNDLE_IDENTITY_PROPAGATION_PASS`
-
-## Future live bounds and terminal contract
-
-Only after all gates pass may a future real journal durably append `PHASE44_CALL_ABOUT_TO_ENTER`, flush, and fsync. That is the sole consumption boundary. Phase44 is capped at `1`; Deba GET at `1`; RaceList GET at `1`; total GET at `2`, in DebaTable then RaceList order, with no retry or fallback.
-
-Capture metadata retains the exact eleven-key contract and both records use `closed_bundle_identity = bundle.bundle_id`. Publication remains forbidden. The external safe-final remains bounded; cleanup removes raw captures, journals, runner, synthetic/probe material, streams, and caches after parent validation. Current-byte reproduction never establishes historical availability, state, timing, or market eligibility.
-
-Expected only, not assumed: Profile-B v2 `QUALIFIED`, Profile-A v3 `QUALIFIED`, Safety v3 `SAFE`. Terminal mapping remains `RECOVERY_PREFLIGHT_BLOCKED`, `SOURCE_PROFILE_FIXTURE_BLOCKED`, or `READY_FOR_REVIEW` as truthfully determined. Market eligibility remains `UNSUPPORTED`.
-
-## Readiness
-
-All readiness items A–R are `YES`: Phase71 review/support is frozen; Phase70 is unconsumed but unusable; Phase72 identity and target are frozen; V2/V3 authority and the Phase50 target repair are confirmed; actual V3 blocked-payload testing and the repair-specific gate are specified; synthetic, runner, isolation, boundary, cap, publication, and no-new-support constraints are complete.
-
-## Approval effect and stop condition
-
-During this approval, Provider HTTP, Phase44, and GET are `0`; synthetic and live execution are `NOT RUN`; the boundary is `NOT WRITTEN`; authorization remains unconsumed. No staged, committed, or pushed change is permitted in this approval.
-
-Next permitted action after integration: `INDEPENDENT_REMOTE_VERIFICATION_BEFORE_PHASE72_EXECUTE`.
+Next permitted action: `CHATGPT_REVIEW_PHASE73_IMPLEMENTATION`.

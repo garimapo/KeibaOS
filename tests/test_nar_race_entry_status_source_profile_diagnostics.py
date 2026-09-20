@@ -7,9 +7,11 @@ import json
 from pathlib import Path
 
 import pytest
+from bs4 import BeautifulSoup
 
 from scripts.simulation import nar_race_entry_status_raw_capture as raw_capture
 from scripts.simulation import nar_race_entry_status_source_profile_diagnostics as subject
+from scripts.simulation import nar_race_entry_status_source_profile_structural_recovery_diagnostics as phase66
 
 
 UTC = timezone.utc
@@ -221,6 +223,106 @@ def test_profile_b_v2_excludes_nested_change_info_from_schedule_domain() -> None
     assert corrected.predicate_results[1].safe_fields["target_6r_row_count"] == 1
     assert corrected.predicate_results[4].outcome is subject.ProfileBPredicateOutcome.PASS
     assert corrected.predicate_results[5].outcome is subject.ProfileBPredicateOutcome.PASS
+
+
+def _live_shape(change_table_class: str = "changeInfo") -> bytes:
+    return (
+        '<html><body><section class="raceTable">'
+        '<table>'
+        f'<tr class="data"><td>6R</td><td><a href="{DEBA_HREF}">entry</a></td></tr>'
+        '</table>'
+        f'<table class="{change_table_class}">'
+        '<tr class="data"><td>6R</td><td>14</td><td>x</td><td>出走取消</td><td>x</td><td>x</td></tr>'
+        '</table>'
+        '</section></body></html>'
+    ).encode("utf-8")
+
+
+def test_profile_b_v2_live_shape_excludes_sole_change_info_table_and_preserves_v1() -> None:
+    source = _live_shape()
+
+    legacy = subject.diagnose_nar_race_entry_status_profile_b(race_list_bytes=source, target=TARGET)
+    corrected = subject.diagnose_nar_race_entry_status_profile_b_v2(race_list_bytes=source, target=TARGET)
+
+    assert legacy.predicate_results[1].outcome is subject.ProfileBPredicateOutcome.AMBIGUOUS
+    assert legacy.predicate_results[1].safe_fields["target_6r_row_count"] == 2
+    assert corrected.overall_result == "QUALIFIED"
+    assert _outcomes(corrected) == ("PASS",) * 6
+    assert corrected.predicate_results[1].safe_fields["target_6r_row_count"] == 1
+
+
+def test_profile_b_v2_supports_beautifulsoup_list_compatible_class_values() -> None:
+    source = _live_shape()
+    document = BeautifulSoup(source.decode("utf-8"), "html.parser")
+    parsed_class = document.select_one("table.changeInfo").get("class")  # type: ignore[union-attr]
+
+    assert isinstance(parsed_class, list)
+    assert type(parsed_class) is not list
+    result = subject.diagnose_nar_race_entry_status_profile_b_v2(race_list_bytes=source, target=TARGET)
+    assert result.predicate_results[1].safe_fields["target_6r_row_count"] == 1
+
+
+def test_profile_b_v2_unknown_class_representation_fails_closed() -> None:
+    table = BeautifulSoup("<table></table>", "html.parser").table
+    assert table is not None
+    table.attrs["class"] = object()
+
+    with pytest.raises(subject.NARRaceEntryStatusSourceProfileDiagnosticsValidationError):
+        subject._has_exact_class_token(table, "changeInfo")
+
+
+def test_profile_b_v2_change_info_token_is_exact_and_supports_multiple_tokens() -> None:
+    multi_token = subject.diagnose_nar_race_entry_status_profile_b_v2(
+        race_list_bytes=_live_shape("other changeInfo extra"), target=TARGET
+    )
+    assert multi_token.overall_result == "QUALIFIED"
+    assert multi_token.predicate_results[1].safe_fields["target_6r_row_count"] == 1
+    assert multi_token.predicate_results[4].outcome is subject.ProfileBPredicateOutcome.PASS
+    assert multi_token.predicate_results[5].outcome is subject.ProfileBPredicateOutcome.PASS
+
+    for similar_token in ("changeInformation", "CHANGEINFO"):
+        result = subject.diagnose_nar_race_entry_status_profile_b_v2(
+            race_list_bytes=_live_shape(similar_token), target=TARGET
+        )
+        assert result.predicate_results[1].outcome is subject.ProfileBPredicateOutcome.AMBIGUOUS
+        assert result.predicate_results[1].safe_fields["target_6r_row_count"] == 2
+
+
+@pytest.mark.parametrize(
+    ("candidate_wrapper", "expected_direct"),
+    [
+        ("<table>{row}</table>", True),
+        ('<table class="changeInfo">{row}</table>', False),
+        ("<table><tr><td><table>{row}</table></td></tr></table>", False),
+        ('<table><tr><td><table class="changeInfo">{row}</table></td></tr></table>', False),
+        ("{row}", False),
+        ('<table class="other changeInfo extra">{row}</table>', False),
+        ('<table class="changeInformation">{row}</table>', True),
+        ('<table class="CHANGEINFO">{row}</table>', True),
+    ],
+)
+def test_profile_b_v2_schedule_domain_matches_phase66_structural_grammar(
+    candidate_wrapper: str,
+    expected_direct: bool,
+) -> None:
+    row = '<tr class="data"><td>6R</td></tr>'
+    source = (
+        '<html><body><section class="raceTable">'
+        + candidate_wrapper.format(row=row)
+        + '</section></body></html>'
+    ).encode("utf-8")
+
+    profile_b = subject.diagnose_nar_race_entry_status_profile_b_v2(
+        race_list_bytes=source, target=TARGET
+    )
+    ancestry = phase66.diagnose_nar_race_entry_status_profile_b_candidate_ancestry_recovery(
+        race_list_bytes=source, target=TARGET
+    )
+
+    profile_b_direct = profile_b.predicate_results[1].safe_fields["target_6r_row_count"] == 1
+    assert ancestry.target_candidate_count == 1
+    assert ancestry.candidate_results[0].direct_schedule_table_descendant is expected_direct
+    assert profile_b_direct is expected_direct
 
 
 def test_profile_b_v2_excludes_other_nested_tables_but_not_two_direct_rows() -> None:
