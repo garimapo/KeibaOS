@@ -29,6 +29,7 @@ QUALIFICATION_ID_V2 = "nar-race-entry-status-source-profile-qualification-v2:" +
 QUALIFICATION_ID_V3 = "nar-race-entry-status-source-profile-qualification-v3:" + "f" * 64
 DEDICATED_TEST_PATH_V1 = "tests/test_nar_race_entry_status_source_profile_fixtures.py"
 DEDICATED_TEST_PATH_V2 = "tests/test_nar_race_entry_status_source_profile_v2_fixtures.py"
+DEDICATED_TEST_PATH_V3 = "tests/test_nar_race_entry_status_source_profile_v3_fixtures.py"
 
 
 def _profile_b_recovery_diagnostics(count: int = 1, *, maximal: bool = False) -> dict[str, object]:
@@ -380,7 +381,7 @@ def _dedicated_test_record_bytes(test_path: object, details: dict[str, object] |
 
 @pytest.mark.parametrize(
     ("test_path", "expected_record_bytes"),
-    [(DEDICATED_TEST_PATH_V1, 322), (DEDICATED_TEST_PATH_V2, 325)],
+    [(DEDICATED_TEST_PATH_V1, 322), (DEDICATED_TEST_PATH_V2, 325), (DEDICATED_TEST_PATH_V3, 325)],
 )
 def test_dedicated_test_written_accepts_exact_closed_path_union(
     test_path: str,
@@ -397,10 +398,10 @@ def test_dedicated_test_written_accepts_exact_closed_path_union(
 @pytest.mark.parametrize(
     "test_path",
     [
-        "tests/test_nar_race_entry_status_source_profile_v3_fixtures.py",
         "tests/arbitrary_third_test.py",
         DEDICATED_TEST_PATH_V1 + ".bak",
         DEDICATED_TEST_PATH_V2 + ".bak",
+        DEDICATED_TEST_PATH_V3 + ".bak",
         "test/test_nar_race_entry_status_source_profile_v2_fixtures.py",
         "/" + DEDICATED_TEST_PATH_V2,
         "C:/" + DEDICATED_TEST_PATH_V2,
@@ -412,6 +413,15 @@ def test_dedicated_test_written_accepts_exact_closed_path_union(
         DEDICATED_TEST_PATH_V2 + "\x00",
         DEDICATED_TEST_PATH_V2 + "\x1f",
         "tests/../" + DEDICATED_TEST_PATH_V2,
+        "/" + DEDICATED_TEST_PATH_V3,
+        "C:/" + DEDICATED_TEST_PATH_V3,
+        DEDICATED_TEST_PATH_V3.replace("/", "\\"),
+        " " + DEDICATED_TEST_PATH_V3,
+        DEDICATED_TEST_PATH_V3 + " ",
+        DEDICATED_TEST_PATH_V3 + "\n",
+        DEDICATED_TEST_PATH_V3 + "\r",
+        DEDICATED_TEST_PATH_V3 + "\x00",
+        "tests/../" + DEDICATED_TEST_PATH_V3,
     ],
 )
 def test_dedicated_test_written_rejects_every_path_outside_closed_union(test_path: str) -> None:
@@ -422,7 +432,14 @@ def test_dedicated_test_written_rejects_every_path_outside_closed_union(test_pat
         )
 
 
-@pytest.mark.parametrize("details", [{}, {"test_path": DEDICATED_TEST_PATH_V2, "extra": "forbidden"}])
+@pytest.mark.parametrize(
+    "details",
+    [
+        {},
+        {"test_path": DEDICATED_TEST_PATH_V2, "extra": "forbidden"},
+        {"test_path": DEDICATED_TEST_PATH_V3, "extra": "forbidden"},
+    ],
+)
 def test_dedicated_test_written_requires_exact_detail_key(details: dict[str, object]) -> None:
     with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
         subject.validate_journal_bytes(
@@ -442,7 +459,9 @@ def test_phase61_dedicated_test_path_compatibility_preserves_phase50_contracts()
 
     assert tuple(subject.ObservationMilestone)[start : start + len(expected_order)] == expected_order
     assert subject._DETAIL_KEYS[subject.ObservationMilestone.DEDICATED_TEST_WRITTEN] == frozenset({"test_path"})
-    assert subject._DEDICATED_TEST_PATHS == frozenset({DEDICATED_TEST_PATH_V1, DEDICATED_TEST_PATH_V2})
+    assert subject._DEDICATED_TEST_PATHS == frozenset(
+        {DEDICATED_TEST_PATH_V1, DEDICATED_TEST_PATH_V2, DEDICATED_TEST_PATH_V3},
+    )
     assert subject.JOURNAL_SCHEMA_VERSION == 1
     assert subject.MAX_STRING_BYTES == 512
     assert subject.MAX_RECORD_BYTES == 4096
@@ -458,6 +477,60 @@ def test_phase61_dedicated_test_path_compatibility_preserves_phase50_contracts()
             "SYNTHETIC_FAILURE",
         },
     )
+
+
+def test_v3_publication_success_journal_validates_and_reconstructs_without_rollback(
+    tmp_path: Path,
+) -> None:
+    writer = _writer(tmp_path)
+    excluded = {
+        subject.ObservationMilestone.PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED,
+        subject.ObservationMilestone.PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED,
+        subject.ObservationMilestone.ROLLBACK_BEGIN,
+        subject.ObservationMilestone.ROLLBACK_COMPLETE,
+    }
+    for milestone in subject.ObservationMilestone:
+        if milestone in excluded:
+            continue
+        details = _details_for(milestone)
+        if milestone is subject.ObservationMilestone.PUBLICATION_BEGIN:
+            details = {"planned_path_count": 6}
+        elif milestone is subject.ObservationMilestone.MANIFEST_WRITTEN:
+            details = {
+                "fixture_set_identity": FIXTURE_ID_V3,
+                "qualification_identity": QUALIFICATION_ID_V3,
+            }
+        elif milestone is subject.ObservationMilestone.DEDICATED_TEST_WRITTEN:
+            details = {"test_path": DEDICATED_TEST_PATH_V3}
+        elif milestone is subject.ObservationMilestone.LIVE_PROCESS_COMPLETE:
+            details = {
+                "outcome": "READY_FOR_REVIEW",
+                "authorization_state": "CONSUMED_CONFIRMED",
+            }
+        writer.append(milestone, details)
+        if milestone is subject.ObservationMilestone.LIVE_PROCESS_COMPLETE:
+            break
+    writer.close()
+
+    records = subject.validate_journal_bytes(writer.path.read_bytes(), expected_run_id=RUN_ID)
+    subject.validate_journal_semantics(records)
+    execution = subject.reconstruct_execution(records)
+
+    assert execution.publication_began
+    assert execution.rollback_state == "NOT_STARTED"
+    assert execution.semantic_complete
+    assert execution.last_milestone is subject.ObservationMilestone.LIVE_PROCESS_COMPLETE
+    manifest_record = next(
+        record for record in records if record.milestone is subject.ObservationMilestone.MANIFEST_WRITTEN
+    )
+    assert manifest_record.details == {
+        "fixture_set_identity": FIXTURE_ID_V3,
+        "qualification_identity": QUALIFICATION_ID_V3,
+    }
+    dedicated_record = next(
+        record for record in records if record.milestone is subject.ObservationMilestone.DEDICATED_TEST_WRITTEN
+    )
+    assert dedicated_record.details == {"test_path": DEDICATED_TEST_PATH_V3}
 
 
 @pytest.mark.parametrize(

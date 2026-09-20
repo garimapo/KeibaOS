@@ -59,6 +59,7 @@ _DEDICATED_TEST_PATHS = frozenset(
     {
         "tests/test_nar_race_entry_status_source_profile_fixtures.py",
         "tests/test_nar_race_entry_status_source_profile_v2_fixtures.py",
+        "tests/test_nar_race_entry_status_source_profile_v3_fixtures.py",
     },
 )
 

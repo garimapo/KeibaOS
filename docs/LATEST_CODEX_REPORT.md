@@ -1,5 +1,57 @@
 # Latest Codex Report
 
+## Phase77 implementation report
+
+Phase: `POST_V0_8_DAILY_REPLAY_77`
+
+State: `IMPLEMENTED_FOR_REVIEW`
+
+Outcome: `READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`
+
+Support Repair: `PHASE50_V3_DEDICATED_TEST_PATH_SUPPORT_ADDED`
+
+Starting HEAD/tree: `c6522eacf46f03036e1171f14f634983c1f73479` / `e5df986b4788afb3a22507767767580ad399a880`
+
+Phase76 is frozen `DESIGN_BLOCKED_ADDITIONAL_SUPPORT_REQUIRED`. Its primary blocker was `PHASE50_V3_DEDICATED_TEST_PATH_ALLOWLIST_MISSING`; the separate `PUBLICATION_COMMIT_PUSH_ROLLBACK_BOUNDARY_REQUIRES_DESIGN_CORRECTION` remains for the corrected later publication design. Before commit the live publication delta remains rollback-capable; after a successful commit, push failure must preserve the local commit and enter integration recovery rather than reset, amend, force, reacquire, or restart the publication transaction.
+
+Phase50 now accepts exactly the historical V1 path, V2 path, and `tests/test_nar_race_entry_status_source_profile_v3_fixtures.py`. It rejects all malformed V3 variants and arbitrary paths. Journal schema `1`, milestone order, `{test_path}` detail shape, size limits, outcomes, authorization states, and existing V3 manifest identity-pair support are unchanged. A successful V3 publication journal using V3 fixture/qualification identities and the V3 dedicated path passes syntax, semantic validation, and reconstruction with publication begun and no rollback.
+
+Verification: Phase50 `367 passed`; publication plan `45 passed`; publication contract `49 passed`; full repository `4349 passed, 2841 subtests passed`. Provider HTTP / Phase44 / GET: `0 / 0 / 0`. Acquisition authorization: `NONE`. Publication authorization: `NONE`. Publication: `NO`.
+
+Phase75 remains `FORMALLY_COMPLETE`; Phase74 authorization remains permanently consumed fail-closed. Market eligibility remains `UNSUPPORTED`; no historical inference is made.
+
+Next permitted action: `CHATGPT_REVIEW_PHASE77_IMPLEMENTATION`.
+
+---
+
+## Phase76 publication preparation report
+
+Phase: `POST_V0_8_DAILY_REPLAY_76`
+
+Status: `DRAFT_FOR_REVIEW`
+
+Outcome: `READY_FOR_APPROVAL`
+
+Design Contract: `V3_FRESH_CURRENT_ACQUISITION_AND_PUBLICATION_CONTRACT_COMPLETE`
+
+Worktree: `C:\Users\garim\Desktop\KeibaOS-post-v0.8`
+
+Current support HEAD/tree: `c6522eacf46f03036e1171f14f634983c1f73479` / `e5df986b4788afb3a22507767767580ad399a880`
+
+Phase75 is frozen `FORMALLY_COMPLETE` with `PHASE75_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`; its V3 publication-plan authority, exact six-path plan, closed FixtureSetV3 validation, `VALIDATE_ONLY` attribute policy, and tracked V3 binary rule are available. Phase74 remains final with permanently consumed Phase74 authorization; its raw bytes were cleaned and cannot be reconstructed or reused.
+
+Preparation found no additional support gap. The exact four V3 CREATE_ONLY targets are absent, and the committed V3 `.gitattributes` rule is present. Phase76 reserves, but does not issue, `PHASE76_V3_SOURCE_PROFILE_PUBLICATION_AUTHORIZATION_UNCONSUMED` bound only to `NAR / 21 / 2025-01-01 / 6`, purpose `FRESH_CURRENT_V3_SOURCE_PROFILE_ACQUISITION_AND_PUBLICATION`, current-acquisition semantics, and the current support HEAD. Its sole post-boundary state is permanent consumed fail-closed.
+
+The reviewed future execution uses a one-time frozen external runner; namespace-package import isolation; complete synthetic qualification, Phase50 blocked-payload, V3 contract, test-template, rollback, attribute, and CREATE_ONLY absence gates; then exactly one Phase44 and at most two ordered GETs. It retains the same fresh raw bytes through all qualification and V3 authority construction. Only fully qualified same-byte evidence may reach `PUBLICATION_BEGIN`, raw fixture readback, manifest readback, deterministic dedicated test generation, documentation update, regression tests, six-path staging, commit, and normal push. Any post-publication failure rolls back exactly the six live paths and does not retry.
+
+Current-acquisition semantics are preserved throughout: no historical bytes, provider availability, timing, cutoff, or market eligibility are inferred. `market_eligibility`, `positive_market_eligibility`, and `WHOLE_MEETING_CANCELLATION` remain `UNSUPPORTED`.
+
+Readiness A–T: `YES`. Provider HTTP / Phase44 / GET: `0 / 0 / 0`. Authorization issued: `NONE`. Publication: `NOT PERFORMED`. Staged: empty. Untracked: empty.
+
+Next recommended action: `CHATGPT_REVIEW_PHASE76_PUBLICATION_DESIGN`.
+
+---
+
 ## Phase75 implementation report
 
 Phase: `POST_V0_8_DAILY_REPLAY_75`
