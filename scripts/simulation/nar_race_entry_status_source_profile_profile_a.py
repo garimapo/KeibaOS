@@ -18,6 +18,7 @@ from scripts.simulation import nar_race_entry_status_raw_capture as _raw_capture
 
 
 PROFILE_A_SCHEMA_VERSION = 2
+PROFILE_A_SCHEMA_VERSION_V3 = 3
 PROFILE_A_SEMANTIC = "ENTRY_LISTING_PRESENT"
 _MAX_COUNT = 10_000
 _HORSE_NUMBER = re.compile(r"[1-9][0-9]*\Z", flags=re.ASCII)
@@ -199,12 +200,25 @@ class ProfileADiagnostics:
         return _canonical_bytes(self.to_canonical_dict())
 
 
+@dataclass(frozen=True, slots=True)
+class ProfileADiagnosticsV3(ProfileADiagnostics):
+    """Profile-A v3 result with tolerant-HTML qualification semantics."""
+
+    def to_canonical_dict(self) -> dict[str, object]:
+        payload = super().to_canonical_dict()
+        payload["schema_version"] = PROFILE_A_SCHEMA_VERSION_V3
+        return payload
+
+
 def _result(identifier: ProfileAPredicateIdentifier, outcome: ProfileAOutcome, **fields: object) -> _PredicateResult:
     return _PredicateResult(identifier, outcome, fields)
 
 
-def _unsupported(target: _raw_capture.NARRaceEntryStatusRaceIdentity) -> ProfileADiagnostics:
-    return ProfileADiagnostics(
+def _unsupported(
+    target: _raw_capture.NARRaceEntryStatusRaceIdentity,
+    result_type: type[ProfileADiagnostics] = ProfileADiagnostics,
+) -> ProfileADiagnostics:
+    return result_type(
         target,
         (
             _result(ProfileAPredicateIdentifier.ENTRY_TABLE_SCOPE, ProfileAOutcome.UNSUPPORTED, entry_table_scope_count=0),
@@ -219,22 +233,23 @@ def _unsupported(target: _raw_capture.NARRaceEntryStatusRaceIdentity) -> Profile
     )
 
 
-def diagnose_nar_race_entry_status_profile_a(
+def _diagnose_nar_race_entry_status_profile_a(
     *,
     deba_table_bytes: bytes,
     target: _raw_capture.NARRaceEntryStatusRaceIdentity,
+    result_type: type[ProfileADiagnostics],
+    require_strict_structure: bool,
 ) -> ProfileADiagnostics:
-    """Qualify the frozen ordinary non-14 DebaTable listing profile."""
-
     canonical_target = _target(target)
     if type(deba_table_bytes) is not bytes:
         raise _validation("deba_table_bytes must be exact bytes")
     try:
         source = deba_table_bytes.decode("utf-8", errors="strict")
-        _validate_html_structure(source)
+        if require_strict_structure:
+            _validate_html_structure(source)
         document = BeautifulSoup(source, "html.parser")
     except (UnicodeDecodeError, ValueError, ParserRejectedMarkup):
-        return _unsupported(canonical_target)
+        return _unsupported(canonical_target, result_type)
 
     tables: list[Tag] = []
     for card in document.select("article.raceCard"):
@@ -316,12 +331,49 @@ def diagnose_nar_race_entry_status_profile_a(
         selected_non14_candidate_count=len(eligible),
         selected_provider_horse_no=selected,
     )
-    return ProfileADiagnostics(canonical_target, (scope, shape, listing))
+    return result_type(canonical_target, (scope, shape, listing))
+
+
+def diagnose_nar_race_entry_status_profile_a(
+    *,
+    deba_table_bytes: bytes,
+    target: _raw_capture.NARRaceEntryStatusRaceIdentity,
+) -> ProfileADiagnostics:
+    """Qualify the frozen Profile-A v2 authority."""
+
+    return _diagnose_nar_race_entry_status_profile_a(
+        deba_table_bytes=deba_table_bytes,
+        target=target,
+        result_type=ProfileADiagnostics,
+        require_strict_structure=True,
+    )
+
+
+def diagnose_nar_race_entry_status_profile_a_v3(
+    *,
+    deba_table_bytes: bytes,
+    target: _raw_capture.NARRaceEntryStatusRaceIdentity,
+) -> ProfileADiagnosticsV3:
+    """Qualify Profile-A v3 using strict UTF-8 and tolerant HTML parsing."""
+
+    result = _diagnose_nar_race_entry_status_profile_a(
+        deba_table_bytes=deba_table_bytes,
+        target=target,
+        result_type=ProfileADiagnosticsV3,
+        require_strict_structure=False,
+    )
+    if type(result) is not ProfileADiagnosticsV3:
+        raise _validation("Profile-A v3 result type is invalid")
+    return result
 
 
 __all__ = (
+    "PROFILE_A_SCHEMA_VERSION",
+    "PROFILE_A_SCHEMA_VERSION_V3",
     "ProfileADiagnostics",
+    "ProfileADiagnosticsV3",
     "ProfileAOutcome",
     "ProfileAPredicateIdentifier",
     "diagnose_nar_race_entry_status_profile_a",
+    "diagnose_nar_race_entry_status_profile_a_v3",
 )

@@ -124,6 +124,13 @@ def _safety(source: bytes) -> subject.RawFixturePublicationSafety:
     )
 
 
+def _safety_v3(source: bytes) -> subject.RawFixturePublicationSafetyV3:
+    return subject.assess_nar_race_entry_status_raw_fixture_publication_safety_v3(
+        deba_table_bytes=source,
+        race_list_bytes=SAFE_SOURCE,
+    )
+
+
 def _category(result: subject.RawFixturePublicationSafety, name: str) -> subject.PublicationSafetyOutcome:
     return next(item.outcome for item in result.category_results if item.identifier.value == name)
 
@@ -135,6 +142,109 @@ def test_minimal_sources_are_safe_in_exact_category_order() -> None:
     assert all(item.outcome is subject.PublicationSafetyOutcome.SAFE for item in result.category_results)
     assert result.result is subject.PublicationSafetyOutcome.SAFE
     assert result.raw_fixture_publication_safe is True
+
+
+def test_v2_publication_canonical_golden_vectors_remain_frozen() -> None:
+    fixture, qualification, manifest = _contract()
+    assert len(fixture.canonical_bytes()) == 1644
+    assert fixture.identity == (
+        "nar-race-entry-status-source-profile-fixture-set-v2:"
+        "ac1e76922cfb0a49e03afb2c58da57ddb5ea68c3c4308279e4b090b1698bdcc6"
+    )
+    assert len(qualification.canonical_bytes()) == 2012
+    assert qualification.identity == (
+        "nar-race-entry-status-source-profile-qualification-v2:"
+        "071e035ea8279b603958460550835cec529be3b02f69c28a165ddf9250e3e86b"
+    )
+    assert len(manifest.canonical_bytes()) == 4247
+    from hashlib import sha256
+    assert sha256(manifest.canonical_bytes()).hexdigest() == "df40f436d40da434e3ceed6744a7204eb6d7405868cec7440934d3d817d42be0"
+
+
+@pytest.mark.parametrize(
+    ("source", "category"),
+    [
+        (b'<div authorization="secret"></main>', "NO_AUTHENTICATION_MATERIAL"),
+        (b'<input id="session_id" content="secret"/>', "NO_COOKIE_OR_SESSION_SECRET"),
+        (b'<a href="/x?csrf=secret">x</a>', "NO_CSRF_OR_SECRET_TOKEN"),
+        (b'<img src="/x?account_id=secret"/>', "NO_USER_ACCOUNT_IDENTIFIER"),
+        (b'<form action="/x?preference=secret"></form>', "NO_PERSONALIZATION_IDENTIFIER"),
+    ],
+)
+def test_safety_v3_scans_all_carriers_without_nesting_dependency(source: bytes, category: str) -> None:
+    result = _safety_v3(source)
+    assert result.to_canonical_dict()["schema_version"] == 3
+    assert _category(result, category) is subject.PublicationSafetyOutcome.UNSAFE
+
+
+def test_safety_v3_malformed_percent_raw_headers_and_utf8_fail_closed() -> None:
+    malformed = _safety_v3(b'<a href="/x?csrf=%GG">x</a>')
+    headers = _safety_v3(b"<html>\nAuthorization: secret\nCookie: secret\nSet-Cookie: secret\n</html>")
+    invalid = _safety_v3(b"\xff")
+    assert _category(malformed, "NO_CSRF_OR_SECRET_TOKEN") is subject.PublicationSafetyOutcome.AMBIGUOUS
+    assert _category(headers, "NO_AUTHENTICATION_MATERIAL") is subject.PublicationSafetyOutcome.UNSAFE
+    assert _category(headers, "NO_COOKIE_OR_SESSION_SECRET") is subject.PublicationSafetyOutcome.UNSAFE
+    assert invalid.result is subject.PublicationSafetyOutcome.UNSUPPORTED
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        b'<input name="authorization" value="secret">',
+        b'<input name="session_id" value="secret">',
+        b'<input name="csrf" value="secret">',
+        b'<input name="account_id" value="secret">',
+        b'<input name="preference" value="secret">',
+        b'<a href="/x?csrf=%GG">x</a>',
+        b"Authorization: secret",
+        b"Cookie: secret",
+        b"Set-Cookie: secret",
+    ],
+)
+def test_safety_v3_is_monotonic_for_existing_unsafe_or_ambiguous_conditions(source: bytes) -> None:
+    legacy = _safety(source)
+    corrected = _safety_v3(source)
+    assert legacy.result in {subject.PublicationSafetyOutcome.UNSAFE, subject.PublicationSafetyOutcome.AMBIGUOUS}
+    assert corrected.result is not subject.PublicationSafetyOutcome.SAFE
+
+
+def test_v3_publication_authorities_are_additive_and_reject_v2_types() -> None:
+    bundle = _bundle()
+    capture = profile_b.summarize_nar_race_entry_status_capture_bundle(bundle=bundle)
+    a = profile_a.diagnose_nar_race_entry_status_profile_a_v3(
+        deba_table_bytes=bundle.deba_table_capture.response_body, target=TARGET
+    )
+    b = profile_b.diagnose_nar_race_entry_status_profile_b_v2(
+        race_list_bytes=bundle.race_list_capture.response_body, target=TARGET
+    )
+    safety = _safety_v3(SAFE_SOURCE)
+    fixture = subject.build_nar_race_entry_status_fixture_set_v3(target=TARGET, capture_summary=capture)
+    qualification = subject.build_nar_race_entry_status_qualification_v3(
+        target=TARGET, fixture_set=fixture, profile_a=a, profile_b=b
+    )
+    manifest = subject.build_nar_race_entry_status_manifest_v3(
+        fixture_set=fixture, qualification=qualification, publication_safety=safety
+    )
+    assert fixture.to_canonical_dict()["schema_version"] == 3
+    assert fixture.identity.startswith(subject.FIXTURE_ID_PREFIX_V3)
+    assert qualification.to_canonical_dict()["schema_version"] == 3
+    assert qualification.identity.startswith(subject.QUALIFICATION_ID_PREFIX_V3)
+    assert manifest.to_canonical_dict()["manifest_schema_version"] == 3
+    assert b"source_profiles/v3/" in manifest.canonical_bytes()
+    assert subject.validate_nar_race_entry_status_manifest_v3(
+        manifest_bytes=manifest.canonical_bytes(), fixture_set=fixture,
+        qualification=qualification, publication_safety=safety
+    ) == manifest
+    legacy_fixture, legacy_qualification, _ = _contract()
+    with pytest.raises(subject.SourceProfilePublicationContractError):
+        subject.validate_nar_race_entry_status_fixture_set_v3(
+            value=legacy_fixture, target=TARGET, capture_summary=capture  # type: ignore[arg-type]
+        )
+    with pytest.raises(subject.SourceProfilePublicationContractError):
+        subject.validate_nar_race_entry_status_qualification_v2(
+            value=qualification, target=TARGET, fixture_set=legacy_fixture,
+            profile_a=legacy_qualification.profile_a, profile_b=legacy_qualification.profile_b  # type: ignore[arg-type]
+        )
 
 
 @pytest.mark.parametrize(

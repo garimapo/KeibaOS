@@ -200,6 +200,53 @@ def test_result_order_first_nonpass_and_canonical_bytes_are_deterministic() -> N
     assert json.loads(first.canonical_bytes())["first_nonpass_predicate"] == "UNIQUE_TARGET_6R"
 
 
+def test_profile_b_v2_excludes_nested_change_info_from_schedule_domain() -> None:
+    nested = (
+        '<html><body><section class="raceTable"><table>'
+        f'<tr class="data"><td>6R</td><td><a href="{DEBA_HREF}">entry</a></td></tr>'
+        '<tr><td><table class="changeInfo">'
+        '<tr class="data"><td>6R</td><td>14</td><td>x</td><td>出走取消</td><td>x</td><td>x</td></tr>'
+        '</table></td></tr></table></section></body></html>'
+    ).encode("utf-8")
+
+    legacy = subject.diagnose_nar_race_entry_status_profile_b(race_list_bytes=nested, target=TARGET)
+    corrected = subject.diagnose_nar_race_entry_status_profile_b_v2(race_list_bytes=nested, target=TARGET)
+
+    assert type(legacy) is subject.ProfileBDiagnostics
+    assert legacy.to_canonical_dict()["schema_version"] == 1
+    assert legacy.predicate_results[1].outcome is subject.ProfileBPredicateOutcome.AMBIGUOUS
+    assert type(corrected) is subject.ProfileBDiagnosticsV2
+    assert corrected.to_canonical_dict()["schema_version"] == 2
+    assert corrected.predicate_results[1].outcome is subject.ProfileBPredicateOutcome.PASS
+    assert corrected.predicate_results[1].safe_fields["target_6r_row_count"] == 1
+    assert corrected.predicate_results[4].outcome is subject.ProfileBPredicateOutcome.PASS
+    assert corrected.predicate_results[5].outcome is subject.ProfileBPredicateOutcome.PASS
+
+
+def test_profile_b_v2_excludes_other_nested_tables_but_not_two_direct_rows() -> None:
+    nested_other = (
+        '<tr><td><table><tr class="data"><td>6R</td></tr></table></td></tr>'
+    )
+    direct = f'<tr class="data"><td>6R</td><td><a href="{DEBA_HREF}">entry</a></td></tr>'
+    source = _source(schedule_rows=direct + nested_other)
+    corrected = subject.diagnose_nar_race_entry_status_profile_b_v2(race_list_bytes=source, target=TARGET)
+    assert corrected.predicate_results[1].outcome is subject.ProfileBPredicateOutcome.PASS
+
+    ambiguous = subject.diagnose_nar_race_entry_status_profile_b_v2(
+        race_list_bytes=_source(schedule_rows=direct + direct), target=TARGET
+    )
+    assert ambiguous.predicate_results[1].outcome is subject.ProfileBPredicateOutcome.AMBIGUOUS
+
+
+def test_profile_b_v2_is_deterministic_and_invalid_utf8_is_versioned() -> None:
+    first = subject.diagnose_nar_race_entry_status_profile_b_v2(race_list_bytes=_source(), target=TARGET)
+    second = subject.diagnose_nar_race_entry_status_profile_b_v2(race_list_bytes=_source(), target=TARGET)
+    unsupported = subject.diagnose_nar_race_entry_status_profile_b_v2(race_list_bytes=b"\xff", target=TARGET)
+    assert first == second
+    assert first.canonical_bytes() == second.canonical_bytes()
+    assert unsupported.to_canonical_dict()["schema_version"] == 2
+
+
 def test_result_is_frozen_and_retains_no_raw_or_arbitrary_url_text() -> None:
     marker = "unsafe-visible-marker"
     source = _source(

@@ -39,10 +39,12 @@ _BUNDLE_ID = re.compile(r"nar-race-entry-status-raw-bundle-v1:[0-9a-f]{64}\Z", f
 _FIXTURE_SET_ID_BY_VERSION = (
     (1, re.compile(r"nar-race-entry-status-source-profile-fixture-set-v1:[0-9a-f]{64}\Z", flags=re.ASCII)),
     (2, re.compile(r"nar-race-entry-status-source-profile-fixture-set-v2:[0-9a-f]{64}\Z", flags=re.ASCII)),
+    (3, re.compile(r"nar-race-entry-status-source-profile-fixture-set-v3:[0-9a-f]{64}\Z", flags=re.ASCII)),
 )
 _QUALIFICATION_ID_BY_VERSION = (
     (1, re.compile(r"nar-race-entry-status-source-profile-qualification-v1:[0-9a-f]{64}\Z", flags=re.ASCII)),
     (2, re.compile(r"nar-race-entry-status-source-profile-qualification-v2:[0-9a-f]{64}\Z", flags=re.ASCII)),
+    (3, re.compile(r"nar-race-entry-status-source-profile-qualification-v3:[0-9a-f]{64}\Z", flags=re.ASCII)),
 )
 _SAFE_ENUM = re.compile(r"[A-Z][A-Z0-9_]{0,127}\Z", flags=re.ASCII)
 _BABA_CODE = re.compile(r"[1-9][0-9]*\Z", flags=re.ASCII)
@@ -366,8 +368,9 @@ def _validate_publication_safety_blocked_result(value: object) -> dict[str, obje
     expected = {"schema_version", "result", "raw_fixture_publication_safe", "category_results"}
     if set(value) != expected:
         raise _error("publication_safety keys do not match the exact allowlist")
-    if value["schema_version"] != 2 or type(value["schema_version"]) is not int:
-        raise _error("publication_safety schema_version must be exact 2")
+    schema_version = value["schema_version"]
+    if type(schema_version) is not int or schema_version not in {2, 3}:
+        raise _error("publication_safety schema_version is unsupported")
     results = value["category_results"]
     if type(results) is not list or len(results) != len(_PUBLICATION_SAFETY_CATEGORIES):
         raise _error("category_results must be the exact five-result list")
@@ -404,7 +407,7 @@ def _validate_publication_safety_blocked_result(value: object) -> dict[str, obje
     if expected_result == "SAFE":
         raise _error("blocked publication safety evidence cannot retain a SAFE result")
     return {
-        "schema_version": 2,
+        "schema_version": schema_version,
         "result": expected_result,
         "raw_fixture_publication_safe": False,
         "category_results": normalized_results,
@@ -440,8 +443,9 @@ def _validate_profile_a_blocked_diagnostics(value: object) -> dict[str, object]:
     }
     if set(value) != expected:
         raise _error("profile_a_blocked_diagnostics keys do not match the exact allowlist")
-    if value["schema_version"] != 2 or type(value["schema_version"]) is not int:
-        raise _error("profile_a_blocked_diagnostics schema_version must be exact 2")
+    schema_version = value["schema_version"]
+    if type(schema_version) is not int or schema_version not in {2, 3}:
+        raise _error("profile_a_blocked_diagnostics schema_version is unsupported")
     if value["profile"] != "ENTRY_LISTING_PRESENT" or type(value["profile"]) is not str:
         raise _error("Profile-A semantic is outside the exact allowlist")
     if value["overall_result"] != "BLOCKED" or type(value["overall_result"]) is not str:
@@ -486,7 +490,7 @@ def _validate_profile_a_blocked_diagnostics(value: object) -> dict[str, object]:
     if value["terminal_reason"] != expected_reason or type(value["terminal_reason"]) is not str:
         raise _error("Profile-A terminal_reason is inconsistent with predicate outcomes")
     return {
-        "schema_version": 2,
+        "schema_version": schema_version,
         "profile": "ENTRY_LISTING_PRESENT",
         "overall_result": "BLOCKED",
         "terminal_semantic": None,
@@ -531,8 +535,9 @@ def _validate_profile_b_diagnostics(value: object) -> dict[str, object]:
     }
     if set(value) != expected:
         raise _error("profile_b_diagnostics keys do not match the exact allowlist")
-    if value["schema_version"] != 1 or type(value["schema_version"]) is not int:
-        raise _error("profile_b_diagnostics schema_version must be exact 1")
+    schema_version = value["schema_version"]
+    if type(schema_version) is not int or schema_version not in {1, 2}:
+        raise _error("profile_b_diagnostics schema_version is unsupported")
     if value["profile"] != "EXPLICIT_WITHDRAWAL_PRESENT" or type(value["profile"]) is not str:
         raise _error("profile is outside the exact allowlist")
     if value["terminal_semantic"] != "EXPLICIT_WITHDRAWAL_PRESENT" or type(value["terminal_semantic"]) is not str:
@@ -601,7 +606,7 @@ def _validate_profile_b_diagnostics(value: object) -> dict[str, object]:
     if value["terminal_reason"] != expected_reason or type(value["terminal_reason"]) is not str:
         raise _error("terminal_reason is inconsistent with predicate outcomes")
     return {
-        "schema_version": 1,
+        "schema_version": schema_version,
         "profile": "EXPLICIT_WITHDRAWAL_PRESENT",
         "overall_result": overall,
         "terminal_semantic": "EXPLICIT_WITHDRAWAL_PRESENT",

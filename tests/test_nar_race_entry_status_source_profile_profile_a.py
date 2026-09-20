@@ -91,6 +91,36 @@ def test_invalid_utf8_or_malformed_source_is_unsupported(source: bytes) -> None:
     assert result.terminal_reason == "UNSUPPORTED_INPUT"
 
 
+def test_profile_a_v3_accepts_noncritical_nesting_mismatch_but_v2_remains_frozen() -> None:
+    source = _source(_row("3")).replace(b"</article>", b"</main>")
+    legacy = subject.diagnose_nar_race_entry_status_profile_a(deba_table_bytes=source, target=TARGET)
+    corrected = subject.diagnose_nar_race_entry_status_profile_a_v3(deba_table_bytes=source, target=TARGET)
+    assert type(legacy) is subject.ProfileADiagnostics
+    assert legacy.to_canonical_dict()["schema_version"] == 2
+    assert legacy.overall_result == "BLOCKED"
+    assert type(corrected) is subject.ProfileADiagnosticsV3
+    assert corrected.to_canonical_dict()["schema_version"] == 3
+    assert corrected.overall_result == "QUALIFIED"
+
+
+def test_profile_a_v3_keeps_semantic_ambiguity_and_utf8_fail_closed() -> None:
+    ambiguous = subject.diagnose_nar_race_entry_status_profile_a_v3(
+        deba_table_bytes=_source(_row("3"), duplicate_scope=True), target=TARGET
+    )
+    invalid = subject.diagnose_nar_race_entry_status_profile_a_v3(deba_table_bytes=b"\xff", target=TARGET)
+    assert ambiguous.predicate_results[0].outcome is subject.ProfileAOutcome.AMBIGUOUS
+    assert invalid.to_canonical_dict()["schema_version"] == 3
+    assert _outcomes(invalid) == ("UNSUPPORTED",) * 3
+
+
+def test_profile_a_v3_canonical_output_is_deterministic() -> None:
+    source = _source(_row("3"))
+    first = subject.diagnose_nar_race_entry_status_profile_a_v3(deba_table_bytes=source, target=TARGET)
+    second = subject.diagnose_nar_race_entry_status_profile_a_v3(deba_table_bytes=source, target=TARGET)
+    assert first == second
+    assert first.canonical_bytes() == second.canonical_bytes()
+
+
 def test_result_and_canonical_representation_are_deterministic_and_frozen() -> None:
     source = _source(_row("3"))
     first = _diagnose(source)

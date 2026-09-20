@@ -24,6 +24,7 @@ from scripts.simulation import nar_race_entry_status_raw_capture as _raw_capture
 
 PROFILE_B_DIAGNOSTICS_SCHEMA = "profile_b_diagnostics_v1"
 PROFILE_B_DIAGNOSTICS_SCHEMA_VERSION = 1
+PROFILE_B_DIAGNOSTICS_SCHEMA_VERSION_V2 = 2
 PROFILE_B_TERMINAL_SEMANTIC = "EXPLICIT_WITHDRAWAL_PRESENT"
 CAPTURE_METADATA_SCHEMA = "nar_race_entry_status_capture_metadata_v1"
 CAPTURE_METADATA_SCHEMA_VERSION = 1
@@ -218,6 +219,16 @@ class ProfileBDiagnostics:
 
 
 @dataclass(frozen=True, slots=True)
+class ProfileBDiagnosticsV2(ProfileBDiagnostics):
+    """Version 2 diagnostics with a structural schedule-row boundary."""
+
+    def to_canonical_dict(self) -> dict[str, object]:
+        payload = super().to_canonical_dict()
+        payload["schema_version"] = PROFILE_B_DIAGNOSTICS_SCHEMA_VERSION_V2
+        return payload
+
+
+@dataclass(frozen=True, slots=True)
 class CaptureDocumentMetadata:
     document_role: str
     request_identity: str
@@ -334,8 +345,30 @@ def _normalized_cell(cell: _Tag) -> str:
     return "".join(cell.stripped_strings)
 
 
-def _unsupported_results(target: _raw_capture.NARRaceEntryStatusRaceIdentity) -> ProfileBDiagnostics:
-    return ProfileBDiagnostics(
+def _has_exact_class_token(node: _Tag, token: str) -> bool:
+    value = node.get("class")
+    if type(value) is str:
+        return value == token
+    if type(value) is list:
+        return any(type(item) is str and item == token for item in value)
+    return False
+
+
+def _is_v2_schedule_domain_row(row: _Tag, scope: _Tag) -> bool:
+    tables: list[_Tag] = []
+    parent = row.parent
+    while type(parent) is _Tag and parent is not scope:
+        if parent.name == "table":
+            tables.append(parent)
+        parent = parent.parent
+    return parent is scope and len(tables) == 1 and not _has_exact_class_token(tables[0], "changeInfo")
+
+
+def _unsupported_results(
+    target: _raw_capture.NARRaceEntryStatusRaceIdentity,
+    result_type: type[ProfileBDiagnostics],
+) -> ProfileBDiagnostics:
+    return result_type(
         target=target,
         predicate_results=(
             _result(ProfileBPredicateIdentifier.RACE_TABLE_SCOPE, ProfileBPredicateOutcome.UNSUPPORTED, race_table_scope_count=0),
@@ -348,12 +381,13 @@ def _unsupported_results(target: _raw_capture.NARRaceEntryStatusRaceIdentity) ->
     )
 
 
-def diagnose_nar_race_entry_status_profile_b(
+def _diagnose_nar_race_entry_status_profile_b(
     *,
     race_list_bytes: bytes,
     target: _raw_capture.NARRaceEntryStatusRaceIdentity,
+    result_type: type[ProfileBDiagnostics],
+    structural_schedule_domain: bool,
 ) -> ProfileBDiagnostics:
-    """Evaluate the frozen six-predicate Profile-B grammar without side effects."""
 
     canonical_target = _canonical_target(target)
     if type(race_list_bytes) is not bytes:
@@ -362,7 +396,7 @@ def diagnose_nar_race_entry_status_profile_b(
         source = race_list_bytes.decode("utf-8", errors="strict")
         document = _BeautifulSoup(source, "html.parser")
     except (UnicodeDecodeError, _ParserRejectedMarkup):
-        return _unsupported_results(canonical_target)
+        return _unsupported_results(canonical_target, result_type)
 
     scopes = [node for node in document.select("section.raceTable") if type(node) is _Tag]
     scope_outcome = _outcome(len(scopes))
@@ -378,6 +412,8 @@ def diagnose_nar_race_entry_status_profile_b(
     if scope_outcome is ProfileBPredicateOutcome.PASS:
         schedule_rows = [node for node in scopes[0].select("tr.data") if type(node) is _Tag]
         for row in schedule_rows:
+            if structural_schedule_domain and not _is_v2_schedule_domain_row(row, scopes[0]):
+                continue
             cells = _direct_cells(row)
             if not cells:
                 malformed_schedule_rows = True
@@ -507,7 +543,7 @@ def diagnose_nar_race_entry_status_profile_b(
         withdrawal_label_match=label_match,
     )
 
-    return ProfileBDiagnostics(
+    return result_type(
         target=canonical_target,
         predicate_results=(
             scope_result,
@@ -518,6 +554,39 @@ def diagnose_nar_race_entry_status_profile_b(
             association_result,
         ),
     )
+
+
+def diagnose_nar_race_entry_status_profile_b(
+    *,
+    race_list_bytes: bytes,
+    target: _raw_capture.NARRaceEntryStatusRaceIdentity,
+) -> ProfileBDiagnostics:
+    """Evaluate the frozen version 1 six-predicate Profile-B grammar."""
+
+    return _diagnose_nar_race_entry_status_profile_b(
+        race_list_bytes=race_list_bytes,
+        target=target,
+        result_type=ProfileBDiagnostics,
+        structural_schedule_domain=False,
+    )
+
+
+def diagnose_nar_race_entry_status_profile_b_v2(
+    *,
+    race_list_bytes: bytes,
+    target: _raw_capture.NARRaceEntryStatusRaceIdentity,
+) -> ProfileBDiagnosticsV2:
+    """Evaluate Profile-B v2 with structural schedule/change-info separation."""
+
+    result = _diagnose_nar_race_entry_status_profile_b(
+        race_list_bytes=race_list_bytes,
+        target=target,
+        result_type=ProfileBDiagnosticsV2,
+        structural_schedule_domain=True,
+    )
+    if type(result) is not ProfileBDiagnosticsV2:
+        raise _validation("Profile-B v2 result type is invalid")
+    return result
 
 
 def _utc_text(value: datetime, field_name: str) -> str:
@@ -581,11 +650,14 @@ __all__ = (
     "NARRaceEntryStatusSourceProfileDiagnosticsValidationError",
     "PROFILE_B_DIAGNOSTICS_SCHEMA",
     "PROFILE_B_DIAGNOSTICS_SCHEMA_VERSION",
+    "PROFILE_B_DIAGNOSTICS_SCHEMA_VERSION_V2",
     "PROFILE_B_TERMINAL_SEMANTIC",
     "ProfileBDiagnostics",
+    "ProfileBDiagnosticsV2",
     "ProfileBPredicateIdentifier",
     "ProfileBPredicateOutcome",
     "ProfileBPredicateResult",
     "diagnose_nar_race_entry_status_profile_b",
+    "diagnose_nar_race_entry_status_profile_b_v2",
     "summarize_nar_race_entry_status_capture_bundle",
 )

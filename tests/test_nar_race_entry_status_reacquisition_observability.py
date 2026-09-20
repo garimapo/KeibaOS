@@ -22,8 +22,10 @@ BUNDLE_ID = "nar-race-entry-status-raw-bundle-v1:" + "b" * 64
 CAPTURE_ID = "nar-race-entry-status-capture-v1:" + "9" * 64
 FIXTURE_ID_V1 = "nar-race-entry-status-source-profile-fixture-set-v1:" + "e" * 64
 FIXTURE_ID_V2 = "nar-race-entry-status-source-profile-fixture-set-v2:" + "e" * 64
+FIXTURE_ID_V3 = "nar-race-entry-status-source-profile-fixture-set-v3:" + "e" * 64
 QUALIFICATION_ID_V1 = "nar-race-entry-status-source-profile-qualification-v1:" + "f" * 64
 QUALIFICATION_ID_V2 = "nar-race-entry-status-source-profile-qualification-v2:" + "f" * 64
+QUALIFICATION_ID_V3 = "nar-race-entry-status-source-profile-qualification-v3:" + "f" * 64
 DEDICATED_TEST_PATH_V1 = "tests/test_nar_race_entry_status_source_profile_fixtures.py"
 DEDICATED_TEST_PATH_V2 = "tests/test_nar_race_entry_status_source_profile_v2_fixtures.py"
 
@@ -112,7 +114,7 @@ def _structural_stage_recovery_diagnostics() -> dict[str, object]:
     return payload
 
 
-def _profile_b_diagnostics() -> dict[str, object]:
+def _profile_b_diagnostics(schema_version: int = 1) -> dict[str, object]:
     fields = {
         "RACE_TABLE_SCOPE": {"race_table_scope_count": 1},
         "UNIQUE_TARGET_6R": {"target_race_no": 6, "target_6r_row_count": 1},
@@ -126,7 +128,7 @@ def _profile_b_diagnostics() -> dict[str, object]:
         },
     }
     return {
-        "schema_version": 1,
+        "schema_version": schema_version,
         "profile": "EXPLICIT_WITHDRAWAL_PRESENT",
         "overall_result": "QUALIFIED",
         "terminal_semantic": "EXPLICIT_WITHDRAWAL_PRESENT",
@@ -153,6 +155,7 @@ def _publication_safety_result(
     outcomes: tuple[str, str, str, str, str] = ("UNSAFE", "SAFE", "SAFE", "SAFE", "SAFE"),
     *,
     finding_count: int = 1,
+    schema_version: int = 2,
 ) -> dict[str, object]:
     aggregate = (
         "SAFE"
@@ -164,7 +167,7 @@ def _publication_safety_result(
         else "AMBIGUOUS"
     )
     return {
-        "schema_version": 2,
+        "schema_version": schema_version,
         "result": aggregate,
         "raw_fixture_publication_safe": aggregate == "SAFE",
         "category_results": [
@@ -185,6 +188,7 @@ def _profile_a_blocked_diagnostics(
     outcomes: tuple[str, str, str] = ("PASS", "PASS", "FAIL"),
     *,
     count: int = 1,
+    schema_version: int = 2,
 ) -> dict[str, object]:
     fields = (
         {"entry_table_scope_count": count},
@@ -193,7 +197,7 @@ def _profile_a_blocked_diagnostics(
     )
     first_index = next(index for index, outcome in enumerate(outcomes) if outcome != "PASS")
     return {
-        "schema_version": 2,
+        "schema_version": schema_version,
         "profile": "ENTRY_LISTING_PRESENT",
         "overall_result": "BLOCKED",
         "terminal_semantic": None,
@@ -457,6 +461,7 @@ def test_phase61_dedicated_test_path_compatibility_preserves_phase50_contracts()
     [
         (FIXTURE_ID_V1, QUALIFICATION_ID_V1),
         (FIXTURE_ID_V2, QUALIFICATION_ID_V2),
+        (FIXTURE_ID_V3, QUALIFICATION_ID_V3),
     ],
 )
 def test_manifest_written_accepts_only_canonical_same_version_identity_pairs(
@@ -480,6 +485,8 @@ def test_manifest_written_accepts_only_canonical_same_version_identity_pairs(
     [
         (FIXTURE_ID_V1, QUALIFICATION_ID_V2),
         (FIXTURE_ID_V2, QUALIFICATION_ID_V1),
+        (FIXTURE_ID_V2, QUALIFICATION_ID_V3),
+        (FIXTURE_ID_V3, QUALIFICATION_ID_V2),
     ],
 )
 def test_manifest_written_rejects_mixed_identity_versions(
@@ -497,7 +504,7 @@ def test_manifest_written_rejects_mixed_identity_versions(
     "fixture_identity",
     [
         "nar-race-entry-status-source-profile-fixture-set-v0:" + "e" * 64,
-        "nar-race-entry-status-source-profile-fixture-set-v3:" + "e" * 64,
+        "nar-race-entry-status-source-profile-fixture-set-v4:" + "e" * 64,
         "nar-race-entry-status-source-profile-fixture-set-v2:" + "E" * 64,
         "NAR-race-entry-status-source-profile-fixture-set-v2:" + "e" * 64,
         "nar-race-entry-status-source-profile-fixture-set-v2:" + "e" * 63,
@@ -524,7 +531,7 @@ def test_manifest_written_rejects_noncanonical_fixture_identity(fixture_identity
     "qualification_identity",
     [
         "nar-race-entry-status-source-profile-qualification-v0:" + "f" * 64,
-        "nar-race-entry-status-source-profile-qualification-v3:" + "f" * 64,
+        "nar-race-entry-status-source-profile-qualification-v4:" + "f" * 64,
         "nar-race-entry-status-source-profile-qualification-v2:" + "F" * 64,
         "NAR-race-entry-status-source-profile-qualification-v2:" + "f" * 64,
         "nar-race-entry-status-source-profile-qualification-v2:" + "f" * 63,
@@ -1178,6 +1185,56 @@ def test_publication_safety_blocked_result_rejects_safe_result(tmp_path: Path) -
             {"publication_safety": _publication_safety_result(("SAFE",) * 5)},
         )
     writer.close()
+
+
+@pytest.mark.parametrize("version", [2, 3])
+def test_publication_safety_supported_versions_are_retained(version: int) -> None:
+    value = _publication_safety_result(schema_version=version)
+    assert subject._validate_publication_safety_blocked_result(value)["schema_version"] == version
+
+
+@pytest.mark.parametrize("version", [2, 3])
+def test_profile_a_supported_versions_are_retained(version: int) -> None:
+    value = _profile_a_blocked_diagnostics(schema_version=version)
+    assert subject._validate_profile_a_blocked_diagnostics(value)["schema_version"] == version
+
+
+@pytest.mark.parametrize("version", [1, 2])
+def test_profile_b_supported_versions_are_retained(version: int) -> None:
+    value = _profile_b_diagnostics(schema_version=version)
+    assert subject._validate_profile_b_diagnostics(value)["schema_version"] == version
+
+
+@pytest.mark.parametrize(
+    ("validator", "value"),
+    [
+        (subject._validate_publication_safety_blocked_result, _publication_safety_result(schema_version=4)),
+        (subject._validate_profile_a_blocked_diagnostics, _profile_a_blocked_diagnostics(schema_version=4)),
+        (subject._validate_profile_b_diagnostics, _profile_b_diagnostics(schema_version=3)),
+    ],
+)
+def test_nested_payload_unsupported_versions_are_rejected(validator: object, value: object) -> None:
+    with pytest.raises(subject.NARReacquisitionObservabilityValidationError):
+        validator(value)  # type: ignore[operator]
+
+
+def test_phase69_new_nested_payload_records_fit_unchanged_limits() -> None:
+    records = (
+        _canonical(_record(
+            milestone="PROFILE_B_DIAGNOSTICS_RETAINED",
+            details={"profile_b_diagnostics": _profile_b_diagnostics(schema_version=2)},
+        )) + b"\n",
+        _canonical(_record(
+            milestone="PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED",
+            details={"profile_a_blocked_diagnostics": _profile_a_blocked_diagnostics(schema_version=3)},
+        )) + b"\n",
+        _canonical(_record(
+            milestone="PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED",
+            details={"publication_safety": _publication_safety_result(schema_version=3)},
+        )) + b"\n",
+    )
+    assert max(map(len, records)) <= subject.MAX_RECORD_BYTES == 4096
+    assert sum(map(len, records)) <= subject.MAX_JOURNAL_BYTES == 131072
 
 
 @pytest.mark.parametrize(

@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from hashlib import sha256
+from html.parser import HTMLParser
 import json
 import re
 from typing import Mapping
@@ -18,9 +19,11 @@ from scripts.simulation import nar_race_entry_status_raw_capture as _raw_capture
 from scripts.simulation.nar_race_entry_status_source_profile_diagnostics import (
     CaptureMetadataSummary,
     ProfileBDiagnostics,
+    ProfileBDiagnosticsV2,
 )
 from scripts.simulation.nar_race_entry_status_source_profile_profile_a import (
     ProfileADiagnostics,
+    ProfileADiagnosticsV3,
     _validate_html_structure,
 )
 
@@ -29,8 +32,11 @@ FIXTURE_SET_SCHEMA = "nar-race-entry-status-source-profile-fixture-set"
 QUALIFICATION_SCHEMA = "nar-race-entry-status-source-profile-qualification"
 MANIFEST_SCHEMA = "nar-race-entry-status-source-profile-fixture-manifest"
 SCHEMA_VERSION = 2
+SCHEMA_VERSION_V3 = 3
 FIXTURE_ID_PREFIX = "nar-race-entry-status-source-profile-fixture-set-v2:"
 QUALIFICATION_ID_PREFIX = "nar-race-entry-status-source-profile-qualification-v2:"
+FIXTURE_ID_PREFIX_V3 = "nar-race-entry-status-source-profile-fixture-set-v3:"
+QUALIFICATION_ID_PREFIX_V3 = "nar-race-entry-status-source-profile-qualification-v3:"
 ACQUISITION_SEMANTICS = "CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET"
 MARKET_ELIGIBILITY = "UNSUPPORTED"
 
@@ -185,6 +191,16 @@ class RawFixturePublicationSafety:
         return _canonical_bytes(self.to_canonical_dict())
 
 
+@dataclass(frozen=True, slots=True)
+class RawFixturePublicationSafetyV3(RawFixturePublicationSafety):
+    """Nesting-independent publication-safety result."""
+
+    def to_canonical_dict(self) -> dict[str, object]:
+        payload = super().to_canonical_dict()
+        payload["schema_version"] = SCHEMA_VERSION_V3
+        return payload
+
+
 def _unsupported_safety() -> RawFixturePublicationSafety:
     return RawFixturePublicationSafety(
         tuple(
@@ -204,6 +220,160 @@ def _malformed_percent(value: str) -> bool:
         else:
             index += 1
     return False
+
+
+def _mark_all_ambiguous(ambiguous: dict[PublicationSafetyCategory, int]) -> None:
+    for category in PublicationSafetyCategory:
+        ambiguous[category] += 1
+
+
+def _scan_url_value_v3(
+    value: object,
+    unsafe: dict[PublicationSafetyCategory, int],
+    ambiguous: dict[PublicationSafetyCategory, int],
+) -> None:
+    if type(value) is not str:
+        _mark_all_ambiguous(ambiguous)
+        return
+    try:
+        query = urlsplit(value).query
+    except ValueError:
+        _mark_all_ambiguous(ambiguous)
+        return
+    if not query:
+        return
+    for component in query.split("&"):
+        raw_key = component.split("=", 1)[0]
+        category = _category_for(raw_key)
+        if _malformed_percent(component):
+            targets = (
+                {category}
+                if category is not None
+                else (set(PublicationSafetyCategory) if "%" in raw_key else set())
+            )
+            for target in targets:
+                ambiguous[target] += 1
+            continue
+        try:
+            pairs = parse_qsl(component, keep_blank_values=True, strict_parsing=True)
+        except ValueError:
+            if category is not None:
+                ambiguous[category] += 1
+            continue
+        for key, query_value in pairs:
+            category = _category_for(key)
+            if category is None:
+                continue
+            if query_value:
+                unsafe[category] += 1
+            else:
+                ambiguous[category] += 1
+
+
+class _PublicationSafetyScannerV3(HTMLParser):
+    """Scan sensitive HTML carriers without imposing nesting semantics."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.unsafe = {category: 0 for category in PublicationSafetyCategory}
+        self.ambiguous = {category: 0 for category in PublicationSafetyCategory}
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self._scan_attributes(attrs)
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self._scan_attributes(attrs)
+
+    def _scan_attributes(self, attrs: object) -> None:
+        if type(attrs) is not list:
+            _mark_all_ambiguous(self.ambiguous)
+            return
+        pairs: list[tuple[str, str | None]] = []
+        for item in attrs:
+            if type(item) is not tuple or len(item) != 2 or type(item[0]) is not str:
+                _mark_all_ambiguous(self.ambiguous)
+                continue
+            name, value = item
+            if value is not None and type(value) is not str:
+                _mark_all_ambiguous(self.ambiguous)
+                continue
+            pairs.append((name, value))
+            category = _category_for(name)
+            if category is not None:
+                if value is None or value == "":
+                    self.ambiguous[category] += 1
+                else:
+                    self.unsafe[category] += 1
+        attributes = {name: value for name, value in pairs}
+        for carrier in ("name", "id"):
+            key = attributes.get(carrier)
+            if type(key) is str:
+                category = _category_for(key)
+                if category is not None:
+                    associated = attributes.get("value", attributes.get("content"))
+                    if associated is None or associated == "":
+                        self.ambiguous[category] += 1
+                    else:
+                        self.unsafe[category] += 1
+        for name in _URL_ATTRIBUTES:
+            if name in attributes:
+                _scan_url_value_v3(attributes[name], self.unsafe, self.ambiguous)
+
+
+def _unsupported_safety_v3() -> RawFixturePublicationSafetyV3:
+    return RawFixturePublicationSafetyV3(
+        tuple(
+            _SafetyCategoryResult(category, PublicationSafetyOutcome.UNSUPPORTED, 0)
+            for category in PublicationSafetyCategory
+        )
+    )
+
+
+def assess_nar_race_entry_status_raw_fixture_publication_safety_v3(
+    *,
+    deba_table_bytes: bytes,
+    race_list_bytes: bytes,
+) -> RawFixturePublicationSafetyV3:
+    """Scan exact UTF-8 bytes without requiring balanced HTML nesting."""
+
+    if type(deba_table_bytes) is not bytes or type(race_list_bytes) is not bytes:
+        raise _error("publication safety inputs must be exact bytes")
+    scanner = _PublicationSafetyScannerV3()
+    try:
+        for source_bytes in (deba_table_bytes, race_list_bytes):
+            source = source_bytes.decode("utf-8", errors="strict")
+            scanner.feed(source)
+            scanner.close()
+            for line in source.splitlines():
+                normalized = line.lstrip().lower()
+                for prefix, category in (
+                    ("authorization:", PublicationSafetyCategory.NO_AUTHENTICATION_MATERIAL),
+                    ("cookie:", PublicationSafetyCategory.NO_COOKIE_OR_SESSION_SECRET),
+                    ("set-cookie:", PublicationSafetyCategory.NO_COOKIE_OR_SESSION_SECRET),
+                ):
+                    if normalized.startswith(prefix):
+                        if normalized[len(prefix):].strip():
+                            scanner.unsafe[category] += 1
+                        else:
+                            scanner.ambiguous[category] += 1
+    except Exception:
+        return _unsupported_safety_v3()
+    results = []
+    for category in PublicationSafetyCategory:
+        if scanner.unsafe[category]:
+            outcome = PublicationSafetyOutcome.UNSAFE
+        elif scanner.ambiguous[category]:
+            outcome = PublicationSafetyOutcome.AMBIGUOUS
+        else:
+            outcome = PublicationSafetyOutcome.SAFE
+        results.append(
+            _SafetyCategoryResult(
+                category,
+                outcome,
+                scanner.unsafe[category] + scanner.ambiguous[category],
+            )
+        )
+    return RawFixturePublicationSafetyV3(tuple(results))
 
 
 def assess_nar_race_entry_status_raw_fixture_publication_safety(
@@ -566,25 +736,250 @@ def validate_nar_race_entry_status_manifest_v2(
     return expected
 
 
+def _fixture_path_v3(target: _raw_capture.NARRaceEntryStatusRaceIdentity, role: str) -> str:
+    return (
+        "tests/fixtures/nar_race_entry_status/source_profiles/v3/"
+        f"baba_{target.baba_code}__{target.race_date.isoformat()}__race_{target.race_no:02d}/"
+        + ("deba_table.html" if role == "deba_table" else "race_list.html")
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class FixtureSetV3:
+    target: _raw_capture.NARRaceEntryStatusRaceIdentity
+    capture_summary: CaptureMetadataSummary
+
+    def __post_init__(self) -> None:
+        target = _canonical_target(self.target)
+        object.__setattr__(self, "target", target)
+        if type(self.capture_summary) is not CaptureMetadataSummary:
+            raise _error("capture_summary must be exact CaptureMetadataSummary")
+        _validate_capture_target(target, self.capture_summary)
+
+    def to_canonical_dict(self) -> dict[str, object]:
+        documents = []
+        for role, item in (
+            ("deba_table", self.capture_summary.deba_table),
+            ("race_list", self.capture_summary.race_list),
+        ):
+            documents.append(
+                {
+                    "role": role,
+                    "fixture_relative_path": _fixture_path_v3(self.target, role),
+                    "request_identity": item.request_identity,
+                    "capture_identity": item.capture_identity,
+                    "response_sha256": item.response_sha256,
+                    "response_byte_length": item.response_byte_length,
+                    "requested_at": item.requested_at,
+                    "observed_at": item.observed_at,
+                    "captured_at": item.captured_at,
+                    "effective_url_matches_canonical": item.effective_url_matches_canonical,
+                }
+            )
+        return {
+            "schema": FIXTURE_SET_SCHEMA,
+            "schema_version": SCHEMA_VERSION_V3,
+            "provider": "NAR",
+            "target": _target_dict(self.target),
+            "documents": documents,
+            "closed_bundle_identity": self.capture_summary.closed_bundle_identity,
+        }
+
+    def canonical_bytes(self) -> bytes:
+        return _canonical_bytes(self.to_canonical_dict())
+
+    @property
+    def identity(self) -> str:
+        return FIXTURE_ID_PREFIX_V3 + sha256(self.canonical_bytes()).hexdigest()
+
+
+def build_nar_race_entry_status_fixture_set_v3(
+    *, target: _raw_capture.NARRaceEntryStatusRaceIdentity, capture_summary: CaptureMetadataSummary
+) -> FixtureSetV3:
+    return FixtureSetV3(target, capture_summary)
+
+
+def validate_nar_race_entry_status_fixture_set_v3(
+    *, value: FixtureSetV3, target: _raw_capture.NARRaceEntryStatusRaceIdentity, capture_summary: CaptureMetadataSummary
+) -> FixtureSetV3:
+    if type(value) is not FixtureSetV3:
+        raise _error("fixture-set value has the wrong type")
+    expected = build_nar_race_entry_status_fixture_set_v3(target=target, capture_summary=capture_summary)
+    if value.canonical_bytes() != expected.canonical_bytes() or value.identity != expected.identity:
+        raise _error("fixture-set value does not match deterministic authority")
+    return value
+
+
+@dataclass(frozen=True, slots=True)
+class QualificationV3:
+    target: _raw_capture.NARRaceEntryStatusRaceIdentity
+    fixture_set: FixtureSetV3
+    profile_a: ProfileADiagnosticsV3
+    profile_b: ProfileBDiagnosticsV2
+
+    def __post_init__(self) -> None:
+        target = _canonical_target(self.target)
+        object.__setattr__(self, "target", target)
+        if type(self.fixture_set) is not FixtureSetV3 or self.fixture_set.target != target:
+            raise _error("fixture_set target is contradictory")
+        if type(self.profile_a) is not ProfileADiagnosticsV3 or self.profile_a.target != target:
+            raise _error("Profile-A target is contradictory")
+        if type(self.profile_b) is not ProfileBDiagnosticsV2 or self.profile_b.target != target:
+            raise _error("Profile-B target is contradictory")
+
+    def to_canonical_dict(self) -> dict[str, object]:
+        return {
+            "schema": QUALIFICATION_SCHEMA,
+            "schema_version": SCHEMA_VERSION_V3,
+            "provider": "NAR",
+            "target": _target_dict(self.target),
+            "fixture_set_identity": self.fixture_set.identity,
+            "profile_a": self.profile_a.to_canonical_dict(),
+            "profile_b": self.profile_b.to_canonical_dict(),
+            "market_eligibility": MARKET_ELIGIBILITY,
+        }
+
+    def canonical_bytes(self) -> bytes:
+        return _canonical_bytes(self.to_canonical_dict())
+
+    @property
+    def identity(self) -> str:
+        return QUALIFICATION_ID_PREFIX_V3 + sha256(self.canonical_bytes()).hexdigest()
+
+
+def build_nar_race_entry_status_qualification_v3(
+    *,
+    target: _raw_capture.NARRaceEntryStatusRaceIdentity,
+    fixture_set: FixtureSetV3,
+    profile_a: ProfileADiagnosticsV3,
+    profile_b: ProfileBDiagnosticsV2,
+) -> QualificationV3:
+    return QualificationV3(target, fixture_set, profile_a, profile_b)
+
+
+def validate_nar_race_entry_status_qualification_v3(
+    *,
+    value: QualificationV3,
+    target: _raw_capture.NARRaceEntryStatusRaceIdentity,
+    fixture_set: FixtureSetV3,
+    profile_a: ProfileADiagnosticsV3,
+    profile_b: ProfileBDiagnosticsV2,
+) -> QualificationV3:
+    if type(value) is not QualificationV3:
+        raise _error("qualification value has the wrong type")
+    expected = build_nar_race_entry_status_qualification_v3(
+        target=target, fixture_set=fixture_set, profile_a=profile_a, profile_b=profile_b
+    )
+    if value.canonical_bytes() != expected.canonical_bytes() or value.identity != expected.identity:
+        raise _error("qualification value does not match deterministic authority")
+    return value
+
+
+@dataclass(frozen=True, slots=True)
+class SourceProfileManifestV3:
+    fixture_set: FixtureSetV3
+    qualification: QualificationV3
+    publication_safety: RawFixturePublicationSafetyV3
+
+    def __post_init__(self) -> None:
+        if type(self.fixture_set) is not FixtureSetV3:
+            raise _error("manifest fixture_set has the wrong type")
+        if type(self.qualification) is not QualificationV3 or self.qualification.fixture_set != self.fixture_set:
+            raise _error("manifest qualification is contradictory")
+        if type(self.publication_safety) is not RawFixturePublicationSafetyV3:
+            raise _error("manifest publication_safety has the wrong type")
+        if not self.publication_safety.raw_fixture_publication_safe:
+            raise _error("manifest requires publication-safe source")
+        if self.qualification.profile_a.overall_result != "QUALIFIED":
+            raise _error("manifest requires qualified Profile A")
+        if self.qualification.profile_b.overall_result != "QUALIFIED":
+            raise _error("manifest requires qualified Profile B")
+
+    def to_canonical_dict(self) -> dict[str, object]:
+        fixture_payload = self.fixture_set.to_canonical_dict()
+        return {
+            "manifest_schema": MANIFEST_SCHEMA,
+            "manifest_schema_version": SCHEMA_VERSION_V3,
+            "acquisition_semantics": ACQUISITION_SEMANTICS,
+            "provider": "NAR",
+            "target": fixture_payload["target"],
+            "documents": fixture_payload["documents"],
+            "closed_bundle_identity": fixture_payload["closed_bundle_identity"],
+            "fixture_set_identity": self.fixture_set.identity,
+            "qualification_identity": self.qualification.identity,
+            "publication_safety": self.publication_safety.to_canonical_dict(),
+            "profile_a": self.qualification.profile_a.to_canonical_dict(),
+            "profile_b": self.qualification.profile_b.to_canonical_dict(),
+            "market_eligibility": MARKET_ELIGIBILITY,
+        }
+
+    def canonical_bytes(self) -> bytes:
+        return _canonical_bytes(self.to_canonical_dict())
+
+
+def build_nar_race_entry_status_manifest_v3(
+    *, fixture_set: FixtureSetV3, qualification: QualificationV3, publication_safety: RawFixturePublicationSafetyV3
+) -> SourceProfileManifestV3:
+    return SourceProfileManifestV3(fixture_set, qualification, publication_safety)
+
+
+def validate_nar_race_entry_status_manifest_v3(
+    *,
+    manifest_bytes: bytes,
+    fixture_set: FixtureSetV3,
+    qualification: QualificationV3,
+    publication_safety: RawFixturePublicationSafetyV3,
+) -> SourceProfileManifestV3:
+    if type(manifest_bytes) is not bytes:
+        raise _error("manifest_bytes must be exact bytes")
+    expected = build_nar_race_entry_status_manifest_v3(
+        fixture_set=fixture_set, qualification=qualification, publication_safety=publication_safety
+    )
+    try:
+        payload = json.loads(manifest_bytes.decode("utf-8", errors="strict"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise _error("manifest bytes are invalid") from error
+    if type(payload) is not dict or manifest_bytes != _canonical_bytes(payload):
+        raise _error("manifest bytes are invalid or noncanonical")
+    if manifest_bytes != expected.canonical_bytes():
+        raise _error("manifest does not match deterministic authority")
+    return expected
+
+
 __all__ = (
     "FIXTURE_ID_PREFIX",
+    "FIXTURE_ID_PREFIX_V3",
     "FIXTURE_SET_SCHEMA",
     "MANIFEST_SCHEMA",
     "MARKET_ELIGIBILITY",
     "QUALIFICATION_ID_PREFIX",
+    "QUALIFICATION_ID_PREFIX_V3",
+    "SCHEMA_VERSION",
+    "SCHEMA_VERSION_V3",
     "QUALIFICATION_SCHEMA",
     "FixtureSetV2",
+    "FixtureSetV3",
     "PublicationSafetyCategory",
     "PublicationSafetyOutcome",
     "QualificationV2",
+    "QualificationV3",
     "RawFixturePublicationSafety",
+    "RawFixturePublicationSafetyV3",
     "SourceProfileManifestV2",
+    "SourceProfileManifestV3",
     "SourceProfilePublicationContractError",
     "assess_nar_race_entry_status_raw_fixture_publication_safety",
+    "assess_nar_race_entry_status_raw_fixture_publication_safety_v3",
     "build_nar_race_entry_status_fixture_set_v2",
+    "build_nar_race_entry_status_fixture_set_v3",
     "build_nar_race_entry_status_manifest_v2",
+    "build_nar_race_entry_status_manifest_v3",
     "build_nar_race_entry_status_qualification_v2",
+    "build_nar_race_entry_status_qualification_v3",
     "validate_nar_race_entry_status_fixture_set_v2",
+    "validate_nar_race_entry_status_fixture_set_v3",
     "validate_nar_race_entry_status_manifest_v2",
+    "validate_nar_race_entry_status_manifest_v3",
     "validate_nar_race_entry_status_qualification_v2",
+    "validate_nar_race_entry_status_qualification_v3",
 )
