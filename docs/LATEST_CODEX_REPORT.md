@@ -1,44 +1,50 @@
 # Latest Codex Report
 
-## Phase71 implementation report
+## Phase72 approval report
 
-Phase: `POST_V0_8_DAILY_REPLAY_71`
+Phase: `POST_V0_8_DAILY_REPLAY_72`
 
-State: `IMPLEMENTED_FOR_REVIEW`
+State: `APPROVED_UNCONSUMED_TRACKED`
 
-Outcome: `READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`
+Authorization Tracking State: `APPROVED_UNCONSUMED_TRACKED`
 
-Support Repair: `PHASE50_PROFILE_A_V3_TARGET_CONTRACT_REPAIRED`
+Formal Status: `APPROVED_FOR_CODEX`
 
-Starting tracking HEAD: `4c18597eac7ec8b180650c89acddbe88f0294047`
+Design Review: `PHASE72_VALIDATION_DESIGN_REVIEW_PASS`
 
-Previous executable support HEAD: `79d6faaa30a54840232c0b73cd0e4ce1451a088e`
+Outcome: `APPROVED_REAUTHORIZED_VERSIONED_SOURCE_PROFILE_VALIDATION`
 
-Phase50 now preserves the historical schema-2 targetless blocked Profile-A payload contract while requiring the real canonical `target` object for schema 3. Schema 3 accepts no missing or extra target keys and validates canonical `baba_code`, exact valid `YYYY-MM-DD` `race_date`, and an exact positive `race_no` bounded to `1..12`, without coercion or normalization.
+Validation Contract: `REAUTHORIZED_VERSIONED_SOURCE_PROFILE_VALIDATION_CONTRACT_COMPLETE`
 
-Phase50 journal semantics additionally require a schema-3 blocked Profile-A target to equal the journal's `TARGET_CONSTRUCTED` record exactly. Mismatch in baba code, race date, or race number fails closed. Unsupported versions remain rejected. The top-level journal schema, ordering, limits, acquisition behavior, and all other qualification/recovery authorities are unchanged.
+Worktree: `C:\Users\garim\Desktop\KeibaOS-post-v0.8`
 
-Changed paths are exactly:
+Current / executable support HEAD: `b29e98259a3186f905220b0d66eae24597458059`
 
-1. `scripts/simulation/nar_race_entry_status_reacquisition_observability.py`
-2. `tests/test_nar_race_entry_status_reacquisition_observability.py`
-3. `docs/CURRENT_PHASE.md`
-4. `docs/LATEST_CODEX_REPORT.md`
+Approval Base HEAD: `b29e98259a3186f905220b0d66eae24597458059`
 
-Verification completed:
+Support tree: `04acbe48a554a1dd16548d4df8449f1775e3acbf`
 
-- `python -m pytest tests/test_nar_race_entry_status_reacquisition_observability.py -q`: `355 passed in 3.05s`.
-- `python -m pytest tests/test_nar_race_entry_status_source_profile_profile_a.py tests/test_nar_race_entry_status_source_profile_recovery_diagnostics.py tests/test_nar_race_entry_status_source_profile_structural_recovery_diagnostics.py -q`: `249 passed in 0.71s`.
-- `python -m pytest -q`: `4309 passed, 2841 subtests passed in 28.82s`.
+Phase71 is frozen as `FORMALLY_COMPLETE`; its repair is `PHASE50_PROFILE_A_V3_TARGET_CONTRACT_REPAIRED` and its independent review passed. Phase70 remains `PRE_AUTHORIZATION_STOP`, with the old authorization unconsumed but `INVALIDATED_BY_EXECUTABLE_SUPPORT_HEAD_CHANGE`. It cannot be reused, consumed, rebound, or transferred.
 
-The representative schema-3 blocked Profile-A record is `923` bytes excluding LF (`924` including LF), below `MAX_RECORD_BYTES = 4096`. The representative seven-record journal is `2695` bytes, below `MAX_JOURNAL_BYTES = 131072`.
+The frozen target is `NAR / 21 / 2025-01-01 / 6` under `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`. No historical inference is allowed.
 
-No provider request occurred: Provider HTTP `0`, Phase44 `0`, GET `0`. No acquisition authorization was issued. No fixture, manifest, publication artifact, raw provider content, database, or log was created.
+Future Phase72 qualification authority is exclusively Profile-B v2, Profile-A v3, and Safety v3. Phase50 retains journal schema `1`, Profile-B `{1,2}`, blocked Profile-A `{2,3}`, blocked Safety `{2,3}`, and identity versions v1/v2/v3. It preserves historical schema-2 targetless Profile-A evidence while requiring schema-3 canonical target data and exact agreement with `TARGET_CONSTRUCTED`.
 
-Phase70 authorization remains formally unconsumed:
+The Phase70 hardened runner design is reused with one external source, one byte sequence, one shared capture adapter, one shared post-acquisition processor, isolated `-I -B` imports, KeibaAI exclusion, origin checks, and exact LF preflight output. Phase72 adds a repair-specific pre-live proof: an actual blocked `ProfileADiagnosticsV3.to_canonical_dict()` payload must pass Phase50 directly with target present, retained unchanged, equal to `TARGET_CONSTRUCTED`, and semantically reconstructed.
 
-`PHASE70_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_UNCONSUMED`
+Mandatory future gates are the V2/V3 synthetic qualifications, Phase50 versioned-payload gate, Safety-v3 blocked probe, Profile-A-v3 blocked probe, `PHASE71_PROFILE_A_V3_TARGET_CONTRACT_INTEGRATION_PASS`, full Phase50 reconstruction, no-network proof, runner-byte parity, and exact capture metadata/bundle identity gates. No live boundary may be crossed unless every gate passes.
 
-Because the executable support HEAD changes with this repair, its execution eligibility is `INVALIDATED_BY_EXECUTABLE_SUPPORT_HEAD_CHANGE`. It is unusable and must not be reused or rebound; it was not marked consumed.
+The newly issued Phase72 authorization is:
 
-Next permitted action: `CHATGPT_REVIEW_PHASE71_IMPLEMENTATION`.
+- `PHASE72_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_UNCONSUMED`
+- `PHASE72_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_CONSUMED_FAIL_CLOSED`
+
+It binds only to Phase72, target `NAR / 21 / 2025-01-01 / 6`, purpose `FRESH_CURRENT_VALIDATION_AFTER_PHASE71_PROFILE_A_V3_TARGET_REPAIR`, semantics `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`, and support HEAD `b29e98259a3186f905220b0d66eae24597458059`. It is one-shot, nontransferable, and nonrenewable after consumption.
+
+During APPROVE, Provider HTTP, Phase44, GET, synthetic execution, and live execution are all `0` / `NOT RUN`; the boundary is not written and authorization is not consumed. No production or test support change is required; modified paths are documentation only.
+
+Future live caps remain Phase44 `1`, Deba GET `1`, RaceList GET `1`, total GET `2`, in that order, with no retry. Publication remains forbidden. Safe-final, raw cleanup, current-byte-only comparison, and `UNSUPPORTED` market eligibility remain unchanged.
+
+Readiness A–R: all `YES`.
+
+Next permitted action after integration: `INDEPENDENT_REMOTE_VERIFICATION_BEFORE_PHASE72_EXECUTE`.
