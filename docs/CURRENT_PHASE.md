@@ -1,63 +1,115 @@
 # Current Phase
 
-## Identity and status
+## Phase70 approved authorization
 
-- Phase: `POST_V0_8_DAILY_REPLAY_69`
-- Title: `Evidence-Backed NAR Source Profile Grammar and HTML Recovery Remediation`
+- Phase: `POST_V0_8_DAILY_REPLAY_70`
+- Title: `Fresh-Current Validation of Versioned NAR Source Profile Authority`
 - Branch: `feature/post-v0.8-daily-replay`
-- Starting HEAD: `7d07f3f2e1d7ef43c5fbab50861170073d2cd788`
-- State: `IMPLEMENTED_FOR_REVIEW`
-- Outcome: `READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`
-- Design Contract: `EVIDENCE_BACKED_SOURCE_PROFILE_REMEDIATION_CONTRACT_COMPLETE`
-- Design Review: `PHASE69_CORRECTED_REMEDIATION_DESIGN_REVIEW_PASS`
-- Version Compatibility: `FORMALLY_IMPLEMENTED`
+- Starting and executable support HEAD: `79d6faaa30a54840232c0b73cd0e4ce1451a088e`
+- Approval Base HEAD: `79d6faaa30a54840232c0b73cd0e4ce1451a088e`
+- Executable Support HEAD: `79d6faaa30a54840232c0b73cd0e4ce1451a088e`
+- State: `APPROVED_UNCONSUMED_TRACKED`
+- Authorization Tracking State: `APPROVED_UNCONSUMED_TRACKED`
+- Formal Status: `APPROVED_FOR_CODEX`
+- Design Review: `PHASE70_VALIDATION_DESIGN_REVIEW_PASS`
+- Outcome: `APPROVED_VERSIONED_SOURCE_PROFILE_FRESH_CURRENT_VALIDATION`
+- Validation Contract: `VERSIONED_SOURCE_PROFILE_FRESH_CURRENT_VALIDATION_CONTRACT_COMPLETE`
+- Allowed files during this authorization record: `docs/CURRENT_PHASE.md`, `docs/LATEST_CODEX_REPORT.md` only.
 
-Phase69 is a no-network authority implementation. Provider HTTP, Phase44, GET, and acquisition authorization are all `0`/`NONE`. No fixture, manifest, or other publication artifact was created.
+Phase69 is `FORMALLY_COMPLETE`; its remote implementation verification is `PHASE69_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`. Phase70 requires no production, test, Phase63, or Phase66 modification. Authorization is issued but has not been consumed: `PHASE70_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_UNCONSUMED`.
 
-## Implemented version authorities
+## Frozen target and authority
 
-Historical authority remains frozen. The unversioned Profile-B API still returns schema v1 with its original recursive candidate semantics. The unversioned Profile-A API still returns schema v2 and retains the strict nesting prerequisite. The unversioned publication Safety and every `_v2` fixture, qualification, and manifest API remain canonical v2 authority.
+The sole future target is `NAR / 21 / 2025-01-01 / 6` with semantics `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`. This means only a current acquisition concerning the historical target; it does not establish 2025 source bytes, historical availability, timing, provider state, or market eligibility.
 
-The additive authorities are:
+The future qualification authorities are exclusively:
 
-- Profile-B v2: `ProfileBDiagnosticsV2` and `diagnose_nar_race_entry_status_profile_b_v2`. Only rows having exactly one table ancestor before the selected `section.raceTable`, with that table not carrying exact `changeInfo`, enter `UNIQUE_TARGET_6R`. The independent changeInfo traversal for withdrawal predicates is unchanged.
-- Profile-A v3: `ProfileADiagnosticsV3` and `diagnose_nar_race_entry_status_profile_a_v3`. Exact UTF-8 and tolerant `html.parser` parsing are mandatory; XML-like nesting is not a positive prerequisite, while all explicit selectors, cardinalities, numeric horse rules, and ambiguity handling remain fail closed.
-- Safety v3: `RawFixturePublicationSafetyV3` and `assess_nar_race_entry_status_raw_fixture_publication_safety_v3`. A nesting-independent streaming `HTMLParser` scans start/start-end attributes, direct sensitive names, name/id carriers with value/content, href/src/action queries, malformed percent/query cases, and Authorization/Cookie/Set-Cookie raw lines. Decode, parser, runtime, attribute, or incomplete-scan failure cannot become SAFE.
-- Publication v3: `FixtureSetV3`, `QualificationV3`, `SourceProfileManifestV3`, and explicit `_v3` build/validate functions. Identities use `fixture-set-v3:` and `qualification-v3:`; paths are under `source_profiles/v3/`. Qualification v3 requires Profile-A v3 and Profile-B v2; manifest v3 requires Safety v3 SAFE plus both profiles QUALIFIED.
+- Profile-B v2: `diagnose_nar_race_entry_status_profile_b_v2`, exact `ProfileBDiagnosticsV2`, schema `2`.
+- Profile-A v3: `diagnose_nar_race_entry_status_profile_a_v3`, exact `ProfileADiagnosticsV3`, schema `3`.
+- Safety v3: `assess_nar_race_entry_status_raw_fixture_publication_safety_v3`, exact `RawFixturePublicationSafetyV3`, schema `3`.
 
-No ordinal, cell-count, anchor-count, link-presence, current-target, current-SHA, or provider-body special case exists. `MARKET_ELIGIBILITY`, positive market eligibility, and whole-meeting cancellation remain `UNSUPPORTED`.
+Legacy V1/V2 results may be retained only as optional bounded comparison evidence and never as Phase70 qualification authority. Phase63 and Phase66 remain recommended supplemental recovery/consistency authorities only; they cannot override V2/V3 results.
 
-## Phase50 compatibility
+## Expected, not assumed, fresh results
 
-Phase50 now accepts and retains only these nested versions: Profile-B `{1,2}`, blocked Profile-A `{2,3}`, and blocked Safety `{2,3}`. Fixture and qualification identity patterns accept v1/v2/v3 and still require matching versions. Unsupported versions are rejected and no version is normalized.
+The expected-but-not-assumed validation outcome is Profile-B v2 `QUALIFIED`, Profile-A v3 `QUALIFIED`, and Safety v3 `SAFE`. In particular, Profile-B v2 is expected to count only the direct schedule-domain candidate and Profile-A v3 is expected not to treat the historical Deba nesting mismatch as a qualification prerequisite. Safety v3 is expected to complete all five nesting-independent categories. Every actual result, including any non-pass, must be retained truthfully without forced qualification.
 
-`JOURNAL_SCHEMA_VERSION` remains `1`; top-level records, milestones, ordering, authorization semantics, `MAX_RECORD_BYTES = 4096`, `MAX_JOURNAL_BYTES = 131072`, process-stream bounds, and the v1/v2 dedicated-test-path allowlist are unchanged. Historical journal shapes remain valid. Phase63 and Phase66 production modules were not changed.
+## Future no-network preflight and shared runner
 
-## Compatibility and security verification
+The external runner must be generated once outside the repository, compiled before use, and used byte-for-byte unchanged for a synthetic no-network dry run and then, only if approved later, real live mode. It must retain one shared capture-metadata adapter and one shared post-acquisition processor; dry and live modes may differ only in how their closed bundle is obtained.
 
-Frozen v2 golden regressions retain fixture canonical length `1644` and identity digest `ac1e76922cfb0a49e03afb2c58da57ddb5ea68c3c4308279e4b090b1698bdcc6`; qualification length `2012` and identity digest `071e035ea8279b603958460550835cec529be3b02f69c28a165ddf9250e3e86b`; manifest length `4247` and SHA-256 `df40f436d40da434e3ceed6744a7204eb6d7405868cec7440934d3d817d42be0`.
+The synthetic mode must use the new V2/V3 authorities and exercise Profile-B v2, Phase63 Profile-B recovery, Phase66 ancestry, ancestry consistency, identity, Phase63 Safety recovery, Phase66 strict recovery, strict consistency, Safety v3, Profile-A v3, terminal mapping, and Phase50 reconstruction. It is structurally forbidden from calling Phase44, transport, provider URLs, or any network path.
 
-Safety monotonicity passed: every exercised pre-existing UNSAFE or AMBIGUOUS condition remained non-SAFE under v3. Representative Profile-B v2, Profile-A v3, and Safety v3 Phase50 records measure `1318`, `856`, and `784` bytes including LF; their representative journal is `2958` bytes. These remain within `4096` / `131072`; limits were not raised.
+Required future gates are:
 
-Tests:
+- `PROFILE_B_V2_DRY_RUN_PASS`
+- `PROFILE_A_V3_DRY_RUN_PASS`
+- `SAFETY_V3_DRY_RUN_PASS`
+- `PHASE50_VERSIONED_PAYLOAD_DRY_RUN_PASS`
+- `PHASE50_SAFETY_V3_BLOCKED_PAYLOAD_PASS`
+- `PHASE50_PROFILE_A_V3_BLOCKED_PAYLOAD_PASS`
+- `RUNNER_FULL_VERSIONED_POST_ACQUISITION_DRY_RUN_PASS`
+- `DRY_RUN_NO_NETWORK_PASS`
+- `DRY_RUN_LIVE_LOGIC_PARITY_PASS`
+- `CAPTURE_METADATA_EXACT_11_KEYS_PASS`
+- `CLOSED_BUNDLE_IDENTITY_PROPAGATION_PASS`
 
-- Targeted Phase50/Profile-B/Profile-A/publication contract: `432 passed`, `0 failed`.
-- Phase63/Phase66 recovery plus frozen V2 publication-plan compatibility: `261 passed`, `0 failed`.
-- Full repository: `4294 passed`, `2841 subtests passed`, `0 failed`.
+The existing hardened execution controls remain required: a fresh `-I -B` interpreter, explicit authorized-worktree bootstrap, exclusion of KeibaAI, no preloaded `scripts` modules, package-path/module-origin exclusivity, and native Git exit-code checks before evaluating output cardinality. No `git fetch` is permitted.
 
-## Exact implementation paths
+## Future acquisition and evidence contract
 
-1. `scripts/simulation/nar_race_entry_status_reacquisition_observability.py`
-2. `tests/test_nar_race_entry_status_reacquisition_observability.py`
-3. `scripts/simulation/nar_race_entry_status_source_profile_diagnostics.py`
-4. `tests/test_nar_race_entry_status_source_profile_diagnostics.py`
-5. `scripts/simulation/nar_race_entry_status_source_profile_profile_a.py`
-6. `tests/test_nar_race_entry_status_source_profile_profile_a.py`
-7. `scripts/simulation/nar_race_entry_status_source_profile_publication_contract.py`
-8. `tests/test_nar_race_entry_status_source_profile_publication_contract.py`
-9. `docs/CURRENT_PHASE.md`
-10. `docs/LATEST_CODEX_REPORT.md`
+The issued authorization is bound exactly to Phase70, target `NAR / 21 / 2025-01-01 / 6`, purpose `FRESH_CURRENT_VALIDATION_OF_VERSIONED_NAR_SOURCE_PROFILE_AUTHORITY`, semantics `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`, and executable support HEAD `79d6faaa30a54840232c0b73cd0e4ce1451a088e`. It is one-shot, nontransferable, and nonrenewable after consumption:
 
-A separately reviewed V3 publication-plan phase is required before any v3 fixture publication. Any fresh provider validation likewise requires a new, separately reviewed current-acquisition authorization and cannot establish historical availability.
+- `PHASE70_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_UNCONSUMED`
+- `PHASE70_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_CONSUMED_FAIL_CLOSED`
 
-Next permitted action: `CHATGPT_REVIEW_PHASE69_IMPLEMENTATION`.
+Only a future real journal boundary may consume authorization:
+
+`PHASE44_CALL_ABOUT_TO_ENTER` → canonical append → flush → fsync → one Phase44 call.
+
+The cap is Phase44 `1`; DebaTable GET `1`; RaceList GET `1`; total GET `2`; order is DebaTable then RaceList; no retry, fallback, alternate target, or alternate provider is allowed after the durable boundary.
+
+In addition to the main synthetic successful path, two separate no-network synthetic probes are mandatory before the boundary. One must retain a legitimate schema-3 non-SAFE `RawFixturePublicationSafetyV3` through `PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED`; the other must retain a legitimate schema-3 blocked `ProfileADiagnosticsV3` through `PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED`. Both must reconstruct through real Phase50 with incoming schema version `3`, without normalization. Their journals and data are synthetic, separate from the future live journal, and deleted after validation.
+
+Future retained progression is:
+
+`CLOSED_BUNDLE_RETURNED` → capture metadata → Profile-B v2 diagnostics → Phase63 Profile-B recovery → Phase66 ancestry → ancestry consistency → identity → Phase63 Safety recovery → Phase66 strict recovery → strict consistency → Safety v3 result → `SAFETY_PASS` if SAFE → Profile-A v3 → Profile-A outcome event → Profile-B qualification event if qualified → truthful terminal completion.
+
+Phase50 v1 accepts Profile-B schemas `{1,2}`, blocked Profile-A schemas `{2,3}`, and blocked Safety schemas `{2,3}`. V3 fixture/qualification identity patterns are available but FixtureSetV3 and QualificationV3 are not required for this no-publication validation; SourceProfileManifestV3 must not be constructed or validated.
+
+## Terminal, publication, and cleanup contract
+
+Pre-boundary failure leaves authorization unconsumed with HTTP/Phase44/GET all zero. Post-boundary acquisition or integrity failure maps to `RECOVERY_PREFLIGHT_BLOCKED`. Safety v3 non-SAFE, Profile-A v3 non-qualified after Safety SAFE, or Profile-B v2 non-qualified after Safety SAFE maps to `SOURCE_PROFILE_FIXTURE_BLOCKED`. All three qualifying maps to `READY_FOR_REVIEW`, meaning only `VERSIONED_SOURCE_PROFILE_VALIDATION_READY_FOR_CHATGPT_REVIEW`, never publication approval.
+
+Publication is prohibited: no `PUBLICATION_BEGIN`, `RAW_FIXTURES_WRITTEN`, `MANIFEST_WRITTEN`, `DEDICATED_TEST_WRITTEN`, `REGRESSIONS_PASS`, rollback, fixture path, or manifest. A separate V3 publication-plan phase remains required.
+
+The external safe-final may retain only bounded run/target/authorization/capture identity/hash/length, V2/V3 canonical diagnostics, Phase63/66 diagnostics, Safety v3 categories, terminal result, journal digest, parent validation, and cleanup facts. It must not retain raw provider content. After parent validation, all raw bytes, journals after safe-final retention, runner, streams, and synthetic data are removed; no raw-bearing artifact may remain.
+
+Current-byte SHA/length comparison to Phase57/64/67/68 metadata is allowed. Equality may be reported only as `CURRENT_ACQUISITION_BYTES_REPRODUCED`, without historical inference. Market eligibility, positive market eligibility, and whole-meeting cancellation remain `UNSUPPORTED`.
+
+## Readiness
+
+- A Phase69 remote verification passed: YES.
+- B executable support HEAD frozen: YES.
+- C V3 authorities identified: YES.
+- D Phase50 version compatibility confirmed: YES.
+- E Phase63/66 supplemental-only role preserved: YES.
+- F dry-run uses new authorities: YES.
+- G dry/live shared runner designed: YES.
+- H no-network dry-run complete in design: YES.
+- I exact authorization boundary frozen: YES.
+- J Phase44/GET caps frozen: YES.
+- K Profile-B v2 expected evidence defined without assuming result: YES.
+- L Profile-A v3 expected evidence defined without assuming result: YES.
+- M Safety v3 expected evidence defined without assuming result: YES.
+- N terminal mapping complete: YES.
+- O publication prohibited: YES.
+- P safe-final/cleanup preserved: YES.
+- Q historical non-inference preserved: YES.
+- R no tracked implementation change required: YES.
+
+During APPROVE: Provider HTTP: `0`; Phase44: `0`; GET: `0`; synthetic dry-run: `NOT RUN`; live run: `NOT RUN`; boundary: `NOT WRITTEN`; authorization consumed: `NO`. Authorization state: `PHASE70_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_UNCONSUMED`.
+
+Phase57, Phase64, Phase67, and Phase68 remain consumed fail-closed; Phase54 remains `UNCONSUMED_BUT_UNUSABLE_FOR_V2`; Phase41 remains `DESIGN_BLOCKED`.
+
+Next permitted action: `TRACK_PHASE70_AUTHORIZATION_STATE_THEN_INDEPENDENT_REMOTE_VERIFICATION`.

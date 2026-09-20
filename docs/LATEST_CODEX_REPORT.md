@@ -1,31 +1,39 @@
 # Latest Codex Report
 
-## Phase69 implementation
+## Phase70 approval
 
-Phase `POST_V0_8_DAILY_REPLAY_69` is `IMPLEMENTED_FOR_REVIEW` with outcome `READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW` and version compatibility `FORMALLY_IMPLEMENTED`.
+Phase: `POST_V0_8_DAILY_REPLAY_70`
 
-Strategy B was implemented additively. Legacy unversioned Profile-B v1, Profile-A v2, Safety v2, and all publication `_v2` APIs remain frozen. New explicit authorities provide Profile-B v2 structural schedule scoping, Profile-A v3 tolerant semantic qualification, Safety v3 nesting-independent sensitive-carrier scanning, and publication v3 fixture/qualification/manifest types and functions.
+State: `APPROVED_UNCONSUMED_TRACKED`
 
-Profile-B v2 excludes nested changeInfo and other nested tables from `UNIQUE_TARGET_6R` by table ancestry, while leaving the withdrawal/changeInfo predicates independent. Profile-A v3 requires strict UTF-8 and successful tolerant parsing but not exact XML-like nesting. Safety v3 scans direct attributes, name/id carriers, URL queries, malformed encodings, and raw header-like lines without using balanced nesting as a prerequisite. Security monotonicity tests passed.
+Authorization Tracking State: `APPROVED_UNCONSUMED_TRACKED`
 
-Phase50 retains `JOURNAL_SCHEMA_VERSION = 1` and unchanged record/journal limits. It now accepts only Profile-B `{1,2}`, blocked Profile-A `{2,3}`, blocked Safety `{2,3}`, plus matched v1/v2/v3 fixture and qualification identities. Incoming versions are retained; unsupported versions remain rejected. Its v1/v2 dedicated publication-test path allowlist is unchanged.
+Approval Base HEAD: `79d6faaa30a54840232c0b73cd0e4ce1451a088e`
 
-Frozen V2 golden vectors passed unchanged: fixture length/identity `1644` / `ac1e76922cfb0a49e03afb2c58da57ddb5ea68c3c4308279e4b090b1698bdcc6`; qualification `2012` / `071e035ea8279b603958460550835cec529be3b02f69c28a165ddf9250e3e86b`; manifest length/SHA-256 `4247` / `df40f436d40da434e3ceed6744a7204eb6d7405868cec7440934d3d817d42be0`.
+Executable Support HEAD: `79d6faaa30a54840232c0b73cd0e4ce1451a088e`
 
-Verification results:
+Formal Status: `APPROVED_FOR_CODEX`
 
-- Targeted four-module suite: `432 passed`, `0 failed`.
-- Phase63/66 recovery and V2 publication-plan regressions: `261 passed`, `0 failed`.
-- Full repository: `4294 passed`, `2841 subtests passed`, `0 failed`.
-- Representative new nested records including LF: Profile-B v2 `1318`, Profile-A v3 `856`, Safety v3 `784`; all within `MAX_RECORD_BYTES = 4096`.
-- Representative journal: `2958`, within `MAX_JOURNAL_BYTES = 131072`.
-- Provider HTTP / Phase44 / GET: `0 / 0 / 0`.
-- Acquisition authorization: `NONE`.
-- Publication performed: `NO`.
-- Phase63 changed: `NO`.
-- Phase66 changed: `NO`.
-- Market eligibility: `UNSUPPORTED`.
+Design Review: `PHASE70_VALIDATION_DESIGN_REVIEW_PASS`
 
-The change is restricted to the approved ten paths. No fixture, database, log, raw provider content, current-target/SHA special case, or acquisition code was added. A later, independently reviewed V3 publication-plan phase is required before fixture publication; fresh current-byte verification is also a later separately authorized action.
+Outcome: `APPROVED_VERSIONED_SOURCE_PROFILE_FRESH_CURRENT_VALIDATION`
 
-Next permitted action: `CHATGPT_REVIEW_PHASE69_IMPLEMENTATION`.
+Authorization: `PHASE70_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_UNCONSUMED`
+
+`POST_V0_8_DAILY_REPLAY_70` is approved at the tracked/executable support HEAD above. Phase69 is frozen as `FORMALLY_COMPLETE` with `PHASE69_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`.
+
+The planned one-shot validation concerns the current NAR target `21 / 2025-01-01 / 6` only. Its authority is Profile-B v2 (`diagnose_nar_race_entry_status_profile_b_v2`), Profile-A v3 (`diagnose_nar_race_entry_status_profile_a_v3`), and Safety v3 (`assess_nar_race_entry_status_raw_fixture_publication_safety_v3`). Desired results are QUALIFIED / QUALIFIED / SAFE, but no result is assumed.
+
+Phase50 support is sufficient without tracked changes: Profile-B nested schemas `{1,2}`, blocked Profile-A `{2,3}`, and blocked Safety `{2,3}` are accepted while preserving incoming versions; journal schema remains `1`. Phase63 and Phase66 remain supplemental recovery evidence. FixtureSetV3 and QualificationV3 are not required for this no-publication run; SourceProfileManifestV3 is prohibited.
+
+The future runner will follow the hardened external pattern: isolated `-I -B` process, authorized path bootstrap, KeibaAI exclusion, verified origins, corrected Git output/exit-code guard, one generated/compiled runner, shared capture adapter, and one shared dry/live post-acquisition processor. A synthetic no-network dry-run must pass the Profile-B v2, Profile-A v3, Safety v3, Phase50 versioned-payload, full reconstruction, capture identity, no-network, and unchanged-runner gates before any authorization boundary.
+
+Issued authorization: `PHASE70_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_UNCONSUMED`; reserved consumed state: `PHASE70_VERSIONED_SOURCE_PROFILE_VALIDATION_AUTHORIZATION_CONSUMED_FAIL_CLOSED`. It is one-shot and bound to Phase70, the frozen target, `FRESH_CURRENT_VALIDATION_OF_VERSIONED_NAR_SOURCE_PROFILE_AUTHORITY`, current-acquisition semantics, and the support HEAD. The future durable boundary remains `PHASE44_CALL_ABOUT_TO_ENTER` → append → flush → fsync → exactly one Phase44 call. Caps remain Deba 1 GET, RaceList 1 GET, total 2, in that order, with no retry.
+
+Two additional no-network Phase50 probes are mandatory before the real boundary: a schema-3 blocked Safety V3 payload retained through the actual `PUBLICATION_SAFETY_BLOCKED_RESULT_RETAINED` path, and a schema-3 blocked Profile-A V3 payload retained through the actual `PROFILE_A_BLOCKED_DIAGNOSTICS_RETAINED` path. Each must reconstruct with schema version 3 retained unchanged. Required gates are `PHASE50_SAFETY_V3_BLOCKED_PAYLOAD_PASS` and `PHASE50_PROFILE_A_V3_BLOCKED_PAYLOAD_PASS`, in addition to every previously specified dry-run, capture-metadata, no-network, and runner-parity gate.
+
+No publication is planned or authorized. No manifest or V3 fixture object needs construction. Safe-final and raw cleanup remain external and bounded; current-byte comparison may never establish historical availability. During APPROVE, Provider HTTP, Phase44, and GET are `0`; synthetic and live runs are `NOT RUN`; the boundary is not written and authorization is not consumed.
+
+Readiness A–R: all `YES`. No tracked support change is required. Only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` changed.
+
+Next permitted action: `TRACK_PHASE70_AUTHORIZATION_STATE_THEN_INDEPENDENT_REMOTE_VERIFICATION`.
