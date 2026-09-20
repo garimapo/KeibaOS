@@ -65,8 +65,29 @@ def _fixture_set(
     )
 
 
+def _fixture_set_v3(
+    target: raw_capture.NARRaceEntryStatusRaceIdentity = FROZEN_TARGET,
+) -> publication_contract.FixtureSetV3:
+    bundle = raw_capture.NARRaceEntryStatusRawCaptureBundle(
+        target_race_identity=target,
+        deba_table_capture=_capture(target, raw_capture.NARRaceEntryStatusPageKind.DEBA_TABLE, 0),
+        race_list_capture=_capture(target, raw_capture.NARRaceEntryStatusPageKind.RACE_LIST, 1),
+    )
+    capture_summary = profile_b.summarize_nar_race_entry_status_capture_bundle(bundle=bundle)
+    return publication_contract.build_nar_race_entry_status_fixture_set_v3(
+        target=target,
+        capture_summary=capture_summary,
+    )
+
+
 def _plan() -> subject.Phase57PublicationPlan:
     return subject.build_nar_race_entry_status_phase57_publication_plan(fixture_set=_fixture_set())
+
+
+def _plan_v3() -> subject.SourceProfilePublicationPlanV3:
+    return subject.build_nar_race_entry_status_source_profile_publication_plan_v3(
+        fixture_set=_fixture_set_v3(),
+    )
 
 
 def _replace_entry(
@@ -292,3 +313,209 @@ def test_future_fixture_test_contract_freezes_semantics_without_provider_values(
         "NO_NETWORK",
     )
     assert not any("SHA256:" in item or "BYTE_LENGTH:" in item for item in subject.FUTURE_OFFICIAL_FIXTURE_TEST_REQUIREMENTS)
+
+
+def test_exact_fixture_set_v3_builds_and_validates_distinct_plan() -> None:
+    fixture_set = _fixture_set_v3()
+    plan = subject.build_nar_race_entry_status_source_profile_publication_plan_v3(
+        fixture_set=fixture_set,
+    )
+
+    assert type(plan) is subject.SourceProfilePublicationPlanV3
+    assert plan.authority_semantic == subject.AUTHORITY_SEMANTIC_V3
+    assert (plan.provider, plan.baba_code, plan.race_date, plan.race_no) == (
+        "NAR",
+        "21",
+        "2025-01-01",
+        6,
+    )
+    assert subject.validate_nar_race_entry_status_source_profile_publication_plan_v3(
+        value=plan,
+        fixture_set=fixture_set,
+    ) is plan
+    assert plan == subject.build_nar_race_entry_status_source_profile_publication_plan_v3(
+        fixture_set=fixture_set,
+    )
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        raw_capture.NARRaceEntryStatusRaceIdentity("22", date(2025, 1, 1), 6),
+        raw_capture.NARRaceEntryStatusRaceIdentity("21", date(2025, 1, 2), 6),
+        raw_capture.NARRaceEntryStatusRaceIdentity("21", date(2025, 1, 1), 7),
+    ],
+)
+def test_v3_wrong_target_is_rejected_fail_closed(
+    target: raw_capture.NARRaceEntryStatusRaceIdentity,
+) -> None:
+    with pytest.raises(subject.PublicationPlanError, match="frozen Phase75 target"):
+        subject.build_nar_race_entry_status_source_profile_publication_plan_v3(
+            fixture_set=_fixture_set_v3(target),
+        )
+
+
+def test_v3_exact_six_roles_paths_and_policies_are_frozen() -> None:
+    fixture_set = _fixture_set_v3()
+    documents = fixture_set.to_canonical_dict()["documents"]
+    plan = _plan_v3()
+
+    assert tuple(entry.role for entry in plan.entries) == tuple(subject.PublicationRole)
+    assert plan.future_live_paths == (
+        subject.EXPECTED_DEBA_TABLE_PATH_V3,
+        subject.EXPECTED_RACE_LIST_PATH_V3,
+        subject.EXPECTED_MANIFEST_PATH_V3,
+        subject.EXPECTED_DEDICATED_FIXTURE_TEST_PATH_V3,
+        subject.EXPECTED_CURRENT_PHASE_DOC_PATH,
+        subject.EXPECTED_LATEST_CODEX_REPORT_PATH,
+    )
+    assert documents[0]["fixture_relative_path"] == subject.EXPECTED_DEBA_TABLE_PATH_V3
+    assert documents[1]["fixture_relative_path"] == subject.EXPECTED_RACE_LIST_PATH_V3
+    assert tuple(entry.policy for entry in plan.entries[:4]) == (
+        subject.PublicationPathPolicy.CREATE_ONLY,
+    ) * 4
+    assert tuple(entry.policy for entry in plan.entries[4:]) == (
+        subject.PublicationPathPolicy.MODIFY_EXISTING,
+    ) * 2
+    assert plan.gitattributes_policy is subject.PublicationPathPolicy.VALIDATE_ONLY
+
+
+def test_v2_and_v3_fixture_sets_and_plans_cross_reject() -> None:
+    v2_fixture_set = _fixture_set()
+    v3_fixture_set = _fixture_set_v3()
+    v2_plan = _plan()
+    v3_plan = _plan_v3()
+
+    with pytest.raises(subject.PublicationPlanError):
+        subject.build_nar_race_entry_status_source_profile_publication_plan_v3(
+            fixture_set=v2_fixture_set,  # type: ignore[arg-type]
+        )
+    with pytest.raises(subject.PublicationPlanError):
+        subject.build_nar_race_entry_status_phase57_publication_plan(
+            fixture_set=v3_fixture_set,  # type: ignore[arg-type]
+        )
+    with pytest.raises(subject.PublicationPlanError):
+        subject.validate_nar_race_entry_status_source_profile_publication_plan_v3(
+            value=v2_plan,  # type: ignore[arg-type]
+            fixture_set=v3_fixture_set,
+        )
+    with pytest.raises(subject.PublicationPlanError):
+        subject.validate_nar_race_entry_status_phase57_publication_plan(
+            value=v3_plan,  # type: ignore[arg-type]
+            fixture_set=v2_fixture_set,
+        )
+
+
+@pytest.mark.parametrize(
+    ("entry_index", "replacement_path"),
+    [
+        (0, subject.EXPECTED_DEBA_TABLE_PATH),
+        (1, subject.EXPECTED_RACE_LIST_PATH),
+        (2, "tests/fixtures/nar_race_entry_status/source_profiles/v3/baba_21__2025-01-01__race_06/other.json"),
+        (3, "tests/test_arbitrary_v3.py"),
+        (4, "docs/OTHER.md"),
+        (5, "docs/OTHER.md"),
+    ],
+)
+def test_v3_closed_paths_reject_v2_substitution_and_alternates(
+    entry_index: int,
+    replacement_path: str,
+) -> None:
+    plan = _plan_v3()
+    entry = plan.entries[entry_index]
+    replacement = replace(entry, repository_path=replacement_path)
+    entries = plan.entries[:entry_index] + (replacement,) + plan.entries[entry_index + 1 :]
+
+    with pytest.raises(subject.PublicationPlanError):
+        replace(plan, entries=entries)
+
+
+def test_v3_duplicate_reorder_wrong_policy_and_noncanonical_path_are_rejected() -> None:
+    plan = _plan_v3()
+    duplicate = replace(plan.entries[1], repository_path=plan.entries[0].repository_path)
+    reordered = plan.entries[1::-1] + plan.entries[2:]
+
+    with pytest.raises(subject.PublicationPlanError):
+        replace(plan, entries=plan.entries[:1] + (duplicate,) + plan.entries[2:])
+    with pytest.raises(subject.PublicationPlanError):
+        replace(plan, entries=reordered)
+    with pytest.raises(subject.PublicationPlanError):
+        replace(
+            plan,
+            entries=(
+                replace(plan.entries[0], policy=subject.PublicationPathPolicy.MODIFY_EXISTING),
+                *plan.entries[1:],
+            ),
+        )
+    with pytest.raises(subject.PublicationPlanError):
+        subject.PublicationPlanEntry(
+            role=subject.PublicationRole.DEBA_TABLE_FIXTURE,
+            repository_path="tests\\fixtures\\v3.html",
+            policy=subject.PublicationPathPolicy.CREATE_ONLY,
+        )
+
+
+def test_v3_binary_rule_is_exact_and_git_marks_future_raw_paths_binary() -> None:
+    attributes = (REPOSITORY_ROOT / ".gitattributes").read_text(encoding="utf-8").splitlines()
+
+    assert attributes.count(subject.REQUIRED_GITATTRIBUTES_RULE) == 1
+    assert attributes.count(subject.REQUIRED_GITATTRIBUTES_RULE_V3) == 1
+    result = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(REPOSITORY_ROOT),
+            "check-attr",
+            "text",
+            "diff",
+            "--",
+            subject.EXPECTED_DEBA_TABLE_PATH_V3,
+            subject.EXPECTED_RACE_LIST_PATH_V3,
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    lines = result.stdout.splitlines()
+    for path in (subject.EXPECTED_DEBA_TABLE_PATH_V3, subject.EXPECTED_RACE_LIST_PATH_V3):
+        assert f"{path}: text: unset" in lines
+        assert f"{path}: diff: unset" in lines
+
+
+def test_v3_plan_has_no_identity_and_rollback_scope_is_exact_live_delta() -> None:
+    plan = _plan_v3()
+
+    assert not hasattr(plan, "identity")
+    assert plan.rollback_paths == plan.future_live_paths
+    assert ".gitattributes" not in plan.rollback_paths
+    assert all("publication_plan.py" not in path for path in plan.rollback_paths)
+
+
+def test_v3_future_fixture_test_requirements_are_exact_and_nonprovider_specific() -> None:
+    assert subject.FUTURE_OFFICIAL_FIXTURE_TEST_REQUIREMENTS_V3 == (
+        "EXACT_DEBA_SHA256",
+        "EXACT_DEBA_BYTE_LENGTH",
+        "EXACT_RACELIST_SHA256",
+        "EXACT_RACELIST_BYTE_LENGTH",
+        "EXACT_TARGET",
+        "DOCUMENT_ROLE_ORDER",
+        "FIXTURE_SET_V3_RECOMPUTATION",
+        "QUALIFICATION_V3_RECOMPUTATION",
+        "MANIFEST_V3_CANONICAL_SERIALIZATION",
+        "MANIFEST_V3_VALIDATION",
+        "PUBLICATION_SAFETY_V3_SAFE",
+        "PROFILE_A_V3_QUALIFIED",
+        "PROFILE_B_V2_QUALIFIED",
+        "PROFILE_B_ALL_SIX_PREDICATES_PASS",
+        "PROFILE_B_TARGET_SCHEDULE_COUNT_ONE",
+        "PHASE66_DIRECT_SCHEDULE_COUNT_ONE",
+        "PROFILE_B_PHASE66_STRUCTURAL_CONSISTENCY",
+        "PROFILE_B_EXPLICIT_WITHDRAWAL_PRESENT",
+        "CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET",
+        "MARKET_ELIGIBILITY_UNSUPPORTED",
+        "NO_NETWORK",
+    )
+    assert not any(
+        "SHA256:" in item or "BYTE_LENGTH:" in item
+        for item in subject.FUTURE_OFFICIAL_FIXTURE_TEST_REQUIREMENTS_V3
+    )

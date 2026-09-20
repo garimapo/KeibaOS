@@ -7,14 +7,20 @@ import unicodedata
 
 from scripts.simulation.nar_race_entry_status_source_profile_publication_contract import (
     FixtureSetV2,
+    FixtureSetV3,
     SourceProfilePublicationContractError,
     validate_nar_race_entry_status_fixture_set_v2,
+    validate_nar_race_entry_status_fixture_set_v3,
 )
 
 
 AUTHORITY_SEMANTIC = "PHASE60_PUBLICATION_PLAN_AUTHORITY_EFFECTIVE_FROM_INTEGRATION"
+AUTHORITY_SEMANTIC_V3 = "PHASE75_V3_PUBLICATION_PLAN_AUTHORITY_EFFECTIVE_FROM_INTEGRATION"
 REQUIRED_GITATTRIBUTES_RULE = (
     "tests/fixtures/nar_race_entry_status/source_profiles/v2/**/*.html -text -diff"
+)
+REQUIRED_GITATTRIBUTES_RULE_V3 = (
+    "tests/fixtures/nar_race_entry_status/source_profiles/v3/**/*.html -text -diff"
 )
 EXPECTED_DEBA_TABLE_PATH = (
     "tests/fixtures/nar_race_entry_status/source_profiles/v2/"
@@ -33,6 +39,22 @@ EXPECTED_DEDICATED_FIXTURE_TEST_PATH = (
 )
 EXPECTED_CURRENT_PHASE_DOC_PATH = "docs/CURRENT_PHASE.md"
 EXPECTED_LATEST_CODEX_REPORT_PATH = "docs/LATEST_CODEX_REPORT.md"
+
+EXPECTED_DEBA_TABLE_PATH_V3 = (
+    "tests/fixtures/nar_race_entry_status/source_profiles/v3/"
+    "baba_21__2025-01-01__race_06/deba_table.html"
+)
+EXPECTED_RACE_LIST_PATH_V3 = (
+    "tests/fixtures/nar_race_entry_status/source_profiles/v3/"
+    "baba_21__2025-01-01__race_06/race_list.html"
+)
+EXPECTED_MANIFEST_PATH_V3 = (
+    "tests/fixtures/nar_race_entry_status/source_profiles/v3/"
+    "baba_21__2025-01-01__race_06/manifest.json"
+)
+EXPECTED_DEDICATED_FIXTURE_TEST_PATH_V3 = (
+    "tests/test_nar_race_entry_status_source_profile_v3_fixtures.py"
+)
 
 FUTURE_OFFICIAL_FIXTURE_TEST_REQUIREMENTS = (
     "EXACT_DEBA_SHA256",
@@ -54,8 +76,33 @@ FUTURE_OFFICIAL_FIXTURE_TEST_REQUIREMENTS = (
     "NO_NETWORK",
 )
 
+FUTURE_OFFICIAL_FIXTURE_TEST_REQUIREMENTS_V3 = (
+    "EXACT_DEBA_SHA256",
+    "EXACT_DEBA_BYTE_LENGTH",
+    "EXACT_RACELIST_SHA256",
+    "EXACT_RACELIST_BYTE_LENGTH",
+    "EXACT_TARGET",
+    "DOCUMENT_ROLE_ORDER",
+    "FIXTURE_SET_V3_RECOMPUTATION",
+    "QUALIFICATION_V3_RECOMPUTATION",
+    "MANIFEST_V3_CANONICAL_SERIALIZATION",
+    "MANIFEST_V3_VALIDATION",
+    "PUBLICATION_SAFETY_V3_SAFE",
+    "PROFILE_A_V3_QUALIFIED",
+    "PROFILE_B_V2_QUALIFIED",
+    "PROFILE_B_ALL_SIX_PREDICATES_PASS",
+    "PROFILE_B_TARGET_SCHEDULE_COUNT_ONE",
+    "PHASE66_DIRECT_SCHEDULE_COUNT_ONE",
+    "PROFILE_B_PHASE66_STRUCTURAL_CONSISTENCY",
+    "PROFILE_B_EXPLICIT_WITHDRAWAL_PRESENT",
+    "CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET",
+    "MARKET_ELIGIBILITY_UNSUPPORTED",
+    "NO_NETWORK",
+)
+
 _WINDOWS_DRIVE_PREFIX = re.compile(r"^[A-Za-z]:")
 _RAW_FIXTURE_ROOT = "tests/fixtures/nar_race_entry_status/source_profiles/v2/"
+_RAW_FIXTURE_ROOT_V3 = "tests/fixtures/nar_race_entry_status/source_profiles/v3/"
 
 
 class PublicationPlanError(ValueError):
@@ -93,6 +140,15 @@ _ROLE_POLICIES = {
     PublicationRole.DEDICATED_FIXTURE_TEST: PublicationPathPolicy.CREATE_ONLY,
     PublicationRole.CURRENT_PHASE_DOC: PublicationPathPolicy.MODIFY_EXISTING,
     PublicationRole.LATEST_CODEX_REPORT: PublicationPathPolicy.MODIFY_EXISTING,
+}
+
+_ROLE_PATHS_V3 = {
+    PublicationRole.DEBA_TABLE_FIXTURE: EXPECTED_DEBA_TABLE_PATH_V3,
+    PublicationRole.RACE_LIST_FIXTURE: EXPECTED_RACE_LIST_PATH_V3,
+    PublicationRole.MANIFEST: EXPECTED_MANIFEST_PATH_V3,
+    PublicationRole.DEDICATED_FIXTURE_TEST: EXPECTED_DEDICATED_FIXTURE_TEST_PATH_V3,
+    PublicationRole.CURRENT_PHASE_DOC: EXPECTED_CURRENT_PHASE_DOC_PATH,
+    PublicationRole.LATEST_CODEX_REPORT: EXPECTED_LATEST_CODEX_REPORT_PATH,
 }
 
 
@@ -185,6 +241,60 @@ class Phase57PublicationPlan:
         return self.future_live_paths
 
 
+@dataclass(frozen=True, slots=True)
+class SourceProfilePublicationPlanV3:
+    """Closed future V3 publication path authority, without publication I/O."""
+
+    authority_semantic: str
+    provider: str
+    baba_code: str
+    race_date: str
+    race_no: int
+    entries: tuple[PublicationPlanEntry, ...]
+    required_gitattributes_rule: str
+    gitattributes_policy: PublicationPathPolicy
+
+    def __post_init__(self) -> None:
+        if self.authority_semantic != AUTHORITY_SEMANTIC_V3:
+            raise _error("V3 publication-plan authority semantic is invalid")
+        if (
+            self.provider != "NAR"
+            or self.baba_code != "21"
+            or self.race_date != "2025-01-01"
+            or type(self.race_no) is not int
+            or self.race_no != 6
+        ):
+            raise _error("V3 publication plan is not for the frozen Phase75 target")
+        if type(self.entries) is not tuple or len(self.entries) != len(_ROLE_ORDER):
+            raise _error("V3 publication plan must contain exactly six entries")
+        if any(type(entry) is not PublicationPlanEntry for entry in self.entries):
+            raise _error("V3 publication plan entries have the wrong type")
+        if tuple(entry.role for entry in self.entries) != _ROLE_ORDER:
+            raise _error("V3 publication roles are missing, duplicated, or out of order")
+        paths = tuple(entry.repository_path for entry in self.entries)
+        if len(set(paths)) != len(paths):
+            raise _error("V3 publication plan contains duplicate paths")
+        for entry in self.entries:
+            if entry.repository_path != _ROLE_PATHS_V3[entry.role]:
+                raise _error(f"{entry.role.value} V3 path is outside the closed authority")
+            if entry.policy is not _ROLE_POLICIES[entry.role]:
+                raise _error(f"{entry.role.value} V3 policy is invalid")
+        if not paths[0].startswith(_RAW_FIXTURE_ROOT_V3) or not paths[1].startswith(_RAW_FIXTURE_ROOT_V3):
+            raise _error("V3 raw fixture path is outside the approved subtree")
+        if self.required_gitattributes_rule != REQUIRED_GITATTRIBUTES_RULE_V3:
+            raise _error("V3 binary-preservation rule is invalid")
+        if self.gitattributes_policy is not PublicationPathPolicy.VALIDATE_ONLY:
+            raise _error("future V3 .gitattributes policy must be VALIDATE_ONLY")
+
+    @property
+    def future_live_paths(self) -> tuple[str, ...]:
+        return tuple(entry.repository_path for entry in self.entries)
+
+    @property
+    def rollback_paths(self) -> tuple[str, ...]:
+        return self.future_live_paths
+
+
 def _validated_fixture_paths(fixture_set: object) -> tuple[str, str]:
     if type(fixture_set) is not FixtureSetV2:
         raise _error("fixture_set must be exact Phase56 FixtureSetV2")
@@ -215,6 +325,39 @@ def _validated_fixture_paths(fixture_set: object) -> tuple[str, str]:
     result = (paths[0], paths[1])
     if result != (EXPECTED_DEBA_TABLE_PATH, EXPECTED_RACE_LIST_PATH):
         raise _error("Phase56 fixture paths do not match the approved Phase60 target")
+    return result
+
+
+def _validated_fixture_paths_v3(fixture_set: object) -> tuple[str, str]:
+    if type(fixture_set) is not FixtureSetV3:
+        raise _error("fixture_set must be exact Phase75 FixtureSetV3")
+    try:
+        validate_nar_race_entry_status_fixture_set_v3(
+            value=fixture_set,
+            target=fixture_set.target,
+            capture_summary=fixture_set.capture_summary,
+        )
+        payload = fixture_set.to_canonical_dict()
+    except (SourceProfilePublicationContractError, AttributeError, TypeError) as error:
+        raise _error("fixture_set is not valid Phase75 authority") from error
+    if payload.get("provider") != "NAR" or payload.get("target") != {
+        "baba_code": "21",
+        "race_date": "2025-01-01",
+        "race_no": 6,
+    }:
+        raise _error("fixture_set is not for the frozen Phase75 target")
+    documents = payload.get("documents")
+    if type(documents) is not list or len(documents) != 2:
+        raise _error("fixture_set must contain exactly two Phase75 documents")
+    expected_roles = ("deba_table", "race_list")
+    paths: list[str] = []
+    for document, role in zip(documents, expected_roles, strict=True):
+        if type(document) is not dict or document.get("role") != role:
+            raise _error("fixture_set V3 document roles are invalid")
+        paths.append(_validate_repository_path(document.get("fixture_relative_path")))
+    result = (paths[0], paths[1])
+    if result != (EXPECTED_DEBA_TABLE_PATH_V3, EXPECTED_RACE_LIST_PATH_V3):
+        raise _error("FixtureSetV3 paths do not match the approved Phase75 target")
     return result
 
 
@@ -254,21 +397,69 @@ def validate_nar_race_entry_status_phase57_publication_plan(
     return value
 
 
+def build_nar_race_entry_status_source_profile_publication_plan_v3(
+    *, fixture_set: FixtureSetV3
+) -> SourceProfilePublicationPlanV3:
+    deba_path, race_list_path = _validated_fixture_paths_v3(fixture_set)
+    paths = {
+        **_ROLE_PATHS_V3,
+        PublicationRole.DEBA_TABLE_FIXTURE: deba_path,
+        PublicationRole.RACE_LIST_FIXTURE: race_list_path,
+    }
+    entries = tuple(
+        PublicationPlanEntry(role=role, repository_path=paths[role], policy=_ROLE_POLICIES[role])
+        for role in _ROLE_ORDER
+    )
+    return SourceProfilePublicationPlanV3(
+        authority_semantic=AUTHORITY_SEMANTIC_V3,
+        provider="NAR",
+        baba_code="21",
+        race_date="2025-01-01",
+        race_no=6,
+        entries=entries,
+        required_gitattributes_rule=REQUIRED_GITATTRIBUTES_RULE_V3,
+        gitattributes_policy=PublicationPathPolicy.VALIDATE_ONLY,
+    )
+
+
+def validate_nar_race_entry_status_source_profile_publication_plan_v3(
+    *, value: SourceProfilePublicationPlanV3, fixture_set: FixtureSetV3
+) -> SourceProfilePublicationPlanV3:
+    if type(value) is not SourceProfilePublicationPlanV3:
+        raise _error("V3 publication-plan value has the wrong type")
+    expected = build_nar_race_entry_status_source_profile_publication_plan_v3(
+        fixture_set=fixture_set,
+    )
+    if value != expected:
+        raise _error("V3 publication plan does not match deterministic Phase75 authority")
+    return value
+
+
 __all__ = (
     "AUTHORITY_SEMANTIC",
+    "AUTHORITY_SEMANTIC_V3",
     "EXPECTED_CURRENT_PHASE_DOC_PATH",
     "EXPECTED_DEBA_TABLE_PATH",
+    "EXPECTED_DEBA_TABLE_PATH_V3",
     "EXPECTED_DEDICATED_FIXTURE_TEST_PATH",
+    "EXPECTED_DEDICATED_FIXTURE_TEST_PATH_V3",
     "EXPECTED_LATEST_CODEX_REPORT_PATH",
     "EXPECTED_MANIFEST_PATH",
+    "EXPECTED_MANIFEST_PATH_V3",
     "EXPECTED_RACE_LIST_PATH",
+    "EXPECTED_RACE_LIST_PATH_V3",
     "FUTURE_OFFICIAL_FIXTURE_TEST_REQUIREMENTS",
+    "FUTURE_OFFICIAL_FIXTURE_TEST_REQUIREMENTS_V3",
     "Phase57PublicationPlan",
     "PublicationPathPolicy",
     "PublicationPlanEntry",
     "PublicationPlanError",
     "PublicationRole",
     "REQUIRED_GITATTRIBUTES_RULE",
+    "REQUIRED_GITATTRIBUTES_RULE_V3",
+    "SourceProfilePublicationPlanV3",
     "build_nar_race_entry_status_phase57_publication_plan",
+    "build_nar_race_entry_status_source_profile_publication_plan_v3",
     "validate_nar_race_entry_status_phase57_publication_plan",
+    "validate_nar_race_entry_status_source_profile_publication_plan_v3",
 )
