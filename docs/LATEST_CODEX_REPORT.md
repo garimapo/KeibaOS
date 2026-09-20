@@ -1,5 +1,65 @@
 # Latest Codex Report
 
+## Phase76 approval report
+
+Phase: `POST_V0_8_DAILY_REPLAY_76`
+
+State: `APPROVED_UNCONSUMED_TRACKED`
+
+Authorization Tracking State: `APPROVED_UNCONSUMED_TRACKED`
+
+Formal Status: `APPROVED_FOR_CODEX`
+
+Design Review: `PHASE76_CORRECTED_PUBLICATION_DESIGN_REVIEW_PASS`
+
+Outcome: `APPROVED_V3_PUBLICATION_DELTA_GENERATION`
+
+Authorization: `PHASE76_V3_SOURCE_PROFILE_PUBLICATION_AUTHORIZATION_UNCONSUMED`
+
+Support HEAD/tree: `cd9a728d04aab69a2330ee7f23583318c1901386` / `ce7e18d940fac243766f24237b6cc54d956c94d0`
+
+Approval Base HEAD: `cd9a728d04aab69a2330ee7f23583318c1901386`
+
+Executable Support HEAD: `cd9a728d04aab69a2330ee7f23583318c1901386`
+
+Executable Support Tree: `ce7e18d940fac243766f24237b6cc54d956c94d0`
+
+The authorization is one-shot, phase/target/purpose/support-HEAD-specific, nontransferable, and permanently becomes `PHASE76_V3_SOURCE_PROFILE_PUBLICATION_AUTHORIZATION_CONSUMED_FAIL_CLOSED` only after durable Phase44 boundary evidence. Its external state is intentionally distinct from Phase50's reconstructed journal state: the expected normal run has external consumed fail-closed state and journal `CONSUMED_CONFIRMED` after observing `PHASE44_FUNCTION_ENTERED`.
+
+Phase77 is `FORMALLY_COMPLETE` with `PHASE77_IMPLEMENTATION_REMOTE_VERIFICATION_PASS` and exact V3 dedicated-test-path support. Phase75 is `FORMALLY_COMPLETE` with its V3 publication-plan authority. Phase74 authorization remains permanently consumed fail-closed. The approved design retains the no-Git Phase76 publication delta and separate Phase78 integration model, all pre-live gates, exact six paths, same-byte authority/qualification/readback controls, rollback before completion, bounded evidence, and historical non-inference.
+
+This APPROVE activity performed no provider HTTP, Phase44, GET, synthetic/live run, publication, boundary write, staging, commit, or push. Authorization consumed: `NO`. The only modified paths are the two Phase documents; staged and untracked remain empty.
+
+Next permitted action: `TRACK_PHASE76_AUTHORIZATION_STATE_THEN_INDEPENDENT_REMOTE_VERIFICATION`.
+
+---
+
+## Phase76 corrected publication-design report
+
+Phase: `POST_V0_8_DAILY_REPLAY_76`
+
+Status: `DRAFT_FOR_REVIEW`
+
+Outcome: `READY_FOR_APPROVAL`
+
+Design Contract: `V3_PUBLICATION_DELTA_REVIEW_BEFORE_GIT_INTEGRATION_CONTRACT_COMPLETE`
+
+Current support HEAD/tree: `cd9a728d04aab69a2330ee7f23583318c1901386` / `ce7e18d940fac243766f24237b6cc54d956c94d0`
+
+Phase77 is `FORMALLY_COMPLETE` with `PHASE77_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`. Its exact Phase50 V3 dedicated-test path support resolves `PHASE50_V3_DEDICATED_TEST_PATH_ALLOWLIST_MISSING`; the corrected Phase76 binding is now support-HEAD-specific to the Phase77 commit. No Phase76 authorization has been issued.
+
+The corrected transaction model is `PUBLICATION_DELTA_AND_GIT_INTEGRATION_SPLIT`: Phase76 creates and validates the exact six-path unstaged V3 publication delta, retains bounded evidence, and stops for independent review. It never stages, commits, or pushes. Phase78 later performs no-network integration. If a Phase78 commit succeeds but push fails, it preserves the immutable local commit as `LOCAL_PUBLICATION_COMMIT_PUSH_PENDING_REVIEW`; it never resets, amends, force-pushes, reacquires, or reruns Phase76.
+
+Phase76 preserves all existing synthetic gates and adds the actual `PHASE50_V3_DEDICATED_TEST_PATH_INTEGRATION_PASS`, V3 plan/contract/template/rollback gates, exact attribute validation, and CREATE_ONLY absence gates. A future publication requires one durable authorization boundary, exactly one Phase44, ordered Deba/RaceList GETs capped at two, same-byte qualification and V3 object validation, readback verification, generated no-network dedicated test, and passing regressions. Any pre-commit publication failure rolls back only the six live paths.
+
+Semantics remain `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`; market eligibility, positive market eligibility, and `WHOLE_MEETING_CANCELLATION` remain `UNSUPPORTED`. No historical inference is allowed.
+
+Readiness A–U: `YES`. Provider HTTP / Phase44 / GET: `0 / 0 / 0`. Authorization issued: `NONE`. Publication: `NOT PERFORMED`. Staged: empty. Untracked: empty.
+
+Next recommended action: `CHATGPT_REVIEW_CORRECTED_PHASE76_PUBLICATION_DESIGN`.
+
+---
+
 ## Phase77 implementation report
 
 Phase: `POST_V0_8_DAILY_REPLAY_77`
