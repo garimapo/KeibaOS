@@ -1,5 +1,17 @@
 # Latest Codex Report
 
+## POST_V0_8_DAILY_REPLAY_80 — TRACKING CORRECTION
+
+**State:** AUTHORIZATION_TRACKING_CORRECTED_FOR_REMOTE_REVIEW
+
+Independent remote review reported `PHASE80_AUTHORIZATION_STATE_REMOTE_VERIFICATION_BLOCKED_STALE_READINESS_E`. The current-authority Readiness E stale PREPARE wording was corrected to: `E. Phase80 authorization issued and tracked as APPROVED_UNCONSUMED_TRACKED; boundary not crossed and authorization remains UNCONSUMED.` Historical PREPARE records remain unchanged.
+
+The same token remains `PHASE80_V3_SOURCE_PROFILE_PUBLICATION_AUTHORIZATION_UNCONSUMED` with tracking state `APPROVED_UNCONSUMED_TRACKED`. Boundary: **NOT WRITTEN**. Authorization consumed: **NO**. Provider HTTP / Phase44 / GET: **0 / 0 / 0**. Synthetic/live execution: **NOT RUN**. Publication: **NO**.
+
+The executable support binding remains HEAD `321868ac827677700da2c2ec41fded860eb464cc`, tree `0c422b45118131b8e3bb8ce5dd7189f2368e683e`; this docs correction does not rebind authorization or change executable support.
+
+Next action: `INDEPENDENT_REMOTE_VERIFICATION_BEFORE_PHASE80_EXECUTE`.
+
 ## POST_V0_8_DAILY_REPLAY_80 — APPROVE
 
 **Formal Status:** APPROVED_FOR_CODEX
