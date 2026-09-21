@@ -1,5 +1,115 @@
 # Latest Codex Report
 
+## POST_V0_8_DAILY_REPLAY_79 — IMPLEMENTED
+
+**State:** IMPLEMENTED_FOR_REVIEW
+**Outcome:** READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW
+**Support:** V3_DEDICATED_FIXTURE_TEST_EXECUTION_AND_FAILURE_EVIDENCE_AUTHORITY_IMPLEMENTED
+
+Implementation is confined to the approved six paths. The pure renderer implements `render_nar_race_entry_status_source_profile_v3_fixture_test(*, deba_table_bytes, race_list_bytes, manifest, publication_plan) -> bytes`, exact V3 type/authority and raw-byte validation, portable local-only generated tests, and the 65536-byte source limit.
+
+The preflight constructs deterministic qualified synthetic authority with Phase63/Phase66 counts 2 / 2, direct schedule 1, changeInfo 1, and structural consistency 1 == 1. It writes only to a temporary external mirror, runs the generated test through `python -I -B` and actual pytest, validates the sole PEP 420 namespace and all module origins, disables ambient plugin/PYTHONPATH influence, and cleans the mirror.
+
+Actual preflight result:
+
+- Gate: V3_DEDICATED_FIXTURE_TEST_END_TO_END_PREFLIGHT_PASS.
+- Generated pytest tests: 4 passed; return code 0.
+- Import isolation: PASS.
+- Generated source SHA/length: `447535319ad465f44df2fd1e03cab6988d284ea5431e9badc01454e3de7264ef` / 10462.
+- Manifest SHA/length: `0be206f04b8a7a4a6bffa3bc83e6eb8527a034870ecf82366b995f8be338eb46` / 4247.
+- Command identity: `phase79-pytest-command-v1:db816856de1217bc1e9ea068fd4724be62baed2e09df19931dbe4ecd664725db`.
+- Process output used Phase50 sanitization; stdout was bounded/redacted with full digest/length and stderr was EMPTY.
+
+The focused suite proves exact-type/V2/dict/duck rejection, raw hash/length consistency, formal authority rejection, repeatable UTF-8 LF-only compilable output, nine actual-pytest mutations, missing/alternate/import-origin/namespace fail-closed behavior, no provider-network calls, bounded manifest retention, safe failure-node extraction, and durable exclusive-write/flush/fsync/readback evidence before rollback.
+
+Final required test counts:
+
+- generator 17 passed
+- preflight 17 passed
+- publication plan 45 passed
+- publication contract 49 passed
+- Profile-B diagnostics 38 passed
+- Profile-A 17 passed
+- Phase66 structural recovery 152 passed
+- Phase50 observability 367 passed
+- full suite 4383 passed, 2841 subtests passed
+
+Phase76 remains TERMINAL_CONSUMED_BLOCKED_ROLLBACK_COMPLETE with cause UNKNOWN_AFTER_BOUNDED_EVIDENCE_GAP. Phase78 remains NOT_ENTERED_NO_PUBLICATION_DELTA. Provider HTTP / Phase44 / GET are 0 / 0 / 0; authorization is NONE; publication is NO. A future Phase80-or-later live phase requires a new reviewed one-shot authorization and the committed preflight gate.
+
+Next action: `CHATGPT_REVIEW_PHASE79_IMPLEMENTATION`.
+
+## POST_V0_8_DAILY_REPLAY_79 — APPROVE
+
+**Formal Status:** APPROVED_FOR_CODEX
+**Outcome:** APPROVED_V3_DEDICATED_FIXTURE_TEST_HARDENING_IMPLEMENTATION
+**Design Review:** PHASE79_DEDICATED_TEST_HARDENING_DESIGN_REVIEW_PASS
+
+The executable contract is recorded for branch `feature/post-v0.8-daily-replay`, base commit `e1e176291e0a79ad79f807c64b35d67da4851469`, and base tree `d2d1593adfa95835ed59d37cb0e35f33945e118b`. The future execution scope is exactly the two new source modules, their two focused tests, and these two documents; all other paths are forbidden.
+
+The approved renderer is `render_nar_race_entry_status_source_profile_v3_fixture_test(*, deba_table_bytes, race_list_bytes, manifest, publication_plan) -> bytes`. It validates exact V3 authority and raw-byte consistency, generates bounded portable UTF-8/LF source, and remains pure. The approved preflight runs the committed renderer against an external synthetic mirror through isolated `python -I -B` pytest with PEP 420/module-origin checks and bounded evidence retention before any future rollback.
+
+Phase76 remains TERMINAL_CONSUMED_BLOCKED_ROLLBACK_COMPLETE with permanently consumed authorization and an UNKNOWN_AFTER_BOUNDED_EVIDENCE_GAP; Phase78 remains NOT_ENTERED_NO_PUBLICATION_DELTA. This approval performed no code/test implementation, tests, provider HTTP, Phase44, GET, authorization, publication, staging, commit, or push.
+
+Next action: `EXECUTE_APPROVED_PHASE`.
+
+## POST_V0_8_DAILY_REPLAY_79 — IMPLEMENTATION CONTRACT BLOCKED
+
+Implementation did not start.
+
+- Requested review: `PHASE79_DEDICATED_TEST_HARDENING_DESIGN_REVIEW_PASS`
+- Requested state: `APPROVED_FOR_IMPLEMENTATION`
+- Contract blocker: `PHASE79_EXECUTION_CONTRACT_NOT_APPROVED_FOR_CODEX`
+- Current `docs/CURRENT_PHASE.md` status: `DRAFT_FOR_REVIEW`
+- Current allowed scope remains the PREPARE-only two-document scope and explicitly forbids production/test implementation.
+- The current phase document does not yet declare the approved Base Commit and Branch, exact six implementation Allowed Files, Forbidden Files, and Required Tests as an `APPROVED_FOR_CODEX` execution contract.
+- The prepared renderer API also differs from the newly requested implementation API and must be resolved in the approved phase contract rather than inferred during implementation.
+- No production code, tests, staging, commit, push, network, Phase44, GET, authorization, or publication activity occurred.
+
+Required next action: approve/correct `docs/CURRENT_PHASE.md` using the repository workflow, then issue `EXECUTE_APPROVED_PHASE`.
+
+## POST_V0_8_DAILY_REPLAY_79 — PREPARE
+
+**Status:** DRAFT_FOR_REVIEW
+**Outcome:** READY_FOR_APPROVAL
+**Design contract:** V3_DEDICATED_FIXTURE_TEST_EXECUTION_AND_FAILURE_EVIDENCE_AUTHORITY_COMPLETE
+
+Phase79 is documentation-only preparation. It performed no provider HTTP, Phase44, GET, acquisition authorization, reacquisition, publication, staging, commit, or push.
+
+### Frozen Phase76 result
+
+- Review: PHASE76_CONSUMED_BLOCKED_RESULT_REVIEW_PASS.
+- Terminal semantic: TERMINAL_CONSUMED_BLOCKED_ROLLBACK_COMPLETE.
+- Phase50 outcome: RECOVERY_PREFLIGHT_BLOCKED.
+- External authorization is permanently PHASE76_V3_SOURCE_PROFILE_PUBLICATION_AUTHORIZATION_CONSUMED_FAIL_CLOSED; Phase50 reconstructed CONSUMED_CONFIRMED.
+- Live evidence retained only: Phase44 1; Deba GET 1; RaceList GET 1; total GET 2; retry 0.
+- Deba SHA/length: `6c9aa3ea614c17e14f0e7a5050190ca923445925d67f8e61e71db95e87c87727` / 313317.
+- RaceList SHA/length: `1eb363621c7a152929765ff7ffecabea2d7cf15283d45fa9c31036527c0b53a1` / 66307.
+- Profile-B v2 QUALIFIED; Safety v3 SAFE; Profile-A v3 QUALIFIED.
+- FixtureSetV3 identity: `nar-race-entry-status-source-profile-fixture-set-v3:20d14faad781a11dddba49f364745d302365bc639f5092d82f255597f8e75a90`.
+- QualificationV3 identity: `nar-race-entry-status-source-profile-qualification-v3:ca0a3022ade5cf661018b226f69e0bba3a88d747dd205838122d191cf4d7e2d9`.
+
+The exact blocker was REGRESSION_FAILURE_AT_DEDICATED_V3_FIXTURE_TEST. Its cause is UNKNOWN_AFTER_BOUNDED_EVIDENCE_GAP: generated source, pytest output/node, and manifest SHA/length were unavailable after rollback. No cause or patch is inferred. PUBLICATION_BEGIN through DEDICATED_TEST_WRITTEN were reached, REGRESSIONS_PASS was not, and rollback completed. Phase78 is NOT_ENTERED_NO_PUBLICATION_DELTA.
+
+### Proposed reviewed authority
+
+Later implementation is expected to add a pure deterministic V3 test-source renderer at `scripts/simulation/nar_race_entry_status_source_profile_fixture_test_generator.py`, plus a separate no-network external-mirror/evidence harness at `scripts/simulation/nar_race_entry_status_source_profile_fixture_test_preflight.py`, focused tests, and documents. The renderer accepts exact `FixtureSetV3`, `QualificationV3`, and `SourceProfileManifestV3`, validates existing authority, derives canonical values, and returns canonical UTF-8 LF-only source bytes. It is pure: no filesystem writes, network, clock, environment lookup, randomness, subprocess, or provider access.
+
+The renderer must derive requirements solely from `FUTURE_OFFICIAL_FIXTURE_TEST_REQUIREMENTS_V3` and existing V3 fixture, qualification, manifest, and publication-plan authority. The generated portable test uses `Path(__file__)`, approved relative paths, and local files only.
+
+### End-to-end and evidence plan
+
+The required future `V3_DEDICATED_FIXTURE_TEST_END_TO_END_PREFLIGHT_PASS` uses the same renderer as live publication in an external deterministic synthetic mirror and executes actual pytest. A deterministic `python -I -B` wrapper injects only reviewed KeibaOS support and validates PEP 420 `scripts` namespace and authority-module origins; it rejects ambient PYTHONPATH, KeibaAI, site-package shadows, and alternate worktrees. If this cannot be proven, stop with DESIGN_BLOCKED_IMPORT_ISOLATION_FOR_EXTERNAL_PYTEST.
+
+Renderer tests will prove exact-type rejection, determinism, canonical source, compilation, and no time/random/environment influence. End-to-end mutation tests will prove failure for independently changed fixture bytes, manifest bytes, expected hash/length, target, fixture/qualification identity, and market eligibility.
+
+Before a future rollback, bounded evidence must be retained and fsynced: safe generated source; source/fixture/manifest hashes and lengths; V3 identities; command/return-code; milestone; and safe bounded pytest diagnostics. Valid canonical V3 manifest bytes are retainable only when at most 16384 bytes because their reviewed schema contains metadata, identities, hashes, and lengths—not raw HTML, URLs, cookies, or credentials. Otherwise only a safe projection is retained and publication blocks pending review. Raw process streams are not retained wholesale: use digest, length, classification, conservative test-node extraction, and a mechanically safe excerpt only where permitted.
+
+Phase79 has no authorization. A new one-shot Phase80 authorization is required after formal Phase79 review, and Phase80 must pass the end-to-end preflight before any live boundary. Historical non-inference remains fixed: market_eligibility, positive_market_eligibility, and WHOLE_MEETING_CANCELLATION are UNSUPPORTED.
+
+### Readiness
+
+Readiness A–U: YES. No blocker was identified for the design. The next action is CHATGPT_REVIEW_PHASE79_DEDICATED_TEST_HARDENING_DESIGN.
+
 ## Phase76 approval report
 
 Phase: `POST_V0_8_DAILY_REPLAY_76`
