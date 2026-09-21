@@ -1,5 +1,135 @@
 # Current Phase
 
+## POST_V0_8_DAILY_REPLAY_82
+
+Title: Fresh Current V3 Publication with Corrected Final Git Success-Audit Semantics
+
+Formal Status: APPROVED_FOR_CODEX
+
+Authorization Tracking State: APPROVED_UNCONSUMED_TRACKED
+
+Outcome: APPROVED_FRESH_V3_PUBLICATION_WITH_CORRECTED_GIT_SUCCESS_AUDIT
+
+Design Contract: V3_PUBLICATION_WITH_CORRECTED_GIT_SUCCESS_AUDIT_CONTRACT_COMPLETE
+
+Design Review: PHASE82_PUBLICATION_DESIGN_REVIEW_PASS
+
+### Authority and PREPARE scope
+
+Authorized worktree: `C:\Users\garim\Desktop\KeibaOS-post-v0.8`
+
+Branch: `feature/post-v0.8-daily-replay`
+
+Current tracking HEAD/tree: `d54676e5c4e568bbc883d1a119dd632c653c1526` / `ae9baf3edfedc5c78eb35b03132903ca9d17530e`
+
+Executable support HEAD/tree: `321868ac827677700da2c2ec41fded860eb464cc` / `0c422b45118131b8e3bb8ce5dd7189f2368e683e`
+
+Target: `NAR / 21 / 2025-01-01 / 6`
+
+Future purpose: `FRESH_CURRENT_V3_SOURCE_PROFILE_PUBLICATION_WITH_CORRECTED_GIT_SUCCESS_AUDIT`
+
+Semantics: `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`
+
+This approval tracking activity changes only the two documentation files. The authorization is issued and tracked only upon successful creation and normal push of this exact documentation commit with local HEAD equal to remote-tracking HEAD. No provider HTTP, Phase44, GET, acquisition, publication, or live execution occurs in this approval activity.
+
+### Frozen Phase80 and Phase81
+
+Phase80 is terminal: `TERMINAL_CONSUMED_BLOCKED_ROLLBACK_COMPLETE`. Its review is `PHASE80_CONSUMED_BLOCKED_RESULT_REVIEW_PASS_WITH_FINAL_AUDIT_RUNNER_DEFECT`; its external authorization remains permanently `PHASE80_V3_SOURCE_PROFILE_PUBLICATION_AUTHORIZATION_CONSUMED_FAIL_CLOSED`; Phase50 reconstructed `CONSUMED_CONFIRMED` with outcome `RECOVERY_PREFLIGHT_BLOCKED`. Phase80 cannot be retried.
+
+The exact Phase80 root cause is proven: `GIT_DIFF_CHECK_ZERO_EXIT_WITH_EOL_WARNING_STDERR_MISCLASSIFIED_AS_FAILURE`. `git diff --check` returned code zero but emitted CRLF/LF conversion warnings on stderr. The frozen runner incorrectly required both zero exit status and empty stderr, converting a successful final audit into a rollback. The bounded safe-final error-message digest is `ca4d4fc7d257fdf647d7a7f7653c66e459cec40b46327221e5ec9ac02d5b331a`.
+
+This defect must not be attributed to fixture bytes, V3 manifest, renderer, dedicated test, publication contract, Profile-A, Profile-B, Safety v3, Phase50, or regressions. Before that final audit, Phase80 passed the Phase79 executable pytest preflight, completed one Phase44, Deba GET, and RaceList GET with zero retries, qualified Profile-B v2 and Profile-A v3, assessed Safety v3 SAFE, and reached `REGRESSIONS_PASS`.
+
+Frozen Phase80 evidence includes Deba SHA-256/length `6c9aa3ea614c17e14f0e7a5050190ca923445925d67f8e61e71db95e87c87727` / `313317`; RaceList `1eb363621c7a152929765ff7ffecabea2d7cf15283d45fa9c31036527c0b53a1` / `66307`; Phase63 candidates `2`; Phase66 total/direct/changeInfo `2 / 1 / 1`; and structural consistency PASS. FixtureSetV3 was `nar-race-entry-status-source-profile-fixture-set-v3:2660a568e455c5d2f3f430b0b57297e0c725e73ba5c4d78b9fa211010831f2c7`; QualificationV3 was `nar-race-entry-status-source-profile-qualification-v3:0932ef780af0cebc76d4c411531fe12508544fe1ca103dc18286201fde63093c`; manifest SHA/length was `9e089a0f75e8c57cdd37a994e7d210ca2c941d1209f2bf486091fb2ad754add3` / `4254`; generated-test SHA/length was `82047976daba97c6262b44fa52d9232bdfc29fdb285fcb0f605344a9d85382e9` / `10467`.
+
+Frozen PASS results: dedicated V3 fixture `4`; generator `17`; preflight `17`; publication plan `45`; publication contract `49`; Profile-B diagnostics `38`; Profile-A `17`; Phase66 `152`; Phase50 `367`; full suite `4383` plus `2841` subtests. `PUBLICATION_BEGIN`, `REGRESSIONS_PASS`, `ROLLBACK_BEGIN`, and `ROLLBACK_COMPLETE` were reached. The repository ended clean with no surviving delta, commit, or push.
+
+Phase81 is `NOT_ENTERED_NO_PUBLICATION_DELTA`; it remains reserved and must not be repurposed. A reviewed Phase82 success requires a separately numbered no-network integration phase, `POST_V0_8_DAILY_REPLAY_83` or later. No Phase79 production/test support repair is required.
+
+### Corrected final Git success audit
+
+The Phase82 runner must classify `git -C "C:\Users\garim\Desktop\KeibaOS-post-v0.8" diff --check` solely from its exit status:
+
+- `returncode == 0` means `DIFF_CHECK_PASS`.
+- `returncode != 0` means `DIFF_CHECK_FAIL`.
+- Nonempty stderr is bounded diagnostic evidence only and cannot override zero exit status.
+
+For every audit, retain command identity, return code, stdout/stderr SHA-256, original lengths, and sanitized bounded streams. This preserves EOL conversion warnings without treating them as a pass/fail authority.
+
+The frozen external runner must pass `PHASE82_GIT_DIFF_CHECK_EXIT_STATUS_CLASSIFIER_PASS` before any boundary using deterministic classifier cases: (A) zero code with empty streams => PASS; (B) zero code and representative LF/CRLF warning stderr => PASS; (C) nonzero code with empty or nonempty stderr => FAIL; (D) nonzero code and whitespace-error stdout => FAIL. These tests perform no provider access or Git mutation.
+
+The actual read-only clean-baseline `git diff --check` is mandatory before a boundary. Its gate is `PHASE82_BASELINE_GIT_DIFF_CHECK_PASS`; its sole success criterion is return code zero. Stderr remains evidence only.
+
+After all publication regressions, final audit must require unchanged local and remote-tracking HEADs, empty staging, exactly the two modified docs, exactly the four V3 CREATE_ONLY untracked files, and existence of all four CREATE_ONLY files. It must record `git_diff_check_return_code`, `git_diff_check_passed`, `git_diff_check_stdout`, `git_diff_check_stderr`, `success_delta_exact`, `staged_empty`, `head_unchanged`, and `remote_tracking_unchanged`.
+
+If a final audit genuinely fails after publication, bounded evidence must be retained before rollback: command identity, return code, stream digests/lengths/sanitized streams, parsed modified/untracked/staged path sets, expected and actual sets, and classification. Only then may `ROLLBACK_BEGIN` and `ROLLBACK_COMPLETE` run.
+
+### Planned Phase82 live contract
+
+Authorization: `PHASE82_V3_SOURCE_PROFILE_PUBLICATION_AUTHORIZATION_UNCONSUMED`
+
+Phase82 authorization is issued and tracked as `APPROVED_UNCONSUMED_TRACKED`; boundary not crossed and authorization remains UNCONSUMED. Its permanent post-boundary token is `PHASE82_V3_SOURCE_PROFILE_PUBLICATION_AUTHORIZATION_CONSUMED_FAIL_CLOSED`. It binds only to this Phase82, the executable support above, the stated target, purpose, and historical-target/current-acquisition semantics.
+
+Boundary: `NOT WRITTEN`
+
+Authorization consumed: `NO`
+
+The sole real authorization boundary remains durable `PHASE44_CALL_ABOUT_TO_ENTER`: append, flush, fsync, then external consumption. No retry follows the boundary. Caps remain one Phase44, one Deba GET, one RaceList GET, two total, Deba then RaceList, with no fallback, discovery, or alternate target.
+
+Before the boundary, Phase82 preserves the actual Phase79 isolated pytest preflight (`V3_DEDICATED_FIXTURE_TEST_END_TO_END_PREFLIGHT_PASS`) and every Phase80 gate: import and support identity isolation; exact LF runner and hash/length parity; CREATE_ONLY absence; gitattributes; V3 plan/contract; Phase50 V3 dedicated path and blocked-payload gates; Profile-B; Phase63/66; Safety; Profile-A; Phase71 target contract; exact 11-key capture metadata; closed-bundle propagation; same-byte authority; no-network synthetic gates; and rollback dry-run. The Phase79 preflight must produce actual pytest PASS with Provider HTTP / actual Phase44 / GET equal to `0 / 0 / 0`.
+
+Fresh Phase82 bytes flow unchanged through capture, Profile-B, Phase63/66, Safety, Profile-A, FixtureSetV3, QualificationV3, ManifestV3, the Phase79 renderer, and fixtures. No Phase76/80 substitution, re-fetch, decode/re-encode, or HTML serialization is permitted. Reproduced bytes remain current acquisition and do not establish historical availability or historical bytes.
+
+The exact six future paths are the V3 Deba HTML, RaceList HTML, manifest, and dedicated fixture test as CREATE_ONLY, plus `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` as MODIFY_EXISTING. The dedicated V3 fixture test runs exactly once as regression step 1, followed by generator, preflight, publication plan, publication contract, Profile-B diagnostics, Profile-A, Phase66, Phase50, and full-suite regressions. All pass before `REGRESSIONS_PASS`.
+
+Success stops for review with precisely this unstaged six-path delta, empty index, no commit, and no push. It reports `READY_FOR_REVIEW`, Phase50 `READY_FOR_REVIEW`, external authorization consumed fail-closed, Phase50 `CONSUMED_CONFIRMED`, and `V3_SOURCE_PROFILE_PUBLICATION_DELTA_READY_FOR_CHATGPT_REVIEW`.
+
+Historical non-inference remains mandatory: `market_eligibility = UNSUPPORTED`, `positive_market_eligibility = UNSUPPORTED`, and `WHOLE_MEETING_CANCELLATION = UNSUPPORTED`.
+
+### Readiness matrix
+
+| Item | Ready |
+| --- | --- |
+| A. Phase80 terminal consumed state frozen | YES |
+| B. Phase80 exact root cause proven | YES |
+| C. Phase80 all ten regressions frozen PASS | YES |
+| D. Phase80 rollback frozen complete | YES |
+| E. Phase81 not entered and reserved | YES |
+| F. No repository support defect required | YES |
+| G. Corrected exit-status semantics defined | YES |
+| H. Stderr diagnostic-only rule defined | YES |
+| I. Pre-live classifier self-tests defined | YES |
+| J. Baseline diff-check probe defined | YES |
+| K. Final six-path audit defined | YES |
+| L. Final-audit evidence before rollback defined | YES |
+| M. Phase79 actual-pytest preflight preserved | YES |
+| N. All Phase80 safety gates preserved | YES |
+| O. Phase82 authorization issued and tracked as APPROVED_UNCONSUMED_TRACKED; boundary not crossed and authorization remains UNCONSUMED | YES |
+| P. Sole durable boundary preserved | YES |
+| Q. One Phase44/two GET caps preserved | YES |
+| R. Same-byte authority preserved | YES |
+| S. Exact regression order preserved | YES |
+| T. Exact unstaged success delta preserved | YES |
+| U. Historical non-inference preserved | YES |
+
+### Approval tracking activity
+
+Provider HTTP / Phase44 / GET: `0 / 0 / 0`
+
+Authorization: `PHASE82_V3_SOURCE_PROFILE_PUBLICATION_AUTHORIZATION_UNCONSUMED`
+
+Publication: `NO`
+
+Synthetic/live execution: `NOT RUN`
+
+Publication: `NO`
+
+Staging and commit: documentation-only tracking activity; no publication path is staged
+
+Next action: `INDEPENDENT_REMOTE_VERIFICATION_BEFORE_PHASE82_EXECUTE`
+
+## Historical current-phase records
+
 ## POST_V0_8_DAILY_REPLAY_80
 
 Title: Fresh Current V3 Source-Profile Publication After Executable Dedicated-Test Preflight
