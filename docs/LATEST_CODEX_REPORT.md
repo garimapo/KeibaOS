@@ -1,5 +1,58 @@
 # Latest Codex Report
 
+## POST_V0_8_DAILY_REPLAY_80 — APPROVE
+
+**Formal Status:** APPROVED_FOR_CODEX
+**Outcome:** APPROVED_FRESH_V3_PUBLICATION_AFTER_EXECUTABLE_TEST_PREFLIGHT
+**Design Review:** PHASE80_PUBLICATION_DESIGN_REVIEW_PASS_WITH_REGRESSION_ORDER_CORRECTION
+**Design Contract:** V3_FRESH_PUBLICATION_AFTER_EXECUTABLE_TEST_PREFLIGHT_CONTRACT_COMPLETE
+
+This approval records a docs-only executable contract for branch `feature/post-v0.8-daily-replay`, executable support HEAD `321868ac827677700da2c2ec41fded860eb464cc`, tree `0c422b45118131b8e3bb8ce5dd7189f2368e683e`, and target `NAR / 21 / 2025-01-01 / 6` under `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET` semantics.
+
+The Phase80 authorization is issued only after this exact approval contract is committed in the two documentation files, normally pushed, and local HEAD equals remote-tracking HEAD. Upon those conditions it is `PHASE80_V3_SOURCE_PROFILE_PUBLICATION_AUTHORIZATION_UNCONSUMED` with tracking state `APPROVED_UNCONSUMED_TRACKED`; it is one-shot, phase/target/purpose/support-specific, nontransferable, and permanently changes to `PHASE80_V3_SOURCE_PROFILE_PUBLICATION_AUTHORIZATION_CONSUMED_FAIL_CLOSED` only after the durable real boundary. The approval commit is tracking evidence only; its executable support remains the stated Phase79 commit.
+
+The Phase79 end-to-end preflight remains mandatory before any live boundary: the committed preflight must produce `V3_DEDICATED_FIXTURE_TEST_END_TO_END_PREFLIGHT_PASS` through actual isolated `python -I -B` generated pytest, PEP 420 and module-origin isolation, and an external mirror. It must perform Provider HTTP / actual Phase44 / GET equal to `0 / 0 / 0`. The existing profile, safety, observability, plan, V3 contract, attribute, create-only, metadata, identity, runner-parity, LF, and clean-baseline gates remain mandatory.
+
+Future Phase80 uses exactly four CREATE_ONLY paths (V3 Deba, RaceList, manifest, and dedicated test) and the two documentation paths as MODIFY_EXISTING. It writes no Git index entries, commit, or push during live execution. The sole renderer is the committed Phase79 `render_nar_race_entry_status_source_profile_v3_fixture_test`; the same newly acquired bytes must flow through all diagnostics, V3 authority construction, renderer input, and fixture writes. The sole boundary is durable `PHASE44_CALL_ABOUT_TO_ENTER`; request caps are one Phase44 and two GETs, Deba then RaceList.
+
+Correction applied: the dedicated V3 fixture test runs **exactly once**, as regression step #1. The exact order is dedicated V3 fixture test; generator tests; preflight tests; publication-plan tests; publication-contract tests; diagnostics tests; Profile-A tests; Phase66 structural-recovery tests; Phase50 observability tests; then the full suite. Dedicated-test failure retains and durably validates bounded source/manifest/hash/identity/pytest evidence before rollback. Any later regression failure retains bounded command/result evidence before rollback. No raw HTML is diagnostic evidence.
+
+Phase76 remains `TERMINAL_CONSUMED_BLOCKED_ROLLBACK_COMPLETE` with permanently consumed authorization and `UNKNOWN_AFTER_BOUNDED_EVIDENCE_GAP`; Phase78 remains `NOT_ENTERED_NO_PUBLICATION_DELTA`; Phase79 is formally complete with `PHASE79_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`. Market eligibility, positive market eligibility, and whole-meeting cancellation remain `UNSUPPORTED`; fixture existence does not establish historical availability.
+
+This approval performed Provider HTTP / Phase44 / GET: **0 / 0 / 0**. Authorization consumed: **NO**. Publication: **NO**. Synthetic/live preflight: **NOT RUN**. No production/test changes were made.
+
+Next action after a successful tracking push: `INDEPENDENT_REMOTE_VERIFICATION_BEFORE_PHASE80_EXECUTE`.
+
+## POST_V0_8_DAILY_REPLAY_80 — PREPARE
+
+**Status:** DRAFT_FOR_REVIEW
+**Outcome:** READY_FOR_APPROVAL
+**Design Contract:** V3_FRESH_PUBLICATION_AFTER_EXECUTABLE_TEST_PREFLIGHT_CONTRACT_COMPLETE
+
+Phase80 is a documentation-only preparation for a new one-shot fresh-current V3 source-profile publication transaction. It is bound in design, but not authorization, to branch `feature/post-v0.8-daily-replay`, executable support HEAD `321868ac827677700da2c2ec41fded860eb464cc`, tree `0c422b45118131b8e3bb8ce5dd7189f2368e683e`, and target `NAR / 21 / 2025-01-01 / 6` under `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET` semantics.
+
+Frozen history:
+
+- Phase76: `TERMINAL_CONSUMED_BLOCKED_ROLLBACK_COMPLETE`; review `PHASE76_CONSUMED_BLOCKED_RESULT_REVIEW_PASS`; authorization permanently `PHASE76_V3_SOURCE_PROFILE_PUBLICATION_AUTHORIZATION_CONSUMED_FAIL_CLOSED`; blocker `REGRESSION_FAILURE_AT_DEDICATED_V3_FIXTURE_TEST`; exact cause `UNKNOWN_AFTER_BOUNDED_EVIDENCE_GAP`.
+- Phase78: `NOT_ENTERED_NO_PUBLICATION_DELTA`; it is not reused or repurposed.
+- Phase79: `FORMALLY_COMPLETE`; verification `PHASE79_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`; support `V3_DEDICATED_FIXTURE_TEST_EXECUTION_AND_FAILURE_EVIDENCE_AUTHORITY_IMPLEMENTED`.
+
+The future, unissued authorization is `PHASE80_V3_SOURCE_PROFILE_PUBLICATION_AUTHORIZATION_UNCONSUMED`, bound only to Phase80, the stated target, purpose `FRESH_CURRENT_V3_SOURCE_PROFILE_PUBLICATION_AFTER_EXECUTABLE_TEST_PREFLIGHT`, and the reviewed Phase79 support. After the sole durable `PHASE44_CALL_ABOUT_TO_ENTER` boundary is appended, flushed, and fsynced, it permanently becomes `PHASE80_V3_SOURCE_PROFILE_PUBLICATION_AUTHORIZATION_CONSUMED_FAIL_CLOSED`. Phase50 reconstruction remains a separate state domain and reports `CONSUMED_CONFIRMED` only after `PHASE44_FUNCTION_ENTERED`.
+
+Before any future boundary, Phase80 must obtain `V3_DEDICATED_FIXTURE_TEST_END_TO_END_PREFLIGHT_PASS` using the exact committed Phase79 preflight support: an external synthetic mirror, actual generated pytest, `python -I -B`, PEP 420 namespace and production-origin isolation, and no Provider HTTP, actual Phase44, or GET. Its bounded evidence must include generated-source and manifest hashes/lengths, command and return code, sanitized process output, and import-isolation result. The complete historical Phase76 gates remain required as well: publication-plan and V3-contract dry runs, Phase50 V3 test-path and blocked-payload integration, Profile-B/Phase73, Profile-A, Safety, Phase71 target contract, exact metadata, closed-bundle identity, runner parity, gitattributes, create-only absence, clean baseline, and LF preflight.
+
+The only planned future delta remains six paths: CREATE_ONLY Deba HTML, RaceList HTML, manifest, and dedicated V3 fixture test under `tests/fixtures/nar_race_entry_status/source_profiles/v3/baba_21__2025-01-01__race_06/`, plus the two current documentation files as MODIFY_EXISTING. The V3 `.gitattributes` binary rule is validate-only and must be present exactly once. The four CREATE_ONLY targets must be absent before a boundary.
+
+Future live execution must call only the committed Phase79 renderer `render_nar_race_entry_status_source_profile_v3_fixture_test`; no inline or duplicate template is permitted. Exactly one Phase44 and two GETs are allowed, DebaTable then RaceList. The same acquired bytes must supply every diagnostic, V3 authority object, renderer input, and raw fixture write. Publication follows only complete Profile-B v2, Safety v3, Profile-A v3, identity, metadata, and V3 authority validation.
+
+The dedicated V3 test runs before broader regressions. If it fails, `build_v3_fixture_test_failure_evidence` and `retain_v3_fixture_test_failure_evidence_durably` must preserve and validate bounded source/manifest/identity/hash/pytest diagnostic evidence before `ROLLBACK_BEGIN`; raw HTML is never retained. A successful Phase80 leaves the exact six-path unstaged delta for independent review, with no staging, commit, or push. A post-publication failure rolls back only those six paths to the clean Phase80 pre-live baseline. A later new no-network Phase81-or-later phase, not Phase78, may perform Git integration after review.
+
+Readiness A–U: **YES**. The design fixes support identity, a new unissued authorization, preflight, closed paths, attributes, one-shot boundary and request caps, same-byte qualification, renderer-only generation, failure-before-rollback evidence, exact review delta, rollback, future integration, and historical non-inference. Market eligibility, positive market eligibility, and whole-meeting cancellation remain `UNSUPPORTED`.
+
+This PREPARE activity performed Provider HTTP / Phase44 / GET: **0 / 0 / 0**. Authorization issued: **NONE**. Publication: **NO**. No tests, staging, commit, or push were performed.
+
+Next action: `CHATGPT_REVIEW_PHASE80_PUBLICATION_DESIGN`.
+
 ## POST_V0_8_DAILY_REPLAY_79 — IMPLEMENTED
 
 **State:** IMPLEMENTED_FOR_REVIEW
