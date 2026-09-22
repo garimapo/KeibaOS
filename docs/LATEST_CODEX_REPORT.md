@@ -1,5 +1,78 @@
 # Latest Codex Report
 
+## POST_V0_8_DAILY_REPLAY_83 — INTEGRATION
+
+**Formal Status:** READY_FOR_REVIEW
+**State:** IMPLEMENTED_FOR_REVIEW
+**Outcome:** READY_FOR_INDEPENDENT_INTEGRATION_REVIEW
+**Integration:** V3_SOURCE_PROFILE_PUBLICATION_COMMITTED_AND_PUSHED
+**Authorization:** NONE_REQUIRED_NO_NETWORK_INTEGRATION
+
+Phase83 locally revalidated and integrated the exact independently reviewed Phase82 six-path publication delta without provider HTTP, Phase44, GET, acquisition, refetch, or artifact regeneration. Phase82 review remains `PHASE82_PUBLICATION_EVIDENCE_AND_DELTA_REVIEW_PASS`; its consumed authorization and historical evidence remain unchanged.
+
+The four frozen artifacts passed pre-test and post-test byte-identity checks. Manifest V3 authority, dedicated-test UTF-8/LF/BOM/compile properties, the single V3 `.gitattributes` rule, and `text: unset` / `diff: unset` for both HTML fixtures all passed.
+
+No-network tests passed in the approved order: dedicated V3 fixture `4`; generator `17`; preflight `17`; publication plan `45`; publication contract `49`; Profile-B diagnostics `38`; Profile-A `17`; Phase66 structural recovery `152`; Phase50 observability `367`; full repository suite `4387` plus `2841` subtests. The full-suite total is mechanically four above the Phase82 baseline because it includes the four dedicated V3 tests in addition to their separate step-1 execution.
+
+The integration commit uses expected parent `0c3e7577c5df44ffeee2ff9339f10272193bc7de`, exact message `feat: publish qualified NAR V3 source-profile fixtures`, and exactly the four frozen artifacts plus the two phase-control docs. It is pushed normally to `origin/feature/post-v0.8-daily-replay`; no broad staging, amend, reset, rebase, or force push is permitted.
+
+Provider HTTP / Phase44 / GET: `0 / 0 / 0`. Historical semantics remain `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`; market, positive-market, and whole-meeting-cancellation eligibility remain `UNSUPPORTED`.
+
+Next action: `CHATGPT_REVIEW_PHASE83_INTEGRATION`.
+
+## POST_V0_8_DAILY_REPLAY_83 — APPROVE
+
+**Formal Status:** APPROVED_FOR_CODEX
+**Outcome:** APPROVED_NO_NETWORK_V3_PUBLICATION_INTEGRATION
+**Design Review:** PHASE83_INTEGRATION_DESIGN_REVIEW_PASS
+**Authorization:** NONE_REQUIRED_NO_NETWORK_INTEGRATION
+
+This is local contract approval only: it creates no approval-tracking commit because the final Phase83 integration commit must retain parent `0c3e7577c5df44ffeee2ff9339f10272193bc7de` and contain the exact reviewed six-path delta. The four CREATE_ONLY artifacts remain byte-frozen; the two documentation files remain phase-control mutable only. No Phase82 evidence is changed.
+
+Future execution must first revalidate the four frozen bytes, manifest authority, generated-test compilation, HTML attributes, and the specified ten no-network test stages. It may stage only the four artifacts and these two documentation files individually, make exactly one commit with message `feat: publish qualified NAR V3 source-profile fixtures`, then push normally to `origin/feature/post-v0.8-daily-replay`. `git diff --check` is authoritative only by zero return code; stderr is diagnostic evidence. A post-commit push failure preserves the exact local commit as `LOCAL_PHASE83_PUBLICATION_COMMIT_PUSH_PENDING_REVIEW`.
+
+Provider HTTP / Phase44 / GET: `0 / 0 / 0`. Staging / commit / push: `NONE / NONE / NONE`. No provider access, Phase44, GET, acquisition, refetch, artifact regeneration, or production-support change is approved.
+
+Next action: `EXECUTE_APPROVED_PHASE`.
+
+## POST_V0_8_DAILY_REPLAY_83 — PREPARE
+
+**Status:** DRAFT_FOR_REVIEW
+**Outcome:** READY_FOR_APPROVAL
+**Design Contract:** NO_NETWORK_V3_PUBLICATION_INTEGRATION_CONTRACT_COMPLETE
+
+Phase83 prepares only no-network integration of the independently reviewed Phase82 publication delta. The path set remains exactly six paths: four byte-frozen CREATE_ONLY artifacts and two phase-control-mutable documentation files. The artifact bytes were re-read without mutation and match the frozen Phase82 values: Deba `313317` / `6c9aa3ea614c17e14f0e7a5050190ca923445925d67f8e61e71db95e87c87727`; RaceList `66307` / `1eb363621c7a152929765ff7ffecabea2d7cf15283d45fa9c31036527c0b53a1`; manifest `4254` / `3ca36ed4cec1002e0440fb02e466f40dd7f4d74ffb7c0bdf7b55be2271af321d`; dedicated test `10467` / `a7339350be7e0724bd75408534a094c544bf6776eb57118e70ae6dd314e7b3ff`.
+
+The manifest is strict UTF-8 and canonical; it confirms target `NAR / 21 / 2025-01-01 / 6`, `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`, market eligibility `UNSUPPORTED`, FixtureSetV3 `nar-race-entry-status-source-profile-fixture-set-v3:11f18aae600df59ab90ce9cd3dd3614ff250698d783bcd96e6917cc38a8ab225`, and QualificationV3 `nar-race-entry-status-source-profile-qualification-v3:a7f0ba5ed66a71f9785c80b1ba1b5f556b2328d09ead597839cc068a84b0d3ff`. The generated test remains UTF-8, LF-only, BOM-absent, and compilable. Both V3 HTML paths have `text: unset` and `diff: unset`.
+
+Phase82 remains `READY_FOR_REVIEW` with review `PHASE82_PUBLICATION_EVIDENCE_AND_DELTA_REVIEW_PASS`, permanently consumed external authorization `PHASE82_V3_SOURCE_PROFILE_PUBLICATION_AUTHORIZATION_CONSUMED_FAIL_CLOSED`, Phase50 `CONSUMED_CONFIRMED`, and semantic `V3_SOURCE_PROFILE_PUBLICATION_DELTA_READY_FOR_CHATGPT_REVIEW`. It must never reacquire or publish again.
+
+Future Phase83 execution is constrained to local artifact validation; the ten specified no-network suites; exact six-path staging; one commit with parent `0c3e7577c5df44ffeee2ff9339f10272193bc7de` and message `feat: publish qualified NAR V3 source-profile fixtures`; then a normal push to `origin/feature/post-v0.8-daily-replay`. No HTTP, provider access, Phase44, GET, reacquisition, refetch, regeneration, production-support change, or `.gitattributes` change is permitted. `git diff --check` is PASS on return code zero; stderr is diagnostic only. A push failure after commit retains the exact local commit in `LOCAL_PHASE83_PUBLICATION_COMMIT_PUSH_PENDING_REVIEW` without reset, amend, or reacquisition.
+
+Provider HTTP / Phase44 / GET: `0 / 0 / 0`. Staging / commit / push: `NONE / NONE / NONE`. Historical market, positive-market, and whole-meeting-cancellation eligibility remain `UNSUPPORTED`; no historical availability inference is permitted.
+
+Next action: `CHATGPT_REVIEW_PHASE83_INTEGRATION_DESIGN`.
+
+## POST_V0_8_DAILY_REPLAY_82 — LIVE PUBLICATION
+
+State: READY_FOR_REVIEW
+
+Phase50 Outcome: READY_FOR_REVIEW
+
+External Authorization: `PHASE82_V3_SOURCE_PROFILE_PUBLICATION_AUTHORIZATION_CONSUMED_FAIL_CLOSED`
+
+Phase50 Authorization: `CONSUMED_CONFIRMED`
+
+Semantic: `V3_SOURCE_PROFILE_PUBLICATION_DELTA_READY_FOR_CHATGPT_REVIEW`
+
+Phase82 completed a fresh current one-Phase44/two-GET acquisition, same-byte qualification and publication, dedicated test generation through the reviewed Phase79 renderer, all ten regression stages, and the corrected exit-status-based Git success audit. The exact six paths remain unstaged for independent review; commit and push are `NO / NO`.
+
+FixtureSetV3: `nar-race-entry-status-source-profile-fixture-set-v3:11f18aae600df59ab90ce9cd3dd3614ff250698d783bcd96e6917cc38a8ab225`. QualificationV3: `nar-race-entry-status-source-profile-qualification-v3:a7f0ba5ed66a71f9785c80b1ba1b5f556b2328d09ead597839cc068a84b0d3ff`. Manifest SHA/length: `3ca36ed4cec1002e0440fb02e466f40dd7f4d74ffb7c0bdf7b55be2271af321d` / `4254`. Generated test SHA/length: `a7339350be7e0724bd75408534a094c544bf6776eb57118e70ae6dd314e7b3ff` / `10467`.
+
+Profile-B v2 and Profile-A v3 are QUALIFIED; Safety v3 is SAFE; structural consistency passed. Market eligibility, positive market eligibility, and whole-meeting cancellation remain UNSUPPORTED. No historical inference is permitted.
+
+Next action: `CHATGPT_REVIEW_PHASE82_PUBLICATION_EVIDENCE_AND_DELTA`.
+
 ## POST_V0_8_DAILY_REPLAY_82 — APPROVE
 
 **Formal Status:** APPROVED_FOR_CODEX
