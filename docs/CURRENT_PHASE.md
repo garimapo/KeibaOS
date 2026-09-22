@@ -1,6 +1,79 @@
 # Current Phase
 
-## POST_V0_8_DAILY_REPLAY_85
+## POST_V0_8_DAILY_REPLAY_86
+
+Title: Phase85 Post-Commit Documentation Reconciliation
+
+Formal Status: READY_FOR_REVIEW
+
+State: IMPLEMENTED_FOR_REVIEW
+
+Outcome: READY_FOR_INDEPENDENT_DOCUMENTATION_REVIEW
+
+Implementation: PHASE85_POST_COMMIT_DOCUMENTATION_RECONCILIATION_IMPLEMENTED
+
+Design Contract: PHASE85_POST_COMMIT_DOCUMENTATION_RECONCILIATION_CONTRACT_COMPLETE
+
+Design Review: PHASE86_DOCUMENTATION_RECONCILIATION_DESIGN_REVIEW_PASS
+
+Primary blocker resolved: PHASE85_LATEST_REPORT_POST_COMMIT_STATE_STALE
+
+Authorization: NONE_REQUIRED_DOCS_ONLY
+
+Branch: `feature/post-v0.8-daily-replay`
+
+Starting HEAD/tree: `496d581120be5bda5326ed6a95b17169e92adbdc` / `2ad0df638e31b4275a63b8a1fa63e408bca4ee0d`
+
+Phase85 implementation review: `PHASE85_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`
+
+Phase85 code state/formal state: `IMPLEMENTATION_VERIFIED` / `POST_V0_8_DAILY_REPLAY_85 = FORMALLY_COMPLETE`
+
+Integrated authority: `STRICT_LOCAL_V3_SOURCE_PROFILE_FIXTURE_CONSUMER = FORMALLY_INTEGRATED`
+
+### Frozen proven state and exact reconciliation
+
+The independently verified Phase85 commit is `496d581120be5bda5326ed6a95b17169e92adbdc`, with tree `2ad0df638e31b4275a63b8a1fa63e408bca4ee0d`, parent `c6e06ac5331b2f056534efa58756383e587ec27e`, and message `feat: add strict local NAR V3 fixture consumer`. At the start of Phase86, local and remote-tracking branch heads equaled that commit. Its exact committed paths were:
+
+- `scripts/simulation/nar_race_entry_status_source_profile_fixture_consumer.py`
+- `tests/test_nar_race_entry_status_source_profile_fixture_consumer.py`
+- `docs/CURRENT_PHASE.md`
+- `docs/LATEST_CODEX_REPORT.md`
+
+The Phase85 implementation report now records the actual commit and normal push. Its final worktree was clean, with empty staged and untracked sets. The documentation defect identified by independent remote review is resolved. Phase86 changed no Phase85 code, test, or fixture bytes.
+
+Phase86 modified exactly `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`. The final Phase85 implementation result is reconciled without changing historical PREPARE and APPROVE chronology or rerunning tests. The formal Phase85 verdict rests on the existing independent remote verification.
+
+The frozen test evidence is focused consumer `40 passed, 2 skipped`; dedicated V3 fixture `4 passed`; publication contract `49 passed`; publication plan `45 passed`; Profile-A `17 passed`; Profile-B diagnostics `38 passed`; Phase66 `152 passed`; full suite `4427 passed, 2 skipped, 2841 subtests passed`. The two skips are platform-conditional symlink creation cases. The published Deba/RaceList/manifest Git blobs remain `e0da768cb7c5cb98c4ae060e463581f829d2eb79`, `57bb0d763b30401080cc577251e53fc9335f05ad`, and `63d6f05cb7807d25e3ea84118e24ffee6ded0e5e`; content identities remain 313317 / `6c9aa3ea614c17e14f0e7a5050190ca923445925d67f8e61e71db95e87c87727`, 66307 / `1eb363621c7a152929765ff7ffecabea2d7cf15283d45fa9c31036527c0b53a1`, and 4254 / `3ca36ed4cec1002e0440fb02e466f40dd7f4d74ffb7c0bdf7b55be2271af321d`.
+
+Historical semantics remain `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`; market eligibility, positive market eligibility, and whole-meeting cancellation remain `UNSUPPORTED`. Provider HTTP / Phase44 / GET: `0 / 0 / 0`.
+
+### Readiness matrix
+
+| Item | Ready |
+| --- | --- |
+| A. Phase85 code review result frozen | YES |
+| B. Actual Phase85 commit identity frozen | YES |
+| C. Remote branch state frozen | YES |
+| D. Exact stale documentation statement identified | YES |
+| E. No production correction required | YES |
+| F. No test correction required | YES |
+| G. No fixture correction required | YES |
+| H. Exact docs-only two-path scope defined | YES |
+| I. Post-commit facts defined | YES |
+| J. Historical PREPARE/APPROVE chronology preserved | YES |
+| K. Phase85 final formal verdict defined after reconciliation | YES |
+| L. No network/Phase44/GET | YES |
+| M. No stage/commit/push during PREPARE | YES |
+
+Production code changes / test changes / fixture changes: `NONE / NONE / NONE`
+
+Phase86 integration: one docs-only commit and normal push as authorized by `EXECUTE_APPROVED_PHASE`.
+
+Next Action: `CHATGPT_REVIEW_PHASE86_DOCUMENTATION_RECONCILIATION`
+
+## Historical current-phase records
+
+### POST_V0_8_DAILY_REPLAY_85
 
 Title: Strict Local V3 Source-Profile Fixture Consumer Authority
 
@@ -193,11 +266,11 @@ Production implementation: `YES`
 
 Tests implemented: `YES`
 
-Staging / commit / push: `PENDING / PENDING / PENDING`
+Final Phase85 staging / commit / push: `EMPTY / SUCCESS / SUCCESS`; local and remote-tracking HEAD after Phase85 were both `496d581120be5bda5326ed6a95b17169e92adbdc`, and the worktree and untracked set were clean and empty.
 
 Next Action: `CHATGPT_REVIEW_PHASE85_IMPLEMENTATION`
 
-## Historical current-phase records
+### Earlier historical records
 
 ## POST_V0_8_DAILY_REPLAY_84
 

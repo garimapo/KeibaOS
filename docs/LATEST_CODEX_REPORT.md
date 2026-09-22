@@ -1,5 +1,30 @@
 # Latest Codex Report
 
+## POST_V0_8_DAILY_REPLAY_86 — DOCUMENTATION RECONCILIATION
+
+**Formal Status:** READY_FOR_REVIEW
+**State:** IMPLEMENTED_FOR_REVIEW
+**Outcome:** READY_FOR_INDEPENDENT_DOCUMENTATION_REVIEW
+**Implementation:** PHASE85_POST_COMMIT_DOCUMENTATION_RECONCILIATION_IMPLEMENTED
+**Design Contract:** PHASE85_POST_COMMIT_DOCUMENTATION_RECONCILIATION_CONTRACT_COMPLETE
+**Design Review:** PHASE86_DOCUMENTATION_RECONCILIATION_DESIGN_REVIEW_PASS
+**Primary blocker resolved:** PHASE85_LATEST_REPORT_POST_COMMIT_STATE_STALE
+**Authorization:** NONE_REQUIRED_DOCS_ONLY
+
+Phase86 inspected the independently verified Phase85 integration without changing production code, tests, or fixtures. Phase85's actual commit is `496d581120be5bda5326ed6a95b17169e92adbdc`, tree `2ad0df638e31b4275a63b8a1fa63e408bca4ee0d`, parent `c6e06ac5331b2f056534efa58756383e587ec27e`, and message `feat: add strict local NAR V3 fixture consumer`. Before Phase86 integration, the local and remote-tracking heads both equaled that commit.
+
+The exact four committed Phase85 paths are `scripts/simulation/nar_race_entry_status_source_profile_fixture_consumer.py`, `tests/test_nar_race_entry_status_source_profile_fixture_consumer.py`, `docs/CURRENT_PHASE.md`, and `docs/LATEST_CODEX_REPORT.md`. The frozen remote review confirms the API, immutable bundle, strict local filesystem/manifest/formal-authority validation, Phase83 identity gate, absence of network/database/replay authority, and all reported tests. Published Deba/RaceList/manifest Git blobs remain `e0da768cb7c5cb98c4ae060e463581f829d2eb79`, `57bb0d763b30401080cc577251e53fc9335f05ad`, and `63d6f05cb7807d25e3ea84118e24ffee6ded0e5e`; their frozen content identities remain unchanged.
+
+The independently identified Phase85 reporting defect was its outdated final integration status and missing commit identity. The Phase85 final implementation result below now records its actual commit, normal push, and clean final local state. Historical PREPARE and APPROVE records retain their original chronology.
+
+The completed reconciliation records `PHASE85_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`, `POST_V0_8_DAILY_REPLAY_85 = FORMALLY_COMPLETE`, and `STRICT_LOCAL_V3_SOURCE_PROFILE_FIXTURE_CONSUMER = FORMALLY_INTEGRATED`. Phase86 changed only the two phase-control documents; Phase85 production code, tests, fixtures, and historical semantics are unchanged. Phase85 tests were not rerun.
+
+Frozen Phase85 verification: consumer `40 passed, 2 skipped`; dedicated V3 `4 passed`; publication contract `49 passed`; publication plan `45 passed`; Profile-A `17 passed`; Profile-B diagnostics `38 passed`; Phase66 `152 passed`; full suite `4427 passed, 2 skipped, 2841 subtests passed`. The skips were platform-conditional symlink creation cases. Provider HTTP / Phase44 / GET: `0 / 0 / 0`.
+
+Historical semantics remain `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`; `market_eligibility`, `positive_market_eligibility`, and `WHOLE_MEETING_CANCELLATION` remain `UNSUPPORTED`. No historical availability or replay readiness is inferred.
+
+Next action: `CHATGPT_REVIEW_PHASE86_DOCUMENTATION_RECONCILIATION`.
+
 ## POST_V0_8_DAILY_REPLAY_85 — IMPLEMENTATION
 
 **Formal Status:** READY_FOR_REVIEW
@@ -30,7 +55,9 @@ The committed Phase83 artifacts were read-only throughout. Before and after test
 
 Historical semantics remain `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`; market, positive-market, and whole-meeting-cancellation eligibility remain `UNSUPPORTED`. Provider HTTP / Phase44 / GET: `0 / 0 / 0`.
 
-Changed paths are exactly the approved consumer, focused test, and two phase-control documents. Staging, commit, and push are pending the final scoped Git checks in this execution.
+The Phase85 commit and normal push succeeded. Commit `496d581120be5bda5326ed6a95b17169e92adbdc` has tree `2ad0df638e31b4275a63b8a1fa63e408bca4ee0d`, parent `c6e06ac5331b2f056534efa58756383e587ec27e`, and message `feat: add strict local NAR V3 fixture consumer`. Its exact four paths are `scripts/simulation/nar_race_entry_status_source_profile_fixture_consumer.py`, `tests/test_nar_race_entry_status_source_profile_fixture_consumer.py`, `docs/CURRENT_PHASE.md`, and `docs/LATEST_CODEX_REPORT.md`. After Phase85 push, both local and remote-tracking HEAD equaled that commit; the worktree was clean, with empty staged and untracked sets. Provider HTTP / Phase44 / GET remained `0 / 0 / 0`.
+
+Independent verification: `PHASE85_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`. Formal verdict: `POST_V0_8_DAILY_REPLAY_85 = FORMALLY_COMPLETE`; `STRICT_LOCAL_V3_SOURCE_PROFILE_FIXTURE_CONSUMER = FORMALLY_INTEGRATED`.
 
 Next action: `CHATGPT_REVIEW_PHASE85_IMPLEMENTATION`.
 
