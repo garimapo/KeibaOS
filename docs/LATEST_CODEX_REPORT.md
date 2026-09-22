@@ -1,5 +1,105 @@
 # Latest Codex Report
 
+## POST_V0_8_DAILY_REPLAY_85 — IMPLEMENTATION
+
+**Formal Status:** READY_FOR_REVIEW
+**State:** IMPLEMENTED_FOR_REVIEW
+**Outcome:** READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW
+**Implementation:** STRICT_LOCAL_V3_SOURCE_PROFILE_FIXTURE_CONSUMER_IMPLEMENTED
+**Design Review:** PHASE85_FIXTURE_CONSUMER_DESIGN_REVIEW_PASS
+**Authorization:** NONE_REQUIRED_NO_NETWORK_IMPLEMENTATION
+
+Phase85 implemented `load_nar_race_entry_status_source_profile_v3_fixture(*, repository_root: Path, target: NARRaceEntryStatusRaceIdentity) -> NARRaceEntryStatusSourceProfileFixtureBundleV3` in the approved production module. The exact immutable bundle fields are `target`, `deba_table_bytes`, `race_list_bytes`, `manifest_bytes`, `manifest`, `phase66_ancestry`, `publication_plan`, and `repository_relative_paths`; the path tuple is exactly `(EXPECTED_DEBA_TABLE_PATH_V3, EXPECTED_RACE_LIST_PATH_V3, EXPECTED_MANIFEST_PATH_V3)`.
+
+The implementation accepts only the exact published target and canonical explicit repository root, closes the fixture directory to exactly three files, rejects link/reparse/path-escape and unstable-read conditions, reads each file once, and parses only strict UTF-8 canonical JSON without duplicate keys or non-finite values. It then validates raw SHA/length against manifest metadata, reconstructs capture metadata, and recomputes existing Profile-A v3, Profile-B v2, Safety v3, Phase66, FixtureSetV3, QualificationV3, ManifestV3, and PublicationPlanV3 authority before applying the final frozen Phase83 byte and identity gate. No provider/network, Phase44, subprocess/socket, database, historical normalizer, snapshot, or replay authority is imported or invoked.
+
+The fail-closed public base is `NARRaceEntryStatusSourceProfileFixtureConsumerError`, with unsupported, filesystem, manifest, and formal-authority subclasses. Stable classifications cover `UNSUPPORTED_TARGET`, `FILESYSTEM_VIOLATION`, `MISSING_FIXTURE`, `UNEXPECTED_FIXTURE_DIRECTORY_CONTENT`, `MANIFEST_INVALID`, `DOCUMENT_IDENTITY_MISMATCH`, `TARGET_OR_PATH_CONTRADICTION`, `FORMAL_AUTHORITY_VALIDATION_FAILURE`, and `FROZEN_PHASE83_IDENTITY_MISMATCH`.
+
+Verification results:
+
+- focused consumer: `40 passed, 2 skipped` (the skips are platform-conditional symlink creation cases)
+- committed V3 fixture: `4 passed`
+- publication contract: `49 passed`
+- publication plan: `45 passed`
+- Profile-A: `17 passed`
+- Profile-B diagnostics: `38 passed`
+- Phase66 structural diagnostics: `152 passed`
+- full repository suite: `4427 passed, 2 skipped, 2841 subtests passed`
+
+The committed Phase83 artifacts were read-only throughout. Before and after tests, DebaTable remained 313317 bytes / `6c9aa3ea614c17e14f0e7a5050190ca923445925d67f8e61e71db95e87c87727`, RaceList remained 66307 bytes / `1eb363621c7a152929765ff7ffecabea2d7cf15283d45fa9c31036527c0b53a1`, and manifest remained 4254 bytes / `3ca36ed4cec1002e0440fb02e466f40dd7f4d74ffb7c0bdf7b55be2271af321d`. FixtureSetV3 and QualificationV3 remain `nar-race-entry-status-source-profile-fixture-set-v3:11f18aae600df59ab90ce9cd3dd3614ff250698d783bcd96e6917cc38a8ab225` and `nar-race-entry-status-source-profile-qualification-v3:a7f0ba5ed66a71f9785c80b1ba1b5f556b2328d09ead597839cc068a84b0d3ff`.
+
+Historical semantics remain `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`; market, positive-market, and whole-meeting-cancellation eligibility remain `UNSUPPORTED`. Provider HTTP / Phase44 / GET: `0 / 0 / 0`.
+
+Changed paths are exactly the approved consumer, focused test, and two phase-control documents. Staging, commit, and push are pending the final scoped Git checks in this execution.
+
+Next action: `CHATGPT_REVIEW_PHASE85_IMPLEMENTATION`.
+
+## POST_V0_8_DAILY_REPLAY_85 — APPROVE
+
+**Formal Status:** APPROVED_FOR_CODEX
+**Outcome:** APPROVED_STRICT_LOCAL_V3_SOURCE_PROFILE_FIXTURE_CONSUMER
+**Design Review:** PHASE85_FIXTURE_CONSUMER_DESIGN_REVIEW_PASS
+**Design Contract:** STRICT_LOCAL_V3_SOURCE_PROFILE_FIXTURE_CONSUMER_CONTRACT_COMPLETE
+**Authorization:** NONE_REQUIRED_NO_NETWORK_IMPLEMENTATION
+
+This approval records the Phase85 executable contract only. It is bound to branch `feature/post-v0.8-daily-replay` and HEAD/tree `c6e06ac5331b2f056534efa58756383e587ec27e` / `e5ae14c7d4da34f83afb32e5d83c06bc30471167`; it creates no authorization and performs no provider HTTP, Phase44, GET, implementation, test implementation, staging, commit, or push.
+
+Future execution is closed to four paths: create `scripts/simulation/nar_race_entry_status_source_profile_fixture_consumer.py` and `tests/test_nar_race_entry_status_source_profile_fixture_consumer.py`, then modify only the two phase-control documents. Any fifth path is `PHASE85_APPROVED_CONTRACT_SUPPORT_MISMATCH`. Existing V3 fixtures, contract/plan/Profile-A/Profile-B/Phase66/Phase50, historical/replay/snapshot code, database, logs, and `.gitattributes` are forbidden.
+
+The approved API accepts only an exact `NARRaceEntryStatusRaceIdentity` for `NAR / 21 / 2025-01-01 / 6` and an explicit, absolute, existing, NUL-free concrete `Path` repository root. It returns the frozen/slotted `NARRaceEntryStatusSourceProfileFixtureBundleV3` containing exactly target, Deba bytes, RaceList bytes, manifest bytes, validated manifest, Phase66 ancestry, V3 publication plan, and the ordered tuple `(EXPECTED_DEBA_TABLE_PATH_V3, EXPECTED_RACE_LIST_PATH_V3, EXPECTED_MANIFEST_PATH_V3)`. Profile and safety objects remain accessible only through the validated manifest authority.
+
+The target directory is closed to exactly `deba_table.html`, `race_list.html`, and `manifest.json`; no glob, version scan, V1/V2 fallback, arbitrary path, link/reparse redirect, path escape, or unstable replacement is accepted. Each artifact is binary-read once with before/opened-handle/after identity checks. Strict manifest parsing, metadata reconstruction, raw-to-manifest validation, existing Profile-A/Profile-B/Safety/FixtureSet/Qualification/Manifest/Plan/Phase66 recomputation, canonical-manifest equality, and only then frozen Phase83 SHA/length and FixtureSet/Qualification identity checks are mandatory. This preserves independent formal-authority failure gates.
+
+The semantic firewall remains fixed: current acquisition concerning a historical target only; market, positive-market, and whole-meeting-cancellation eligibility are `UNSUPPORTED`. The consumer cannot expose historical availability/bytes, replay readiness, or market eligibility, and cannot import or invoke network/provider/Phase44/subprocess/socket/DB/snapshot/replay authority.
+
+Focused consumer, committed-V3, V3 contract/plan, Profile-A, Profile-B diagnostics, Phase66, and full-suite tests are required. They must cover the approved target/type/path/filesystem/manifest/raw/identity/semantic mutations, no-fallback behavior, bundle immutability, static forbidden imports, CWD independence, and committed-fixture identity before and after test execution. All mutations use temporary repository-shaped copies.
+
+Provider HTTP / Phase44 / GET: `0 / 0 / 0`. Modified paths are only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`; staging, commit, and push remain `NONE / NONE / NONE`.
+
+Next action: `EXECUTE_APPROVED_PHASE`.
+
+## POST_V0_8_DAILY_REPLAY_85 — PREPARE / DESIGN
+
+**Status:** DRAFT_FOR_REVIEW
+**Outcome:** READY_FOR_APPROVAL
+**Design Contract:** STRICT_LOCAL_V3_SOURCE_PROFILE_FIXTURE_CONSUMER_CONTRACT_COMPLETE
+
+Phase85 preparation freezes `PHASE84_REPLAY_CONSUMER_DEPENDENCY_AUDIT_REVIEW_PASS` and the repository-evidenced primary dependency `V3_FIXTURE_CONSUMER_SUPPORT_REQUIRED`. It designs, but does not implement, the first production read-side for the exact committed target `NAR / 21 / 2025-01-01 / 6` at HEAD/tree `c6e06ac5331b2f056534efa58756383e587ec27e` / `e5ae14c7d4da34f83afb32e5d83c06bc30471167`.
+
+The proposed exact API is `load_nar_race_entry_status_source_profile_v3_fixture(*, repository_root: Path, target: NARRaceEntryStatusRaceIdentity) -> NARRaceEntryStatusSourceProfileFixtureBundleV3`. It uses existing V3 publication path constants, accepts only the exact frozen target, closes the target fixture directory to exactly DebaTable/RaceList/manifest, rejects symlink/reparse/path escape or unstable file identity, and reads each artifact once without writes or normalization.
+
+Manifest handling is strict UTF-8 canonical JSON with duplicate-key and non-finite-number rejection. The consumer reconstructs only existing capture metadata fields, checks raw SHA/length against the manifest, recomputes Profile-A v3, Profile-B v2, Safety v3, FixtureSetV3, QualificationV3, ManifestV3, PublicationPlanV3, and Phase66, then requires canonical manifest byte equality and the exact frozen Phase83 artifact/FixtureSet/Qualification identities. No self-consistent replacement fixture is accepted.
+
+The immutable bundle is limited to target, the three exact byte payloads, validated `SourceProfileManifestV3`, Phase66 ancestry, V3 publication plan, and the exact three relative paths. Nested fixture-set, qualification, safety, and Profile-A/B authority remain reachable through the manifest rather than duplicated. The type is explicitly source-profile-scoped and cannot claim historical snapshot, replay readiness, or market eligibility.
+
+Historical semantics remain `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`; market, positive-market, and whole-meeting-cancellation eligibility remain `UNSUPPORTED`. The module is forbidden from importing/calling historical normalization, snapshot, replay, DB, provider, network, Phase44, subprocess, clock, randomness, environment, or CWD authority. Missing local content fails closed without fallback.
+
+Future implementation is exactly four paths: create the consumer and its focused test, then modify the two phase docs. The focused contract covers deterministic valid load; exact target/version/path closure; filesystem substitution; all manifest/raw/identity/semantic contradictions; Profile-A/Profile-B/Safety/Phase66 failures; static forbidden-authority audit; CWD independence; and before/after committed-fixture byte identity. Related V3 contract/plan/diagnostic/Profile-A/Phase66 tests and the full suite remain required. Any fifth path or weakening of existing authority is a stop condition.
+
+Readiness A–U: **YES**. Provider HTTP / Phase44 / GET: `0 / 0 / 0`. Production implementation/tests: `NO / NO`. Staging/commit/push: `NONE / NONE / NONE`.
+
+Next action: `CHATGPT_REVIEW_PHASE85_FIXTURE_CONSUMER_DESIGN`.
+
+## POST_V0_8_DAILY_REPLAY_84 — PREPARE / AUDIT
+
+**Status:** DRAFT_FOR_REVIEW
+**Outcome:** READY_FOR_ARCHITECTURAL_REVIEW
+**Audit:** POST_V3_PUBLICATION_REPLAY_CONSUMER_DEPENDENCY_AUDIT_COMPLETE
+
+Phase84 audited the repository at HEAD/tree `c6e06ac5331b2f056534efa58756383e587ec27e` / `e5ae14c7d4da34f83afb32e5d83c06bc30471167` after `PHASE83_INTEGRATION_REMOTE_VERIFICATION_PASS`. The formally integrated V3 DebaTable, RaceList, manifest, and dedicated-test byte identities remain unchanged, as do FixtureSetV3 `nar-race-entry-status-source-profile-fixture-set-v3:11f18aae600df59ab90ce9cd3dd3614ff250698d783bcd96e6917cc38a8ab225` and QualificationV3 `nar-race-entry-status-source-profile-qualification-v3:a7f0ba5ed66a71f9785c80b1ba1b5f556b2328d09ead597839cc068a84b0d3ff`.
+
+The audit found no production historical replay consumer that discovers or reads `tests/fixtures/nar_race_entry_status/source_profiles/*`. V3 is explicitly supported by the publication contract/plan, Phase50 journal authority, deterministic generator/preflight, and committed dedicated test. Those components validate or publish fixtures but do not provide a replay read side. The actual replay path—`run_nar_daily_replay` → `resolve_sqlite_nar_daily_evidence` → historical snapshot adapter—uses SQLite snapshot and official settlement-capture evidence and never discovers the V3 source profile.
+
+The hypothetical no-network replay of `NAR / 21 / 2025-01-01 / 6` therefore stops at its first step: fixture discovery. Manifest validation exists only inside the dedicated test/reconstruction logic; no reusable consumer exposes a validated local bundle. External-to-internal identity binding, entry/status interpretation, causal snapshot completion, market odds, and official payout evidence are ordered later dependencies. The NAR source normalizer rejects cancellation/status rows as unsupported, `SourceRecordKind` has no entry-status member, and the snapshot builder requires explicit race-entry mapping, so unsupported history is not silently promoted or name-linked.
+
+The single primary next blocker is `V3_FIXTURE_CONSUMER_SUPPORT_REQUIRED`.
+
+The proposed Phase85 is a no-network, four-file implementation: create `scripts/simulation/nar_race_entry_status_source_profile_fixture_consumer.py` and `tests/test_nar_race_entry_status_source_profile_fixture_consumer.py`, and update the two phase-control docs. It should add only strict canonical V3 target/version discovery and immutable local-bundle validation using existing V3/Profile-A/Profile-B/Safety authority. It must reject V1/V2/unknown/fallback candidates and all byte/manifest/identity contradictions, preserve current-acquisition and `UNSUPPORTED` semantics, and perform no identity binding, status application, snapshot construction, market promotion, replay, database write, or network access.
+
+Provider HTTP / Phase44 / GET: `0 / 0 / 0`. Authorization: `NONE`. Production/tests/fixtures/.gitattributes were not changed; no staging, commit, or push occurred.
+
+Next action: `CHATGPT_REVIEW_PHASE84_REPLAY_CONSUMER_DEPENDENCY_AUDIT`.
+
 ## POST_V0_8_DAILY_REPLAY_83 — INTEGRATION
 
 **Formal Status:** READY_FOR_REVIEW

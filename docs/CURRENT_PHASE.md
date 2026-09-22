@@ -1,5 +1,304 @@
 # Current Phase
 
+## POST_V0_8_DAILY_REPLAY_85
+
+Title: Strict Local V3 Source-Profile Fixture Consumer Authority
+
+Formal Status: READY_FOR_REVIEW
+
+State: IMPLEMENTED_FOR_REVIEW
+
+Outcome: READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW
+
+Implementation: STRICT_LOCAL_V3_SOURCE_PROFILE_FIXTURE_CONSUMER_IMPLEMENTED
+
+Design Contract: STRICT_LOCAL_V3_SOURCE_PROFILE_FIXTURE_CONSUMER_CONTRACT_COMPLETE
+
+Design Review: PHASE85_FIXTURE_CONSUMER_DESIGN_REVIEW_PASS
+
+Authorization: NONE_REQUIRED_NO_NETWORK_IMPLEMENTATION
+
+Branch: `feature/post-v0.8-daily-replay`
+
+Base Commit/tree: `c6e06ac5331b2f056534efa58756383e587ec27e` / `e5ae14c7d4da34f83afb32e5d83c06bc30471167`
+
+Prior review: `PHASE84_REPLAY_CONSUMER_DEPENDENCY_AUDIT_REVIEW_PASS`
+
+Primary dependency: `V3_FIXTURE_CONSUMER_SUPPORT_REQUIRED`
+
+Phase85 implemented the approved strict local V3 fixture consumer and focused tests without provider HTTP, Phase44, GET, database access, replay, or snapshot construction.
+
+### Closed purpose and published authority
+
+Phase85 designs the first production read-side authority for the one committed NAR V3 source profile. Its boundary is exactly: canonical local location → stable byte reads → strict manifest/raw validation → existing Profile-A v3, Profile-B v2, Safety v3, FixtureSetV3, QualificationV3, ManifestV3, PublicationPlanV3, and Phase66 recomputation → immutable local bundle.
+
+The only supported target is exact `NARRaceEntryStatusRaceIdentity("21", date(2025, 1, 1), 6)`. The three paths are derived from existing `EXPECTED_DEBA_TABLE_PATH_V3`, `EXPECTED_RACE_LIST_PATH_V3`, and `EXPECTED_MANIFEST_PATH_V3`; callers cannot supply paths and the loader cannot glob, choose a highest version, or fall back to V1/V2/provider data.
+
+The published bytes remain frozen:
+
+- DebaTable: 313317 bytes / `6c9aa3ea614c17e14f0e7a5050190ca923445925d67f8e61e71db95e87c87727`
+- RaceList: 66307 bytes / `1eb363621c7a152929765ff7ffecabea2d7cf15283d45fa9c31036527c0b53a1`
+- manifest: 4254 bytes / `3ca36ed4cec1002e0440fb02e466f40dd7f4d74ffb7c0bdf7b55be2271af321d`
+- FixtureSetV3: `nar-race-entry-status-source-profile-fixture-set-v3:11f18aae600df59ab90ce9cd3dd3614ff250698d783bcd96e6917cc38a8ab225`
+- QualificationV3: `nar-race-entry-status-source-profile-qualification-v3:a7f0ba5ed66a71f9785c80b1ba1b5f556b2328d09ead597839cc068a84b0d3ff`
+
+The loader must require both deterministic recomputation and these frozen identities. A self-consistent replacement for the same target is not the published Phase83 fixture and must fail closed.
+
+### Exact proposed API and immutable result
+
+```python
+def load_nar_race_entry_status_source_profile_v3_fixture(
+    *,
+    repository_root: Path,
+    target: NARRaceEntryStatusRaceIdentity,
+) -> NARRaceEntryStatusSourceProfileFixtureBundleV3:
+    ...
+```
+
+`target` must be the exact production type and exact frozen value; dict, tuple, and duck-typed targets are rejected. `repository_root` must be the exact concrete `Path` type on the running platform, absolute, NUL-free, and an existing directory. The implementation must not use `Path.cwd()`, ambient relative opens, environment variables, or repository searching.
+
+`NARRaceEntryStatusSourceProfileFixtureBundleV3` is a frozen, slotted, exact-type dataclass with the minimized fields:
+
+- `target`
+- `deba_table_bytes`
+- `race_list_bytes`
+- `manifest_bytes`
+- `manifest` (`SourceProfileManifestV3`)
+- `phase66_ancestry` (`ProfileBCandidateAncestryRecoveryDiagnostics`)
+- `publication_plan` (`SourceProfilePublicationPlanV3`)
+- `repository_relative_paths` (exact three-string tuple in Deba, RaceList, manifest order)
+
+Separate fixture-set, qualification, safety, Profile-A, and Profile-B fields are intentionally omitted because the validated `manifest` already owns `fixture_set`, `qualification`, `publication_safety`, and the qualification owns both profiles. Bytes and tuples are immutable; all nested formal authorities are existing frozen objects. The result contains no DB, HTTP, session, replay, or historical-snapshot object and is not named as replay-ready or historical evidence.
+
+### Filesystem and stable-read contract
+
+The resolved repository root and each expected path must be absolute, contained beneath the resolved root, and free of `..` escape. Every path component from the root through the target directory and files is checked with non-following metadata; symbolic links and Windows reparse points are rejected wherever the platform exposes them. If the platform cannot establish the required regular-file/no-substitution property, loading fails rather than weakening the check.
+
+The target V3 directory is closed and must contain exactly the set `{deba_table.html, race_list.html, manifest.json}`. Enumeration order is irrelevant; missing, extra, directory-substituted, symlinked, or reparse entries fail. This exact-set rule is cross-platform and intentionally rejects hidden or backup siblings.
+
+Each artifact is opened once for binary read. Pre-open `lstat`, opened-handle `fstat`, post-read `fstat`, and post-close `lstat` identities are compared using available device/inode, regular-file mode, size, and nanosecond modification time. The exact bytes from that single read are retained; there is no second semantic read, rewrite, normalization, or temporary replacement.
+
+### Strict manifest and raw validation
+
+Manifest parsing requires exact bytes, strict UTF-8, one JSON object, duplicate-key rejection, non-finite-number rejection, and byte equality with canonical JSON (`ensure_ascii=False`, sorted keys, compact separators, `allow_nan=False`). Unknown schema/version/content cannot fall back. Exact formal reconstruction plus final canonical-byte equality rejects missing and unknown keys.
+
+Before constructing formal objects, require provider `NAR`, exact target, acquisition semantics `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`, market eligibility `UNSUPPORTED`, exactly two documents in `deba_table`, `race_list` order, and their exact V3 publication paths. Recompute SHA-256 and byte length from the single-read raw bytes and require agreement with document metadata.
+
+`CaptureDocumentMetadata` is reconstructed only from the existing fields `document_role`, `request_identity`, `capture_identity`, `response_sha256`, `response_byte_length`, `requested_at`, `observed_at`, `captured_at`, and `effective_url_matches_canonical`; `CaptureMetadataSummary` adds only `closed_bundle_identity`. No URL, timestamp, capture, or identity is inferred.
+
+### Formal recomputation and semantic firewall
+
+The fail-closed validation order is fixed: filesystem/path closure → stable single reads → strict manifest parse/basic provider-target-semantics-path checks → raw SHA/length against manifest metadata → capture-metadata reconstruction → Profile-A/Profile-B/Safety recomputation → FixtureSet/Qualification/Manifest/Plan/Phase66 reconstruction → rebuilt canonical manifest equality → frozen Phase83 SHA/length and identity checks → immutable bundle construction. Thus profile, safety, and Phase66 formal-authority failures remain independently observable rather than being hidden by an early frozen-hash rejection.
+
+Using the original loaded bytes, exact target, and reconstructed capture summary, the consumer runs existing production functions to obtain Profile-A v3, Profile-B v2, Safety v3, FixtureSetV3, QualificationV3, ManifestV3, PublicationPlanV3, and Phase66 ancestry. It requires:
+
+- Profile-A exact V3, `QUALIFIED`, all three predicates PASS
+- Profile-B exact V2, `QUALIFIED`, all six predicates PASS, target schedule count 1
+- Safety exact V3, `SAFE`, all five categories SAFE with zero findings
+- Phase66 one race scope, two target candidates, complete details, direct schedule 1, changeInfo 1
+- Profile-B schedule count equals Phase66 direct schedule count
+- rebuilt FixtureSetV3 and QualificationV3 identities equal both loaded manifest values and frozen Phase83 values
+- rebuilt `SourceProfileManifestV3.canonical_bytes()` is byte-identical to the loaded manifest
+- `validate_nar_race_entry_status_manifest_v3` and the exact V3 publication-plan validator both PASS
+
+The bundle preserves `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`, `market_eligibility = UNSUPPORTED`, `positive_market_eligibility = UNSUPPORTED`, and `WHOLE_MEETING_CANCELLATION = UNSUPPORTED`. It exposes no `historical_available`, `historical_bytes`, `market_eligible`, `positive_market_eligible`, or equivalent promoted field.
+
+The consumer must not import or call `normalize_nar_historical_input_source_records`, `build_historical_input_snapshot`, `resolve_sqlite_nar_daily_evidence`, `run_nar_daily_replay`, repository/database modules, requests/httpx/urllib openers/socket, provider acquisition, Phase44, or subprocess. A missing local fixture is a hard local failure with no network/provider fallback.
+
+### Failure authority
+
+The proposed module defines one base `NARRaceEntryStatusSourceProfileFixtureConsumerError` and four exact subclasses:
+
+- `NARRaceEntryStatusSourceProfileFixtureUnsupportedError`
+- `NARRaceEntryStatusSourceProfileFixtureFilesystemError`
+- `NARRaceEntryStatusSourceProfileFixtureManifestError`
+- `NARRaceEntryStatusSourceProfileFixtureAuthorityError`
+
+Stable internal classifications distinguish `UNSUPPORTED_TARGET`, `FILESYSTEM_VIOLATION`, `MISSING_FIXTURE`, `UNEXPECTED_FIXTURE_DIRECTORY_CONTENT`, `MANIFEST_INVALID`, `DOCUMENT_IDENTITY_MISMATCH`, `TARGET_OR_PATH_CONTRADICTION`, `FORMAL_AUTHORITY_VALIDATION_FAILURE`, and `FROZEN_PHASE83_IDENTITY_MISMATCH`. No failure is recovered, skipped, or converted to an empty bundle.
+
+### Implementation and verification result
+
+The production module now implements the approved exact loader, frozen/slotted bundle, stable single-read filesystem authority, strict canonical-manifest parsing, existing Profile-A/Profile-B/Safety/FixtureSet/Qualification/Manifest/Plan/Phase66 recomputation, and final Phase83 frozen-identity gate. Its public error hierarchy exposes stable fail-closed classifications for unsupported targets, filesystem and missing-fixture violations, unexpected directory content, manifest errors, raw-document contradictions, target/path contradictions, formal-authority failures, and frozen-identity mismatch.
+
+The focused test module covers valid and repeat loads, bundle type/immutability/path order, wrong type and target, relative/missing roots, missing files, V1/V2 no fallback, extra siblings, symlink/path escape/unstable identity, strict UTF-8/canonical/duplicate/non-finite JSON, manifest and raw mutations, independently reachable Profile-A/Profile-B/Safety/Phase66 failures, frozen alternate-identity rejection, CWD independence, and static no-network/no-DB/no-replay authority. Two symlink tests were conditionally skipped because link creation is unavailable in the current Windows environment; production rejection remains implemented and statically covered.
+
+Required results, in approved order:
+
+1. fixture consumer: `40 passed, 2 skipped`
+2. committed V3 fixture: `4 passed`
+3. publication contract: `49 passed`
+4. publication plan: `45 passed`
+5. Profile-A: `17 passed`
+6. Profile-B diagnostics: `38 passed`
+7. Phase66 structural diagnostics: `152 passed`
+8. full repository suite: `4427 passed, 2 skipped, 2841 subtests passed`
+
+The committed DebaTable, RaceList, and manifest were hashed before and after verification and remain exactly 313317 / 66307 / 4254 bytes with their frozen Phase83 SHA-256 values. Provider HTTP / Phase44 / GET remained `0 / 0 / 0`.
+
+### Allowed Files, Forbidden Files, Required Tests, Stop Condition
+
+Future implementation may change exactly:
+
+- CREATE `scripts/simulation/nar_race_entry_status_source_profile_fixture_consumer.py`
+- CREATE `tests/test_nar_race_entry_status_source_profile_fixture_consumer.py`
+- MODIFY `docs/CURRENT_PHASE.md`
+- MODIFY `docs/LATEST_CODEX_REPORT.md`
+
+Everything else is forbidden, including existing authority modules, all committed fixtures, the dedicated V3 fixture test, `.gitattributes`, database files, and logs. A need for a fifth path is `PHASE85_APPROVED_CONTRACT_SUPPORT_MISMATCH` and stops implementation.
+
+Required future test order:
+
+1. `python -m pytest -q tests/test_nar_race_entry_status_source_profile_fixture_consumer.py`
+2. `python -m pytest -q tests/test_nar_race_entry_status_source_profile_v3_fixtures.py`
+3. `python -m pytest -q tests/test_nar_race_entry_status_source_profile_publication_contract.py`
+4. `python -m pytest -q tests/test_nar_race_entry_status_source_profile_publication_plan.py`
+5. `python -m pytest -q tests/test_nar_race_entry_status_source_profile_diagnostics.py`
+6. `python -m pytest -q tests/test_nar_race_entry_status_source_profile_profile_a.py`
+7. `python -m pytest -q tests/test_nar_race_entry_status_source_profile_structural_recovery_diagnostics.py`
+8. full repository suite using the established command
+
+Focused coverage must include the valid committed load, repeated deterministic equality, exact target, V1/V2/no-fallback rejection, every missing file, unexpected sibling, manifest/raw/target/order/path/hash/length/identity/semantic mutations, Profile-A/Profile-B/Safety/Phase66 blocked cases, path escape/symlink/reparse/substitution where testable, static no-network/no-DB/no-replay imports, and CWD independence. Mutations use temporary repository-shaped copies only. Before and after tests, all committed fixture hashes/lengths must remain frozen.
+
+Implementation stops without staging/commit/push if any required check fails, a fifth path is needed, filesystem no-substitution cannot be proven, committed fixture identity changes, an existing authority must be weakened, or the consumer would need network, DB, replay, snapshot, identity-binding, or status-application behavior.
+
+### Readiness matrix
+
+| Item | Ready |
+| --- | --- |
+| A. Phase84 review frozen | YES |
+| B. Primary blocker fixed as V3_FIXTURE_CONSUMER_SUPPORT_REQUIRED | YES |
+| C. Exact published target closed | YES |
+| D. Canonical V3 path authority defined | YES |
+| E. No glob/version fallback | YES |
+| F. Stable filesystem read contract defined | YES |
+| G. Strict manifest parsing defined | YES |
+| H. Raw hash/length recomputation defined | YES |
+| I. Capture metadata reconstruction defined | YES |
+| J. Profile-A/B/Safety recomputation defined | YES |
+| K. FixtureSet/Qualification/Manifest recomputation defined | YES |
+| L. Phase66 structural check defined | YES |
+| M. Immutable bundle boundary defined | YES |
+| N. Historical semantic firewall defined | YES |
+| O. Historical normalizer/snapshot/replay excluded | YES |
+| P. Network/provider access excluded | YES |
+| Q. DB writes excluded | YES |
+| R. Negative mutation coverage defined | YES |
+| S. Committed fixture mutation prohibited | YES |
+| T. CWD independence defined | YES |
+| U. Future implementation exact four-path scope defined | YES |
+
+Provider HTTP / Phase44 / GET: `0 / 0 / 0`
+
+Production implementation: `YES`
+
+Tests implemented: `YES`
+
+Staging / commit / push: `PENDING / PENDING / PENDING`
+
+Next Action: `CHATGPT_REVIEW_PHASE85_IMPLEMENTATION`
+
+## Historical current-phase records
+
+## POST_V0_8_DAILY_REPLAY_84
+
+Title: Post-V3 Publication Replay-Consumer Dependency Audit
+
+Status: DRAFT_FOR_REVIEW
+
+Outcome: READY_FOR_ARCHITECTURAL_REVIEW
+
+Audit: POST_V3_PUBLICATION_REPLAY_CONSUMER_DEPENDENCY_AUDIT_COMPLETE
+
+Branch: `feature/post-v0.8-daily-replay`
+
+Starting HEAD/tree: `c6e06ac5331b2f056534efa58756383e587ec27e` / `e5ae14c7d4da34f83afb32e5d83c06bc30471167`
+
+Prior verification/state: `PHASE83_INTEGRATION_REMOTE_VERIFICATION_PASS`; `POST_V0_8_DAILY_REPLAY_83 = FORMALLY_COMPLETE`; `V3_SOURCE_PROFILE_PUBLICATION = FORMALLY_INTEGRATED`.
+
+This phase is a documentation-only architectural audit. It performs no provider HTTP, Phase44, GET, acquisition, fixture regeneration, live authorization, production/test implementation, staging, commit, or push.
+
+### Frozen V3 publication authority
+
+The integrated V3 artifacts remain unchanged:
+
+- DebaTable: 313317 bytes, SHA-256 `6c9aa3ea614c17e14f0e7a5050190ca923445925d67f8e61e71db95e87c87727`
+- RaceList: 66307 bytes, SHA-256 `1eb363621c7a152929765ff7ffecabea2d7cf15283d45fa9c31036527c0b53a1`
+- manifest: 4254 bytes, SHA-256 `3ca36ed4cec1002e0440fb02e466f40dd7f4d74ffb7c0bdf7b55be2271af321d`
+- dedicated V3 test: 10467 bytes, SHA-256 `a7339350be7e0724bd75408534a094c544bf6776eb57118e70ae6dd314e7b3ff`
+- FixtureSetV3: `nar-race-entry-status-source-profile-fixture-set-v3:11f18aae600df59ab90ce9cd3dd3614ff250698d783bcd96e6917cc38a8ab225`
+- QualificationV3: `nar-race-entry-status-source-profile-qualification-v3:a7f0ba5ed66a71f9785c80b1ba1b5f556b2328d09ead597839cc068a84b0d3ff`
+
+The authority remains `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`. `market_eligibility`, `positive_market_eligibility`, and `WHOLE_MEETING_CANCELLATION` remain `UNSUPPORTED`. The committed current-byte fixture does not establish historical provider availability or historical bytes.
+
+### Consumer path and symbol map
+
+| Path / symbol | Role | Accepted fixture / manifest versions | V3 support and fallback | Fail-closed / leakage finding |
+| --- | --- | --- | --- | --- |
+| `tests/test_nar_race_entry_status_source_profile_v3_fixtures.py::_recompute` | The only code that discovers the committed target paths, reads both HTML files and `manifest.json`, and recomputes the formal authority | Exact V3 paths and schema 3 manifest | V3 is explicit; no V1/V2 or network fallback; not accidental | Test-only. It preserves unsupported semantics and rejects contradictions, but is not a replay consumer. |
+| `scripts/simulation/nar_race_entry_status_source_profile_fixture_test_generator.py::render_nar_race_entry_status_source_profile_v3_fixture_test` | Generates the dedicated test from already supplied bytes plus formal V3 authority | Exact `SourceProfileManifestV3` and `SourceProfilePublicationPlanV3` | Explicit V3; no discovery or fallback | Pure renderer; cannot feed replay. |
+| `scripts/simulation/nar_race_entry_status_source_profile_fixture_test_preflight.py::run_nar_race_entry_status_source_profile_v3_fixture_test_preflight` | Runs the generated test against a synthetic external mirror | Synthetic V3 only | Explicit V3; no provider fallback | Validates renderer execution, not committed fixture consumption. |
+| `scripts/simulation/nar_race_entry_status_source_profile_publication_contract.py::{FixtureSetV3,QualificationV3,SourceProfileManifestV3,validate_nar_race_entry_status_manifest_v3}` | Formal V3 object and validation authority | V3 objects; separate V2 authority also exists | V3 explicit; caller must already construct the objects | No repository discovery, deserialization-to-replay, or fallback. |
+| `scripts/simulation/nar_race_entry_status_source_profile_publication_plan.py::{build_nar_race_entry_status_source_profile_publication_plan_v3,validate_nar_race_entry_status_source_profile_publication_plan_v3}` | Exact publication-path authority | V3 plan; separate V2 plan | V3 explicit | Publication authority only, not a read-side consumer. |
+| `scripts/simulation/nar_race_entry_status_reacquisition_observability.py::{validate_journal_bytes,validate_journal_semantics,reconstruct_execution}` | Phase50 durable evidence validation | Journal identities and dedicated-test paths for V1/V2/V3 | V3 explicitly allowed; no fixture-content fallback | Reconstructs acquisition/publication evidence, not replay input. |
+| `scripts/simulation/nar_daily_replay_orchestrator.py::run_nar_daily_replay` | Current NAR daily replay entry point | No source-profile fixture or manifest version | V3 is neither accepted nor accidentally discovered; no fixture fallback | Requires a daily-target acquisition result plus SQLite historical snapshot and settlement-capture stores. It never searches `source_profiles`. |
+| `scripts/simulation/sqlite_nar_daily_evidence_resolver.py::resolve_sqlite_nar_daily_evidence` | Resolves replay prediction and settlement evidence | SQLite snapshot/capture schemas, not source-profile fixtures | No V1/V2/V3 fixture support or fallback | Read-only and fail-closed for missing, ambiguous, noncausal, or mismatched evidence; prediction capture/cutoff must not exceed scheduled start. |
+| `scripts/simulation/historical_input_snapshot_simulation_adapter.py::build_simulation_race_input_from_historical_snapshot` | Converts a persisted historical snapshot to `SimulationRaceInput` | `HistoricalInputSnapshot`, not fixture manifests | No fixture support | Requires already bound internal race-entry IDs, odds, jockey, track, and past-race evidence. |
+| `scripts/simulation/nar_historical_input_source.py::normalize_nar_historical_input_source_records` | Pure normalization of a caller-supplied DebaTable response | Raw supplied response only; no source-profile manifest | No directory/version selection and no RaceList/manifest binding | Emits track/entry/jockey/win-odds records. Cancellation/status markers raise `NarHistoricalInputSourceUnsupportedError`; they are not silently skipped. Direct historical use without snapshot/cutoff authority would risk future leakage. |
+| `scripts/simulation/historical_input_snapshot_builder.py::build_historical_input_snapshot` | Builds a formal snapshot from normalized records and explicit external-to-internal mapping | Source-record contract, not fixtures | No fixture support | Requires complete `race_entry_id_by_external_entry_id`; record kinds have no entry-status member. |
+| `scripts/simulation/historical_input_source_records.py::SourceRecordKind` | Defines normalized historical source-record kinds | `track`, `entry`, `jockey`, `odds_win`, `past_race`, `past_race_absence` | No V3 concept | No withdrawal/non-run/status record exists, so status cannot silently become replay authority. |
+
+No production replay consumer currently reads NAR source-profile fixture directories. Consequently, no runtime consumer is merely V1/V2-only: the runtime read side is absent. V3 is explicit only in publication, validation, observability, generator, preflight, and the dedicated test. Repository search found no accidental runtime acceptance and no network fallback from replay to these artifacts.
+
+### Local-only trace for NAR / 21 / 2025-01-01 / 6
+
+1. **Fixture discovery — BLOCKED.** The four committed paths exist and the dedicated test knows their literal locations, but there is no production catalog/loader selecting a target and source-profile version.
+2. **Manifest validation — TEST-ONLY.** The dedicated V3 test reconstructs and validates V3 authority, but no reusable runtime loader exposes that result to replay.
+3. **Identity binding — NOT REACHED.** Existing snapshot construction requires an explicit mapping from NAR external race/entry identities to internal `race_id`/`race_entry_id`; the V3 fixture consumer path supplies none.
+4. **Entry/status consumption — NOT REACHED.** The current historical source record contract has no status kind, and the NAR normalizer fails closed on cancellation markers.
+5. **Replay input construction — NOT REACHED.** The replay adapter accepts only a complete historical snapshot with causal odds, jockey, track, and past-race evidence. Source-profile current bytes cannot be promoted to a historical snapshot.
+
+The first exact blocker is therefore:
+
+`V3_FIXTURE_CONSUMER_SUPPORT_REQUIRED`
+
+Identity binding, entry/status replay semantics, market eligibility, market-odds evidence, and official settlement evidence remain real later dependencies, but none precedes the missing read-side fixture consumer in this local-only trace.
+
+### Ordered dependency graph
+
+| Order | Node | Current status / existing authority | Missing authority and implementation dependency | Network / authorization |
+| --- | --- | --- | --- | --- |
+| 0 | Integrated V3 source profile | COMPLETE; exact four artifacts, manifest/test authority, binary attributes, and Phase83 integration are committed | None for publication | No network; no authorization |
+| 1 | Strict V3 fixture discovery and loading | MISSING; only the dedicated test uses literal paths | Repo-owned target/version catalog plus strict V3 loader that validates canonical manifest, roles, hashes, lengths, identities, and unsupported semantics and returns an immutable local bundle | No-network implementation possible first; no one-shot authorization |
+| 2 | Replay identity binding | PARTIAL; NAR external identities and snapshot builder mapping checks exist | Explicit authoritative binding from `NAR / 21 / 2025-01-01 / 6` and external entry IDs to internal race/race-entry IDs; no name matching | Can be designed/tested no-network; live authorization not inherently required |
+| 3 | Entry/status replay interpretation | MISSING; cancellation is explicitly unsupported and no status record kind exists | Approved status domain, mapping rules, withdrawal/non-run effect on entries and replay, and fail-closed tests | No-network contract/implementation possible first; no live authorization until new evidence is sought |
+| 4 | Causal historical replay input | PARTIAL; snapshot builder, repository, resolver, and adapter exist | Complete causal snapshot evidence for all required entries, odds, jockeys, track, and past races after applying approved status semantics | Local persisted evidence can be used no-network; acquiring absent evidence would need a separately authorized live phase |
+| 5 | Market eligibility and prediction odds | CLOSED AS UNSUPPORTED for this V3 profile; separate NAR market-odds capture/parser authorities exist | A future approved eligibility contract and causal captured market evidence; current fixture must not promote eligibility | No-network parser/adapter work may precede acquisition; any fresh capture needs authorization/network |
+| 6 | Official result/payout settlement evidence | Resolver and capture repositories exist; replay expects an eligible official capture | Exact target settlement capture must exist and pass cutoff/identity checks; source-profile fixture is not payout evidence | Existing archive is no-network; absent official evidence requires separately authorized acquisition |
+| 7 | Deterministic NAR replay | Orchestrator and simulation adapter exist | Nodes 1–6 must provide a complete executable resolution without fallback or future leakage | Replay itself can be no-network once evidence is complete |
+
+### Proposed Phase85 scope
+
+Phase85 should be a **no-network implementation phase** named `POST_V0_8_DAILY_REPLAY_85 — Strict Local V3 Source-Profile Fixture Consumer Authority`. It should close only node 1 and must not claim replay readiness.
+
+Proposed exact files:
+
+- CREATE `scripts/simulation/nar_race_entry_status_source_profile_fixture_consumer.py`
+- CREATE `tests/test_nar_race_entry_status_source_profile_fixture_consumer.py`
+- MODIFY `docs/CURRENT_PHASE.md`
+- MODIFY `docs/LATEST_CODEX_REPORT.md`
+
+The proposed module should expose an immutable V3 local bundle and one strict loader accepting an explicit repository root and exact target. It must select only the canonical V3 path, reject V1/V2/unknown/fallback candidates, read bytes once, validate strict UTF-8 canonical manifest bytes through existing V3 authority, recompute roles/hashes/lengths/Profile-A/Profile-B/Safety/FixtureSetV3/QualificationV3, preserve `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET` and all `UNSUPPORTED` fields, and return original bytes plus validated identities. It must perform no network, database writes, identity binding, snapshot creation, entry-status interpretation, market promotion, or replay execution.
+
+Tests should cover exact target discovery, missing/extra/ambiguous paths, V1/V2/unknown rejection, manifest/raw mutation, role/path/target/identity mismatch, no fallback, no network, unchanged raw bytes, and explicit unsupported semantics. Any need to modify an existing authority module should stop as a design-support mismatch.
+
+Provider HTTP / Phase44 / GET: `0 / 0 / 0`
+
+Authorization issued: `NONE`
+
+Next Action: `CHATGPT_REVIEW_PHASE84_REPLAY_CONSUMER_DEPENDENCY_AUDIT`
+
+## Historical current-phase records
+
 ## POST_V0_8_DAILY_REPLAY_83
 
 Title: No-Network Integration of Reviewed Phase82 V3 Publication Delta
