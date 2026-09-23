@@ -1,32 +1,113 @@
 # Current Phase
 
-## POST_V0_8_DAILY_REPLAY_96
+## POST_V0_8_DAILY_REPLAY_97
 
-Title: NAR Historical Replay Prediction-Cutoff Coherence Implementation
+Title: Outcome-Independent NAR Prediction-Cutoff Policy and Plan Production
 
 Formal Status: READY_FOR_REVIEW
 
-Design Review: PHASE96_PREDICTION_CUTOFF_DESIGN_REVIEW_PASS
+Design Review: PHASE97_PREDICTION_CUTOFF_POLICY_DESIGN_REVIEW_PASS
 
-Base Commit and Branch: `3a8bb363838110d5b918829e19e97fef1718fdaf` / `feature/post-v0.8-daily-replay`
+Base Commit and Branch: `974808ee888de36bbdbf5f409922ccb21038ba67` / `feature/post-v0.8-daily-replay`
 
 State: IMPLEMENTED_FOR_REVIEW
 
 Outcome: READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW
 
-Audit: PREDICTION_CUTOFF_COHERENCE_AUDIT_COMPLETE
+Audit: OUTCOME_INDEPENDENT_PREDICTION_CUTOFF_POLICY_DESIGN_COMPLETE
 
-Authorization: NONE_REQUIRED_NO_NETWORK_IMPLEMENTATION
+Authorization: APPROVED_FOR_IMPLEMENTATION
 
-Implementation: NAR_PREDICTION_CUTOFF_PLAN_AND_V017_PROVENANCE_IMPLEMENTED
+Implementation: NAR_FIXED_OFFSET_PREDICTION_CUTOFF_POLICY_AND_PLAN_PRODUCER_IMPLEMENTED
 
-Implementation evidence: the separate immutable cutoff plan binds the exact target set, closed policy identity, ordered per-target C values, canonical JSON, and SHA-256. Phase93 requires exact-C temporal coverage; the SQLite resolver selects prediction snapshots at C while settlement remains independent. The orchestration result retains the plan and its audit SHA binds the plan SHA. v017 adds an immutable one-to-one companion without altering v016 objects or legacy rows; new parent/companion publication is atomic. Strict aggregation rejects selected legacy rows and compares cutoff policy identities, not daily plan SHAs.
+### Phase96 formal reconciliation
 
-Validation: focused plan 4 passed; Phase93 8 passed/5 subtests; resolver 27 passed/38 subtests; orchestrator 23 passed/11 subtests; persistence 12 passed/12 subtests; result repository 26 passed/19 subtests; aggregation 22 passed; historical migration 11 passed; simulation migrations 22 passed/10 subtests. Final full suite: 4,528 passed, 2 skipped, 2,846 subtests passed. Provider HTTP / Phase44 / GET: 0 / 0 / 0. No production database writes, live replay, source acquisition, Phase97 timing policy, or authority issuer. Three additional regression-test paths only update exact migration-registry expectations for v017.
+`PHASE96_IMPLEMENTATION_REMOTE_VERIFICATION_PASS` is frozen. `POST_V0_8_DAILY_REPLAY_96 = FORMALLY_COMPLETE`; `NAR_PREDICTION_CUTOFF_PLAN_AND_V017_PROVENANCE = FORMALLY_INTEGRATED`; and `PHASE93_CUTOFF_CONTRACT_REQUIRES_HARDENING = RESOLVED_BY_PHASE96`.
+
+The completed Phase96 contract already owns exact C validation, resolver propagation, Phase93 temporal comparison, orchestration/audit binding, v017 companion provenance, and strict aggregation. It does not select C. The historical material below is explicitly a pre-Phase96 architecture record and is not a current Phase93 defect.
 
 Branch: `feature/post-v0.8-daily-replay`
 
-Starting HEAD/tree: `3a8bb363838110d5b918829e19e97fef1718fdaf` / `19986e75e450150032e631fe4dac111d3e59e581`
+Starting HEAD/tree: `974808ee888de36bbdbf5f409922ccb21038ba67` / `d18e8350781ed05b9322e59f76737cdbee4c00ac`
+
+### Phase97 implementation result
+
+The immutable/slotted `NARHistoricalReplayPredictionCutoffPolicy` fixes NAR/nar_official, `FIXED_OFFSET_BEFORE_SCHEDULED_START`, the reviewed scheduled-start basis, and versioned boundary semantics. One positive exact integer `offset_microseconds` is validated for exact `timedelta` representability; no operational value or maximum is selected. Canonical UTF-8 JSON uses sorted keys, compact separators, `ensure_ascii=False`, and `allow_nan=False`. SHA-256 of those bytes derives `nar-prediction-cutoff-policy-v1:<digest>`; callers cannot supply a detached identity.
+
+The pure keyword-only producer creates the existing Phase96 `NARHistoricalReplayPredictionCutoffPlan` for the exact canonical target set, using `C = scheduled_start_at - timedelta(microseconds=offset_microseconds)` for every target. It reuses Phase96 validation. No network, filesystem, clock, SQLite, snapshot, odds, status, result, payout, settlement, replay, or persistence authority was added.
+
+`POLICY_IDENTITY != PRE_OUTCOME_POLICY_AUTHORITY` remains explicit. The policy and producer prove semantics and deterministic derivation, not authorization time. A retrospective plan without separately reviewed pre-outcome activation provenance remains `PREDICTION_CUTOFF_POLICY_PROVENANCE_UNAVAILABLE` for strict historical use. Phase96 orchestrator, resolver, eligibility, persistence, aggregation, and v017 contracts are unchanged. `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT` remains unresolved.
+
+Validation: new focused policy test `19 passed`; Phase96 cutoff-plan `4 passed`; historical replay eligibility `8 passed, 5 subtests`; SQLite daily evidence resolver `27 passed, 38 subtests`; NAR daily replay orchestrator `23 passed, 11 subtests`; full repository suite `4,547 passed, 2 skipped, 2,846 subtests passed`. The skips are existing platform-conditional cases. Phase97 changed paths are exactly the new policy module, its focused test, and these two phase-control documents. Production policy DB writes and Provider HTTP / Phase44 / GET are `0` / `0 / 0 / 0`.
+
+### Phase97 finding and policy boundary
+
+Primary finding: `OUTCOME_INDEPENDENT_FIXED_OFFSET_POLICY_REQUIRES_OPERATIONAL_PARAMETER_APPROVAL`. The approved policy family is a fixed offset: `C = scheduled_start_at - Δ`, where one immutable policy applies to every target in the exact canonical target set. It is deterministic, outcome-independent, race-order independent, and fits Phase96 without changing provider target/denominator identity.
+
+Architecture verdict: the fixed-offset policy mechanism is implementable as a pure plan producer, while strict historical admissibility authorization remains future-gated. Concrete blocker: `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`. No concrete initial `Δ` is frozen in Phase97. The repository proves schedule identity and C propagation but contains no pre-outcome operational measurement of capture latency, prediction/bet-plan duration, concurrency under overlapping races, provider throttling/retry behavior, clock synchronization, or provider delivery margin. An arbitrary offset would be a disguised unreviewed operating policy. A later operational timing audit must choose a positive fixed duration before a prospective shadow scheduler is authorized.
+
+### Fixed-offset policy semantics and canonical identity
+
+Future `NARHistoricalReplayPredictionCutoffPolicy` is frozen/slotted and is only a deterministic semantic specification. Its canonical UTF-8 NFC JSON contains exactly versioned semantic material: `schema_version`; `organization=NAR`; `source_system=nar_official`; closed `policy_kind=FIXED_OFFSET_BEFORE_SCHEDULED_START`; `offset_microseconds`; closed `scheduled_start_basis=DAILY_HISTORICAL_REPLAY_TARGET_SCHEDULED_START_AT_V1`; and a versioned `boundary_semantics=C_EQUALS_SCHEDULED_START_AT_MINUS_OFFSET`. It excludes race result, payout, odds, evidence availability, status change, ROI, database state, current clock, run ID, and race-specific overrides. JSON uses `ensure_ascii=False`, `allow_nan=False`, sorted keys, and compact separators. `SHA256(canonical policy JSON bytes)` produces the sole public identity `nar-prediction-cutoff-policy-v1:<policy_sha256>`.
+
+`offset_microseconds` is an exact built-in `int`, with `bool` rejected, and must be strictly greater than zero. Float, `Decimal`, free-form duration text, and a per-target value are invalid. Phase97 defines neither an operational maximum nor a concrete offset. Any material semantic change, including the offset, changes the policy SHA/identity; duration is timezone-independent because its canonical representation is integer microseconds.
+
+Frozen invariant: `POLICY_IDENTITY != PRE_OUTCOME_POLICY_AUTHORITY`. Policy semantics answer what rule computes C; policy identity content-addresses that rule; authorization/activation provenance independently proves when it was frozen for a relevant use. A SHA can be computed after results are known and never proves pre-outcome selection by itself.
+
+The pure producer `build_nar_historical_replay_prediction_cutoff_plan(*, target_set, policy)` accepts only the exact canonical `DailyHistoricalReplayTargetSet` and exact NAR policy. It traverses exact canonical target order and produces the existing Phase96 plan with each `C = target.scheduled_start_at - timedelta(microseconds=policy.offset_microseconds)`. Its `cutoff_policy_identity` is derived from that policy object; callers never independently supply an opaque identity string plus offset. Missing start, nonpositive/malformed duration, unsupported provider/policy, target omission, extra/duplicate target, or target-set contradiction fails closed. It reads no database, snapshot, status authority, odds, result, payout, settlement, wall clock, or network source; it has no target-specific override or evidence-dependent fallback. Same target set plus same policy produces identical plan bytes/SHA; a material policy difference yields a different policy identity and, when its offset differs, a different C/plan SHA.
+
+### Historical authorization is a separate later gate
+
+The Phase97 policy and producer do not issue pre-outcome policy authority. A newly derived valid plan is `DETERMINISTIC_RETROSPECTIVE_PLAN` unless it carries independently auditable pre-outcome policy authorization/activation provenance or equivalent previously frozen pre-outcome plan provenance. Without either, strict historical use stays fail closed as `PREDICTION_CUTOFF_POLICY_PROVENANCE_UNAVAILABLE`. Determinism, a valid SHA, fixed offset, executable resolution, or favorable ROI cannot retrospectively authorize it.
+
+### Anti-hindsight, shadow, and historical-admissibility rules
+
+The policy and resulting plan must be frozen before resolver invocation and before any outcome information. They may not be selected or adjusted using evidence availability, later withdrawals, later odds, result, payout, profitability, replay success, or executable status. “Use a different C when a preferred snapshot is absent” is prohibited.
+
+For prospective shadow operation, an operational Δ is approved first; target schedule is obtained; target set plus approved policy deterministically produce C and the plan; the plan is frozen before evidence resolution; then a future scheduler acquires and predicts within the precomputed deadline window before outcomes arrive. The scheduler must retain its separate activation/provenance record. Phase97 neither designs that scheduler nor performs capture. Historical use is admissible only with independently auditable pre-outcome policy activation or previously frozen plan provenance. Constructing a new plan after inspecting archives cannot make a replay eligible.
+
+### Orchestrator integration decision
+
+Phase97 chooses architecture **A**: add only the pure policy plus plan producer. The completed Phase96 `run_nar_daily_replay(...)` already accepts and retains an exact, target-set-bound cutoff plan; its resolver, eligibility, audit, persistence, and aggregation contracts consume that plan. Requiring an extra policy object there would not establish its pre-outcome authorization and would expand established APIs without closing the missing provenance boundary. A later reviewed policy-provenance/shadow-operation phase must enforce activation provenance before an official strict historical/ROI path can rely on a plan. Thus a syntactically valid Phase96 plan is not, by itself, historical admissibility authority.
+
+Phase94/95 remain `HISTORICAL_ENTRY_STATUS_AUTHORITY_ISSUER_BLOCKED_SOURCE_SEMANTICS` and `PROSPECTIVE_NAR_ENTRY_STATUS_AUTHORITY_CAPTURE_BLOCKED_SOURCE_SEMANTICS`. Phase41 remains `NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE`; market eligibility, positive market eligibility, odds authority, and whole-meeting cancellation remain unsupported.
+
+### Expected Phase97 implementation scope
+
+Create `scripts/simulation/nar_historical_replay_prediction_cutoff_policy.py` and `tests/test_nar_historical_replay_prediction_cutoff_policy.py`; modify only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`. The policy module produces the existing fully validated Phase96 plan type and does not assert authorization provenance. Therefore no resolver, orchestrator, persistence, aggregation, target-discovery, scheduler, migration, or database path changes are required for this narrow semantic mechanism.
+
+Required eventual tests: deterministic canonical policy bytes/SHA/public identity; timezone irrelevance to offset representation; exact `int` required with bool/zero/negative/float/free-form duration rejection; material offset change changes policy SHA/identity; same exact target set/policy produces identical plan; changed offset changes plan SHA; every C is exact start-minus-offset; canonical target order and missing start failure; no network, DB, clock, snapshot, status, odds, result, payout, or settlement access; no per-target override/fallback; plan identity exactly equals the derived policy identity; no API permits contradictory detached identity/offset; producer does not claim pre-outcome authorization; and deterministic scheduler-facing consumption.
+
+### Historical Phase97 PREPARE scope
+
+At the PREPARE stage, the audit changed only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`. The subsequent independent architectural review passed and authorized the narrow implementation recorded above.
+
+The earlier recommendation was to request architectural review of the pure semantic producer while leaving Δ and pre-outcome authorization unresolved. That review passed; Phase97 now awaits independent implementation review.
+
+### Phase97 Approved Implementation Contract (executed)
+
+The independent architectural review passed: `PHASE97_PREDICTION_CUTOFF_POLICY_DESIGN_REVIEW_PASS`. The approved implementation is the pure fixed-offset policy domain and deterministic Phase96 plan producer only. Concrete Δ, policy activation provenance, scheduler, and live acquisition remain outside this implementation.
+
+### Phase97 Allowed Files
+
+- `scripts/simulation/nar_historical_replay_prediction_cutoff_policy.py`
+- `tests/test_nar_historical_replay_prediction_cutoff_policy.py`
+- `docs/CURRENT_PHASE.md`
+- `docs/LATEST_CODEX_REPORT.md`
+
+### Phase97 Forbidden Files
+
+Every other path, including Phase96 orchestrator, resolver, eligibility, persistence, aggregation, result repository, v017 migration, migration runner, provider target discovery, database, fixtures, and logs.
+
+### Phase97 Required Tests and Checks
+
+Run the new focused policy test; existing Phase96 cutoff-plan, historical replay eligibility, SQLite daily evidence resolver, and NAR daily replay orchestrator tests; then the full repository pytest suite. All must pass. Run `git diff --check`, inspect `git status --short`, and verify exact changed paths before the approved commit and normal push.
+
+### Phase97 Stop Condition
+
+Stop if the baseline advances, an unexpected non-doc change exists, an out-of-scope production path is required, the pure contract cannot be implemented without a forbidden dependency, a concrete Δ or historical authority would need to be fabricated, a required test fails outside approved scope, or push would require force.
+
+### Historical pre-Phase96 architecture record (superseded)
 
 ### Phase95 reconciliation
 
@@ -47,7 +128,7 @@ The frozen contract is therefore model **A**: deterministically select everythin
 
 ### Final architectural revision — separate cutoff-plan authority
 
-Primary classification: `PREDICTION_CUTOFF_MODEL_REQUIRES_EXPLICIT_CUTOFF`. Phase93 compatibility remains `PHASE93_CUTOFF_CONTRACT_REQUIRES_HARDENING`.
+Historical pre-Phase96 classification: `PREDICTION_CUTOFF_MODEL_REQUIRES_EXPLICIT_CUTOFF`; its Phase93 compatibility finding was `PHASE93_CUTOFF_CONTRACT_REQUIRES_HARDENING`. Both are superseded by the completed Phase96 implementation: `PHASE93_CUTOFF_CONTRACT_REQUIRES_HARDENING = RESOLVED_BY_PHASE96`.
 
 `DailyHistoricalReplayTarget` and `DailyHistoricalReplayTargetSet` remain provider-discovered denominator/acquisition authority. They must not gain `prediction_information_cutoff`: the same exact target-set content SHA remains reusable under independently selected replay policies. Target-set identity answers *which provider races form the denominator*; cutoff-plan identity answers *which causal evidence boundary an experiment applies to that denominator*.
 
@@ -117,7 +198,7 @@ Required eventual coverage includes: same target set plus different C gives diff
 
 Phase41 remains unresolved: `NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE`. `PROSPECTIVE_NAR_ENTRY_STATUS_AUTHORITY_CAPTURE_BLOCKED_SOURCE_SEMANTICS`, `market_eligibility = UNSUPPORTED`, `positive_market_eligibility = UNSUPPORTED`, and `WHOLE_MEETING_CANCELLATION = UNSUPPORTED` remain unchanged.
 
-### Allowed Files
+### Historical Phase96 Allowed Files
 
 - `scripts/simulation/nar_historical_replay_prediction_cutoff.py`
 - `scripts/simulation/sqlite_nar_daily_evidence_resolver.py`
@@ -143,19 +224,19 @@ Phase41 remains unresolved: `NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_S
 - `docs/CURRENT_PHASE.md`
 - `docs/LATEST_CODEX_REPORT.md`
 
-### Forbidden Files
+### Historical Phase96 Forbidden Files
 
 Every other path, including provider target discovery, historical target identity, snapshot schemas, settlement domains, fixtures, capture archives, `database/**`, and `logs/**`.
 
-### Required Tests and Checks
+### Historical Phase96 Required Tests and Checks
 
 Run the new cutoff-plan test and focused Phase93, resolver, orchestrator, persistence, SQLite repository, aggregation, v017 migration and simulation migration tests; then run the full repository pytest suite. All must pass. Require `git diff --check`, exact scope audit, and `git status --short` before the approved one-commit normal push.
 
-### Stop Condition
+### Historical Phase96 Stop Condition
 
 Stop if the remote baseline advances, an unapproved path or provider-denominator change is required, a fail-closed invariant cannot be represented, or a required test fails outside the approved scope. No Phase97 policy, authority issuer, or live acquisition is included.
 
-Next: `CHATGPT_REVIEW_PHASE96_IMPLEMENTATION`
+Current next action: `CHATGPT_REVIEW_PHASE97_IMPLEMENTATION`
 
 ---
 
