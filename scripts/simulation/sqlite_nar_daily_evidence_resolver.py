@@ -24,6 +24,10 @@ from scripts.simulation.historical_input_snapshots import (
     HistoricalExternalRaceIdentity as _External, HistoricalSourceIdentity as _Source,
     HistoricalInputSnapshotIdentity as _Identity, HistoricalInputSnapshot as _Snapshot,
 )
+from scripts.simulation.nar_historical_replay_prediction_cutoff import (
+    NARHistoricalReplayPredictionCutoffPlan as _CutoffPlan,
+    validate_nar_historical_replay_prediction_cutoff_plan as _validate_plan,
+)
 from scripts.simulation.nar_official_response_capture import (
     canonicalize_nar_official_capture_url as _canonical_url,
     NAROfficialPageKind as _Kind, NAROfficialResponseCapture as _Capture,
@@ -192,7 +196,7 @@ class _SnapshotMetadata:
     digest: str
 
 
-def _prediction(connection: _sqlite3.Connection, repository: _Snapshots, target: _Target, dataset: str, target_date: _date):
+def _prediction(connection: _sqlite3.Connection, repository: _Snapshots, target: _Target, dataset: str, target_date: _date, prediction_cutoff: _datetime):
     external = _External("NAR", "nar_official", target.external_race_id)
     key = (external.organization, external.source_system, external.external_race_id)
     mapped = list(connection.execute(
@@ -228,7 +232,7 @@ def _prediction(connection: _sqlite3.Connection, repository: _Snapshots, target:
             identity = _Identity(dataset, _Source(*key, url), captured)
         except ValueError as error:
             raise _Integrity("invalid snapshot identity metadata") from error
-        if captured <= target.scheduled_start_at and cutoff <= target.scheduled_start_at:
+        if captured <= prediction_cutoff and cutoff <= prediction_cutoff:
             eligible.append(_SnapshotMetadata(identity, internal, cutoff, digest))
     latest = None
     if eligible:
@@ -238,7 +242,7 @@ def _prediction(connection: _sqlite3.Connection, repository: _Snapshots, target:
             raise _Integrity("ambiguous greatest snapshot")
         latest = winners[0]
     loaded = repository.load_latest_snapshot(
-        dataset_id=dataset, race_id=internal, information_cutoff=target.scheduled_start_at, source_identity=external)
+        dataset_id=dataset, race_id=internal, information_cutoff=prediction_cutoff, source_identity=external)
     if latest is None:
         if loaded is not None:
             raise _Integrity("metadata/latest not-found disagreement")
@@ -355,10 +359,12 @@ def _disposition(reasons: tuple[str, ...]) -> _Disposition:
 def resolve_sqlite_nar_daily_evidence(
     *, target_set: _TargetSet, dataset_id: str, settlement_information_cutoff: _datetime,
     snapshot_connection: _sqlite3.Connection, capture_connection: _sqlite3.Connection,
+    prediction_cutoff_plan: _CutoffPlan,
 ) -> _Resolution:
     """Resolve every audited target, or raise without returning a partial day."""
     if type(target_set) is not _TargetSet:
         raise ValueError("target_set must be an audited exact target-set value")
+    plan = _validate_plan(plan=prediction_cutoff_plan, target_set=target_set)
     dataset = _text(dataset_id)
     cutoff = _utc(settlement_information_cutoff)
     if target_set.provider_scope.providers != (_NAR,) or not target_set.target_races:
@@ -387,11 +393,11 @@ def resolve_sqlite_nar_daily_evidence(
         _schema(capture_connection, _ARCHIVE, {"nar_official_response_captures": (_ARCHIVE_KEY,)})
         metadata = _capture_metadata(capture_connection)
         outcomes = []
-        for target in target_set.target_races:
+        for target, cutoff_decision in zip(target_set.target_races, plan.decisions, strict=True):
             reasons = _native_reasons(target, target_set.target_date)
             internal, snapshot, reference = None, None, None
             if not reasons:
-                internal, snapshot, prediction_reasons = _prediction(snapshot_connection, snapshots, target, dataset, target_set.target_date)
+                internal, snapshot, prediction_reasons = _prediction(snapshot_connection, snapshots, target, dataset, target_set.target_date, cutoff_decision.prediction_information_cutoff)
                 reference, settlement_reasons = _settlement(metadata, captures, target, cutoff)
                 reasons = (*prediction_reasons, *settlement_reasons)
             outcomes.append(_Outcome(

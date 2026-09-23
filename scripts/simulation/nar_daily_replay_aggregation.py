@@ -19,6 +19,9 @@ from scripts.simulation.nar_daily_replay_orchestrator import (
 from scripts.simulation.nar_daily_replay_result_persistence import (
     PersistedNARDailyReplayResult as _PersistedResult,
 )
+from scripts.simulation.nar_historical_replay_prediction_cutoff import (
+    validate_nar_historical_replay_prediction_cutoff_plan_json as _validate_plan_json,
+)
 from scripts.simulation.repositories.errors import (
     RepositoryDataIntegrityError as _RepositoryDataIntegrityError,
     RepositoryValidationError as _RepositoryValidationError,
@@ -37,7 +40,7 @@ __all__ = (
 
 
 _SELECTION_VERSION = "nar-daily-replay-aggregation-selection-v1"
-_RESULT_VERSION = "nar-daily-replay-aggregation-result-v1"
+_RESULT_VERSION = "nar-daily-replay-aggregation-result-v2"
 _SHA256 = _re.compile(r"[0-9a-f]{64}\Z")
 _PROVIDER = ("NAR", "nar_official")
 
@@ -175,6 +178,7 @@ def _result_payload(value: NARDailyReplayAggregationResult) -> dict[str, object]
             "void_race_count": value.void_race_count,
         },
         "compatibility": {
+            "cutoff_policy_identity": value.cutoff_policy_identity,
             "dataset_id": value.dataset_id,
             "organization": value.organization,
             "race_budget_total_amount": value.race_budget_total_amount,
@@ -201,6 +205,7 @@ def _result_payload(value: NARDailyReplayAggregationResult) -> dict[str, object]
             "persisted_content_sha256s": list(
                 value.selection.persisted_content_sha256s
             ),
+            "prediction_cutoff_plan_sha256s": list(value.prediction_cutoff_plan_sha256s),
             "selection_sha256": value.selection_sha256,
         },
         "version": _RESULT_VERSION,
@@ -218,6 +223,8 @@ class NARDailyReplayAggregationResult:
     organization: str
     source_system: str
     dataset_id: str
+    cutoff_policy_identity: str
+    prediction_cutoff_plan_sha256s: tuple[str, ...]
     selection_policy: str
     settlement_information_cutoff: _datetime
     strategy_id: str
@@ -277,6 +284,7 @@ class NARDailyReplayAggregationResult:
 
         previous_date: _date | None = None
         compatibility: tuple[object, ...] | None = None
+        plan_sha256s: list[str] = []
         for identity, record in zip(selection.persisted_content_sha256s, records):
             if (
                 type(record) is not _PersistedResult
@@ -285,6 +293,17 @@ class NARDailyReplayAggregationResult:
                 raise _RepositoryDataIntegrityError(
                     "selected record identity disagrees with the exact selection"
                 )
+            if record.prediction_cutoff_plan_json is None or record.prediction_cutoff_plan_sha256 is None:
+                raise _RepositoryValidationError("PREDICTION_CUTOFF_PROVENANCE_UNAVAILABLE")
+            try:
+                _validate_plan_json(
+                    canonical_json=record.prediction_cutoff_plan_json,
+                    plan_sha256=record.prediction_cutoff_plan_sha256,
+                    target_set_content_sha256=record.target_set_content_sha256,
+                )
+            except ValueError as error:
+                raise _RepositoryDataIntegrityError("selected cutoff plan is invalid") from error
+            plan_sha256s.append(record.prediction_cutoff_plan_sha256)
             if previous_date is not None and record.target_date <= previous_date:
                 if record.target_date == previous_date:
                     raise _RepositoryValidationError(
@@ -344,6 +363,8 @@ class NARDailyReplayAggregationResult:
             "organization": first.organization,
             "source_system": first.source_system,
             "dataset_id": first.dataset_id,
+            "cutoff_policy_identity": _json.loads(first.prediction_cutoff_plan_json)["cutoff_policy_identity"],
+            "prediction_cutoff_plan_sha256s": tuple(plan_sha256s),
             "selection_policy": first.selection_policy,
             "settlement_information_cutoff": first.settlement_information_cutoff,
             "strategy_id": first.strategy_id,
@@ -403,6 +424,7 @@ class NARDailyReplayAggregationResult:
             raise _RepositoryValidationError("aggregate provider must be exact NAR/nar_official")
         for name in (
             "dataset_id",
+            "cutoff_policy_identity",
             "selection_policy",
             "strategy_id",
             "strategy_name",
@@ -410,6 +432,10 @@ class NARDailyReplayAggregationResult:
         ):
             _text(getattr(self, name), name)
         _digest(self.strategy_config_hash, "strategy_config_hash")
+        if type(self.prediction_cutoff_plan_sha256s) is not tuple or len(self.prediction_cutoff_plan_sha256s) != len(self.selection.persisted_content_sha256s):
+            raise _RepositoryValidationError("cutoff plan identities must cover the selection")
+        for value in self.prediction_cutoff_plan_sha256s:
+            _digest(value, "prediction cutoff plan identity")
         object.__setattr__(
             self,
             "settlement_information_cutoff",
@@ -535,12 +561,16 @@ class NARDailyReplayAggregationResult:
 
 
 def _compatibility(record: _PersistedResult) -> tuple[object, ...]:
+    if record.prediction_cutoff_plan_json is None:
+        raise _RepositoryValidationError("PREDICTION_CUTOFF_PROVENANCE_UNAVAILABLE")
+    policy = _json.loads(record.prediction_cutoff_plan_json)["cutoff_policy_identity"]
     return (
         record.schema_version,
         record.organization,
         record.source_system,
         record.dataset_id,
         record.selection_policy,
+        policy,
         record.settlement_information_cutoff,
         record.strategy_id,
         record.strategy_name,

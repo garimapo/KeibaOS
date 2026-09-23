@@ -11,12 +11,17 @@ from scripts.simulation.historical_daily_targets import (
     DailyHistoricalReplayTarget as _Target,
     DailyHistoricalReplayTargetSet as _TargetSet,
 )
+from scripts.simulation.nar_historical_replay_prediction_cutoff import (
+    NARHistoricalReplayPredictionCutoffPlan as _CutoffPlan,
+    validate_nar_historical_replay_prediction_cutoff_plan as _validate_plan,
+)
 
 
 __all__ = (
     "NARHistoricalEntryStatusAuthority",
     "NARHistoricalEntryStatusAuthoritySet",
     "NARHistoricalEntryStatusCoverage",
+    "NARHistoricalEntryStatusTemporalCoverage",
     "NARHistoricalEntryStatusTimestampProvenance",
     "NARHistoricalReplayEligibilityDecision",
     "NARHistoricalReplayEligibilityResolution",
@@ -81,6 +86,11 @@ class NARHistoricalEntryStatusTimestampProvenance(_StrEnum):
     INDEPENDENT_ARCHIVE_OBSERVATION = "INDEPENDENT_ARCHIVE_OBSERVATION"
 
 
+class NARHistoricalEntryStatusTemporalCoverage(_StrEnum):
+    STATUS_OBSERVED_AT_CAPTURE_TIME = "STATUS_OBSERVED_AT_CAPTURE_TIME"
+    STATUS_VALID_THROUGH_PREDICTION_CUTOFF = "STATUS_VALID_THROUGH_PREDICTION_CUTOFF"
+
+
 class NARHistoricalReplayEligibilityState(_StrEnum):
     ELIGIBLE_WITH_PRE_CUTOFF_ENTRY_STATUS_AUTHORITY = "ELIGIBLE_WITH_PRE_CUTOFF_ENTRY_STATUS_AUTHORITY"
     BLOCKED_ENTRY_STATUS_AUTHORITY_UNAVAILABLE = "BLOCKED_ENTRY_STATUS_AUTHORITY_UNAVAILABLE"
@@ -99,6 +109,9 @@ class NARHistoricalEntryStatusAuthority:
     coverage_semantic: NARHistoricalEntryStatusCoverage
     entry_universe_identity: str
     covered_entry_universe_identity: str
+    temporal_coverage: NARHistoricalEntryStatusTemporalCoverage = NARHistoricalEntryStatusTemporalCoverage.STATUS_OBSERVED_AT_CAPTURE_TIME
+    valid_through_at: _datetime | None = None
+    validity_proof_identity: str | None = None
 
     def __post_init__(self) -> None:
         _nar_target(self.target)
@@ -126,6 +139,19 @@ class NARHistoricalEntryStatusAuthority:
             raise ValueError("archive availability must equal its independent observation")
         object.__setattr__(self, "available_at", available)
         object.__setattr__(self, "observed_at", observed)
+        if type(self.temporal_coverage) is not NARHistoricalEntryStatusTemporalCoverage:
+            raise ValueError("temporal coverage must be an exact closed value")
+        if self.temporal_coverage is NARHistoricalEntryStatusTemporalCoverage.STATUS_OBSERVED_AT_CAPTURE_TIME:
+            if self.valid_through_at is not None or self.validity_proof_identity is not None:
+                raise ValueError("capture-time observation cannot claim future validity")
+        else:
+            if self.valid_through_at is None or self.validity_proof_identity is None:
+                raise ValueError("valid-through coverage requires explicit proof and bound")
+            through = _utc(self.valid_through_at, "valid_through_at")
+            if through < observed:
+                raise ValueError("valid-through bound cannot precede observation")
+            _text(self.validity_proof_identity, "validity_proof_identity")
+            object.__setattr__(self, "valid_through_at", through)
 
 
 @_dataclass(frozen=True, slots=True)
@@ -195,9 +221,11 @@ class NARHistoricalReplayEligibilityResolution:
 
 def resolve_nar_historical_replay_eligibility(
     *, target_set: _TargetSet, historical_entry_status_authorities: NARHistoricalEntryStatusAuthoritySet,
+    prediction_cutoff_plan: _CutoffPlan,
 ) -> NARHistoricalReplayEligibilityResolution:
     """Resolve only explicit pre-cutoff complete status authority, without I/O."""
     targets = _target_set(target_set)
+    plan = _validate_plan(plan=prediction_cutoff_plan, target_set=targets)
     supplied = historical_entry_status_authorities
     if type(supplied) is not NARHistoricalEntryStatusAuthoritySet or supplied.target_set is not targets:
         raise ValueError("historical authority must retain the exact canonical target set")
@@ -210,12 +238,18 @@ def resolve_nar_historical_replay_eligibility(
     )
     by_key = {_key(item.target): item for item in supplied.authorities}
     decisions = []
-    for target in targets.target_races:
+    for target, cutoff_decision in zip(targets.target_races, plan.decisions, strict=True):
         authority = by_key.get(_key(target))
-        start = target.scheduled_start_at
+        cutoff = cutoff_decision.prediction_information_cutoff
         eligible = (
-            authority is not None and start is not None
-            and authority.available_at <= start and authority.observed_at <= start
+            authority is not None
+            and authority.available_at <= cutoff and authority.observed_at <= cutoff
+            and (
+                (authority.temporal_coverage is NARHistoricalEntryStatusTemporalCoverage.STATUS_OBSERVED_AT_CAPTURE_TIME
+                 and authority.observed_at == cutoff)
+                or (authority.temporal_coverage is NARHistoricalEntryStatusTemporalCoverage.STATUS_VALID_THROUGH_PREDICTION_CUTOFF
+                    and authority.valid_through_at is not None and authority.valid_through_at >= cutoff)
+            )
         )
         if eligible:
             decision = NARHistoricalReplayEligibilityDecision(
@@ -224,9 +258,10 @@ def resolve_nar_historical_replay_eligibility(
             )
         else:
             reason = (
-                "SCHEDULED_START_UNAVAILABLE" if start is None else
                 "ENTRY_STATUS_AUTHORITY_MISSING" if authority is None else
-                "ENTRY_STATUS_AUTHORITY_AFTER_PREDICTION_CUTOFF"
+                "ENTRY_STATUS_AUTHORITY_AFTER_PREDICTION_CUTOFF" if (
+                    authority.available_at > cutoff or authority.observed_at > cutoff
+                ) else "ENTRY_STATUS_AUTHORITY_NOT_VALID_THROUGH_PREDICTION_CUTOFF"
             )
             decision = NARHistoricalReplayEligibilityDecision(
                 target, NARHistoricalReplayEligibilityState.BLOCKED_ENTRY_STATUS_AUTHORITY_UNAVAILABLE,

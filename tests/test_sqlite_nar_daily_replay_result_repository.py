@@ -11,6 +11,7 @@ import unittest
 
 from scripts.migrations.runner import MIGRATIONS, apply_migrations, get_applied_versions
 from scripts.migrations.versions import v016_nar_daily_replay_result_schema as migration
+from scripts.migrations.versions import v017_nar_daily_replay_prediction_cutoff_schema as cutoff_migration
 from scripts.simulation.nar_daily_replay_orchestrator import NARDailyReplayExecutionState
 from scripts.simulation.nar_daily_replay_result_persistence import (
     persist_nar_daily_replay_result,
@@ -102,9 +103,104 @@ class SQLiteNARDailyReplayResultRepositoryTests(unittest.TestCase):
     def test_v016_identity_registration_schema_and_idempotent_runner(self) -> None:
         self.assertEqual(migration.VERSION, 16)
         self.assertEqual(migration.NAME, "v016_nar_daily_replay_result_schema")
-        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS)[-2:], (15, 16))
+        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS)[-2:], (16, 17))
         self.assertEqual(tuple(item for item in MIGRATIONS if item.VERSION == 16), (migration,))
         self.assertEqual(get_applied_versions(self.connection)[16], migration.NAME)
+
+    def test_v017_companion_schema_and_v016_objects_unchanged(self) -> None:
+        self.assertEqual((cutoff_migration.VERSION, cutoff_migration.NAME),
+                         (17, "v017_nar_daily_replay_prediction_cutoff_schema"))
+        self.assertEqual(get_applied_versions(self.connection)[17], cutoff_migration.NAME)
+        migration.require_v016_schema_contract(self.connection)
+        cutoff_migration.require_v017_schema_contract(self.connection)
+        self.assertEqual(tuple(row[3:7] for row in self.connection.execute(
+            "PRAGMA foreign_key_list(nar_daily_replay_prediction_cutoff_plans)")),
+            (("persisted_content_sha256", "persisted_content_sha256", "RESTRICT", "RESTRICT"),))
+        self.repository.save_result(record=self.record)
+        row = self.connection.execute(
+            "SELECT prediction_cutoff_plan_sha256,prediction_cutoff_plan_json "
+            "FROM nar_daily_replay_prediction_cutoff_plans WHERE persisted_content_sha256=?",
+            (self.record.persisted_content_sha256,),
+        ).fetchone()
+        self.assertEqual(row, (self.record.prediction_cutoff_plan_sha256,
+                               self.record.prediction_cutoff_plan_json))
+        for statement in (
+            "UPDATE nar_daily_replay_prediction_cutoff_plans SET prediction_cutoff_plan_sha256=prediction_cutoff_plan_sha256",
+            "DELETE FROM nar_daily_replay_prediction_cutoff_plans",
+        ):
+            with self.assertRaises(sqlite3.IntegrityError):
+                self.connection.execute(statement)
+            self.connection.rollback()
+
+    def test_v017_partial_schema_rejected_and_runner_idempotent(self) -> None:
+        path = self.root / "partial-v017.sqlite3"
+        connection = sqlite3.connect(path)
+        self.addCleanup(connection.close)
+        connection.execute("CREATE TABLE races(id INTEGER PRIMARY KEY)")
+        connection.execute("CREATE TABLE horses(id INTEGER PRIMARY KEY,race_id INTEGER)")
+        connection.commit()
+        apply_migrations(connection, migrations=tuple(item for item in MIGRATIONS if item.VERSION <= 16))
+        before = tuple(connection.execute(
+            "SELECT type,name,sql FROM sqlite_schema WHERE name LIKE 'nar_daily_replay_%' ORDER BY name"
+        ))
+        connection.execute("CREATE TABLE nar_daily_replay_prediction_cutoff_plans(fake TEXT)")
+        connection.commit()
+        with self.assertRaises(RuntimeError):
+            apply_migrations(connection)
+        self.assertNotIn(17, get_applied_versions(connection))
+        self.assertEqual(tuple(connection.execute(
+            "SELECT type,name,sql FROM sqlite_schema WHERE name LIKE 'nar_daily_replay_%' "
+            "AND name <> 'nar_daily_replay_prediction_cutoff_plans' ORDER BY name"
+        )), before)
+        apply_migrations(self.connection)
+        self.assertEqual(get_applied_versions(self.connection)[17], cutoff_migration.NAME)
+
+    def test_v017_migration_preserves_legacy_parent_and_does_not_backfill(self) -> None:
+        legacy_root = self.root / "legacy"
+        legacy_root.mkdir()
+        modern = build_record(legacy_root, NARDailyReplayExecutionState.FULL_DAY_REPLAY_COMPLETED)
+        legacy = replace(modern, prediction_cutoff_plan_sha256=None,
+                         prediction_cutoff_plan_json=None)
+        connection = sqlite3.connect(legacy.database_path)
+        self.addCleanup(connection.close)
+        apply_migrations(connection, migrations=tuple(item for item in MIGRATIONS if item.VERSION <= 16))
+        writer = object.__new__(SQLiteNARDailyReplayResultRepository)
+        object.__setattr__(writer, "_connection", connection)
+        object.__setattr__(writer, "_database_path", legacy.database_path)
+        connection.execute("BEGIN IMMEDIATE")
+        with self.assertRaises(sqlite3.OperationalError):
+            writer._insert(legacy)  # Test-only construction of a genuine pre-v017 parent.
+        connection.commit()
+        parent_before = tuple(connection.execute("SELECT * FROM nar_daily_replay_results"))
+        children_before = tuple(connection.execute("SELECT * FROM nar_daily_replay_result_bet_type_summaries"))
+        apply_migrations(connection)
+        self.assertEqual(tuple(connection.execute("SELECT * FROM nar_daily_replay_results")), parent_before)
+        self.assertEqual(tuple(connection.execute("SELECT * FROM nar_daily_replay_result_bet_type_summaries")), children_before)
+        self.assertEqual(connection.execute("SELECT count(*) FROM nar_daily_replay_prediction_cutoff_plans").fetchone(), (0,))
+        reader = SQLiteNARDailyReplayResultRepository(connection=connection, database_path=legacy.database_path)
+        self.assertEqual(reader.load_result(persisted_content_sha256=legacy.persisted_content_sha256), legacy)
+
+    def test_companion_insert_failure_rolls_back_parent(self) -> None:
+        blocked = []
+        def authorize(action, first, second, database, trigger):
+            if action == sqlite3.SQLITE_INSERT and first == "nar_daily_replay_prediction_cutoff_plans":
+                blocked.append(first)
+                return sqlite3.SQLITE_DENY
+            return sqlite3.SQLITE_OK
+        self.connection.set_authorizer(authorize)
+        try:
+            with self.assertRaises(RepositoryDataIntegrityError):
+                self.repository.save_result(record=self.record)
+        finally:
+            self.connection.set_authorizer(None)
+        self.assertEqual(blocked, ["nar_daily_replay_prediction_cutoff_plans"])
+        self.assertFalse(self.connection.in_transaction)
+        self.assertEqual(self.connection.execute(
+            "SELECT count(*) FROM nar_daily_replay_results").fetchone(), (0,))
+        self.repository.save_result(record=self.record)
+        self.repository.save_result(record=self.record)
+        self.assertEqual(self.repository.load_result(
+            persisted_content_sha256=self.record.persisted_content_sha256), self.record)
 
     def test_v016_rejects_preexisting_partial_object_before_mutation(self) -> None:
         path = self.root / "partial.sqlite3"

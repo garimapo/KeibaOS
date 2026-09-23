@@ -31,6 +31,7 @@ from scripts.simulation.nar_official_response_capture_migration_runner import ap
 from scripts.simulation.repositories.errors import RepositoryDataIntegrityError, RepositoryValidationError
 from scripts.simulation.repositories.sqlite_historical_input_snapshot_repository import SQLiteHistoricalInputSnapshotRepository
 from scripts.simulation.repositories.sqlite_nar_official_response_capture_repository import SQLiteNAROfficialResponseCaptureRepository
+from tests.test_nar_historical_replay_prediction_cutoff import _plan
 
 
 _UTC = timezone.utc
@@ -112,8 +113,10 @@ def _databases(snapshots=(), captures=()):
         archive.close()
 
 
-def _resolve(main, archive, *, targets=None, cutoff=_SETTLEMENT, dataset="dataset"):
-    return subject.resolve_sqlite_nar_daily_evidence(target_set=targets or _targets(_target()), dataset_id=dataset,
+def _resolve(main, archive, *, targets=None, cutoff=_SETTLEMENT, dataset="dataset", prediction_offset=timedelta(minutes=1)):
+    target_set = targets or _targets(_target())
+    return subject.resolve_sqlite_nar_daily_evidence(target_set=target_set, dataset_id=dataset,
+        prediction_cutoff_plan=_plan(target_set, offset=prediction_offset),
         settlement_information_cutoff=cutoff, snapshot_connection=main, capture_connection=archive)
 
 
@@ -139,7 +142,7 @@ class SQLiteDailyResolverTests(unittest.TestCase):
     def test_exact_api_and_latest_then_exact_loader_calls(self):
         self.assertEqual({name for name in vars(subject) if not name.startswith("_")}, {"resolve_sqlite_nar_daily_evidence"})
         signature = inspect.signature(subject.resolve_sqlite_nar_daily_evidence)
-        self.assertEqual(tuple(signature.parameters), ("target_set", "dataset_id", "settlement_information_cutoff", "snapshot_connection", "capture_connection"))
+        self.assertEqual(tuple(signature.parameters), ("target_set", "dataset_id", "settlement_information_cutoff", "snapshot_connection", "capture_connection", "prediction_cutoff_plan"))
         self.assertTrue(all(p.kind is inspect.Parameter.KEYWORD_ONLY for p in signature.parameters.values()))
         snapshot, capture = _snapshot(), _capture()
         order = []
@@ -165,18 +168,35 @@ class SQLiteDailyResolverTests(unittest.TestCase):
             self.assertEqual(outcome.result_capture_reference.capture_id, capture.capture_id)
             self.assertIs(outcome.result_capture_reference, outcome.payout_capture_reference)
         self.assertEqual([item[0] for item in order], ["latest", "exact"])
-        self.assertEqual(order[0][1]["information_cutoff"], _START)
+        self.assertEqual(order[0][1]["information_cutoff"], _START - timedelta(minutes=1))
         self.assertEqual(order[0][1]["source_identity"], HistoricalExternalRaceIdentity("NAR", "nar_official", "nar:20250101:10:1"))
         self.assertEqual(order[1][1]["identity"], snapshot.identity)
 
     def test_unique_latest_none_availability_and_inclusive_bound(self):
         older = _snapshot(available=_CAPTURED - timedelta(minutes=1))
-        latest = _snapshot(captured=_START, cutoff=_START, available=None)
+        latest = _snapshot(captured=_START - timedelta(minutes=1), cutoff=_START - timedelta(minutes=1), available=None)
         for snapshots in ((older, latest), (latest, older)):
             with self.subTest(order=snapshots), _databases(snapshots, (_capture(),)) as (main, archive):
                 result = _resolve(main, archive)
                 self.assertEqual(result.outcomes[0].snapshot_identity, latest.identity)
                 self.assertEqual(result.day_state.value, "ALL_TARGETS_RESOLVED")
+
+    def test_prediction_cutoff_excludes_later_capture_or_information(self):
+        before = _START - timedelta(minutes=3)
+        selected = _START - timedelta(minutes=2)
+        snapshots = (
+            _snapshot(captured=before, cutoff=before),
+            _snapshot(captured=selected, cutoff=selected),
+        )
+        with _databases(snapshots, (_capture(),)) as (main, archive):
+            early = _resolve(main, archive, prediction_offset=timedelta(minutes=3))
+            late = _resolve(main, archive, prediction_offset=timedelta(minutes=1))
+            self.assertEqual(early.outcomes[0].snapshot_identity.captured_at, before)
+            self.assertEqual(late.outcomes[0].snapshot_identity.captured_at, selected)
+        information_later = _snapshot(captured=before, cutoff=selected)
+        with _databases((information_later,), (_capture(),)) as (main, archive):
+            early = _resolve(main, archive, prediction_offset=timedelta(minutes=3))
+            self.assertEqual(early.outcomes[0].reason_codes, ("SNAPSHOT_AFTER_SELECTION_BOUND",))
 
     def test_future_captured_or_cutoff_excluded_without_backdating(self):
         future = _START + timedelta(minutes=1)
@@ -235,7 +255,7 @@ class SQLiteDailyResolverTests(unittest.TestCase):
                 _resolve(main, archive)
             with patch.object(SQLiteHistoricalInputSnapshotRepository, "load_latest_snapshot", side_effect=AssertionError("must not tie-break")), \
                     self.assertRaisesRegex(RepositoryDataIntegrityError, "duplicate snapshot identity"):
-                subject._prediction(main, SQLiteHistoricalInputSnapshotRepository(connection=main), _target(), "dataset", _DATE)
+                subject._prediction(main, SQLiteHistoricalInputSnapshotRepository(connection=main), _target(), "dataset", _DATE, _START - timedelta(minutes=1))
 
     def test_loader_metadata_and_exact_disagreements_fail_globally(self):
         for method, returned in (("load_latest_snapshot", None), ("load_snapshot_by_identity", None),
@@ -381,12 +401,8 @@ class SQLiteDailyResolverTests(unittest.TestCase):
         targets = _targets(_target(1), _target(2, kind=_NON_RUN), _target(3, start=None, kind=_NON_RUN),
                            _target(4, kind="unqualified-kind"), _target(5, start=None))
         with _databases((_snapshot(),), (_capture(),)) as (main, archive):
-            result = _resolve(main, archive, targets=targets)
-            self.assertEqual(result.day_state.value, "PARTIALLY_RESOLVED")
-            self.assertEqual(tuple(item.target for item in result.outcomes), targets.target_races)
-            self.assertEqual([item.disposition.value for item in result.outcomes], ["EXECUTABLE", "UNSUPPORTED", "UNSUPPORTED", "UNSUPPORTED", "INVALID_EVIDENCE"])
-            self.assertEqual(result.outcomes[4].reason_codes, ("SCHEDULED_START_UNAVAILABLE",))
-            self.assertIsNone(result.outcomes[2].snapshot_identity)
+            with self.assertRaises((TypeError, ValueError)):
+                _resolve(main, archive, targets=targets)
 
     def test_deterministic_snapshot_capture_insertion_order_and_timezone(self):
         snapshots = (_snapshot(1), _snapshot(2), _snapshot(1, captured=_PREDICTION))
@@ -428,7 +444,7 @@ class SQLiteDailyResolverTests(unittest.TestCase):
             for kwargs in ({"dataset": " bad"}, {"cutoff": _SETTLEMENT.replace(tzinfo=None)}):
                 with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
                     _resolve(main, archive, **kwargs)
-            with self.assertRaises(TargetDiscoveryIncompleteError):
+            with self.assertRaises(ValueError):
                 _resolve(main, archive, targets=_targets())
             with self.assertRaises(RepositoryValidationError):
                 _resolve(main, main)

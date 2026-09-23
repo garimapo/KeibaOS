@@ -6,7 +6,9 @@ import ast
 from dataclasses import FrozenInstanceError, fields, replace
 from datetime import datetime, timezone
 from decimal import Decimal
+from hashlib import sha256
 import inspect
+import json
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -20,6 +22,7 @@ from scripts.migrations.runner import apply_migrations
 from scripts.simulation.models import BetTypeSummary, SimulationSummary
 from scripts.simulation.nar_daily_replay_orchestrator import NARDailyReplayExecutionState
 from scripts.simulation.nar_historical_replay_eligibility import NARHistoricalEntryStatusAuthoritySet
+from tests.test_nar_historical_replay_prediction_cutoff import _plan
 from scripts.simulation.repositories.errors import (
     RepositoryDataIntegrityError,
     RepositoryValidationError,
@@ -189,6 +192,7 @@ def build_request(
             result = orchestrator.run_nar_daily_replay(
                 acquisition_result=acquisition,
                 historical_entry_status_authorities=historical_authorities,
+                prediction_cutoff_plan=_plan(resolution.target_set),
                 dataset_id="dataset-1",
                 settlement_information_cutoff=cutoff,
                 snapshot_connection=snapshot_connection,
@@ -237,6 +241,17 @@ class NARDailyReplayResultPersistenceTests(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
+
+    def test_cutoff_plan_must_cover_exact_resolution_target_keys(self) -> None:
+        record = build_record(self.root, NARDailyReplayExecutionState.NOT_RUN_NO_EXECUTABLE_TARGETS)
+        payload = json.loads(record.prediction_cutoff_plan_json)
+        for item in payload["target_coverage"] + payload["decisions"]:
+            item["external_race_id"] = "nar:20250101:10:99"
+        forged_json = json.dumps(payload, ensure_ascii=False, allow_nan=False,
+                                 sort_keys=True, separators=(",", ":"))
+        with self.assertRaisesRegex(RepositoryValidationError, "target coverage disagrees"):
+            replace(record, prediction_cutoff_plan_json=forged_json,
+                    prediction_cutoff_plan_sha256=sha256(forged_json.encode("utf-8")).hexdigest())
 
     def test_entry_status_block_reason_survives_sqlite_round_trip(self) -> None:
         request = build_request(
@@ -310,6 +325,7 @@ class NARDailyReplayResultPersistenceTests(unittest.TestCase):
                     strategy_identity=request.strategy_identity,
                     race_budget=request.race_budget,
                     manifest_source_path=request.manifest_source_path,
+                    prediction_cutoff_plan=result.prediction_cutoff_plan,
                 )
                 self.assertEqual(computed, result.orchestration_audit_sha256)
 

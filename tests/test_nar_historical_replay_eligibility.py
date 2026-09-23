@@ -10,6 +10,10 @@ import unittest
 
 import scripts.simulation.nar_historical_replay_eligibility as subject
 from tests.test_historical_daily_replay_manifest_projection import _target, _target_set
+from tests.test_nar_historical_replay_prediction_cutoff import _plan, POLICY
+from scripts.simulation.nar_historical_replay_prediction_cutoff import (
+    NARHistoricalReplayPredictionCutoffDecision, NARHistoricalReplayPredictionCutoffPlan,
+)
 
 
 def _authority(target, **changes):
@@ -40,6 +44,7 @@ class NARHistoricalReplayEligibilityTests(unittest.TestCase):
         return subject.resolve_nar_historical_replay_eligibility(
             target_set=self.targets,
             historical_entry_status_authorities=authority_set,
+            prediction_cutoff_plan=_plan(self.targets),
         )
 
     def test_public_surface_and_frozen_exact_values(self):
@@ -68,8 +73,8 @@ class NARHistoricalReplayEligibilityTests(unittest.TestCase):
 
     def test_at_cutoff_is_eligible_and_after_cutoff_is_blocked(self):
         at_cutoff = _authority(
-            self.first, available_at=self.first.scheduled_start_at,
-            observed_at=self.first.scheduled_start_at,
+            self.first, available_at=self.first.scheduled_start_at - timedelta(minutes=1),
+            observed_at=self.first.scheduled_start_at - timedelta(minutes=1),
         )
         after = _authority(
             self.second, available_at=self.second.scheduled_start_at + timedelta(microseconds=1),
@@ -80,20 +85,35 @@ class NARHistoricalReplayEligibilityTests(unittest.TestCase):
         self.assertEqual(result.decisions[1].eligibility, subject.NARHistoricalReplayEligibilityState.BLOCKED_ENTRY_STATUS_AUTHORITY_UNAVAILABLE)
         self.assertEqual(result.decisions[1].causal_reason, "ENTRY_STATUS_AUTHORITY_AFTER_PREDICTION_CUTOFF")
 
+    def test_capture_time_does_not_prove_later_prediction_cutoff(self):
+        earlier = _authority(
+            self.first,
+            available_at=self.first.scheduled_start_at - timedelta(minutes=2),
+            observed_at=self.first.scheduled_start_at - timedelta(minutes=2),
+        )
+        blocked = self._resolve(earlier, _authority(self.second))
+        self.assertFalse(blocked.all_eligible)
+        self.assertEqual(blocked.decisions[0].causal_reason,
+                         "ENTRY_STATUS_AUTHORITY_NOT_VALID_THROUGH_PREDICTION_CUTOFF")
+        reviewed = replace(
+            earlier,
+            temporal_coverage=subject.NARHistoricalEntryStatusTemporalCoverage.STATUS_VALID_THROUGH_PREDICTION_CUTOFF,
+            valid_through_at=self.first.scheduled_start_at - timedelta(minutes=1),
+            validity_proof_identity="reviewed-valid-through-cutoff-proof",
+        )
+        self.assertTrue(self._resolve(reviewed, _authority(self.second)).all_eligible)
+
     def test_missing_authority_and_missing_start_fail_closed(self):
         missing = self._resolve(_authority(self.first))
         self.assertFalse(missing.all_eligible)
         self.assertEqual(missing.decisions[1].causal_reason, "ENTRY_STATUS_AUTHORITY_MISSING")
         self.assertEqual(missing.decisions[1].blocker_classification, "HISTORICAL_REPLAY_BLOCKED_ENTRY_STATUS_AUTHORITY_UNAVAILABLE")
         no_start = replace(self.first, scheduled_start_at=None)
-        targets = _target_set(no_start)
-        result = subject.resolve_nar_historical_replay_eligibility(
-            target_set=targets,
-            historical_entry_status_authorities=subject.NARHistoricalEntryStatusAuthoritySet(
-                targets, (replace(_authority(self.first), target=no_start),),
-            ),
-        )
-        self.assertEqual(result.decisions[0].causal_reason, "SCHEDULED_START_UNAVAILABLE")
+        with self.assertRaises(ValueError):
+            NARHistoricalReplayPredictionCutoffPlan(
+                _target_set(no_start), POLICY,
+                (NARHistoricalReplayPredictionCutoffDecision(no_start, self.first.scheduled_start_at),),
+            )
 
     def test_duplicate_foreign_and_forged_target_set_fail_closed(self):
         authority = _authority(self.first)
@@ -106,6 +126,7 @@ class NARHistoricalReplayEligibilityTests(unittest.TestCase):
             subject.resolve_nar_historical_replay_eligibility(
                 target_set=self.targets,
                 historical_entry_status_authorities=subject.NARHistoricalEntryStatusAuthoritySet(another_set, ()),
+                prediction_cutoff_plan=_plan(self.targets),
             )
 
     def test_malformed_and_incomplete_authority_cannot_become_eligible(self):
@@ -123,6 +144,7 @@ class NARHistoricalReplayEligibilityTests(unittest.TestCase):
             subject.resolve_nar_historical_replay_eligibility(
                 target_set=self.targets,
                 historical_entry_status_authorities=object(),
+                prediction_cutoff_plan=_plan(self.targets),
             )
 
     def test_no_io_or_current_status_dependencies(self):

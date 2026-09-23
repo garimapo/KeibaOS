@@ -41,6 +41,10 @@ from scripts.simulation.nar_historical_replay_eligibility import (
     NARHistoricalReplayEligibilityState as _EligibilityState,
     resolve_nar_historical_replay_eligibility as _resolve_eligibility,
 )
+from scripts.simulation.nar_historical_replay_prediction_cutoff import (
+    NARHistoricalReplayPredictionCutoffPlan as _CutoffPlan,
+    validate_nar_historical_replay_prediction_cutoff_plan as _validate_plan,
+)
 from scripts.simulation.sqlite_historical_replay_application import (
     run_sqlite_historical_replay as _run_replay,
 )
@@ -58,7 +62,7 @@ __all__ = (
 )
 
 
-_AUDIT_VERSION = "nar-daily-replay-orchestration-audit-v1"
+_AUDIT_VERSION = "nar-daily-replay-orchestration-audit-v2"
 _NAR_PROVIDER = ("NAR", "nar_official")
 _SHA256 = _re.compile(r"[0-9a-f]{64}\Z")
 
@@ -267,6 +271,7 @@ def _audit_digest(
     execution_state: NARDailyReplayExecutionState,
     manifest_sha256: str | None,
     audit_inputs: _AuditInputs,
+    prediction_cutoff_plan: _CutoffPlan,
 ) -> str:
     target_set = acquisition_result.target_set
     payload: dict[str, object] = {
@@ -281,6 +286,7 @@ def _audit_digest(
             "target_set_content_sha256": target_set.content_sha256,
         },
         "execution_state": execution_state.value,
+        "prediction_cutoff_plan_sha256": prediction_cutoff_plan.plan_sha256,
         "inputs": {
             "database_path": str(audit_inputs.database_path),
             "manifest_source_path": str(audit_inputs.manifest_source_path),
@@ -338,10 +344,12 @@ def compute_nar_daily_replay_orchestration_audit_sha256(
     strategy_identity: _StrategyIdentity,
     race_budget: _BetStakeBudget,
     manifest_source_path: _Path,
+    prediction_cutoff_plan: _CutoffPlan,
 ) -> str:
     """Compute the frozen Phase 25 audit identity from exact public inputs."""
 
     acquisition = _validate_acquisition_result(acquisition_result)
+    plan = _validate_plan(plan=prediction_cutoff_plan, target_set=acquisition.target_set)
     if type(resolution) is not _Resolution or resolution.target_set is not acquisition.target_set:
         raise ValueError("resolution must retain the exact acquisition target set")
     if type(execution_state) is not NARDailyReplayExecutionState:
@@ -384,6 +392,7 @@ def compute_nar_daily_replay_orchestration_audit_sha256(
             race_budget,
             manifest,
         ),
+        prediction_cutoff_plan=plan,
     )
 
 
@@ -395,6 +404,7 @@ class NARDailyReplayOrchestrationResult:
     manifest_projection: _ManifestProjection | None
     manifest_sha256: str | None
     summary: _SimulationSummary | None
+    prediction_cutoff_plan: _CutoffPlan
     _audit_inputs: _InitVar[_AuditInputs]
     orchestration_audit_sha256: str = _field(init=False)
 
@@ -405,6 +415,7 @@ class NARDailyReplayOrchestrationResult:
             raise ValueError("resolution must be an exact DailyHistoricalReplayEvidenceResolution")
         if self.resolution.target_set is not self.acquisition_result.target_set:
             raise ValueError("resolution must retain the exact acquisition target set")
+        _validate_plan(plan=self.prediction_cutoff_plan, target_set=self.acquisition_result.target_set)
         if type(self.execution_state) is not NARDailyReplayExecutionState:
             raise ValueError("execution_state must be an exact NARDailyReplayExecutionState")
         if type(_audit_inputs) is not _AuditInputs:
@@ -464,6 +475,7 @@ class NARDailyReplayOrchestrationResult:
                 strategy_identity=_audit_inputs.strategy_identity,
                 race_budget=_audit_inputs.race_budget,
                 manifest_source_path=_audit_inputs.manifest_source_path,
+                prediction_cutoff_plan=self.prediction_cutoff_plan,
             ),
         )
 
@@ -525,6 +537,7 @@ def run_nar_daily_replay(
     *,
     acquisition_result: _AcquisitionResult,
     historical_entry_status_authorities: _EntryStatusAuthoritySet,
+    prediction_cutoff_plan: _CutoffPlan,
     dataset_id: str,
     settlement_information_cutoff: _datetime,
     snapshot_connection: _sqlite3.Connection,
@@ -588,9 +601,11 @@ def run_nar_daily_replay(
     for value in acquisition_result.race_list_capture_ids:
         _required_text(value, "acquisition_result.race_list_capture_ids item")
     _digest(target_set.content_sha256, "target_set.content_sha256")
+    plan = _validate_plan(plan=prediction_cutoff_plan, target_set=target_set)
     eligibility = _resolve_eligibility(
         target_set=target_set,
         historical_entry_status_authorities=historical_entry_status_authorities,
+        prediction_cutoff_plan=plan,
     )
     database = _absolute_path(database_path, "database_path")
     archive = _absolute_path(
@@ -647,6 +662,7 @@ def run_nar_daily_replay(
             None,
             None,
             None,
+            plan,
             audit_inputs,
         )
 
@@ -656,6 +672,7 @@ def run_nar_daily_replay(
         settlement_information_cutoff=cutoff,
         snapshot_connection=snapshot_connection,
         capture_connection=capture_connection,
+        prediction_cutoff_plan=plan,
     )
     if type(resolution) is not _Resolution or resolution.target_set is not target_set:
         raise ValueError("Phase 14 resolution did not retain the exact target set")
@@ -680,6 +697,7 @@ def run_nar_daily_replay(
             None,
             None,
             None,
+            plan,
             audit_inputs,
         )
     if resolution.day_state is _ResolutionState.NO_EXECUTABLE_TARGETS:
@@ -690,6 +708,7 @@ def run_nar_daily_replay(
             None,
             None,
             None,
+            plan,
             audit_inputs,
         )
     if resolution.day_state is not _ResolutionState.ALL_TARGETS_RESOLVED or any(
@@ -730,6 +749,7 @@ def run_nar_daily_replay(
         projection,
         manifest_sha256,
         summary,
+        plan,
         audit_inputs,
     )
 

@@ -115,8 +115,22 @@ def _target_count_changes(record, count: int) -> dict[str, object]:
             reference["capture_id"] = f"settlement-{race_number}"
             reference["response_sha256"] = str(race_number) * 64
         outcomes.append(outcome)
+    target_sha = _audit(f"targets-{count}-{record.run_id}")
+    plan = json.loads(record.prediction_cutoff_plan_json)
+    plan["target_set_content_sha256"] = target_sha
+    plan["target_coverage"] = [
+        {"organization": "NAR", "source_system": "nar_official", "external_race_id": item["target_key"][2]}
+        for item in outcomes
+    ]
+    plan["decisions"] = [
+        {**item, "prediction_information_cutoff": plan["decisions"][0]["prediction_information_cutoff"]}
+        for item in plan["target_coverage"]
+    ]
+    plan_json = json.dumps(plan, ensure_ascii=False, allow_nan=False, sort_keys=True, separators=(",", ":"))
     return {
-        "target_set_content_sha256": _audit(f"targets-{count}-{record.run_id}"),
+        "target_set_content_sha256": target_sha,
+        "prediction_cutoff_plan_json": plan_json,
+        "prediction_cutoff_plan_sha256": sha256(plan_json.encode("utf-8")).hexdigest(),
         "canonical_target_count": count,
         "executable_count": count,
         "resolution_outcomes_json": json.dumps(
@@ -391,8 +405,16 @@ class NARDailyReplayAggregationTests(unittest.TestCase):
 
     def test_compatibility_mismatch_rejected_and_different_run_ids_allowed(self) -> None:
         first, second = self._completed(1), self._completed(2)
+        plan = json.loads(second.prediction_cutoff_plan_json)
+        plan["decisions"][0]["prediction_information_cutoff"] = "2025-01-01T00:00:00.000000+00:00"
+        plan_json = json.dumps(plan, ensure_ascii=False, allow_nan=False, sort_keys=True, separators=(",", ":"))
+        second = replace(second, prediction_cutoff_plan_json=plan_json,
+                         prediction_cutoff_plan_sha256=sha256(plan_json.encode("utf-8")).hexdigest())
         accepted = self._aggregate(first, replace(second, run_id="different-run"))
         self.assertEqual(accepted.selected_record_count, 2)
+        self.assertNotEqual(first.prediction_cutoff_plan_sha256, second.prediction_cutoff_plan_sha256)
+        self.assertEqual(accepted.prediction_cutoff_plan_sha256s,
+                         (first.prediction_cutoff_plan_sha256, second.prediction_cutoff_plan_sha256))
         incompatible = replace(
             second,
             orchestration_audit_sha256=_audit("different-commit-audit"),
@@ -400,6 +422,41 @@ class NARDailyReplayAggregationTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(RepositoryValidationError, "incompatible"):
             self._aggregate(first, incompatible)
+
+    def test_different_cutoff_policy_rejected(self) -> None:
+        first, second = self._completed(1), self._completed(2)
+        plan = json.loads(second.prediction_cutoff_plan_json)
+        plan["cutoff_policy_identity"] = "nar-prediction-cutoff-policy-v1:" + "b" * 64
+        plan_json = json.dumps(plan, ensure_ascii=False, allow_nan=False, sort_keys=True, separators=(",", ":"))
+        different = replace(second, prediction_cutoff_plan_json=plan_json,
+                            prediction_cutoff_plan_sha256=sha256(plan_json.encode("utf-8")).hexdigest())
+        with self.assertRaisesRegex(RepositoryValidationError, "incompatible"):
+            self._aggregate(first, different)
+
+    def test_selected_legacy_row_rejects_entire_aggregation(self) -> None:
+        modern = self._completed(1)
+        legacy = replace(modern, prediction_cutoff_plan_sha256=None,
+                         prediction_cutoff_plan_json=None)
+        def authorize(action, first, second, database, trigger):
+            if action == sqlite3.SQLITE_INSERT and first == "nar_daily_replay_prediction_cutoff_plans":
+                return sqlite3.SQLITE_DENY
+            return sqlite3.SQLITE_OK
+        self.connection.set_authorizer(authorize)
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            with self.assertRaises(sqlite3.DatabaseError):
+                self.repository._insert(legacy)
+            self.connection.commit()
+        finally:
+            self.connection.set_authorizer(None)
+        self.assertIsNone(self.repository.load_result(
+            persisted_content_sha256=legacy.persisted_content_sha256).prediction_cutoff_plan_json)
+        selection = subject.NARDailyReplayAggregationSelection(
+            schema_version=1,
+            persisted_content_sha256s=(legacy.persisted_content_sha256,),
+        )
+        with self.assertRaisesRegex(RepositoryValidationError, "PREDICTION_CUTOFF_PROVENANCE_UNAVAILABLE"):
+            subject.aggregate_nar_daily_replay_selection(selection=selection, repository=self.repository)
 
     def test_compatibility_key_is_exact_frozen_predicate(self) -> None:
         record = self._completed(1)
@@ -411,6 +468,7 @@ class NARDailyReplayAggregationTests(unittest.TestCase):
                 record.source_system,
                 record.dataset_id,
                 record.selection_policy,
+                json.loads(record.prediction_cutoff_plan_json)["cutoff_policy_identity"],
                 record.settlement_information_cutoff,
                 record.strategy_id,
                 record.strategy_name,

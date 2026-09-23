@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ast
 from dataclasses import FrozenInstanceError, fields, replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import inspect
 from pathlib import Path
 import sqlite3
@@ -31,6 +31,7 @@ from tests.test_historical_daily_replay_manifest_projection import (
     _target,
 )
 from tests.test_nar_historical_replay_eligibility import _authority
+from tests.test_nar_historical_replay_prediction_cutoff import _plan
 
 
 def _acquisition(resolution: DailyHistoricalReplayEvidenceResolution) -> NARDailyTargetLiveAcquisitionResult:
@@ -97,6 +98,7 @@ class NARDailyReplayOrchestratorTests(unittest.TestCase):
                 resolution.target_set,
                 tuple(_authority(target) for target in resolution.target_set.target_races),
             ),
+            "prediction_cutoff_plan": _plan(resolution.target_set),
             "dataset_id": "dataset-1",
             "settlement_information_cutoff": self.cutoff,
             "snapshot_connection": self.snapshot_connection,
@@ -153,12 +155,13 @@ class NARDailyReplayOrchestratorTests(unittest.TestCase):
                 "manifest_projection",
                 "manifest_sha256",
                 "summary",
+                "prediction_cutoff_plan",
                 "orchestration_audit_sha256",
             ),
         )
         signature = inspect.signature(subject.run_nar_daily_replay)
         self.assertEqual(tuple(signature.parameters), (
-            "acquisition_result", "historical_entry_status_authorities", "dataset_id", "settlement_information_cutoff",
+            "acquisition_result", "historical_entry_status_authorities", "prediction_cutoff_plan", "dataset_id", "settlement_information_cutoff",
             "snapshot_connection", "capture_connection", "database_path",
             "nar_settlement_capture_archive_path", "run_context", "strategy_identity",
             "race_budget", "manifest_source_path",
@@ -232,6 +235,7 @@ class NARDailyReplayOrchestratorTests(unittest.TestCase):
             strategy_identity=values["strategy_identity"],
             race_budget=values["race_budget"],
             manifest_source_path=values["manifest_source_path"],
+            prediction_cutoff_plan=values["prediction_cutoff_plan"],
         )
         self.assertEqual(audit, result.orchestration_audit_sha256)
         changed = subject.compute_nar_daily_replay_orchestration_audit_sha256(
@@ -247,6 +251,7 @@ class NARDailyReplayOrchestratorTests(unittest.TestCase):
             strategy_identity=values["strategy_identity"],
             race_budget=values["race_budget"],
             manifest_source_path=self.root / "changed.json",
+            prediction_cutoff_plan=values["prediction_cutoff_plan"],
         )
         self.assertNotEqual(changed, audit)
 
@@ -276,6 +281,7 @@ class NARDailyReplayOrchestratorTests(unittest.TestCase):
             settlement_information_cutoff=values["settlement_information_cutoff"],
             snapshot_connection=self.snapshot_connection,
             capture_connection=self.capture_connection,
+            prediction_cutoff_plan=values["prediction_cutoff_plan"],
         )
         writer.assert_called_once_with(
             resolution=resolution,
@@ -483,6 +489,20 @@ class NARDailyReplayOrchestratorTests(unittest.TestCase):
         self.assertEqual(first.orchestration_audit_sha256, second.orchestration_audit_sha256)
         self.assertNotEqual(first.orchestration_audit_sha256, changed.orchestration_audit_sha256)
         self.assertRegex(first.orchestration_audit_sha256, r"[0-9a-f]{64}\Z")
+        changed_cutoff = dict(values)
+        changed_cutoff["prediction_cutoff_plan"] = _plan(
+            resolution.target_set, offset=timedelta(minutes=2),
+        )
+        changed_cutoff["historical_entry_status_authorities"] = NARHistoricalEntryStatusAuthoritySet(
+            resolution.target_set,
+            tuple(_authority(target, available_at=target.scheduled_start_at - timedelta(minutes=2),
+                             observed_at=target.scheduled_start_at - timedelta(minutes=2))
+                  for target in resolution.target_set.target_races),
+        )
+        with patch.object(subject, "_resolve_evidence", return_value=resolution):
+            different = subject.run_nar_daily_replay(**changed_cutoff)
+        self.assertIs(different.resolution, resolution)
+        self.assertNotEqual(first.orchestration_audit_sha256, different.orchestration_audit_sha256)
         with self.assertRaises(FrozenInstanceError):
             first.summary = object()
 

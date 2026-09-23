@@ -26,6 +26,10 @@ from scripts.simulation.nar_daily_replay_orchestrator import (
     NARDailyReplayOrchestrationResult as _OrchestrationResult,
     compute_nar_daily_replay_orchestration_audit_sha256 as _compute_audit_sha256,
 )
+from scripts.simulation.nar_historical_replay_prediction_cutoff import (
+    validate_nar_historical_replay_prediction_cutoff_plan as _validate_plan,
+    validate_nar_historical_replay_prediction_cutoff_plan_json as _validate_plan_json,
+)
 from scripts.simulation.repositories.errors import (
     RepositoryDataIntegrityError as _RepositoryDataIntegrityError,
     RepositoryValidationError as _RepositoryValidationError,
@@ -417,6 +421,8 @@ class PersistedNARDailyReplayResult:
     published_manifest_path: _Path | None
     manifest_sha256: str | None
     summary: _SimulationSummary | None
+    prediction_cutoff_plan_sha256: str | None = None
+    prediction_cutoff_plan_json: str | None = None
     persisted_content_sha256: str = _field(init=False)
 
     def __post_init__(self) -> None:
@@ -439,6 +445,20 @@ class PersistedNARDailyReplayResult:
         if self.resolution_state is not expected:
             raise _RepositoryValidationError("execution and resolution states disagree")
         _digest(self.target_set_content_sha256, "target_set_content_sha256")
+        if (self.prediction_cutoff_plan_sha256 is None) != (self.prediction_cutoff_plan_json is None):
+            raise _RepositoryValidationError("prediction cutoff provenance must be complete or absent")
+        plan_payload = None
+        if self.prediction_cutoff_plan_json is not None:
+            try:
+                plan_payload = _validate_plan_json(
+                    canonical_json=self.prediction_cutoff_plan_json,
+                    plan_sha256=self.prediction_cutoff_plan_sha256,
+                    target_set_content_sha256=self.target_set_content_sha256,
+                )
+            except ValueError as error:
+                raise _RepositoryValidationError("prediction cutoff provenance is invalid") from error
+            if len(plan_payload["decisions"]) != self.canonical_target_count:
+                raise _RepositoryValidationError("cutoff plan does not cover the result denominator")
         for name in (
             "supplier_evidence_identity", "homepage_supplier_capture_id",
             "monthly_root_supplier_capture_id", "locator_script_supplier_capture_id",
@@ -484,6 +504,14 @@ class PersistedNARDailyReplayResult:
             canonical_target_count=self.canonical_target_count,
             executable_count=self.executable_count,
         )
+        if plan_payload is not None:
+            outcome_keys = tuple(tuple(item["target_key"]) for item in _json.loads(self.resolution_outcomes_json))
+            plan_keys = tuple(
+                (item["organization"], item["source_system"], item["external_race_id"])
+                for item in plan_payload["target_coverage"]
+            )
+            if plan_keys != outcome_keys:
+                raise _RepositoryValidationError("cutoff plan target coverage disagrees with resolution outcomes")
         completed = self.execution_state is _ExecutionState.FULL_DAY_REPLAY_COMPLETED
         if completed:
             if (
@@ -511,7 +539,7 @@ class PersistedNARDailyReplayResult:
 
 
 def _content_payload(value: PersistedNARDailyReplayResult) -> dict[str, object]:
-    return {
+    payload = {
         "acquisition": {
             "homepage_supplier_capture_id": value.homepage_supplier_capture_id,
             "locator_script_supplier_capture_id": value.locator_script_supplier_capture_id,
@@ -565,6 +593,13 @@ def _content_payload(value: PersistedNARDailyReplayResult) -> dict[str, object]:
         "target_date": value.target_date.isoformat(),
         "version": _CONTENT_VERSION,
     }
+    if value.prediction_cutoff_plan_json is not None:
+        payload["prediction_cutoff_plan"] = {
+            "sha256": value.prediction_cutoff_plan_sha256,
+            "canonical_plan": _json.loads(value.prediction_cutoff_plan_json),
+        }
+        payload["version"] = "nar-daily-replay-persisted-result-v2"
+    return payload
 
 
 def _content_digest(value: PersistedNARDailyReplayResult) -> str:
@@ -607,6 +642,7 @@ class NARDailyReplayResultPersistenceRequest:
             strategy_identity=self.strategy_identity,
             race_budget=self.race_budget,
             manifest_source_path=self.manifest_source_path,
+            prediction_cutoff_plan=self.orchestration_result.prediction_cutoff_plan,
         )
         if computed != self.orchestration_result.orchestration_audit_sha256:
             raise _RepositoryValidationError("Phase 25 orchestration audit identity mismatch")
@@ -616,6 +652,7 @@ def _build_record(request: NARDailyReplayResultPersistenceRequest) -> PersistedN
     result = request.orchestration_result
     acquisition = result.acquisition_result
     resolution = result.resolution
+    plan = _validate_plan(plan=result.prediction_cutoff_plan, target_set=acquisition.target_set)
     published_path = None
     if result.manifest_projection is not None:
         published_path = result.manifest_projection.document.source_path
@@ -653,6 +690,8 @@ def _build_record(request: NARDailyReplayResultPersistenceRequest) -> PersistedN
         published_manifest_path=published_path,
         manifest_sha256=result.manifest_sha256,
         summary=result.summary,
+        prediction_cutoff_plan_sha256=plan.plan_sha256,
+        prediction_cutoff_plan_json=plan.canonical_bytes().decode("utf-8"),
     )
 
 

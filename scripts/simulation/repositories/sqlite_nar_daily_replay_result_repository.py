@@ -10,6 +10,9 @@ import sqlite3 as _sqlite3
 from scripts.migrations.versions.v016_nar_daily_replay_result_schema import (
     require_v016_schema_contract as _require_v016_schema_contract,
 )
+from scripts.migrations.versions.v017_nar_daily_replay_prediction_cutoff_schema import (
+    require_v017_schema_contract as _require_v017_schema_contract,
+)
 
 from scripts.simulation.historical_daily_evidence_resolution import (
     DailyHistoricalReplayResolutionState as _ResolutionState,
@@ -64,6 +67,7 @@ _EXPECTED_MIGRATIONS = {
     14: "v014_historical_input_request_identity_schema",
     15: "v015_jra_race_replay_seed_schema",
     16: "v016_nar_daily_replay_result_schema",
+    17: "v017_nar_daily_replay_prediction_cutoff_schema",
 }
 
 
@@ -92,6 +96,8 @@ class SQLiteNARDailyReplayResultRepository:
     def save_result(self, *, record: _Record) -> None:
         if type(record) is not _Record:
             raise RepositoryValidationError("record must be exact PersistedNARDailyReplayResult")
+        if record.prediction_cutoff_plan_json is None:
+            raise RepositoryValidationError("new publication requires prediction cutoff provenance")
         if record.persisted_content_sha256 != _content_digest(record):
             raise RepositoryValidationError("record persisted-content identity is invalid")
         if record.database_path != self._database_path:
@@ -189,10 +195,11 @@ class SQLiteNARDailyReplayResultRepository:
                 self._connection.execute("SELECT version,name FROM schema_migrations")
             )
             _require_v016_schema_contract(self._connection)
+            _require_v017_schema_contract(self._connection)
         except (_sqlite3.Error, RuntimeError) as error:
-            raise RepositoryDataIntegrityError("v016 daily replay result schema is unavailable") from error
+            raise RepositoryDataIntegrityError("v016/v017 daily replay result schema is unavailable") from error
         if applied != _EXPECTED_MIGRATIONS:
-            raise RepositoryDataIntegrityError("registered migration state is not exact v016")
+            raise RepositoryDataIntegrityError("registered migration state is not exact v017")
 
     def _insert(self, record: _Record) -> None:
         summary = record.summary
@@ -246,6 +253,13 @@ class SQLiteNARDailyReplayResultRepository:
                     for item in (summary.by_bet_type[key] for key in sorted(summary.by_bet_type))
                 ),
             )
+        self._connection.execute(
+            """INSERT INTO nar_daily_replay_prediction_cutoff_plans
+               (persisted_content_sha256,prediction_cutoff_plan_sha256,prediction_cutoff_plan_json)
+               VALUES(?,?,?)""",
+            (record.persisted_content_sha256, record.prediction_cutoff_plan_sha256,
+             record.prediction_cutoff_plan_json),
+        )
 
     def _load_by_content(self, content_sha256: str) -> _Record | None:
         rows = self._connection.execute(
@@ -274,6 +288,14 @@ class SQLiteNARDailyReplayResultRepository:
             raise RepositoryDataIntegrityError("stored header has unexpected shape")
         data = dict(zip(_HEADER_COLUMNS, row, strict=True))
         content_sha256 = data["persisted_content_sha256"]
+        plan_rows = self._connection.execute(
+            """SELECT prediction_cutoff_plan_sha256,prediction_cutoff_plan_json
+               FROM nar_daily_replay_prediction_cutoff_plans
+               WHERE persisted_content_sha256=?""", (content_sha256,),
+        ).fetchall()
+        if len(plan_rows) > 1:
+            raise RepositoryDataIntegrityError("multiple cutoff companions match one result")
+        plan_sha, plan_json = plan_rows[0] if plan_rows else (None, None)
         bet_rows = self._connection.execute(
             f"SELECT {','.join(_BET_COLUMNS)} FROM nar_daily_replay_result_bet_type_summaries WHERE persisted_content_sha256=? ORDER BY bet_type ASC",
             (content_sha256,),
@@ -350,6 +372,8 @@ class SQLiteNARDailyReplayResultRepository:
                 configured_manifest_source_path=_Path(data["configured_manifest_source_path"]),
                 published_manifest_path=None if data["published_manifest_path"] is None else _Path(data["published_manifest_path"]),
                 manifest_sha256=data["manifest_sha256"], summary=summary,
+                prediction_cutoff_plan_sha256=plan_sha,
+                prediction_cutoff_plan_json=plan_json,
             )
         except RepositoryValidationError as error:
             raise RepositoryDataIntegrityError("stored result violates domain invariants") from error

@@ -144,10 +144,10 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         self.assertEqual(v015_jra_race_replay_seed_schema.NAME, "v015_jra_race_replay_seed_schema")
         self.assertEqual(v016_nar_daily_replay_result_schema.VERSION, 16)
         self.assertEqual(v016_nar_daily_replay_result_schema.NAME, "v016_nar_daily_replay_result_schema")
-        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS), (8, 9, 10, 11, 12, 13, 14, 15, 16))
+        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS), (8, 9, 10, 11, 12, 13, 14, 15, 16, 17))
         self.assertEqual(
             get_applied_versions(connection),
-            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema", 14: "v014_historical_input_request_identity_schema", 15: "v015_jra_race_replay_seed_schema", 16: "v016_nar_daily_replay_result_schema"},
+            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema", 14: "v014_historical_input_request_identity_schema", 15: "v015_jra_race_replay_seed_schema", 16: "v016_nar_daily_replay_result_schema", 17: "v017_nar_daily_replay_prediction_cutoff_schema"},
         )
         self.assertEqual(
             {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'historical_input_%'")},
@@ -171,7 +171,7 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         apply_migrations(connection)
         self.assertEqual(
             connection.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall(),
-            [(8,), (9,), (10,), (11,), (12,), (13,), (14,), (15,), (16,)],
+            [(8,), (9,), (10,), (11,), (12,), (13,), (14,), (15,), (16,), (17,)],
         )
         self.assertEqual(connection.execute("SELECT count(*) FROM historical_input_snapshots").fetchone()[0], 0)
         for table in HISTORICAL_TABLES:

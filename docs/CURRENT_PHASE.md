@@ -1,6 +1,317 @@
 # Current Phase
 
-## POST_V0_8_DAILY_REPLAY_93
+## POST_V0_8_DAILY_REPLAY_96
+
+Title: NAR Historical Replay Prediction-Cutoff Coherence Implementation
+
+Formal Status: READY_FOR_REVIEW
+
+Design Review: PHASE96_PREDICTION_CUTOFF_DESIGN_REVIEW_PASS
+
+Base Commit and Branch: `3a8bb363838110d5b918829e19e97fef1718fdaf` / `feature/post-v0.8-daily-replay`
+
+State: IMPLEMENTED_FOR_REVIEW
+
+Outcome: READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW
+
+Audit: PREDICTION_CUTOFF_COHERENCE_AUDIT_COMPLETE
+
+Authorization: NONE_REQUIRED_NO_NETWORK_IMPLEMENTATION
+
+Implementation: NAR_PREDICTION_CUTOFF_PLAN_AND_V017_PROVENANCE_IMPLEMENTED
+
+Implementation evidence: the separate immutable cutoff plan binds the exact target set, closed policy identity, ordered per-target C values, canonical JSON, and SHA-256. Phase93 requires exact-C temporal coverage; the SQLite resolver selects prediction snapshots at C while settlement remains independent. The orchestration result retains the plan and its audit SHA binds the plan SHA. v017 adds an immutable one-to-one companion without altering v016 objects or legacy rows; new parent/companion publication is atomic. Strict aggregation rejects selected legacy rows and compares cutoff policy identities, not daily plan SHAs.
+
+Validation: focused plan 4 passed; Phase93 8 passed/5 subtests; resolver 27 passed/38 subtests; orchestrator 23 passed/11 subtests; persistence 12 passed/12 subtests; result repository 26 passed/19 subtests; aggregation 22 passed; historical migration 11 passed; simulation migrations 22 passed/10 subtests. Final full suite: 4,528 passed, 2 skipped, 2,846 subtests passed. Provider HTTP / Phase44 / GET: 0 / 0 / 0. No production database writes, live replay, source acquisition, Phase97 timing policy, or authority issuer. Three additional regression-test paths only update exact migration-registry expectations for v017.
+
+Branch: `feature/post-v0.8-daily-replay`
+
+Starting HEAD/tree: `3a8bb363838110d5b918829e19e97fef1718fdaf` / `19986e75e450150032e631fe4dac111d3e59e581`
+
+### Phase95 reconciliation
+
+`PHASE95_PROSPECTIVE_STATUS_CAPTURE_REVIEW_PASS` and `PROSPECTIVE_NAR_ENTRY_STATUS_AUTHORITY_CAPTURE_BLOCKED_SOURCE_SEMANTICS` are frozen. This audit changes neither the unresolved status-source semantics nor the current target's `HISTORICAL_REPLAY_BLOCKED_ENTRY_STATUS_AUTHORITY_UNAVAILABLE` result.
+
+### Reviewed pre-implementation cutoff semantics
+
+| Contract | Represented moment | Current causal rule | Coherence finding |
+| --- | --- | --- | --- |
+| `DailyHistoricalReplayTarget.scheduled_start_at` | Scheduled race start; may be absent | Upper bound only, not an observation or decision time | It is not an explicit prediction information cutoff. |
+| `HistoricalInputSnapshot.information_cutoff` and `captured_at` | Snapshot's logical prediction boundary and its assembly/capture time | `captured_at <= information_cutoff <= scheduled_start_at`; every prediction evidence `observed_at` and, when present, `available_at` is no later than capture/cutoff | The snapshot domain already supports a true per-snapshot cutoff. |
+| SQLite NAR daily evidence resolver | Latest stored NAR snapshot under the start-time bound | It accepts snapshots whose capture and own cutoff are each `<= scheduled_start_at`, then selects the greatest `captured_at`; it calls the repository with `information_cutoff=target.scheduled_start_at` | It defines “latest causal before start,” not one reviewed race-level decision moment. |
+| `NARHistoricalEntryStatusAuthority` / Phase93 eligibility | Status source availability and observation | Both `available_at` and `observed_at` need only be `<= target.scheduled_start_at` | A T-5 status authority is accepted even if other replay inputs are selected at T-1. |
+| `settlement_information_cutoff` | Later settlement/result/payout selection boundary | Result/payout capture observation must be `<= settlement_information_cutoff` | Separate and correctly not a prediction-time cutoff. |
+| NAR daily orchestration | Eligibility then evidence resolution | It passes the same target set to Phase93 and the resolver but supplies no prediction cutoff C | No component binds all prediction evidence to one explicit C. |
+
+The frozen contract is therefore model **A**: deterministically select everything causally known at any time before `scheduled_start_at`. It is reproducible for an unchanged dataset, but insufficient for strict single-decision-time replay because the selected status and prediction inputs need not describe the same information universe.
+
+### Final architectural revision — separate cutoff-plan authority
+
+Primary classification: `PREDICTION_CUTOFF_MODEL_REQUIRES_EXPLICIT_CUTOFF`. Phase93 compatibility remains `PHASE93_CUTOFF_CONTRACT_REQUIRES_HARDENING`.
+
+`DailyHistoricalReplayTarget` and `DailyHistoricalReplayTargetSet` remain provider-discovered denominator/acquisition authority. They must not gain `prediction_information_cutoff`: the same exact target-set content SHA remains reusable under independently selected replay policies. Target-set identity answers *which provider races form the denominator*; cutoff-plan identity answers *which causal evidence boundary an experiment applies to that denominator*.
+
+#### Canonical cutoff-plan contract
+
+The new immutable domain is `NARHistoricalReplayPredictionCutoffPlan` with exact versioned, content-addressed canonical JSON. Its content contains:
+
+- `schema_version`
+- `target_set_content_sha256`
+- closed `cutoff_policy_identity`
+- exact canonical target coverage
+- target-set-order-preserving per-target decisions, each `(organization, source_system, external_race_id, prediction_information_cutoff)`
+
+Canonical plan bytes are UTF-8 JSON with `ensure_ascii=False`, `allow_nan=False`, `sort_keys=True`, and `separators=(",", ":")`. Every datetime is normalized to UTC and encoded with fixed microseconds (`+00:00`). `prediction_cutoff_plan_sha256 = SHA-256(canonical plan JSON bytes)`.
+
+Validation fails closed for a target-set SHA mismatch; missing, extra, duplicate, or incorrectly ordered target coverage; a missing scheduled start or C; and `C > target.scheduled_start_at`. Same target-set content with any different C must yield a different plan SHA. Phase96 defines no T-minus-N rule, capture schedule, or other C-selection policy; Phase97 alone may design that outcome-independent producer.
+
+#### Temporal status-authority contract
+
+`STATUS_OBSERVED_AT_CAPTURE_TIME` does **not** imply `STATUS_VALID_THROUGH_PREDICTION_CUTOFF`. A complete status universe observed at T cannot automatically authorize a later C: for example, an observation at T-5 cannot prove that no change occurred before C at T-1. A capture-time semantic can reproduce knowledge at its exact observation boundary only; it must not be called provider state valid through a later C. `STATUS_VALID_THROUGH_PREDICTION_CUTOFF` requires separate reviewed immutable source/archival proof of that validity interval and may never be inferred from timestamp ordering.
+
+Phase93 must receive the validated plan and compare authority `available_at` and `observed_at` with exact target C, not scheduled start. Unless reviewed authority semantics explicitly prove coverage through C (or exactly represent C as the capture-time decision boundary), the target remains `BLOCKED_ENTRY_STATUS_AUTHORITY_UNAVAILABLE`. Phase94/95 source-semantics blockers and the current target's block remain unchanged.
+
+#### Resolver and orchestration contract
+
+For prediction snapshots, every selection-bound use of `target.scheduled_start_at` changes to exact target C: require `snapshot.identity.captured_at <= C`, `snapshot.information_cutoff <= C`, and repository lookup with `information_cutoff=C`. Scheduled start remains target/race identity validation only. `HistoricalInputSnapshot` already content-binds its local cutoff and receives no new field. Settlement remains governed exclusively by `settlement_information_cutoff`.
+
+`run_nar_daily_replay(...)` must receive the exact plan as a required keyword-only argument, validate that it binds exactly to `acquisition_result.target_set` before Phase93 eligibility and SQLite evidence resolution, and pass the same plan to both. `NARDailyReplayOrchestrationResult` must retain the exact plan, not a detached SHA. The canonical orchestration audit must bind at least `prediction_cutoff_plan_sha256`; because that SHA content-addresses policy identity and all C values, same target set plus same selected snapshots plus different C must yield different `orchestration_audit_sha256`.
+
+#### v017 companion persistence and migration compatibility
+
+`resolution_outcomes_json` remains a closed outcomes-only projection. The required v017 design is an append-only one-to-one companion table/projection, owned by the existing `SQLiteNARDailyReplayResultRepository` rather than a split repository, with at least:
+
+- `persisted_content_sha256` as companion primary key and FK to `nar_daily_replay_results.persisted_content_sha256`, with `ON DELETE RESTRICT` and `ON UPDATE RESTRICT`
+- `prediction_cutoff_plan_sha256` (explicitly **not** UNIQUE; one plan may support many runs/strategies/configurations)
+- canonical `prediction_cutoff_plan_json`
+
+The companion rejects UPDATE and DELETE. Repository/domain validation must reconstruct canonical plan bytes, reproduce its SHA, and require its target-set SHA to equal the parent v016 row's `target_set_content_sha256`; all disagreement fails closed. A v017-backed persisted-content identity must bind the exact companion plan payload as well as parent content. Legacy v016-only identities remain their original immutable v016 values; they are never rewritten, deleted, inferred from scheduled start, synthesized, or backfilled, and are exposed only as `PREDICTION_CUTOFF_PROVENANCE_UNAVAILABLE` / fail-closed for strict consumers.
+
+The existing repository currently requires exact registered migrations 8–16 and would reject a valid v017 database. Its future schema verifier must require the exact registry through v017, continue to validate untouched v016 table/schema/triggers through `require_v016_schema_contract`, and independently validate v017 companion columns, key/FK, canonical payload contract, and immutability triggers. v016 objects themselves stay byte-for-byte/structurally unchanged.
+
+Publication must insert the v016 parent and v017 companion in one SQLite transaction. A committed success cannot contain a parent without its companion. The transaction must roll back on companion failure, support exact idempotent re-publication, reject conflicting companions, and exact-reload the combined authority after commit. No repair/backfill path is permitted.
+
+#### Aggregation contract
+
+Strict aggregation must require a valid v017 companion for every selected persisted result and reject a legacy v016-only row. It must trace each selected `persisted_content_sha256` through its exact companion, plan SHA, and canonical per-target C. It must add `cutoff_policy_identity` to analytical compatibility, while allowing different `prediction_cutoff_plan_sha256` values across different target dates. Different policy identities must fail compatibility rather than aggregate silently.
+
+#### Exact eventual implementation scope and test matrix
+
+Expected production paths are:
+
+- create `scripts/simulation/nar_historical_replay_prediction_cutoff.py`
+- modify `scripts/simulation/sqlite_nar_daily_evidence_resolver.py`
+- modify `scripts/simulation/nar_historical_replay_eligibility.py`
+- modify `scripts/simulation/nar_daily_replay_orchestrator.py`
+- modify `scripts/simulation/nar_daily_replay_result_persistence.py`
+- modify `scripts/simulation/nar_daily_replay_aggregation.py`
+- modify `scripts/simulation/repositories/sqlite_nar_daily_replay_result_repository.py`
+- create `scripts/migrations/versions/v017_nar_daily_replay_prediction_cutoff_schema.py`
+- modify `scripts/migrations/runner.py`
+
+No new companion repository is needed: the existing result repository must own one parent-plus-companion transaction. Expected tests are new `tests/test_nar_historical_replay_prediction_cutoff.py` plus changes to `tests/test_nar_historical_replay_eligibility.py`, `tests/test_sqlite_nar_daily_evidence_resolver.py`, `tests/test_nar_daily_replay_orchestrator.py`, `tests/test_nar_daily_replay_result_persistence.py`, `tests/test_nar_daily_replay_aggregation.py`, `tests/test_sqlite_nar_daily_replay_result_repository.py`, and `tests/test_historical_input_snapshot_migration.py`.
+
+Required eventual coverage includes: same target set plus different C gives different plan SHA; deterministic canonical target order; timezone-equivalent timestamps canonicalize identically; missing, extra, or duplicate targets; missing scheduled start; C after scheduled start; resolver rejection of `captured_at > C` and `information_cutoff > C`; repository lookup at C; Phase93 comparison at C; non-promotion of a capture-time status observation into valid-through-C; same snapshots plus different C gives different audit SHA; prediction-cutoff independence from settlement cutoff; untouched v016 table/schema/triggers; idempotent v017 runner; updated repository acceptance of an exact v017 database; malformed v017 rejection; unchanged legacy v016 values; companion UPDATE/DELETE rejection; corrupt plan SHA, noncanonical plan JSON, and parent/target-set mismatch rejection; atomic rollback on companion failure; identical idempotent publication; conflicting companion rejection; strict aggregation rejection of a legacy row; same `cutoff_policy_identity` with different daily plan SHAs accepted; mixed policy identities rejected; and a green full regression suite.
+
+`historical_daily_targets.py`, provider target discovery, target-set denominator semantics, `HistoricalInputSnapshot` schema, snapshot builder, and settlement-cutoff semantics remain out of scope unless a later reviewed contradiction proves otherwise.
+
+Phase41 remains unresolved: `NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE`. `PROSPECTIVE_NAR_ENTRY_STATUS_AUTHORITY_CAPTURE_BLOCKED_SOURCE_SEMANTICS`, `market_eligibility = UNSUPPORTED`, `positive_market_eligibility = UNSUPPORTED`, and `WHOLE_MEETING_CANCELLATION = UNSUPPORTED` remain unchanged.
+
+### Allowed Files
+
+- `scripts/simulation/nar_historical_replay_prediction_cutoff.py`
+- `scripts/simulation/sqlite_nar_daily_evidence_resolver.py`
+- `scripts/simulation/nar_historical_replay_eligibility.py`
+- `scripts/simulation/nar_daily_replay_orchestrator.py`
+- `scripts/simulation/nar_daily_replay_result_persistence.py`
+- `scripts/simulation/nar_daily_replay_aggregation.py`
+- `scripts/simulation/repositories/sqlite_nar_daily_replay_result_repository.py`
+- `scripts/migrations/versions/v017_nar_daily_replay_prediction_cutoff_schema.py`
+- `scripts/migrations/runner.py`
+- `tests/test_nar_historical_replay_prediction_cutoff.py`
+- `tests/test_nar_historical_replay_eligibility.py`
+- `tests/test_sqlite_nar_daily_evidence_resolver.py`
+- `tests/test_nar_daily_replay_orchestrator.py`
+- `tests/test_nar_daily_replay_result_persistence.py`
+- `tests/test_sqlite_nar_daily_replay_result_repository.py`
+- `tests/test_nar_daily_replay_aggregation.py`
+- `tests/test_historical_input_snapshot_migration.py`
+- `tests/test_simulation_migrations.py`
+- `tests/test_nar_official_response_capture_migration.py`
+- `tests/test_simulation_bet_plan_migration.py`
+- `tests/test_sqlite_persisted_simulation_application.py`
+- `docs/CURRENT_PHASE.md`
+- `docs/LATEST_CODEX_REPORT.md`
+
+### Forbidden Files
+
+Every other path, including provider target discovery, historical target identity, snapshot schemas, settlement domains, fixtures, capture archives, `database/**`, and `logs/**`.
+
+### Required Tests and Checks
+
+Run the new cutoff-plan test and focused Phase93, resolver, orchestrator, persistence, SQLite repository, aggregation, v017 migration and simulation migration tests; then run the full repository pytest suite. All must pass. Require `git diff --check`, exact scope audit, and `git status --short` before the approved one-commit normal push.
+
+### Stop Condition
+
+Stop if the remote baseline advances, an unapproved path or provider-denominator change is required, a fail-closed invariant cannot be represented, or a required test fails outside the approved scope. No Phase97 policy, authority issuer, or live acquisition is included.
+
+Next: `CHATGPT_REVIEW_PHASE96_IMPLEMENTATION`
+
+---
+
+## Historical Record — POST_V0_8_DAILY_REPLAY_95
+
+Title: Prospective NAR Entry-Status Authority Capture Contract
+
+Formal Status: DRAFT_FOR_REVIEW
+
+State: DRAFT_FOR_REVIEW
+
+Outcome: READY_FOR_ARCHITECTURAL_REVIEW
+
+Audit: PROSPECTIVE_NAR_ENTRY_STATUS_AUTHORITY_CAPTURE_AUDIT_COMPLETE
+
+Authorization: NONE_REQUIRED_AUDIT_ONLY
+
+Branch: `feature/post-v0.8-daily-replay`
+
+Starting HEAD/tree: `3a8bb363838110d5b918829e19e97fef1718fdaf` / `19986e75e450150032e631fe4dac111d3e59e581`
+
+### Phase94 reconciliation
+
+`PHASE94_AUTHORITY_ISSUANCE_REVIEW_PASS` and `HISTORICAL_ENTRY_STATUS_AUTHORITY_ISSUER_BLOCKED_SOURCE_SEMANTICS` are frozen. No Phase94 production implementation is authorized. The historical target `NAR / 21 / 2025-01-01 / 6` remains `HISTORICAL_REPLAY_BLOCKED_ENTRY_STATUS_AUTHORITY_UNAVAILABLE`; Phase95 does not repair or issue authority for it.
+
+### Separate prospective domains
+
+1. **Entry identity universe** is provider-scoped identity only. Its canonical content is UTF-8 canonical JSON containing `organization`, `source_system`, `external_race_id`, and a `horse_no`-ascending entries tuple. Each entry contains only `external_entry_id`, `external_horse_id`, and `horse_no`. The result is a versioned SHA-256 identity. It contains no name, internal `race_entry_id`, status, odds, or market field.
+2. **Observed entry-status universe** is a time-bounded interpretation of one or more immutable captures against that exact identity universe. It must retain explicit observed dispositions and supporting capture identities; it may not infer `ACTIVE` from an empty field.
+3. **Market eligibility** is separate and remains unsupported. Neither identity coverage nor observed status coverage can itself authorize a market decision.
+
+Phase88's entry extractor cannot be reused unchanged for prospective races: it intentionally hard-codes the published target and the `1..14` fixture invariant. Its reviewed structural primitives—one canonical `td.horseNum` and one canonical `a.horseName[href]` per entry—can only be reconsidered by a future generic identity-extraction contract. That future contract must derive provider identities without names, status, or odds and must fail closed for missing, duplicate, or ambiguous rows.
+
+### Official-source semantics
+
+| Existing official source | Current repository use | What it can prove | Complete positive status universe? |
+| --- | --- | --- | --- |
+| DebaTable | Exact entry rows and each five-row target block's current `td.info` field | An explicit recognized marker such as `出走取消`; an empty field is only no-explicit-withdrawal evidence | No. The reviewed parser deliberately never maps an empty field to `ACTIVE`; unknown non-empty values fail closed. |
+| RaceList `changeInfo` | Exact changed-race/horse association | Exceptional change rows such as `(race_no, horse_no, 出走取消)` | No. It is a change/exception list, not an explicit status record for every entry; multiple/other changes require separately reviewed semantics. |
+| RaceMarkTable | Normal final-result and payout persistence | Post-race result/settlement material | No. It is causally ineligible for pre-race status. |
+| HorseMarkInfo | Provider-local horse-detail capture | Individual horse detail only | No reviewed race-scoped complete-status contract exists. |
+
+No existing official source contract proves that an empty DebaTable status or absence from `changeInfo` means normal/active, proves that all cancellation/scratch forms are enumerated, or gives a complete positive disposition for every entry. Whole-race or meeting cancellation is also separate and remains unsupported.
+
+### Prospective capture and timing contract
+
+A future raw capture service must preserve one append-only immutable record for every observation: canonical source/request identity, exact response bytes, SHA-256, target identity, `requested_at`, `observed_at`, `stored_at`, HTTP status, charset/content-encoding, and received HTTP metadata. It must not overwrite an earlier capture. `NAROfficialResponseCapture` already supplies this raw-byte boundary for DebaTable, RaceMarkTable, and HorseMarkInfo, but its closed URL vocabulary does **not** include RaceList; a future reviewed capture design would need either a carefully extended common capture boundary or a separate RaceList/status boundary. HTTP `Date` and `Last-Modified` remain received metadata, not publication-time proof.
+
+Prospective capture timing must use the actual capture `observed_at`, never the page's race date. A future policy must declare an explicit prediction information cutoff `C` with `C <= target.scheduled_start_at`, accept only immutable observations at or before `C`, and retain their exact capture identities. Repeated captures before `C`, including after explicitly detected changes, are operationally useful but never replace a missing source-semantics proof.
+
+A capture at T-5 minutes can establish only the state known at that exact observation/cutoff. A withdrawal published at T-1 does not retrospectively invalidate that narrower claim, but it prevents any assertion that T-5 was the final pre-start state. Final-pre-race status may be claimed only if a reviewed source offers an explicit terminal/complete pre-start publication guarantee; none is known. The scheduler must therefore model the information cutoff explicitly rather than treating scheduled start as an observed-information time.
+
+### Issuance decision
+
+An eventual issuer may emit `COMPLETE_PRE_CUTOFF_ENTRY_STATUS_UNIVERSE` only if it proves exact target identity; the complete canonical provider identity universe; complete explicit status interpretation over that identical universe; mutually consistent source captures; immutable raw capture identity/digest; an actual observation no later than the declared prediction cutoff and scheduled start; deterministic derivation; and absence of post-race evidence. Any missing predicate means **do not issue**.
+
+Primary classification: `PROSPECTIVE_NAR_ENTRY_STATUS_AUTHORITY_CAPTURE_BLOCKED_SOURCE_SEMANTICS`.
+
+The raw prospective-capture shape is definable, but no known official source gives the complete positive per-entry status semantics necessary to issue the closed Phase93 authority. Accordingly, no implementation path is proposed in this phase. The minimum next step is a separately reviewed official-source semantics discovery effort that can establish an authoritative per-entry status roster (including the meaning of normal/non-withdrawn) or a provider-defined complete pre-start disposition feed. It must also define any whole-race/meeting cancellation semantics separately.
+
+Phase41 remains unresolved: `NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE`. Even a future successful status-capture prerequisite would not by itself resolve market eligibility: independent market-eligibility and market-odds authority would still require their own reviewed contracts.
+
+### Allowed Files
+
+- `docs/CURRENT_PHASE.md`
+- `docs/LATEST_CODEX_REPORT.md`
+
+### Forbidden Files
+
+Every other path, including live acquisition, production code, tests, fixtures, capture archives, databases, replay domains, `database/**`, and `logs/**`.
+
+### Required Checks
+
+Static repository inspection only. Do not run tests, provider requests, Phase44, GET, replay, database writes, staging, commit, or push. Require `git diff --check` and `git status --short` before stopping.
+
+### Stop Condition
+
+Stop without implementing capture or issuing synthetic authority unless a reviewed official source contract proves complete positive pre-start status coverage for the exact provider entry universe. Any live acquisition, new capture boundary, generic identity extractor, status interpreter, or market work requires a separately approved phase.
+
+Next: `CHATGPT_REVIEW_PHASE95_PROSPECTIVE_STATUS_CAPTURE`
+
+---
+
+## Historical Record — POST_V0_8_DAILY_REPLAY_94
+
+Title: NAR Historical Entry-Status Authority Issuance Boundary
+
+Formal Status: DRAFT_FOR_REVIEW
+
+State: DRAFT_FOR_REVIEW
+
+Outcome: READY_FOR_ARCHITECTURAL_REVIEW
+
+Audit: HISTORICAL_ENTRY_STATUS_AUTHORITY_ISSUANCE_AUDIT_COMPLETE
+
+Authorization: NONE_REQUIRED_AUDIT_ONLY
+
+Branch: `feature/post-v0.8-daily-replay`
+
+Starting HEAD/tree: `3a8bb363838110d5b918829e19e97fef1718fdaf` / `19986e75e450150032e631fe4dac111d3e59e581`
+
+### Phase93 reconciliation
+
+`PHASE93_IMPLEMENTATION_REMOTE_VERIFICATION_PASS` is frozen. `POST_V0_8_DAILY_REPLAY_93 = FORMALLY_COMPLETE` and `STRICT_HISTORICAL_REPLAY_ENTRY_STATUS_ELIGIBILITY_GATE = FORMALLY_INTEGRATED`. The verified integration commit is `3a8bb363838110d5b918829e19e97fef1718fdaf`, with tree `19986e75e450150032e631fe4dac111d3e59e581`, parent `01524006b23a0496d084f0d605f31cba8e6b87f9`, and message `feat: gate NAR replay on historical entry status authority`.
+
+### Candidate issuance inputs
+
+| Candidate | Immutable-byte and target authority | Status-universe authority | Time authority | Issuance result |
+| --- | --- | --- | --- | --- |
+| `NAROfficialResponseCapture` plus its append-only SQLite archive | Exact canonical official URL, strict UTF-8 body, SHA-256, capture ID, and reloadable capture body | The capture domain has no complete entry-status coverage semantic; a captured Deba/RaceList may expose a positive withdrawal only | `requested_at`, `observed_at`, and `stored_at` are retrieval/archive times. Optional HTTP headers are unqualified text, not reviewed provider-publication proof | Insufficient |
+| `HistoricalInputEvidenceReference` and snapshot provenance | Can retain URL, response digest, optional `available_at`, and `observed_at` | `HistoricalInputSourceRecord` has no entry-status record kind or complete-status-universe contract | Values are supplied metadata; this domain is not an issuer and does not independently authenticate availability | Insufficient |
+| Phase85 V3 bundle, Phase88 binding, and Phase90 interpretation | Exact frozen Deba/RaceList/manifest bytes and a complete 14-entry provider identity set | Horse 14 has current explicit withdrawal evidence; horses 1–13 have only no-explicit-withdrawal evidence, never `ACTIVE` | Manifest observations/captures are in 2026 and explicitly `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET` | Categorically ineligible for issuance |
+| Daily target evidence archive | Can identify the target day/race denominator and freeze response bytes | Does not prove complete exact-race entry-status coverage | Target fixture retrieval is in 2026 and `provider_available_at` is absent | Insufficient |
+| Result, payout, settlement, and replay-result evidence | May identify the completed race and immutable outcome records | Post-race outcome, not prediction-time entry status | Finalization/observation is after the prediction boundary | Categorically prohibited by the causal firewall |
+| Independently timestamped historical archive or provider version | No qualifying repository-held candidate exists | Would be eligible only if it explicitly covers every canonical entry's status | Must bind immutable content and trusted capture/publication time at or before the scheduled start | Required new source, not presently issuable |
+
+### Issuance boundary
+
+`NARHistoricalEntryStatusAuthority` remains a policy input, not self-authenticating evidence. A future reviewed issuer may construct it only from a source package that proves all of the following together: exact `NAR` / `nar_official` target identity; immutable canonical source bytes or an immutable archival reference; a lowercase SHA-256 digest of that exact content; an independently verified availability proof; availability at or before `target.scheduled_start_at`; the complete target entry universe; complete status coverage for that same universe; and deterministic source-to-authority derivation. Name matching, results, payouts, settlement, odds, current pages, or a caller-supplied timestamp may not repair a missing predicate. Failure of any predicate means no authority is issued.
+
+The canonical future `entry_universe_identity` must not be free text. It should be a versioned SHA-256 identity over canonical UTF-8 JSON containing `(organization, source_system, external_race_id)` and the horse-number-ascending tuple of exact provider entry identities `(external_entry_id, external_horse_id, horse_no)`. Phase88 supplies the only currently reviewed canonical target universe: fourteen `nar:20250101:21:6:entry:<horse_no>` identities for horse numbers 1 through 14. It is identity-only evidence. A future historical-status source must independently bind its complete status coverage to the same canonical universe; Phase88 cannot promote current status into historical status.
+
+Two timestamp provenance forms are potentially acceptable, but neither exists for this target: (1) `PROVIDER_PUBLICATION_AVAILABILITY`, requiring reviewed provider-controlled version/publication metadata that binds the exact content/digest to its publication time; or (2) `INDEPENDENT_ARCHIVE_OBSERVATION`, requiring an immutable archive capture identity, canonical original-source identity, exact captured content/digest, and independently verifiable archive time. Each time must be no later than the exact target scheduled start. A filename date, race date, a later retrieval's HTTP `Date`, current historical-page availability, or an arbitrary caller datetime is not a causal availability proof.
+
+### Classification and current target
+
+Primary classification: `HISTORICAL_ENTRY_STATUS_AUTHORITY_ISSUER_BLOCKED_SOURCE_SEMANTICS`.
+
+The known NAR documents support a positive current withdrawal marker, but do not support a positive non-withdrawn/active disposition for every other entry. Consequently they cannot establish `COMPLETE_PRE_CUTOFF_ENTRY_STATUS_UNIVERSE`, even apart from their post-cutoff timestamps. Phase92 also found no qualifying pre-cutoff archive. For `NAR / 21 / 2025-01-01 / 6`, no authority is issued and the Phase93 outcome remains `HISTORICAL_REPLAY_BLOCKED_ENTRY_STATUS_AUTHORITY_UNAVAILABLE`.
+
+The smallest next step is a separately reviewed source-contract/discovery phase for an official versioned status publication or independently timestamped archive whose exact document both predates the target scheduled start and explicitly provides complete status coverage for the canonical entry universe. It must determine source semantics before any issuer implementation is proposed; this phase authorizes no network research or authority publication.
+
+Phase41 remains unresolved: `NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE`. `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`, `market_eligibility = UNSUPPORTED`, `positive_market_eligibility = UNSUPPORTED`, and `WHOLE_MEETING_CANCELLATION = UNSUPPORTED` remain unchanged.
+
+### Allowed Files
+
+- `docs/CURRENT_PHASE.md`
+- `docs/LATEST_CODEX_REPORT.md`
+
+### Forbidden Files
+
+Every other path, including production code, tests, fixtures, databases, archives, replay domains, `database/**`, and `logs/**`.
+
+### Required Checks
+
+Static repository inspection only. Do not run tests, provider requests, Phase44, GET, replay, database writes, staging, commit, or push. Require `git diff --check` and `git status --short` before stopping.
+
+### Stop Condition
+
+Stop without issuing synthetic authority or proposing an issuer implementation if complete pre-cutoff status coverage cannot be proven from an existing reviewed source contract. Any needed source acquisition, archive research, implementation, test, or schema work belongs to a separately reviewed phase.
+
+Next: `CHATGPT_REVIEW_PHASE94_AUTHORITY_ISSUANCE`
+
+---
+
+## Historical Record — POST_V0_8_DAILY_REPLAY_93
 
 Title: Strict Historical Replay Eligibility Policy for Missing Entry-Status Authority
 
