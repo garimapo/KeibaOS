@@ -1,5 +1,102 @@
 # Current Phase
 
+## POST_V0_8_DAILY_REPLAY_90
+
+Title: NAR Entry Status Interpretation Authority
+
+Formal Status: READY_FOR_REVIEW
+
+State: IMPLEMENTED_FOR_REVIEW
+
+Outcome: READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW
+
+Implementation: NAR_CURRENT_ENTRY_STATUS_INTERPRETATION_IMPLEMENTED
+
+Audit: NAR_ENTRY_STATUS_INTERPRETATION_AUTHORITY_AUDIT_COMPLETE
+
+Design Review: PHASE90_ENTRY_STATUS_DESIGN_REVIEW_PASS
+
+Authorization: NONE_REQUIRED_NO_NETWORK_NO_DB
+
+Branch: `feature/post-v0.8-daily-replay`
+
+Starting HEAD/tree: `115cd9489d1a13a6cffc99e85d1c79b8cca72194` / `6044d07ceb3e843fa43e7370a637dd1bc1040b14`
+
+### Phase88/89 reconciliation
+
+Phase89 was integrated as commit `115cd9489d1a13a6cffc99e85d1c79b8cca72194`, tree `6044d07ceb3e843fa43e7370a637dd1bc1040b14`, parent `2e420a911e2cdeeb81f32214e5ba4d01fb4b0a7d`, with exact message `test: complete Phase88 bundle authenticity coverage`. Its committed paths were exactly `tests/test_nar_race_entry_status_replay_identity_binding.py`, `docs/CURRENT_PHASE.md`, and `docs/LATEST_CODEX_REPORT.md`; normal push succeeded and local/remote-tracking HEAD both reached that commit. This post-integration fact supersedes the former current/final Phase89 statement that staging, commit, and push were `NONE`; the historical PREPARE/APPROVE chronology remains unchanged.
+
+Independent verdicts are now frozen as `PHASE88_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`, `POST_V0_8_DAILY_REPLAY_88 = FORMALLY_COMPLETE`, `STRICT_READ_ONLY_NAR_REPLAY_IDENTITY_BINDING = FORMALLY_INTEGRATED`, `PHASE89_TEST_HARDENING_REMOTE_VERIFICATION_PASS`, and `POST_V0_8_DAILY_REPLAY_89 = FORMALLY_COMPLETE`.
+
+### Exact source-status evidence map
+
+- Frozen DebaTable bytes contain exactly one explicit `出走取消` marker in the target entry's reviewed current change/status area, structurally associated with horse 14's entry block. The future interpreter must not search arbitrary/global `取消` or `出走取消` text: the same document contains historical past-race cancellation text that is not target-entry status evidence. The horse-14 identity comes from the validated horse-number row and canonical provider horse link, never from name, odds, display order, result, or settlement data. `nar_race_entry_status_source_profile_profile_a.py::diagnose_nar_race_entry_status_profile_a_v3` proves one entry table, fourteen ordinary horse rows, and `ENTRY_LISTING_PRESENT`; Profile-A does **not** prove that unmarked entries are active and is not itself a status interpreter.
+- Frozen RaceList bytes contain exactly one target `table.changeInfo` row with race `6R`, horse number `14`, change category `出走取消`, and reason `疾病`. `nar_race_entry_status_source_profile_diagnostics.py::diagnose_nar_race_entry_status_profile_b_v2` formally proves `EXPLICIT_WITHDRAWAL_PRESENT`, one target schedule row, one shaped change row, and one horse-14 withdrawal association. Association authority is race number plus horse number; horse name is not used.
+- `nar_race_entry_status_source_profile_structural_recovery_diagnostics.py::diagnose_nar_race_entry_status_profile_b_candidate_ancestry_recovery` distinguishes the two target candidates as one direct schedule row and one nested `changeInfo` row. This prevents topology confusion but does not independently create a status semantic.
+- The V3 manifest freezes Profile-A/Profile-B results and the acquisition boundary. Deba was requested/observed/captured at `2026-09-21T23:27:42.093809Z` / `2026-09-21T23:27:42.678776Z` / `2026-09-21T23:27:42.678947Z`; RaceList at `2026-09-21T23:27:42.679272Z` / `2026-09-21T23:27:43.165338Z` / `2026-09-21T23:27:43.165400Z`. It explicitly states `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET` and `market_eligibility = UNSUPPORTED`.
+- `nar_race_entry_status_source_profile_fixture_consumer.py::NARRaceEntryStatusSourceProfileFixtureBundleV3` preserves exact raw bytes, manifest, Phase66 ancestry, and publication-plan authority. It adds no historical timestamp or status inference.
+- `nar_race_entry_status_replay_identity_binding.py::NARRaceEntryStatusReplayIdentityBinding` maps all fourteen source identities, including horse 14, to internal race-entry IDs. It has no status field and neither filters nor reinterprets an entry.
+
+### Four separate semantic decisions
+
+1. `CURRENT_OBSERVED_ENTRY_STATUS`: **supported only as bounded evidence.** At the 2026 capture boundary, horse 14 has corroborating explicit withdrawal evidence in DebaTable and RaceList. For horses 1–13 the only safe conclusion is `NO_EXPLICIT_WITHDRAWAL_EVIDENCE`; absence of the marker does not prove `ACTIVE`.
+2. `HISTORICAL_ENTRY_STATUS`: **unsupported / blocked.** The documents were captured more than a year after the 2025-01-01 target. They contain no provider publication time or other authority proving that the status was available at the historical prediction cutoff. Current observation must not be backdated. Exact blocker: `HISTORICAL_ENTRY_STATUS_AUTHORITY_BLOCKED`.
+3. `MARKET_ELIGIBILITY`: **unsupported.** Neither explicit current withdrawal nor absence of a marker proves market or positive-market eligibility. Phase41 dependency `NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE` remains unresolved; `market_eligibility`, `positive_market_eligibility`, and `WHOLE_MEETING_CANCELLATION` remain `UNSUPPORTED`.
+4. `SNAPSHOT_ENTRY_INCLUSION`: **unsupported.** Current post-target status evidence cannot justify including or excluding any entry from a historical snapshot. Horse 14 remains in the identity universe. No other entry becomes snapshot-eligible merely because it lacks an explicit withdrawal marker.
+
+### Existing-domain audit and temporal firewall
+
+`historical_input_source_records.py::SourceRecordKind` is closed to `track`, `entry`, `jockey`, `odds_win`, `past_race`, and `past_race_absence`; its entry payload carries identity only. `historical_input_snapshots.py::HistoricalRaceEntrySnapshot` has identity, horse number, jockey, positive win odds, and order, but no status field. `historical_input_snapshot_builder.py::build_historical_input_snapshot` requires every source observation to be causally eligible at `information_cutoff`; the 2026 observations cannot satisfy a 2025 historical cutoff. Result/settlement enums such as `RaceResultEntryStatus`, `SettlementStatus`, and payout status describe post-race outcome or settlement domains and are not reusable as prediction-time entry-status evidence.
+
+Accordingly, Phase90 must not add a status record to `HistoricalInputSourceRecord` or alter snapshot models. A separate immutable evidence domain is the smallest safe boundary. The closed current-observation vocabulary is `EXPLICIT_WITHDRAWAL_OBSERVED` and `NO_EXPLICIT_WITHDRAWAL_EVIDENCE`; it deliberately contains no `ACTIVE`, market, or replay-ready value. A race-level temporal scope is fixed to `CURRENT_OBSERVATION_ONLY`.
+
+### Proposed next no-network authority
+
+The primary classification is `ENTRY_STATUS_INTERPRETATION_IMPLEMENTABLE`, limited strictly to current-observed evidence. Historical status remains independently `HISTORICAL_ENTRY_STATUS_AUTHORITY_BLOCKED`.
+
+The future keyword-only interpreter should accept the exact trusted `NARRaceEntryStatusSourceProfileFixtureBundleV3` and exact `NARRaceEntryStatusReplayIdentityBinding`, verify identical target and complete fourteen-entry sets, and return a frozen/slotted `NARRaceEntryStatusInterpretation`. It should contain the exact target, acquisition semantic, `CURRENT_OBSERVATION_ONLY`, an explicit historical-status-authority state, and a horse-number-ordered tuple of frozen entry evidence. Each entry evidence carries source/internal entry identity, horse number, one of the two closed classifications, and immutable supporting document evidence (role, capture identity, observed/captured timestamp, and exact supported label where present). It retains horse 14 and performs no database lookup because Phase88 has already supplied identity binding.
+
+The interpreter must parse only the reviewed target Deba current change/status area and target RaceList `changeInfo` table; it must require RaceList association by exact `race_no = 6`, `horse_no = 14`, and withdrawal label `出走取消`, never by horse name. It must require Deba, RaceList, and frozen Profile-B authority to agree on the explicit horse-14 withdrawal set; Profile-B must retain terminal semantic `EXPLICIT_WITHDRAWAL_PRESENT`, a passing `HORSE_14_WITHDRAWAL_ASSOCIATION`, withdrawn provider horse number `14`, and `withdrawal_label_match = true`. The set must be a subset of the complete Phase88 identity set. Missing, ambiguous, unsupported, or contradictory evidence fails the whole race; no partial result or silent skip is allowed. Stable failures must distinguish `UNSUPPORTED_BUNDLE_OR_BINDING`, `TARGET_CONTRADICTION`, `ENTRY_SET_CONTRADICTION`, `STATUS_EVIDENCE_MISSING`, `STATUS_EVIDENCE_AMBIGUOUS`, `DEBA_RACELIST_CONTRADICTION`, `PROFILE_B_CONTRADICTION`, `HORSE_ASSOCIATION_CONTRADICTION`, `TEMPORAL_AUTHORITY_UNAVAILABLE`, and `UNSUPPORTED_STATUS_REPRESENTATION`. `TEMPORAL_AUTHORITY_UNAVAILABLE` applies whenever a caller attempts to consume this current-observation result as historical-cutoff authority; the basic current-observation interpretation remains valid.
+
+Minimum future implementation scope is exactly four paths:
+
+- create `scripts/simulation/nar_race_entry_status_interpretation.py`
+- create `tests/test_nar_race_entry_status_interpretation.py`
+- modify `docs/CURRENT_PHASE.md`
+- modify `docs/LATEST_CODEX_REPORT.md`
+
+That future phase is pure and no-network. It may parse only the already validated frozen bundle and join by horse number/external entry identity already fixed by Phase88. It must not rediscover DB mapping, use names, construct snapshots, apply market rules, persist anything, invoke replay, or consume results/settlement/payout/odds as status authority.
+
+### Approved Phase90 execution contract
+
+Base Commit and Branch: `115cd9489d1a13a6cffc99e85d1c79b8cca72194` / `feature/post-v0.8-daily-replay`.
+
+Allowed Files: create `scripts/simulation/nar_race_entry_status_interpretation.py` and `tests/test_nar_race_entry_status_interpretation.py`; modify `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`. No fifth path is permitted.
+
+Forbidden Files: published fixtures, Phase85 consumer, Phase88 binder, `.gitattributes`, database, logs, historical normalizer, snapshot, replay, market, provider, and every path outside Allowed Files.
+
+Required Tests, in order: Phase90 focused interpretation; Phase88 identity binding; Phase85 fixture consumer; dedicated V3 fixture; historical snapshot builder; full repository suite. Every required run must pass. Also require branch/HEAD/tree/remote identity before integration, exact four-path scope, empty unexpected staged/untracked sets, and `git diff --check` return code zero.
+
+Stop Condition: fail closed with `PHASE90_IMPLEMENTATION_CONTRACT_BLOCKED` if approved semantics cannot be implemented safely; stop for any scope or test failure. On success, record `IMPLEMENTED_FOR_REVIEW` and `READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`, integrate only the four approved paths with the user-approved exact commit and normal push, then stop for `CHATGPT_REVIEW_PHASE90_IMPLEMENTATION`.
+
+### Phase90 implementation result
+
+The approved keyword-only `interpret_nar_race_entry_status_v3(*, bundle, binding)` now returns frozen/slotted `NARRaceEntryStatusInterpretation`, `NARRaceEntryCurrentStatusEvidence`, and `NARRaceEntryStatusEvidenceTimestamp` values. It independently validates the frozen Phase85 bundle and the complete exact Phase88 binding without accessing SQLite. It reads only the fifth direct row's `td.info` in each validated Deba entry block and the exact target RaceList `changeInfo` row. It requires frozen Profile-B agreement and the exact 2026 acquisition timestamps. All fourteen identities are retained in horse-number order.
+
+Horse 14 has `EXPLICIT_WITHDRAWAL_PRESENT`; horses 1–13 have `NO_EXPLICIT_WITHDRAWAL_EVIDENCE`. The race result explicitly marks current observation `SUPPORTED` and historical status `HISTORICAL_ENTRY_STATUS_AUTHORITY_BLOCKED`. It contains no market, snapshot-inclusion, odds, prediction, replay, settlement, or persistence field. Phase41's independent entry-status capture dependency remains unresolved.
+
+Required tests passed in order: Phase90 focused `27 passed`; Phase88 binding `51 passed`; Phase85 consumer `40 passed, 2 skipped`; dedicated V3 fixture `4 passed`; historical snapshot builder `14 passed, 15 subtests passed`; full repository suite `4505 passed, 2 skipped, 2841 subtests passed`. The published Deba/RaceList/manifest remain byte-identical to Phase83: `313317` / `6c9aa3ea614c17e14f0e7a5050190ca923445925d67f8e61e71db95e87c87727`, `66307` / `1eb363621c7a152929765ff7ffecabea2d7cf15283d45fa9c31036527c0b53a1`, and `4254` / `3ca36ed4cec1002e0440fb02e466f40dd7f4d74ffb7c0bdf7b55be2271af321d`.
+
+Provider HTTP / Phase44 / GET: `0 / 0 / 0`.
+
+DB access / writes: `0 / 0`.
+
+The exact commit and push result are authoritative in the execution handoff after Git integration; this document records implementation evidence for independent review.
+
+Next: `CHATGPT_REVIEW_PHASE90_IMPLEMENTATION`
+
+---
+
 ## POST_V0_8_DAILY_REPLAY_89
 
 Title: Phase88 Bundle-Authenticity Negative-Test Completion
