@@ -1,5 +1,240 @@
 # Latest Codex Report
 
+## POST_V0_8_DAILY_REPLAY_100 — CAMPAIGN ACTIVATION AND PASSIVE WIRING DESIGN
+
+Phase: `POST_V0_8_DAILY_REPLAY_100`
+
+Formal Status: `READY_FOR_REVIEW`
+
+State: `IMPLEMENTED_FOR_REVIEW`
+
+Outcome: `READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`
+
+Audit: `NAR_TIMING_CAMPAIGN_ACTIVATION_AND_PASSIVE_WIRING_DESIGN_COMPLETE`
+
+Implementation: `NAR_PRE_MEASUREMENT_SESSION_ACTIVATION_AUTHORITY_IMPLEMENTED`
+
+Design Review: `PHASE100_CAMPAIGN_ACTIVATION_DESIGN_REVIEW_PASS`
+
+### Implementation result
+
+Phase100 adds a canonical immutable activation declaration, a separate verification
+receipt, closed official/late/unavailable qualification, a same-database companion
+schema with its own v1 registry, an exact activation repository, and controlled
+issuance. It modifies only the normal Phase99 archive schema gate to accept either
+exact historical base v1 or exact base plus exact companion v1. The original Phase99
+strict base-v1 validator, tables, registry, rows, and record meanings are unchanged.
+
+The declaration references the exact archived Phase99 session and configuration;
+its canonical SHA identity contains no timestamp. The receipt references the exact
+declaration and service-sampled UTC `activation_verified_at`. Issuance saves and
+exact-reloads declaration before sampling UTC, then saves and exact-reloads receipt.
+Exact retries reuse the receipt without a new clock sample. A declaration-only retry
+uses the current clock, so it cannot reconstruct an earlier verified time. Official
+qualification requires exact archived ancestry and verification no later than session
+start. No existing session was backfilled or synthesized.
+
+Companion migration is atomic and idempotent from exact base v1. Its tables prohibit
+UPDATE/DELETE, enforce restrictive ancestry and one declaration/verification per
+parent, and the Phase100 gate rejects partial/unknown objects. Existing Phase99
+configuration, session, attempt, terminal, unresolved-attempt, and freeze-receipt
+operations continue after companion installation. No live wiring or runtime-binding
+claim is made; `RUNTIME_MEASUREMENT_CONFIGURATION_BINDING_REQUIRED` remains Phase101
+work. The concrete offset remains subject to the operational timing audit.
+
+Changed production paths: new
+`scripts/simulation/nar_operational_timing_session_activation.py`,
+`scripts/simulation/nar_operational_timing_activation_archive_migration.py`,
+`scripts/simulation/sqlite_nar_operational_timing_activation_archive.py`; modified
+`scripts/simulation/sqlite_nar_operational_timing_observability_archive.py`.
+Added three matching focused test files and updated the two phase-control docs.
+
+Focused activation tests: `14 passed`. Focused plus required Phase99 and
+snapshot/cutoff regressions: `91 passed, 30 subtests passed`. Full suite:
+`4590 passed, 2 skipped, 2846 subtests passed`. Provider HTTP / live campaigns /
+production DB writes: `0 / 0 / 0`; temporary in-memory SQLite writes occurred only
+in tests. No Phase101 passive wrappers, concrete Delta, scheduler, policy activation,
+or ROI work was undertaken. Phase100 awaits independent implementation review.
+
+### Final architectural revision
+
+Phase99 remains formally reconciled: `PHASE99_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`,
+`POST_V0_8_DAILY_REPLAY_99 = FORMALLY_COMPLETE`, and
+`NAR_PRE_C_FREEZE_PROVENANCE_AND_TIMING_OBSERVABILITY_FOUNDATION = FORMALLY_INTEGRATED`.
+
+Record `PHASE100_ARCHITECTURAL_REVIEW_REQUIRES_REVISION`: primary
+`V1_OBSERVABILITY_REGISTRY_CANNOT_DIRECTLY_ACCEPT_V2_MIGRATION`; secondary
+`ACTIVATION_TIMESTAMP_DOES_NOT_YET_PROVE_PRESTART_ACTIVATION_PUBLICATION`.
+
+The existing Phase99 observability registry is exact v1: its `version` check permits
+only `1`, its registered migration name is v001, and its gate requires the exact v1
+object set. The prior in-place v2 proposal is superseded. Preserve every base-v1
+registry/table/row/trigger/payload/validator unchanged; do not add a base-registry v2
+row, backfill, or synthesize activation.
+
+Phase100 instead adds a same-database companion registry,
+`nar_operational_timing_activation_schema_migrations`, with exact companion-v1
+identity and append-only declaration/verification-receipt tables. Its migration first
+verifies exact base v1, then atomically creates its registry, tables, restrictive FKs,
+and immutability triggers. Declarations reference
+`nar_operational_timing_sessions(identity)` with `ON UPDATE RESTRICT ON DELETE
+RESTRICT`; receipts reference declarations. The Phase99 gate remains base-v1 only; a
+new Phase100 gate validates the exact base-v1-plus-companion-v1 union. Idempotent exact
+upgrade succeeds; malformed base, partial companion, changed existing objects, or
+unknown extras fail closed.
+
+The authority is a two-artifact chain. Immutable content-addressed
+`NAROperationalTimingMeasurementSessionActivationDeclaration` binds only schema,
+exact archived session/configuration identities, and a closed activation semantic; it
+has no timestamp or outcome material. The controlled issuer reloads session/config,
+saves and exact-reloads the declaration, and only then samples service-owned UTC time.
+It saves/reloads a verification receipt binding declaration/session/config identities,
+closed verification semantic, and `activation_verified_at`.
+
+The timestamp proves the declaration already committed and exact-reload verified no
+later than the sample; it does not prove receipt publication by then. Therefore
+`ACTIVATION_DECLARATION_IDENTITY != VERIFIED_PRESTART_ACTIVATION_AUTHORITY`.
+`OFFICIAL_PREDECLARED_MEASUREMENT_SESSION` requires the exact archived chain and
+`activation_verified_at <= measurement_start_at` (equality is eligible). A late record
+is `ACTIVATION_VERIFIED_AFTER_MEASUREMENT_START`; missing/contradictory provenance is
+`ACTIVATION_PROVENANCE_UNAVAILABLE`. Retrospective semantic values, session SHA,
+declaration construction time, and row/filesystem metadata never qualify.
+
+Activation only predeclares a timing campaign. It does not authorize Delta, Phase97
+policy activation, status/market eligibility, ROI, or runtime reality. Preserve
+`MEASUREMENT_SESSION_IDENTITY != PRE_MEASUREMENT_SESSION_ACTIVATION_AUTHORITY`,
+`DECLARED_SOFTWARE_COMMIT != RUNTIME_BOUND_SOFTWARE_COMMIT`, and
+`RUNTIME_MEASUREMENT_CONFIGURATION_BINDING_REQUIRED`. Phase100 is activation-only;
+Phase101 must review runtime binding, UTC/monotonic composition, attempt wiring, and
+passive wrappers. The first official Delta campaign remains unavailable, and
+`CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT` remains unresolved.
+
+Expected Phase100 paths are new
+`scripts/simulation/nar_operational_timing_session_activation.py`, new
+`scripts/simulation/nar_operational_timing_activation_archive_migration.py`, and a
+narrow archive-repository change or dedicated activation repository wrapper, plus
+focused activation/companion-migration/archive tests. Required tests include exact
+v1-to-companion upgrade without base-registry v2, exact-union validation, no backfill,
+controlled declaration→reload→clock→receipt ordering, before/equal/after-start states,
+append-only idempotency/conflict behavior, and authority separation. No production
+code, tests, provider HTTP, DB writes, staging, commit, or push occurred.
+
+### Phase99 reconciliation
+
+`PHASE99_IMPLEMENTATION_REMOTE_VERIFICATION_PASS` is recorded. Phase99 is formally
+complete and `NAR_PRE_C_FREEZE_PROVENANCE_AND_TIMING_OBSERVABILITY_FOUNDATION` is
+formally integrated. The prior measurement-session review requirement is resolved.
+
+Phase99 establishes timing record identity, but its session SHA remains semantic
+identity only. It does not prove the session was declared before observation begins:
+
+`MEASUREMENT_SESSION_IDENTITY != PRE_MEASUREMENT_SESSION_ACTIVATION_AUTHORITY`.
+
+### Historical preliminary Phase100 design — superseded
+
+Everything in this historical preliminary block through the Phase99 separator records
+the replaced single-record/in-place-v2 proposal only. The final architectural revision
+above is the sole current Phase100 contract.
+
+`PRE_MEASUREMENT_SESSION_ACTIVATION_AUTHORITY_REQUIRED`.
+
+The minimum new authority is a content-addressed
+`NAROperationalTimingMeasurementSessionActivation`. It binds the exact archived
+session, its exact measurement configuration, a closed
+`PREDECLARED_BEFORE_MEASUREMENT_WINDOW` semantic, and a service-owned UTC
+`activated_at`. Its canonical NFC UTF-8 JSON SHA is exposed as
+`nar-operational-timing-session-activation-v1:<sha256>`.
+
+The controlled issuer reloads the exact configuration/session, samples its injected
+centralized UTC clock, requires `activated_at <= measurement_start_at`, writes the
+record append-only, and exactly reloads it. Equality at session start qualifies. A
+late activation fails issuance; no nonofficial activation variant, backfill, or
+synthetic activation for existing sessions is created.
+
+This authority proves only campaign declaration. It does not activate a Phase97 policy,
+select Delta, establish entry-status or market authority, determine race eligibility,
+or authorize ROI. Therefore:
+
+`SESSION_ACTIVATION_AUTHORITY != SESSION_IDENTITY`
+
+`SESSION_ACTIVATION_AUTHORITY != POLICY_ACTIVATION_AUTHORITY`
+
+`SESSION_ACTIVATION_AUTHORITY != PREDICTION_CUTOFF_POLICY`
+
+### Archive and official aggregation design
+
+Use a v2 migration of the existing isolated observability archive. It retains exact v1
+tables, rows, triggers, and payloads; adds one immutable activation table with a
+one-to-one session foreign key and restrictive foreign-key actions; and rejects
+partial, altered, or unregistered v2 schemas. Migration starts only from exact v1,
+runs atomically, and is idempotent. V1-only archives remain diagnostic and receive no
+retroactive authority.
+
+Official timing aggregation will require exact configuration compatibility, one timely
+activation per selected session, Phase99 half-open attempt membership, the whole
+attempt denominator, terminal records where present, and unresolved-attempt counts.
+The eligible state is `OFFICIAL_PREDECLARED_MEASUREMENT_SESSION`; missing or
+contradictory activation is `DIAGNOSTIC_UNAUTHORIZED_MEASUREMENT_SESSION`. Diagnostic
+sessions cannot silently contribute to official Delta selection. Session SHA may differ
+across campaigns; configuration SHA must match.
+
+### Passive wiring contract
+
+Live composition must validate a configuration from executing collaborators rather than
+trust a caller-written description. It must bind current timeout/retry constants,
+serial RaceList behavior, worker regime, enabled stages, and a deployment-provided
+immutable runtime commit. `DECLARED_SOFTWARE_COMMIT` and
+`RUNTIME_BOUND_SOFTWARE_COMMIT` must match for official evidence. A process lacking a
+runtime-bound commit remains diagnostic. No runtime GitHub lookup is needed.
+
+Wrappers use one centralized injected UTC clock for causal timestamps and a separate
+injected monotonic timer for elapsed spans. Each stage publishes its attempt start
+before measured work starts, then measures the underlying operation, and publishes a
+closed terminal result. A missing terminal after failure/crash stays unresolved.
+Underlying production exceptions are rethrown. Required attempt/receipt archival
+overhead is recorded as observability overhead and included in later PRE_C envelope
+review; its cost cannot disappear from Delta evidence.
+
+The existing composition boundaries are supplier bootstrap capture methods, supplied
+daily-target/RaceList capture, the outer daily acquisition application, official
+response capture, raw market-odds acquisition, snapshot building, the existing
+save→reload→receipt service, and post-C historical bet-plan execution. Phase99
+`freeze_completed_at` remains sampled after snapshot save/reload and before receipt
+archive publication. Receipt archive persistence/reload therefore requires separate
+timing stages and does not redefine the Phase99 freeze semantic.
+
+### Implementation decomposition
+
+Recommend two implementation phases:
+
+1. **Phase100:** activation authority only. Modify the observability archive migration
+   and repository, add the controlled activation service, tests, and phase documents.
+2. **Phase101:** passive live adapters after Phase100 review. Add an adapter/composition
+   module and only the reviewed capture/snapshot/post-C composition changes necessary
+   to install it.
+
+This split avoids publishing timing samples before the authority used to judge them
+has its own reviewed archive contract. A full scheduler is not required for the Phase100
+foundation; it becomes a separate prerequisite if future operation exceeds the existing
+single-worker serial regime.
+
+The first official campaign sequence is exact configuration/runtime binding; archive
+configuration and fixed future session; timely activation; durable attempt starts;
+terminal/reconciliation evidence; read-only timing statistics; independent Delta
+review. An unactivated diagnostic dry run may test adapters but cannot enter official
+Delta evidence.
+
+### Remaining blockers
+
+`CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT` remains unresolved. So do
+the independent entry-status and market-eligibility blockers. No provider HTTP, live
+campaign, production DB write, test, staging, commit, or push occurred in this Phase100
+PREPARE. Only the two phase-control documents changed.
+
+Next: `CHATGPT_REVIEW_PHASE100_CAMPAIGN_ACTIVATION_AND_WIRING`
+
+---
+
 ## POST_V0_8_DAILY_REPLAY_99 — IMPLEMENTATION HANDOFF
 
 Formal Status: `READY_FOR_REVIEW`

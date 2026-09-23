@@ -5,6 +5,9 @@ from __future__ import annotations
 import sqlite3
 
 from scripts.simulation import nar_operational_timing_observability_archive_migration as schema
+from scripts.simulation.nar_operational_timing_activation_archive_migration import (
+    require_nar_operational_timing_archive_compatible_schema,
+)
 from scripts.simulation.historical_input_snapshot_freeze_receipt import (
     HistoricalInputSnapshotFreezeReceipt, _ISSUANCE_MARKER,
 )
@@ -29,10 +32,10 @@ class SQLiteNAROperationalTimingObservabilityArchive:
         if type(connection) is not sqlite3.Connection or connection.in_transaction:
             raise TimingArchiveError("archive requires exact idle caller-owned SQLite connection")
         self._connection = connection
-        schema.require_nar_operational_timing_observability_archive_schema(connection)
+        require_nar_operational_timing_archive_compatible_schema(connection)
 
     def _read(self, table: str, identity: str) -> tuple[object, ...] | None:
-        schema.require_nar_operational_timing_observability_archive_schema(self._connection)
+        require_nar_operational_timing_archive_compatible_schema(self._connection)
         try:
             rows = self._connection.execute(f"SELECT * FROM {table} WHERE identity=?", (identity,)).fetchall()
         except sqlite3.Error as error:
@@ -45,7 +48,7 @@ class SQLiteNAROperationalTimingObservabilityArchive:
               parent_column: str | None = None, parent_identity: str | None = None) -> None:
         if self._connection.in_transaction:
             raise TimingArchiveError("archive writes require no caller transaction")
-        schema.require_nar_operational_timing_observability_archive_schema(self._connection)
+        require_nar_operational_timing_archive_compatible_schema(self._connection)
         encoded = payload.decode("utf-8")
         try:
             self._connection.execute("BEGIN IMMEDIATE")
