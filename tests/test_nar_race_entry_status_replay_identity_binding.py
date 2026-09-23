@@ -65,6 +65,21 @@ def _classification(bundle, db, expected):
     assert not db.in_transaction
 
 
+def _forged_bundle(bundle, **overrides):
+    """Construct a test-only bundle that bypasses its public constructor."""
+    forged = object.__new__(type(bundle))
+    for member in fields(bundle):
+        object.__setattr__(forged, member.name, overrides.get(member.name, getattr(bundle, member.name)))
+    return forged
+
+
+def _unsupported_before_sqlite(bundle):
+    """An unusable connection proves the bundle gate precedes SQLite validation."""
+    with pytest.raises(binding.NARRaceEntryStatusReplayIdentityBindingError) as caught:
+        binding.bind_nar_race_entry_status_v3_identity(bundle=bundle, connection=object())
+    assert caught.value.classification == "UNSUPPORTED_BUNDLE"
+
+
 def test_complete_identity_only_binding(bundle):
     db = _db()
     first = binding.bind_nar_race_entry_status_v3_identity(bundle=bundle, connection=db)
@@ -119,6 +134,20 @@ def test_forged_bundle_rejected_before_database(bundle, field, other):
 
 def test_wrong_bundle_type(bundle):
     _classification(object(), _db(), "UNSUPPORTED_BUNDLE")
+
+
+def test_forged_manifest_member_rejected_before_sqlite(bundle):
+    _unsupported_before_sqlite(_forged_bundle(bundle, manifest=object()))
+
+
+def test_fixture_set_identity_mismatch_rejected_before_sqlite(bundle, monkeypatch):
+    monkeypatch.setattr(binding, "_FIXTURE_SET_ID", "forged-fixture-set-identity")
+    _unsupported_before_sqlite(bundle)
+
+
+def test_qualification_identity_mismatch_rejected_before_sqlite(bundle, monkeypatch):
+    monkeypatch.setattr(binding, "_QUALIFICATION_ID", "forged-qualification-identity")
+    _unsupported_before_sqlite(bundle)
 
 
 def test_withdrawn_horse_identity_does_not_read_status_or_odds(bundle):
