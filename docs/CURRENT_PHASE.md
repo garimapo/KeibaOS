@@ -1,24 +1,329 @@
 # Current Phase
 
-## POST_V0_8_DAILY_REPLAY_97
+## POST_V0_8_DAILY_REPLAY_99
 
-Title: Outcome-Independent NAR Prediction-Cutoff Policy and Plan Production
+Title: NAR Pre-C Freeze and Timing Observability Architecture
 
 Formal Status: READY_FOR_REVIEW
 
-Design Review: PHASE97_PREDICTION_CUTOFF_POLICY_DESIGN_REVIEW_PASS
+Design Review: PHASE99_TIMING_OBSERVABILITY_DESIGN_REVIEW_PASS
 
-Base Commit and Branch: `974808ee888de36bbdbf5f409922ccb21038ba67` / `feature/post-v0.8-daily-replay`
+Measurement Contract Review: PHASE99_MEASUREMENT_SESSION_CONTRACT_REVIEW_PASS
+
+Base Commit and Branch: `7ec5afbe89d65803ba63d357a1d07e68c4c7e30a` / `feature/post-v0.8-daily-replay`
 
 State: IMPLEMENTED_FOR_REVIEW
 
 Outcome: READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW
 
-Audit: OUTCOME_INDEPENDENT_PREDICTION_CUTOFF_POLICY_DESIGN_COMPLETE
+Audit: NAR_PRE_C_FREEZE_AND_TIMING_OBSERVABILITY_DESIGN_COMPLETE
 
-Authorization: APPROVED_FOR_IMPLEMENTATION
+Authorization: POST_V0_8_DAILY_REPLAY_99_REAPPROVED_FOR_IMPLEMENTATION
 
-Implementation: NAR_FIXED_OFFSET_PREDICTION_CUTOFF_POLICY_AND_PLAN_PRODUCER_IMPLEMENTED
+Implementation: NAR_PRE_C_FREEZE_PROVENANCE_AND_TIMING_OBSERVABILITY_FOUNDATION_IMPLEMENTED
+
+### Phase99 implementation result
+
+`PHASE99_TIMING_OBSERVABILITY_DESIGN_REVIEW_PASS` and
+`PHASE99_MEASUREMENT_SESSION_CONTRACT_REVIEW_PASS` authorized the narrow substrate.
+`PHASE99_IMPLEMENTATION_STOP_CONDITION_ACCEPTED` remains the accurate record of the
+prior halt; `PHASE99_MEASUREMENT_SESSION_CONTRACT_REQUIRES_REVIEW = RESOLVED`.
+
+The implementation adds frozen/slotted content-addressed configuration, fixed-window
+session, closed stage/correlation/load context, separate attempt-start and terminal
+observation records, an isolated v1 SQLite archive, and a controlled snapshot
+save→commit→exact reload→UTC sample→archive write→archive reload receipt service.
+Qualification uses an archived receipt plus exact NAR target and Phase96 cutoff plan;
+`freeze_completed_at <= C` qualifies and later completion does not. The receipt
+claims only `COMMITTED_AND_EXACT_RELOAD_VERIFIED`, not crash durability. Existing
+snapshot `captured_at` is never used as freeze-completion proof. An identical stored
+snapshot without a prior receipt receives a new verification time, never an inferred
+historical time.
+
+The archive is connection-injected, explicitly migrated, exact-schema gated, and
+append-only. Configurations, sessions, attempts, terminals, and freeze receipts are
+separate record families. Every started attempt remains queryable until it has a
+terminal record, including a slow attempt finishing after the fixed session end.
+Direct caller-created receipts cannot be archived through the public save method
+without the controlled issuance marker. Optional metric failure cannot affect
+prediction values; required receipt publication failure leaves the snapshot intact
+and prevents official freeze qualification. Required receipt persistence and reload
+belong to future PRE_C timing budgets.
+
+Focused tests: `29 passed`. Required existing regressions: `108 passed, 95
+subtests passed`. Full suite: `4576 passed, 2 skipped, 2846 subtests passed`.
+Only four new production modules, four new focused tests, and the two phase-control
+documents changed. Provider HTTP / Phase44 / GET: `0 / 0 / 0`. Production DB writes:
+`0`; test-only in-memory SQLite writes exercised the archive and snapshot repository.
+
+Still unresolved: `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`,
+`MEASUREMENT_SESSION_IDENTITY != PRE_MEASUREMENT_SESSION_ACTIVATION_AUTHORITY`,
+`POLICY_IDENTITY != PRE_OUTCOME_POLICY_AUTHORITY`, and the independent Phase94/95/41
+source-semantic blockers. Phase99 is not formally complete before independent review.
+
+Next: `CHATGPT_REVIEW_PHASE99_IMPLEMENTATION`.
+
+### Phase99 execution contract
+
+Allowed Files: create `scripts/simulation/nar_operational_timing_observability.py`, `scripts/simulation/nar_operational_timing_observability_archive_migration.py`, `scripts/simulation/sqlite_nar_operational_timing_observability_archive.py`, `scripts/simulation/historical_input_snapshot_freeze_receipt.py`, `tests/test_nar_operational_timing_observability.py`, `tests/test_nar_operational_timing_observability_archive_migration.py`, `tests/test_sqlite_nar_operational_timing_observability_archive.py`, and `tests/test_historical_input_snapshot_freeze_receipt.py`; modify `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`.
+
+Forbidden Files: every other production/test path, especially live capture/transports, generic snapshot repository/domain, Phase96 resolver/cutoff plan, scheduler, prediction pipeline, database, and logs.
+
+Required Tests: all four new focused test files; `tests/test_sqlite_historical_input_snapshot_repository.py`, `tests/test_historical_input_snapshots.py`, `tests/test_historical_input_snapshot_builder.py`, `tests/test_nar_historical_replay_prediction_cutoff.py`, `tests/test_nar_historical_replay_prediction_cutoff_policy.py`, `tests/test_sqlite_nar_daily_evidence_resolver.py`; then the full repository pytest suite, `git diff --check`, and exact changed-path audit.
+
+Stop Condition: stop if the remote baseline advanced, unexpected non-doc changes exist, a new source/activation semantic or concrete Delta is required, the existing snapshot repository cannot safely support controlled wrapper issuance, a live transport or Phase96 change is required, tests fail outside scope, or normal push cannot succeed without force. Only after all checks pass may the one authorized commit and normal push occur.
+
+### Historical design record — measurement-session contract revision
+
+Implementation at the design-revision checkpoint: `NOT_STARTED_STOP_CONDITION_RESOLVED_IN_DESIGN`.
+
+The prior stop is accepted: `PHASE99_IMPLEMENTATION_STOP_CONDITION_ACCEPTED` and
+`PHASE99_MEASUREMENT_SESSION_CONTRACT_REQUIRES_REVIEW = RESOLVED`.  The earlier
+`PHASE99_MEASUREMENT_SESSION_CONTRACT_UNDERSPECIFIED` halt was correct: an immutable
+timing archive must not invent its population contract.  This revision freezes that
+contract was independently reviewed as `PHASE99_MEASUREMENT_SESSION_CONTRACT_REVIEW_PASS`.
+
+`NAROperationalTimingMeasurementConfiguration` answers **what operational regime is
+measured**. `NAROperationalTimingMeasurementSession` answers **when one campaign
+under that exact configuration admits operation attempts**. They are distinct,
+versioned, frozen/slotted content-addressed values. Aggregation may combine sessions
+only under a later reviewed contract and only with exact matching configuration
+identity.
+
+Configuration v1 canonical material is exactly: schema version; repository identity
+`garimapo/KeibaOS`; an exact lowercase 40-hex Git commit SHA (not branch name); closed
+NAR/nar_official provider scope; instrumentation schema/version; a nonempty canonical
+closed enabled-stage tuple; canonical closed HTTP profiles; closed retry/backoff
+semantics; closed concurrency regime; and sample-admission semantic version. It must
+exclude session time bounds, observed latency, result, payout, ROI, profitability,
+prediction/replay outcome, and eventual executability. NFC UTF-8 JSON with
+`ensure_ascii=False`, `allow_nan=False`, sorted keys, compact separators, and exact
+integers produces `measurement_configuration_sha256` and only
+`nar-operational-timing-config-v1:<sha256>`; callers cannot supply a detached SHA.
+
+Closed transport profiles are unique and canonical regardless of caller order:
+`NAR_BOOTSTRAP_HTTP`, `NAR_DAILY_TARGET_HTTP`, and
+`NAR_OFFICIAL_RESPONSE_HTTP` each have connect/read timeout
+`10_000_000/10_000_000` microseconds; `NAR_MARKET_ODDS_RAW_HTTP` has
+`10_000_000/20_000_000`. Each included family has exactly one profile. V1 supports
+only `NO_RETRY`, requiring `max_retries=0` and `backoff_microseconds=0`; this records
+the measured current regime rather than approving an eternal retry policy.
+
+The controlled v1 concurrency regime is `CONTROLLED_SINGLE_WORKER_SERIAL_V1`: one
+campaign worker, one active target workflow, one HTTP request, sequential RaceList
+acquisition, and no approved cross-race/venue parallel scheduler. Enabled stages are
+nonempty closed Phase99 enum values in canonical enum order, with no duplicate or
+unknown value. A serial campaign cannot authorize parallel Delta; any later bounded
+parallel regime requires a new configuration and compatible campaign.
+
+Session v1 canonical material is schema version, exact configuration identity,
+UTC-normalized fixed-microsecond `measurement_start_at`/`measurement_end_at`,
+`OPERATION_STARTED_IN_HALF_OPEN_SESSION_WINDOW`, and `FIXED_WALL_CLOCK_END`.
+Timestamps must be aware and `start < end`; sessions are not open-ended. Canonical
+JSON SHA produces only `nar-operational-timing-session-v1:<sha256>`. Admission is
+exactly `start <= operation_started_at < end`, irrespective of success, failure,
+timeout, or unsupported terminal disposition. A pre-end attempt remains admitted if
+it finishes after end; a post-window drain reconciles it without moving the end.
+
+Every admitted attempt needs a stable identity and recorded start boundary before or
+at execution. Terminal data binds to it. A start-in-window attempt without terminal
+data after reconciliation is unresolved/incomplete evidence, never silently removed.
+Failures and timeouts remain in the denominator; success-only percentiles are
+supplementary. V1 forbids success-count, executable-race, stable-percentile, timeout,
+or outcome/profitability-dependent completion rules.
+
+`MEASUREMENT_SESSION_IDENTITY != PRE_MEASUREMENT_SESSION_ACTIVATION_AUTHORITY`.
+An optional controlled activation receipt is deferred: only a future archive/service
+owned `activated_at <= measurement_start_at` could prove predeclaration, and callers
+may never supply that timestamp. Thus official predeclared-campaign provenance remains
+unresolved. Preserve `POLICY_IDENTITY != PRE_OUTCOME_POLICY_AUTHORITY` and
+`OBSERVABILITY_RECORD != POLICY_ACTIVATION_AUTHORITY`.
+
+### Historical pre-implementation audit — Phase98 reconciliation and primary finding
+
+`PHASE98_OPERATIONAL_TIMING_ARCHITECTURE_REVIEW_PASS` is frozen. The retained Phase98 section below is historical design record. `OPERATIONAL_TIMING_INSTRUMENTATION_REQUIRED`, `PHASE98_PRE_C_SNAPSHOT_FREEZE_REQUIRED`, and `INFORMATION_FREEZE_DEADLINE = C` remain current. Phase96 is unchanged: a selected snapshot requires `identity.captured_at <= C` and `information_cutoff <= C`; no post-C assembly or backdating is authorized. `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT` remains unresolved.
+
+Primary finding: `CAUSAL_FREEZE_PROVENANCE_BOUNDARY_REQUIRED`. Timing samples alone prove duration, not that a specific immutable prediction input existed by C. Conversely, `HistoricalInputSnapshot.identity.captured_at` is a declared semantic timestamp, not independent proof that persistence completed by C. Freeze `DECLARED_CAPTURED_AT != INDEPENDENT_FREEZE_COMPLETION_PROVENANCE` unless the reviewed persistence boundary proves their relationship.
+
+### Historical pre-implementation observability proposal
+
+Future Phase99 must separate frozen/slotted, content-addressed values:
+
+* `NAROperationalTimingObservation`: schema/version; closed stage; closed scope/correlation identity; causal UTC start/finish; monotonic elapsed duration; success/failure/timeout disposition and stable classification; only safely measurable load context; and an immutable artifact identity/SHA when the stage creates one.
+* `NARSnapshotFreezeProvenance`: provider race identity; dataset ID; exact `HistoricalInputSnapshotIdentity`; snapshot content SHA-256; exact C; cutoff-policy identity; cutoff-plan SHA when present; persistence boundary identity; `freeze_completed_at`; exact-reload verification identity/time; and canonical provenance SHA-256.
+* `NAROperationalTimingMeasurementConfiguration`: canonical, content-addressed
+  operational-regime identity. It binds the reviewed software/provider,
+  instrumentation, transport/retry, concurrency, and enabled-stage contracts, but no
+  campaign window or observed data.
+* `NAROperationalTimingMeasurementSession`: canonical, content-addressed fixed
+  campaign-window identity bound to one exact configuration plus the closed v1
+  admission/completion rules. It contains no outcome data.
+
+Canonical JSON for session, observation, and freeze provenance is UTF-8, NFC text, `ensure_ascii=False`, `allow_nan=False`, sorted keys, compact separators, UTC timestamps with fixed microseconds, and SHA-256 of exact bytes. No arbitrary metadata bags, exception strings, result, payout, ROI, or future outcome fields are permitted.
+
+### Snapshot-freeze authority contract
+
+The narrow truthful persistence boundary is: successful SQLite transaction commit followed by exact repository reload. `freeze_completed_at` is sampled by an injected, UTC-aware clock only **after** existing `save_snapshot()` returns and `load_snapshot_by_identity()` reconstructs the exact identity, content SHA, and value. It is a conservative upper bound for verified availability, never a caller-supplied `captured_at`, evidence time, C, or request time. Phase99 does not claim stronger physical-media crash durability than the existing SQLite contract provides.
+
+The current `SQLiteHistoricalInputSnapshotRepository.save_snapshot()` owns `BEGIN IMMEDIATE`/commit and returns only after it completes; it also treats an identical existing row as idempotent. A controlled wrapper uses that existing public boundary, exact-reloads the snapshot, samples its own clock, and persists/reloads the receipt in the separate archive. For an identical existing snapshot without an earlier authoritative receipt, the wrapper records the **current verification time**, never a guessed earlier freeze. An exact earlier archived receipt may be reused only under deterministic exact identity/content validation.
+
+The closed decision is `SNAPSHOT_FROZEN_BY_PREDICTION_CUTOFF` only when: exact target/plan/policy binding holds; Phase96 snapshot constraints hold; repository receipt and exact reload agree with the identity/SHA; and `freeze_completed_at <= C`. A completion after C is `SNAPSHOT_FREEZE_COMPLETED_AFTER_PREDICTION_CUTOFF`. Instantiation before C, request start before C, or `identity.captured_at <= C` alone never qualifies.
+
+### Clock, stage, and correlation contracts
+
+Use injected timezone-aware UTC wall clocks for `requested_at`, `observed_at`, persistence/freeze timestamps, activation times, and C comparison. Use injected monotonic timers only for elapsed request, parse, build, persist, prediction, jitter, and contention durations; do not derive distributions by subtracting wall-clock samples. Instrumentation must not modify causal timestamps, C, inputs, or outputs.
+
+`PRE_C` closed/versioned stages are: `SCHEDULER_DISPATCH`; `BOOTSTRAP_HOME_ACQUISITION`; `MONTHLY_ROOT_ACQUISITION`; `LOCATOR_SCRIPT_ACQUISITION`; `MONTHLY_SCHEDULE_ACQUISITION`; `RACE_LIST_ACQUISITION`; `OFFICIAL_RESPONSE_ACQUISITION`; `RAW_CAPTURE_VALIDATION`; `RAW_CAPTURE_PERSISTENCE`; `PARSING`; `NORMALIZATION`; `SOURCE_RECORD_CONSTRUCTION`; `PROVIDER_IDENTITY_BINDING`; `SNAPSHOT_CONSTRUCTION`; `SNAPSHOT_PERSISTENCE`; and `SNAPSHOT_EXACT_RELOAD_CONFIRMATION`. `POST_C` stages are `SNAPSHOT_ADAPTER`, `PREDICTION_PIPELINE`, `ALLOCATION`, `BET_PLAN_CONSTRUCTION`, `BET_PLAN_PERSISTENCE`, and `SHADOW_ARTIFACT_PUBLICATION`.
+
+The daily acquisition application currently exposes synchronous bootstrap/home → monthly-root → locator-script → monthly request/capture → normalization → sequential RaceList capture composition. Its transport/archive protocols can be decorated without changing transport semantics. Official-response and odds functions likewise accept injectable transport/clock collaborators. Raw validation/persistence, parser internals, generic source-record construction, and inner prediction/allocation calls are not all independently hookable today; their detailed spans are conceptual until a reviewed wrapper or hook is introduced. Existing `build_historical_input_snapshot`, the Phase88 binder, `load_snapshot_by_identity`, `build_simulation_race_input_from_historical_snapshot`, and `execute_and_persist_historical_bet_plan` are the narrow public boundaries for grouped spans.
+
+Correlation must use canonical measurement-session identity plus the applicable target-set SHA, cutoff-plan SHA, policy identity, and provider/race identity; fields are required only when their closed scope requires them. It must never use mutable process IDs as the sole join key. Freeze `OBSERVABILITY_CORRELATION_IDENTITY != PRE_OUTCOME_POLICY_AUTHORITY` and `OBSERVABILITY_RECORD != POLICY_ACTIVATION_AUTHORITY`.
+
+### Persistence, failure, and aggregation architecture
+
+Recommended architecture: a **separate connection-injected append-only SQLite observability archive**, following existing NAR capture-archive schema-gate conventions. It stores canonical sessions, timing observations, and freeze-provenance rows with content-addressed primary identities, immutable UPDATE/DELETE rejection, exact read reconstruction, and independent schema verification. It must not alter Phase96 snapshot tables or artifacts and must not use `resolution_outcomes_json`. Cross-database atomicity is intentionally not claimed: the source snapshot first commits through its existing repository, then the archive records/verifies provenance. A failed required provenance append leaves the prediction artifact unchanged but makes that target ineligible for official shadow qualification; it is not repairable by inventing a later freeze time.
+
+Metric-only observation failure must not change prediction inputs, C, or model output; its sample is unusable/explicitly absent. Required freeze-provenance persistence or exact-reload failure likewise must not mutate prediction behavior, but it fails closed for official shadow/ROI qualification. Every timeout/failure observation stays in the timing denominator. A read-only aggregation/report layer groups only by session/configuration identity, stage, request/source type, venue where applicable, and measured concurrency regime; it reports count, median, p90, p95, p99 when statistically supported, maximum, timeout/failure rate, and never drops unfavorable samples.
+
+### Δ-review handoff, blockers, and future scope
+
+A later Δ review needs an immutable package proving measurement-session configuration, sample period, race/venue count, timeout/failure denominator, pre-C distributions, concurrency/load coverage, clock-skew assumption/evidence, and reviewed safety-margin rule. Only that independent review can resolve `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`. Different timeout/retry/concurrency regimes produce different session/configuration identities and cannot be silently pooled.
+
+Phase99 does not resolve `HISTORICAL_ENTRY_STATUS_AUTHORITY_ISSUER_BLOCKED_SOURCE_SEMANTICS`, `PROSPECTIVE_NAR_ENTRY_STATUS_AUTHORITY_CAPTURE_BLOCKED_SOURCE_SEMANTICS`, or `NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE`. Timing campaigns can proceed independently, but official strict shadow eligibility and ROI remain separately gated. Policy activation remains a later immutable authority: a concrete policy activation must consume reviewed timing evidence without treating a session, correlation, or provenance record as authorization.
+
+Revised future implementation scope, subject to another approval: create
+`scripts/simulation/nar_operational_timing_observability.py`,
+`scripts/simulation/nar_operational_timing_observability_archive_migration.py`,
+`scripts/simulation/sqlite_nar_operational_timing_observability_archive.py`, and
+`scripts/simulation/historical_input_snapshot_freeze_receipt.py`; create focused
+tests `tests/test_nar_operational_timing_observability.py`,
+`tests/test_nar_operational_timing_observability_archive_migration.py`,
+`tests/test_sqlite_nar_operational_timing_observability_archive.py`, and
+`tests/test_historical_input_snapshot_freeze_receipt.py`; and modify only the two
+phase-control documents. The controlled freeze-receipt service must compose existing
+snapshot `save_snapshot` and exact `load_snapshot_by_identity` boundaries, without
+changing generic snapshot/repository semantics. No live timing adapter, transport
+timeout/retry change, concurrency/scheduler change, target-discovery change, Phase96
+change, model change, or policy/session activation authority is in scope. No path is
+authorized in this PREPARE.
+
+Required eventual tests: canonical immutable payload/SHA and closed stages; monotonic duration unaffected by UTC adjustment; exact UTC causal timestamps; no outcome/result/payout/ROI inputs; receipt/reload identity-SHA binding; completion at/before C qualification and after-C rejection; no forged freeze time from `captured_at`; metric failure noninterference; required provenance failure official-qualification block; timeout/failure denominator retention; retry/C and after-C evidence exclusion; correlation-not-authorization; incompatible-session aggregation rejection; no artifact mutation; and race-concurrency isolation.
+
+Explicit non-goals: choose Δ; provider HTTP/live sampling; scheduler/retry/concurrency/timeout changes; Phase96 snapshot changes or backdating; policy activation; status-source semantics; market eligibility; ROI evaluation; or historical-race rescue.
+
+At the historical PREPARE checkpoint, the recommended Phase99 disposition was `DRAFT_FOR_REVIEW` for independent architectural review. That review and the measurement-contract revision later passed; the current implementation state is recorded at the top of this document.
+
+### Phase99 PREPARE scope
+
+Modified only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`. Tests, network/provider activity, DB writes, staging, commit, and push are absent.
+
+Historical PREPARE next action was `CHATGPT_REVIEW_PHASE99_TIMING_OBSERVABILITY`.
+
+---
+
+## Historical Record — POST_V0_8_DAILY_REPLAY_98
+
+Title: NAR Prospective Shadow Operational Timing Architecture
+
+Formal Status: DRAFT_FOR_REVIEW
+
+Design Review: PENDING
+
+Base Commit and Branch: `7ec5afbe89d65803ba63d357a1d07e68c4c7e30a` / `feature/post-v0.8-daily-replay`
+
+State: DRAFT_FOR_REVIEW
+
+Outcome: READY_FOR_ARCHITECTURAL_REVIEW
+
+Audit: NAR_PROSPECTIVE_OPERATIONAL_TIMING_ARCHITECTURE_AUDIT_COMPLETE
+
+Authorization: NONE_REQUIRED_AUDIT_ONLY
+
+### Phase97 formal reconciliation
+
+`PHASE97_IMPLEMENTATION_REMOTE_VERIFICATION_PASS` is frozen. `POST_V0_8_DAILY_REPLAY_97 = FORMALLY_COMPLETE` and `NAR_FIXED_OFFSET_PREDICTION_CUTOFF_POLICY_AND_PLAN_PRODUCER = FORMALLY_INTEGRATED`.
+
+`CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT` remains unresolved. `POLICY_IDENTITY != PRE_OUTCOME_POLICY_AUTHORITY` and `PREDICTION_CUTOFF_POLICY_PROVENANCE_UNAVAILABLE` remain current strict-historical safeguards. The retained Phase97 content below is historical implementation record.
+
+Branch: `feature/post-v0.8-daily-replay`
+
+Starting HEAD/tree: `7ec5afbe89d65803ba63d357a1d07e68c4c7e30a` / `f4c53ab670bfd52fdc1f581e6baae63a7ae5d154`
+
+### Primary operational timing finding
+
+Primary classification: `OPERATIONAL_TIMING_INSTRUMENTATION_REQUIRED`. No independently auditable measurement series exists for provider latency, request volume, retries, local processing, SQLite/filesystem contention, scheduler jitter, or simultaneous venue load. The repository therefore cannot justify a concrete fixed Δ.
+
+Architecture verdict: `PHASE98_PRE_C_SNAPSHOT_FREEZE_REQUIRED`. Phase96 requires selected prediction snapshots to satisfy `identity.captured_at <= C` and `information_cutoff <= C`; the snapshot domain already enforces `captured_at <= information_cutoff <= scheduled_start_at` and evidence `observed_at`/`available_at <= captured_at`. Therefore `INFORMATION_FREEZE_DEADLINE = C`: the complete immutable `HistoricalInputSnapshot` must be constructed and persisted no later than C. A post-C assembly is not a pre-C capture and must never be backdated.
+
+`OPERATIONAL_COMPLETION_DEADLINE` is a separate, future-reviewed action/shadow deadline. After the exact snapshot has frozen by C, pure prediction, stake-plan computation, and shadow-artifact publication may occur after C only from that snapshot and pre-approved deterministic strategy/configuration, with no new prediction-time provider input or after-C evidence. Phase98 does not select that deadline. Allowing later snapshot assembly from a separately frozen evidence bundle would require a separately reviewed pre-C freeze artifact/provenance contract and likely a change to the meaning or use of `HistoricalInputSnapshot.identity.captured_at`; it is explicitly not recommended or implemented here.
+
+### Prospective pre-C dependency graph
+
+```text
+schedule/target discovery
+  → canonical target set
+  → activated fixed policy + cutoff plan
+  → pre-C source request and immutable raw capture
+  → raw validation, parsing, normalization, source-record production, identity binding
+  → complete HistoricalInputSnapshot construction
+  → snapshot persistence and immutable freeze by C
+  → post-C, pre-action prediction and stake-plan generation from that snapshot
+  → immutable shadow prediction/provenance publication
+  → later settlement/result comparison
+```
+
+`PRE_C_FREEZE_CRITICAL_PATH` comprises dispatch/jitter, all prediction-relevant acquisition and request sequencing, provider throttle/retry/timeout budget, immutable raw persistence, validation, parsing, normalization, source-record derivation, identity binding, complete snapshot construction, snapshot persistence, contention/concurrency effects, and clock-skew allowance. It must complete by C. `POST_C_COMPUTE_CRITICAL_PATH` comprises snapshot-to-model adaptation, inference, stake allocation, bet-plan construction, and artifact publication; it is sized against the later operational completion deadline, not automatically against Δ. Results/payouts/settlement remain post-race.
+
+### Current acquisition, concurrency, and retry facts
+
+`scripts/simulation/nar_daily_target_live_acquisition.py::NARDailyTargetLiveAcquisitionApplication.acquire` obtains bootstrap resources, monthly schedule, then iterates venue RaceList captures sequentially. `scripts/simulation/nar_historical_daily_target_source.py::normalize_nar_race_list` derives per-race scheduled starts in JST and normalizes them to UTC. The domain can represent all venues/races for one day, but it provides no worker count, concurrency limit, priority rule, throttle contract, or meeting-load guarantee. Near-simultaneous races across venues and overlap between one race's capture and another race's preparation must be load-tested before Δ is selected.
+
+Existing bootstrap, daily-target, and general official NAR transports use bounded HTTPS requests with connect/read timeouts of 10/10 seconds and `max_retries=0`; current odds raw acquisition uses 10/20 seconds and `max_retries=0`. There is no reviewed retry/backoff budget. A future capture policy must predeclare attempt count, timeout, backoff, and deadline budget. A response observed after C may be retained only as diagnostic append-only raw evidence; it must be excluded from the C prediction snapshot and cannot move C or trigger an evidence-dependent retry choice.
+
+The verified transport facts are exact: historical daily-target transport 10s/10s with `HTTPAdapter(max_retries=0)`; bootstrap transport 10s/10s with `max_retries=0`; official response live capture 10s/10s with `max_retries=0`; and market-odds raw acquisition 10s/20s with `max_retries=0`. These describe current code only, not an approved operational retry policy. A request begun by C but fully observed after C is not prediction-eligible: `requested_at <= C` is insufficient. A retry never moves C, and a late response must not be substituted merely to make a target executable.
+
+### Timing inventory, clock, and measurement protocol
+
+Measure `PRE_C_FREEZE_CRITICAL_PATH` separately: dispatch-to-request, connect/read, raw validation/persistence, parsing, normalization, source-record derivation, identity binding, snapshot construction, and snapshot persistence. Measure `POST_C_COMPUTE_CRITICAL_PATH` separately: snapshot adapter, model/prediction, stake allocation, bet-plan construction, and artifact persistence. Record `SHARED_ENVIRONMENT` effects separately: process startup, SQLite/filesystem contention, concurrent venues, provider throttling, worker availability, and clock skew. Local work is deterministic/local but measurable; transport/throttling/shared-resource behavior is externally variable and currently unknown.
+
+Future timing records need timezone-aware UTC-compatible wall-clock timestamps for causal evidence/scheduler audit and an injected monotonic timer for elapsed durations. Do not derive latency distributions by subtracting independently sampled wall clocks. Instrumentation must not alter evidence timestamps or prediction behavior. Clock synchronization/skew needs a reviewed bound before activation. Measurements must be prospective and outcome-independent, grouped by provider/source, request type, venue, concurrent-meeting count, and operational time window only where relevant. Record count, median, p90, p95, p99 when sample size supports it, maximum, and timeout/failure rate; never group or tune by result, payout, ROI, profitability, or later status.
+
+### Future Δ selection and activation handoff
+
+After an independently reviewed normal-and-stressed prospective sample period, a later policy may select Δ only from the full `PRE_C_FREEZE_CRITICAL_PATH` envelope plus reviewed safety margin and clock-skew allowance. The selection inputs are measured timing distributions, required request inventory, concurrency/throttle policy, timeout/retry policy, clock-skew bound, and declared safety/confidence criteria. Post-C pure inference is excluded unless a later action contract requires it before C. Outcomes, evidence convenience, executability, odds, status changes, and replay performance are prohibited inputs. Any Δ change creates a new Phase97 policy identity and distinct activation/analytical period; periods must not be silently merged.
+
+Future immutable policy activation provenance must bind the exact policy identity and canonical policy SHA, provider scope, activation timestamp, effective-from time, optional effective-until time, reason/audit identity, and its own content SHA. It must be finalized before every covered target outcome; a caller-set authorization flag is insufficient. This future authority is separate from the Phase97 policy object.
+
+### Source-semantic impact and candidate instrumentation boundaries
+
+Timing work cannot make NAR source semantics complete. The blockers have distinct effects:
+
+| Activity or claim | Effect |
+| --- | --- |
+| Passive timing instrumentation | Not blocked. |
+| Measuring current acquisition, parsing, and snapshot construction timing without official-admissibility claims | May proceed safely. |
+| Structurally constructing a current `HistoricalInputSnapshot` | Not categorically blocked solely by the Phase94/95 status-authority blockers. |
+| Claiming complete authoritative entry status | Blocked by `HISTORICAL_ENTRY_STATUS_AUTHORITY_ISSUER_BLOCKED_SOURCE_SEMANTICS` and `PROSPECTIVE_NAR_ENTRY_STATUS_AUTHORITY_CAPTURE_BLOCKED_SOURCE_SEMANTICS`. |
+| Claiming market or positive-market eligibility | Blocked by `NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE`. |
+| Official strict prospective shadow eligibility and official ROI evaluation | Blocked until all required independent semantic authorities are reviewed. |
+
+Candidate future paths, subject to a separate approved instrumentation design, are: instrumentation-only `scripts/simulation/nar_operational_timing_observability.py` and focused test; acquisition boundaries `scripts/simulation/nar_daily_target_live_acquisition.py`, `scripts/simulation/nar_historical_daily_target_live_capture.py`, `scripts/simulation/nar_historical_daily_target_bootstrap_live_capture.py`, `scripts/simulation/nar_official_response_live_capture.py`, and optional `scripts/simulation/nar_market_odds_raw_acquisition.py`; pre-C freeze boundaries `scripts/simulation/nar_historical_input_source.py` and `scripts/simulation/historical_input_snapshot_builder.py`; post-C compute `scripts/simulation/historical_prediction_bet_plan_execution.py`; artifact persistence `scripts/simulation/persisted_bet_plan_service.py`; and later scheduler/activation modules. No path is approved for change in Phase98.
+
+Required eventual tests include injected monotonic-clock duration measurement and UTC audit timestamps; exact C preservation under retries; rejection of responses observed after C; after-C diagnostic isolation; timeout fail-closed behavior; no outcome/result/payout/settlement dependencies; concurrency isolation between races; stable policy identity during one activation period; snapshot completion by C; and proof that observability failures cannot change causal admission or predictions.
+
+Explicit non-goals: selecting Δ, timing benchmarking, scheduler implementation, live acquisition, policy activation persistence, status/odds authority, market eligibility, whole-meeting cancellation, ROI evaluation, historical rescue, or outcome/evidence-adaptive timing.
+
+Recommended formal Phase98 disposition: remain `DRAFT_FOR_REVIEW` for independent architectural review. Recommended next step: `OPERATIONAL_TIMING_INSTRUMENTATION_REQUIRED` — design passive prospective instrumentation and its causal telemetry boundary before collecting measurements; do not design the shadow scheduler until that instrumentation contract determines the full pre-C freeze envelope.
+
+### Phase98 PREPARE scope
+
+Modified only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`. Tests, network/provider activity, DB writes, staging, commit, and push are absent.
+
+Next: `CHATGPT_REVIEW_PHASE98_OPERATIONAL_TIMING`
+
+---
+
+## Historical Record — POST_V0_8_DAILY_REPLAY_97
 
 ### Phase96 formal reconciliation
 
