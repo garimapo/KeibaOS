@@ -1,5 +1,102 @@
 # Latest Codex Report
 
+## POST_V0_8_DAILY_REPLAY_88 — STRICT READ-ONLY NAR IDENTITY BINDING IMPLEMENTATION
+
+**State:** IMPLEMENTED_FOR_REVIEW
+
+**Outcome:** READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW
+
+**Implementation:** STRICT_READ_ONLY_NAR_REPLAY_IDENTITY_BINDING_IMPLEMENTED
+
+**Design Review:** PHASE88_IDENTITY_BINDING_DESIGN_REVIEW_PASS
+**Authorization:** NONE_REQUIRED_NO_NETWORK_READ_ONLY_SQLITE
+
+At the approved starting HEAD/tree `33d8c755c862c073f5783c3645ac0958376afa2c` / `70d040a7c90b5029b090d6aabce56974b3366a5a`, Phase88 created only `scripts/simulation/nar_race_entry_status_replay_identity_binding.py` and `tests/test_nar_race_entry_status_replay_identity_binding.py`, and updated only the two phase-control documents. The public keyword-only API `bind_nar_race_entry_status_v3_identity(bundle, connection)` returns a frozen/slotted race binding with `(target, organization, source_system, external_race_id, internal_race_id, entry_bindings)`; each frozen/slotted entry binding has `(external_entry_id, external_horse_id, horse_no, race_entry_id)`. Failure classifications are stable and fail closed.
+
+The binder checks exact published bundle type, target/path tuple, frozen raw/manifest byte identities, canonical manifest, provider, semantics, and FixtureSet/Qualification identities before source parsing or SQLite access. Its identity-only Deba extractor finds exactly horses `1..14`, retains horse 14 despite `出走取消` and unusable odds, derives `nar:20250101:21:6` and provider-scoped entry IDs, and validates provider-local `nar:horse:` links without using names or statuses. No historical normalizer fallback is used.
+
+The caller-owned exact SQLite connection must already have `foreign_keys=1`, `query_only=1`, no transaction, and no attached database. One owned read transaction is rolled back on success or failure. The binder validates V010 tables, column types, PK/unique/FK authority and foreign-key integrity, then requires exact forward/reverse race mapping, all 14 V010 entry mappings, source/DB set equality, distinct internal entry IDs, and mapped horses rows with horse numbers checked only after ID mapping. External horse IDs are audit evidence only, never database lookup keys or cross-provider identity. The production module contains no database writes, provider access, snapshot/result/payout/odds lookup, status application, or replay.
+
+Required tests passed in order: focused binder `48 passed`; Phase85 consumer `40 passed, 2 skipped`; V3 dedicated fixture `4 passed`; migration `11 passed`; SQLite snapshot repository `25 passed, 30 subtests passed`; snapshot builder `14 passed, 15 subtests passed`; full suite `4475 passed, 2 skipped, 2841 subtests passed`. The skips are platform-conditional symlink tests. Published Deba `313317` / `6c9aa3ea614c17e14f0e7a5050190ca923445925d67f8e61e71db95e87c87727`, RaceList `66307` / `1eb363621c7a152929765ff7ffecabea2d7cf15283d45fa9c31036527c0b53a1`, and manifest `4254` / `3ca36ed4cec1002e0440fb02e466f40dd7f4d74ffb7c0bdf7b55be2271af321d` were unchanged before and after testing.
+
+Provider HTTP / Phase44 / GET: `0 / 0 / 0`. Production DB writes: `0`. Historical semantics remain `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`; market eligibility, positive market eligibility, and whole-meeting cancellation remain `UNSUPPORTED`. Identity binding does not claim replay readiness. The final scoped Git result is supplied in the execution handoff; this report records implementation evidence for independent review.
+
+Next action: `CHATGPT_REVIEW_PHASE88_IMPLEMENTATION`.
+
+## POST_V0_8_DAILY_REPLAY_88 — STRICT READ-ONLY NAR IDENTITY-BINDING DESIGN
+
+**Formal Status:** APPROVED_FOR_CODEX
+**Outcome:** APPROVED_STRICT_READ_ONLY_NAR_REPLAY_IDENTITY_BINDING
+**Design Contract:** STRICT_READ_ONLY_NAR_REPLAY_IDENTITY_BINDING_CONTRACT_COMPLETE
+**Design Review:** PHASE88_IDENTITY_BINDING_DESIGN_REVIEW_PASS
+**Authorization:** NONE_REQUIRED_NO_NETWORK_READ_ONLY_SQLITE
+
+Phase88 is approved for the next no-network, no-write identity-binding implementation at HEAD/tree `33d8c755c862c073f5783c3645ac0958376afa2c` / `70d040a7c90b5029b090d6aabce56974b3366a5a`. This approval made no production/test/fixture changes, provider requests, Phase44 calls, GETs, snapshot/replay/status/market actions, database writes, staging, commit, or push.
+
+### Exact entry-identity decision
+
+The V010 external-race and external-entry tables remain the only persisted provider-scoped mapping authority. The NAR target is closed to `NAR` / `nar_official` / `21` / `2025-01-01` / `6`, with external race ID exactly `nar:20250101:21:6`, derived from the Phase85 target—not caller text. The existing NAR normalizer and daily target source prove the race grammar; the normalizer and NAR result/payout persistence prove external entry IDs are exactly `{external_race_id}:entry:{horse_no}`.
+
+`DEDICATED_ENTRY_IDENTITY_EXTRACTION_REQUIRED` is the correct classification. Profile-A/B, Phase66, raw capture, and V3 manifest authority are all deliberately bounded diagnostics/capture authority, not a complete all-entry identity universe. The frozen DebaTable has exactly fourteen unique entry identities with horse numbers `1..14`; horse 14 has its canonical provider horse link and contains `出走取消`. The future private extractor must retain all fourteen from the Deba entry table without parsing odds or interpreting status. It may reuse only independently identity-only helpers such as `_horse_rows` for row selection and `_canonical_horse_identity` for link validation; it must never invoke the whole-record normalizer or `_row_values`, which impose cancellation/odds/jockey behavior.
+
+`external_horse_id` stays supporting NAR-local evidence, not a database lookup key or cross-provider bridge. `EXTERNAL_HORSE_ID_DATABASE_BINDING = UNSUPPORTED` and `CROSS_PROVIDER_HORSE_IDENTITY = UNSUPPORTED`. Horse number is never a global lookup key; after exact V010 mapping it is a required consistency check against the selected `horses` row only.
+
+### Read-only binding contract
+
+The future exact API is `bind_nar_race_entry_status_v3_identity(*, bundle: NARRaceEntryStatusSourceProfileFixtureBundleV3, connection: sqlite3.Connection) -> NARRaceEntryStatusReplayIdentityBinding`. It returns frozen target/provider/external/internal race identity plus a tuple of frozen external-entry/external-horse/horse-number/race-entry bindings, or raises. No connection, mapping, status, market, snapshot, replay, or settlement object is returned.
+
+The explicit caller-owned connection must be an exact `sqlite3.Connection`, have no active caller transaction or attached database, and already report `foreign_keys == 1` and `query_only == 1`. These are caller preconditions: the binder may not alter or leave changed caller-visible PRAGMAs. It opens only one owned deferred read transaction and rolls it back on every exit; it never commits, closes, or discovers a database path. A private schema inspector follows the existing resolver's PRAGMA read-validation pattern without importing replay logic; it validates required V010 tables, columns/types, primary keys, unique keys, `ux_horses_race_id_id` (or exact equivalent), RESTRICT foreign keys, and consumed `foreign_key_check` results.
+
+Race lookup requires exactly one forward and matching reverse V010 map plus one `races.id`. Entry lookup requires every extracted source entry to map exactly once to that race and a positive entry ID, then requires exact equality of the entire source and database external-entry sets. Each selected `horses` row must match both the internal race and source horse number. Missing, additional, ambiguous, contradictory, duplicate, or structurally invalid rows fail closed. No DDL/DML/upsert/repair, outcome/payout/odds/result/settlement lookup, or post-cutoff inference is permitted.
+
+The future implementation remains exactly four paths: create `scripts/simulation/nar_race_entry_status_replay_identity_binding.py` and `tests/test_nar_race_entry_status_replay_identity_binding.py`, and modify the two phase-control documents. The status-neutral private extractor belongs inside the new binder, so no fifth support path is required. A fifth path is `PHASE88_IDENTITY_BINDING_SUPPORT_SCOPE_REQUIRES_DESIGN_REVISION`.
+
+Focused tests are defined for complete valid binding including retained horse 14, exact mappings and set closure, all race/entry/internal-row/horse-number contradictions, V010 PK/unique/FK corruption, connection/attachment/query-only/no-write enforcement, deterministic behavior, CWD independence, no replay/market/settlement dependency, and no partial return.
+
+Future execution is ordered: focused binder, Phase85 fixture consumer, committed V3 fixture, historical snapshot migration, SQLite snapshot repository, snapshot builder, then the established full suite. All are local/no-network and must pass.
+
+The Phase85 bundle authenticity gate is mandatory before parsing: exact type, target/path tuple, three frozen byte identities, canonical manifest-byte equality, exact provider/acquisition semantics, and frozen FixtureSetV3/QualificationV3 identities. Any failure is `UNSUPPORTED_BUNDLE` without reloading fixtures or using network. Readiness A–V: **YES**. Historical semantics remain `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`; market eligibility, positive market eligibility, and whole-meeting cancellation remain `UNSUPPORTED`. Provider HTTP / Phase44 / GET: `0 / 0 / 0`. Only the two phase-control docs are modified; staged/untracked sets remain empty.
+
+Next action: `EXECUTE_APPROVED_PHASE`.
+
+## POST_V0_8_DAILY_REPLAY_87 — REPLAY IDENTITY-BINDING AUTHORITY AUDIT
+
+**Status:** DRAFT_FOR_REVIEW
+**Outcome:** READY_FOR_ARCHITECTURAL_REVIEW
+**Audit:** NAR_REPLAY_IDENTITY_BINDING_AUTHORITY_AUDIT_COMPLETE
+
+Phase87 audited the repository at HEAD/tree `33d8c755c862c073f5783c3645ac0958376afa2c` / `70d040a7c90b5029b090d6aabce56974b3366a5a` without implementation, tests, database writes, replay, provider HTTP, Phase44, GET, staging, commit, or push. Phase85 and Phase86 are frozen formally complete; the strict local V3 consumer remains formally integrated.
+
+### Evidence-backed identity map
+
+Phase85's `scripts/simulation/nar_race_entry_status_source_profile_fixture_consumer.py::load_nar_race_entry_status_source_profile_v3_fixture` returns a validated V3 source-profile bundle only. Its `NARRaceEntryStatusRaceIdentity` from `nar_race_entry_status_raw_capture.py` carries exact `(baba_code, race_date, race_no)`, raw source bytes, manifest authority, Phase66 ancestry, and publication plan—not an external race ID, external-entry collection, internal race ID, race-entry ID, DB repository, snapshot, or replay input.
+
+The repository's existing NAR normalizer, `scripts/simulation/nar_historical_input_source.py::normalize_nar_historical_input_source_records`, derives stable provider-scoped identifiers from a canonical NAR Deba URL and row evidence: organization/source system `NAR` / `nar_official`, race `nar:{YYYYMMDD}:{baba_code}:{race_no}`, entry `{race}:entry:{horse_no}`, and provider-local horse `nar:horse:{k_lineageLoginCode}`. `HistoricalInputSourceRecord` in `historical_input_source_records.py` retains those external identifiers only. The same race-ID grammar is used by `nar_historical_daily_target_source.py` after a RaceList link has proven its date/venue/race identity.
+
+This existing normalizer is not a neutral all-row binder dependency: it rejects cancellation-marked rows and unsupported odds before producing records. It would therefore turn identity binding into entry/status/market interpretation and risks dropping a required source row. Phase87 preserves the rule that a binder must bind every source entry or fail the entire race; it must not silently omit withdrawn/cancelled rows.
+
+`historical_input_snapshots.py` requires internal `internal_race_id` and `race_entry_id`, with `HistoricalExternalRaceIdentity` keyed by `(organization, source_system, external_race_id)` and `HistoricalExternalEntryIdentity` adding `external_entry_id`. Its `external_horse_id` is explicitly non-key metadata. `historical_input_snapshot_builder.py::build_historical_input_snapshot` takes internal IDs and complete external-entry mapping from its caller; it is not a resolver and enforces causal evidence eligibility.
+
+Migration `scripts/migrations/versions/v010_historical_input_snapshot_schema.py` is the only formal persisted mapping authority:
+
+- `historical_input_external_races` is exactly keyed by organization/source-system/external-race and has a reverse uniqueness constraint for internal race IDs within the source.
+- `historical_input_external_entries` is exactly keyed by organization/source-system/external-race/external-entry and has reverse uniqueness for `(internal_race_id, race_entry_id)` within the source.
+- both reference the exact race mapping/race-entry relationship; `ux_horses_race_id_id` exists, but there is no formal `(race_id, horse_no)` uniqueness constraint.
+
+`sqlite_nar_daily_evidence_resolver.py::_prediction` proves the intended read-side failure model: exact forward and reverse race-map queries are required; absent mapping returns `INTERNAL_RACE_MAPPING_MISSING`; ambiguous/contradictory rows are integrity failures. `SQLiteHistoricalInputSnapshotRepository` validates the same rows during snapshot load, but its mapping helpers are write-side persistence paths and cannot be repurposed for a no-write binder. Legacy `database.py` uses date/organization/place/race-number and `(race_id, horse_no)` `LIMIT 1` lookups without schema uniqueness; those are not binding authority.
+
+### Audit conclusion
+
+`RACE_BINDING_AUTHORITY_PARTIAL` and `ENTRY_BINDING_AUTHORITY_PARTIAL` are proven: V010 maps are sufficient only when exact existing rows are present, while Phase85 has no read-only adapter and no typed source entry-identity projection. `horse_no` is valid only as an exact-race consistency check after the provider-scoped map; it is never a global horse identity. `external_horse_id` is provider-local/non-key and `CROSS_PROVIDER_HORSE_IDENTITY = UNSUPPORTED`. Name, jockey, display text, fuzzy/normalized matching, race names, row order, outcomes, and settlement evidence are prohibited.
+
+The single primary blocker is **`REPLAY_IDENTITY_BINDING_SUPPORT_REQUIRED`**. The proposed next phase is a small no-network, read-only SQLite-backed authority: create `scripts/simulation/nar_race_entry_status_replay_identity_binding.py` and `tests/test_nar_race_entry_status_replay_identity_binding.py`, then modify the two phase-control docs. It should take the Phase85 bundle and an explicit read-only mapping repository, produce a separate immutable complete binding object, query only V010 mappings, and fail closed for missing, ambiguous, contradictory, duplicate, unsupported-provider, cross-provider, or causally ineligible identity evidence. It must not write mappings, apply status, promote markets, construct snapshots, or run replay.
+
+The ordered next dependency is: validated V3 consumer (complete) → provider-scoped race/entry binding (missing read-side authority; no-network/read-only DB implementation possible) → entry/status interpretation → complete causal snapshot → market/odds/settlement authority. Later live authorization is not implied by Phase87; it depends on the later evidence requirement.
+
+Historical semantics remain `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`; market eligibility, positive market eligibility, and whole-meeting cancellation remain `UNSUPPORTED`. Readiness A–R: **YES**. Provider HTTP / Phase44 / GET: `0 / 0 / 0`. Only the two phase-control documents are modified; staged and untracked sets remain empty.
+
+Next action: `CHATGPT_REVIEW_PHASE87_IDENTITY_BINDING_AUDIT`.
+
 ## POST_V0_8_DAILY_REPLAY_86 — DOCUMENTATION RECONCILIATION
 
 **Formal Status:** READY_FOR_REVIEW
