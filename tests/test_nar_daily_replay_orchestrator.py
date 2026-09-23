@@ -21,6 +21,7 @@ from scripts.simulation.models import SimulationSummary
 from scripts.simulation.nar_daily_target_live_acquisition import (
     NARDailyTargetLiveAcquisitionResult,
 )
+from scripts.simulation.nar_historical_replay_eligibility import NARHistoricalEntryStatusAuthoritySet
 from scripts.simulation.stake_allocation import BetStakeBudget
 from tests.test_historical_daily_replay_manifest_projection import (
     _outcome,
@@ -29,6 +30,7 @@ from tests.test_historical_daily_replay_manifest_projection import (
     _strategy,
     _target,
 )
+from tests.test_nar_historical_replay_eligibility import _authority
 
 
 def _acquisition(resolution: DailyHistoricalReplayEvidenceResolution) -> NARDailyTargetLiveAcquisitionResult:
@@ -91,6 +93,10 @@ class NARDailyReplayOrchestratorTests(unittest.TestCase):
     def _values(self, resolution: DailyHistoricalReplayEvidenceResolution) -> dict[str, object]:
         return {
             "acquisition_result": _acquisition(resolution),
+            "historical_entry_status_authorities": NARHistoricalEntryStatusAuthoritySet(
+                resolution.target_set,
+                tuple(_authority(target) for target in resolution.target_set.target_races),
+            ),
             "dataset_id": "dataset-1",
             "settlement_information_cutoff": self.cutoff,
             "snapshot_connection": self.snapshot_connection,
@@ -152,7 +158,7 @@ class NARDailyReplayOrchestratorTests(unittest.TestCase):
         )
         signature = inspect.signature(subject.run_nar_daily_replay)
         self.assertEqual(tuple(signature.parameters), (
-            "acquisition_result", "dataset_id", "settlement_information_cutoff",
+            "acquisition_result", "historical_entry_status_authorities", "dataset_id", "settlement_information_cutoff",
             "snapshot_connection", "capture_connection", "database_path",
             "nar_settlement_capture_archive_path", "run_context", "strategy_identity",
             "race_budget", "manifest_source_path",
@@ -161,6 +167,52 @@ class NARDailyReplayOrchestratorTests(unittest.TestCase):
             value.kind is inspect.Parameter.KEYWORD_ONLY
             for value in signature.parameters.values()
         ))
+        self.assertIs(signature.parameters["historical_entry_status_authorities"].default, inspect.Parameter.empty)
+
+    def test_missing_authority_blocks_entire_day_before_resolution(self) -> None:
+        resolution = self._all_resolution()
+        values = self._values(resolution)
+        target_set = resolution.target_set
+        values["historical_entry_status_authorities"] = NARHistoricalEntryStatusAuthoritySet(
+            target_set, (_authority(target_set.target_races[0]),),
+        )
+        with (
+            patch.object(subject, "_resolve_evidence") as resolver,
+            patch.object(subject, "_write_manifest") as writer,
+            patch.object(subject, "_run_replay") as replay,
+        ):
+            first = subject.run_nar_daily_replay(**values)
+            second = subject.run_nar_daily_replay(**values)
+        resolver.assert_not_called()
+        writer.assert_not_called()
+        replay.assert_not_called()
+        self.assertEqual(first.orchestration_audit_sha256, second.orchestration_audit_sha256)
+        self.assertIs(first.resolution.target_set, target_set)
+        self.assertEqual(first.canonical_target_count, 2)
+        self.assertEqual(first.executable_count, 0)
+        self.assertEqual(tuple(item.reason_codes for item in first.resolution.outcomes), (
+            ("WHOLE_DAY_BLOCKED_BY_ENTRY_STATUS_AUTHORITY",),
+            ("ENTRY_STATUS_AUTHORITY_UNAVAILABLE",),
+        ))
+        self.assertTrue(all(item.disposition is DailyHistoricalReplayEvidenceDisposition.UNSUPPORTED for item in first.resolution.outcomes))
+        self.assertEqual(first.resolution.day_state.value, "NO_EXECUTABLE_TARGETS")
+        self.assertIs(first.execution_state, subject.NARDailyReplayExecutionState.NOT_RUN_NO_EXECUTABLE_TARGETS)
+        self.assertIsNone(first.manifest_projection)
+        self.assertIsNone(first.manifest_sha256)
+        self.assertIsNone(first.summary)
+
+    def test_multiple_missing_authorities_block_without_partial_replay(self) -> None:
+        resolution = self._all_resolution(3)
+        values = self._values(resolution)
+        values["historical_entry_status_authorities"] = NARHistoricalEntryStatusAuthoritySet(
+            resolution.target_set, (),
+        )
+        with patch.object(subject, "_resolve_evidence") as resolver:
+            result = subject.run_nar_daily_replay(**values)
+        resolver.assert_not_called()
+        self.assertEqual(result.canonical_target_count, 3)
+        self.assertEqual(tuple(item.reason_codes for item in result.resolution.outcomes),
+                         (("ENTRY_STATUS_AUTHORITY_UNAVAILABLE",),) * 3)
 
     def test_public_audit_verifier_reuses_exact_phase25_identity(self) -> None:
         resolution = self._partial_resolution()

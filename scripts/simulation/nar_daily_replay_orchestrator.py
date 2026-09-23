@@ -19,6 +19,7 @@ from scripts.simulation.historical_daily_evidence_resolution import (
     DailyHistoricalReplayEvidenceDisposition as _Disposition,
     DailyHistoricalReplayEvidenceResolution as _Resolution,
     DailyHistoricalReplayResolutionState as _ResolutionState,
+    DailyHistoricalReplayTargetOutcome as _Outcome,
 )
 from scripts.simulation.historical_daily_targets import (
     DailyHistoricalReplayTargetSet as _TargetSet,
@@ -34,6 +35,11 @@ from scripts.simulation.models import (
 )
 from scripts.simulation.nar_daily_target_live_acquisition import (
     NARDailyTargetLiveAcquisitionResult as _AcquisitionResult,
+)
+from scripts.simulation.nar_historical_replay_eligibility import (
+    NARHistoricalEntryStatusAuthoritySet as _EntryStatusAuthoritySet,
+    NARHistoricalReplayEligibilityState as _EligibilityState,
+    resolve_nar_historical_replay_eligibility as _resolve_eligibility,
 )
 from scripts.simulation.sqlite_historical_replay_application import (
     run_sqlite_historical_replay as _run_replay,
@@ -518,6 +524,7 @@ def _validate_projection(
 def run_nar_daily_replay(
     *,
     acquisition_result: _AcquisitionResult,
+    historical_entry_status_authorities: _EntryStatusAuthoritySet,
     dataset_id: str,
     settlement_information_cutoff: _datetime,
     snapshot_connection: _sqlite3.Connection,
@@ -581,6 +588,10 @@ def run_nar_daily_replay(
     for value in acquisition_result.race_list_capture_ids:
         _required_text(value, "acquisition_result.race_list_capture_ids item")
     _digest(target_set.content_sha256, "target_set.content_sha256")
+    eligibility = _resolve_eligibility(
+        target_set=target_set,
+        historical_entry_status_authorities=historical_entry_status_authorities,
+    )
     database = _absolute_path(database_path, "database_path")
     archive = _absolute_path(
         nar_settlement_capture_archive_path,
@@ -599,6 +610,45 @@ def run_nar_daily_replay(
             raise ValueError("snapshot and settlement archive paths must identify distinct files")
     except OSError as error:
         raise ValueError("snapshot/archive filesystem identity cannot be verified") from error
+
+    audit_inputs = _AuditInputs(
+        database,
+        archive,
+        run_context,
+        strategy_identity,
+        race_budget,
+        manifest,
+    )
+    if not eligibility.all_eligible:
+        outcomes = tuple(
+            _Outcome(
+                target=decision.target,
+                disposition=_Disposition.UNSUPPORTED,
+                reason_codes=(
+                    "ENTRY_STATUS_AUTHORITY_UNAVAILABLE"
+                    if decision.eligibility is _EligibilityState.BLOCKED_ENTRY_STATUS_AUTHORITY_UNAVAILABLE
+                    else "WHOLE_DAY_BLOCKED_BY_ENTRY_STATUS_AUTHORITY",
+                ),
+                internal_race_id=None,
+                snapshot_identity=None,
+                snapshot_content_sha256=None,
+                result_capture_reference=None,
+                payout_capture_reference=None,
+            )
+            for decision in eligibility.decisions
+        )
+        diagnostic = _Resolution(target_set, dataset_id, "LATEST_CAUSAL_IN_DATASET", cutoff, outcomes)
+        if diagnostic.day_state is not _ResolutionState.NO_EXECUTABLE_TARGETS:
+            raise ValueError("entry-status diagnostic resolution must block the whole day")
+        return NARDailyReplayOrchestrationResult(
+            acquisition_result,
+            diagnostic,
+            NARDailyReplayExecutionState.NOT_RUN_NO_EXECUTABLE_TARGETS,
+            None,
+            None,
+            None,
+            audit_inputs,
+        )
 
     resolution = _resolve_evidence(
         target_set=target_set,
@@ -622,14 +672,6 @@ def run_nar_daily_replay(
     if snapshot_connection.in_transaction or capture_connection.in_transaction:
         raise ValueError("Phase 14 resolution changed caller transaction state")
 
-    audit_inputs = _AuditInputs(
-        database,
-        archive,
-        run_context,
-        strategy_identity,
-        race_budget,
-        manifest,
-    )
     if resolution.day_state is _ResolutionState.PARTIALLY_RESOLVED:
         return NARDailyReplayOrchestrationResult(
             acquisition_result,

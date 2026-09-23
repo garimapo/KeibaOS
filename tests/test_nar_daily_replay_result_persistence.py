@@ -19,6 +19,7 @@ import scripts.simulation.nar_daily_replay_result_persistence as subject
 from scripts.migrations.runner import apply_migrations
 from scripts.simulation.models import BetTypeSummary, SimulationSummary
 from scripts.simulation.nar_daily_replay_orchestrator import NARDailyReplayExecutionState
+from scripts.simulation.nar_historical_replay_eligibility import NARHistoricalEntryStatusAuthoritySet
 from scripts.simulation.repositories.errors import (
     RepositoryDataIntegrityError,
     RepositoryValidationError,
@@ -35,6 +36,7 @@ from tests.test_historical_daily_replay_manifest_projection import (
     _target,
 )
 from tests.test_nar_daily_replay_orchestrator import _acquisition
+from tests.test_nar_historical_replay_eligibility import _authority
 
 
 UTC = timezone.utc
@@ -149,6 +151,7 @@ def build_request(
     run_id: str = "daily-run-1",
     manifest_name: str = "manifest.json",
     completed_no_bet: bool = False,
+    blocked_authorities: bool = False,
 ) -> subject.NARDailyReplayResultPersistenceRequest:
     database_path, archive_path = _ensure_database_files(root)
     strategy = _strategy()
@@ -172,6 +175,10 @@ def build_request(
         resolution = _resolution((target,), (_outcome(target, 1, executable=False),))
         summary = None
     acquisition = _acquisition(resolution)
+    historical_authorities = NARHistoricalEntryStatusAuthoritySet(
+        resolution.target_set,
+        () if blocked_authorities else tuple(_authority(target) for target in resolution.target_set.target_races),
+    )
     snapshot_connection = sqlite3.connect(database_path)
     capture_connection = sqlite3.connect(archive_path)
     try:
@@ -181,6 +188,7 @@ def build_request(
         ):
             result = orchestrator.run_nar_daily_replay(
                 acquisition_result=acquisition,
+                historical_entry_status_authorities=historical_authorities,
                 dataset_id="dataset-1",
                 settlement_information_cutoff=cutoff,
                 snapshot_connection=snapshot_connection,
@@ -229,6 +237,28 @@ class NARDailyReplayResultPersistenceTests(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
+
+    def test_entry_status_block_reason_survives_sqlite_round_trip(self) -> None:
+        request = build_request(
+            self.root,
+            NARDailyReplayExecutionState.NOT_RUN_NO_EXECUTABLE_TARGETS,
+            blocked_authorities=True,
+            run_id="entry-status-blocked-run",
+        )
+        self.assertEqual(request.orchestration_result.resolution.outcomes[0].reason_codes,
+                         ("ENTRY_STATUS_AUTHORITY_UNAVAILABLE",))
+        connection = sqlite3.connect(request.database_path)
+        self.addCleanup(connection.close)
+        apply_migrations(connection)
+        repository = SQLiteNARDailyReplayResultRepository(
+            connection=connection,
+            database_path=request.database_path,
+        )
+        stored = subject.persist_nar_daily_replay_result(request=request, repository=repository)
+        loaded = repository.load_result(persisted_content_sha256=stored.persisted_content_sha256)
+        self.assertEqual(loaded, stored)
+        self.assertIn('"ENTRY_STATUS_AUTHORITY_UNAVAILABLE"', stored.resolution_outcomes_json)
+        self.assertNotIn('"NATIVE_NON_RUN"', stored.resolution_outcomes_json)
 
     def test_public_surface_request_record_and_immutability(self) -> None:
         self.assertEqual(

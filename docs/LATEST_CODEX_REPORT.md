@@ -1,6 +1,84 @@
 # Latest Codex Report
 
-## POST_V0_8_DAILY_REPLAY_90 — NAR ENTRY-STATUS INTERPRETATION AUTHORITY AUDIT
+## POST_V0_8_DAILY_REPLAY_93 — STRICT HISTORICAL REPLAY ELIGIBILITY POLICY
+
+**Formal Status:** READY_FOR_REVIEW
+
+**State:** IMPLEMENTED_FOR_REVIEW
+
+**Outcome:** READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW
+
+**Implementation:** STRICT_HISTORICAL_REPLAY_ENTRY_STATUS_ELIGIBILITY_GATE_IMPLEMENTED
+
+**Audit:** STRICT_HISTORICAL_REPLAY_ELIGIBILITY_POLICY_DESIGN_COMPLETE
+
+**Design Review:** PHASE93_REPLAY_ELIGIBILITY_POLICY_DESIGN_REVIEW_PASS
+
+Phase92 is frozen as `PHASE92_ARCHIVE_DISCOVERY_REVIEW_PASS` with exact result `HISTORICAL_ENTRY_STATUS_ARCHIVE_NOT_FOUND`. No independently timestamped pre-cutoff archive was found for `NAR / 21 / 2025-01-01 / 6` that could prove the horse-14 cancellation was available no later than 2025-01-01 13:50 JST. The Phase90 current observation remains distinct: horse 14 is `EXPLICIT_WITHDRAWAL_PRESENT`, horses 1–13 have only `NO_EXPLICIT_WITHDRAWAL_EVIDENCE`, and the capture semantics remain `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`.
+
+### Design decision
+
+The correct integration point is an explicit NAR target-level readiness policy in `nar_daily_replay_orchestrator`, after audited target-set validation and before connection binding or `resolve_sqlite_nar_daily_evidence`. It prevents a blocked target from reaching snapshot selection, manifest projection, or replay. The generic `DailyHistoricalReplayEvidenceDisposition.UNSUPPORTED` can carry the complete diagnostic outcome and stable cause codes without changing generic snapshot, resolver, audit, execution-state, or persistence contracts.
+
+The exact required new input is `historical_entry_status_authorities: NARHistoricalEntryStatusAuthoritySet`, a frozen canonical-target-set-bound tuple of explicit `NARHistoricalEntryStatusAuthority` values. Each authority carries the target, authority identity, canonical source identity, response digest, immutable availability-proof identity/kind, causally authoritative `available_at`, and observation identity; it must prove availability no later than the target prediction cutoff. Duplicates or out-of-denominator authority fail validation, and absence for a target means blocked. The frozen output is `NARHistoricalReplayEligibilityResolution`, which retains the exact target set and a target-order tuple of immutable `NARHistoricalReplayEligibilityDecision` values with only target, eligibility, blocker classification, missing authority, and causal reason.
+
+Approval fixes the completeness requirement: only a closed `COMPLETE_PRE_CUTOFF_ENTRY_STATUS_UNIVERSE` for the exact target's full entry universe can make an authority eligible. A single withdrawal fact, one change row, later absence of withdrawal text, or odds cannot substitute for complete status authority. The causal bound is `authority.available_at` or authoritative observation no later than `target.scheduled_start_at`; a missing start time blocks, and exact equality is eligible under `<=`. No arbitrary free-text semantic may grant eligibility.
+
+The only eligibility states are `ELIGIBLE_WITH_PRE_CUTOFF_ENTRY_STATUS_AUTHORITY` and `BLOCKED_ENTRY_STATUS_AUTHORITY_UNAVAILABLE`. The gate accepts only the exact target set plus explicit reviewed authority; it does not inspect a current status, horse 14, later page, result, payout, settlement, odds, or a database table to decide whether authority is required. No supplied cutoff-qualified authority means blocked.
+
+For the frozen target, the decision is `BLOCKED_ENTRY_STATUS_AUTHORITY_UNAVAILABLE` with exact blocker `HISTORICAL_REPLAY_BLOCKED_ENTRY_STATUS_AUTHORITY_UNAVAILABLE`. The missing authority is a provider-scoped exact-race/entry status publication with immutable raw bytes, stable identity, and independently verifiable availability/publication time at or before the prediction cutoff. Current 2026 status, results, payouts, settlement, odds absence, and horse-name inference are categorically excluded. Horse 14 remains an identity; it is neither removed nor treated active, and horses 1–13 are not promoted to eligible.
+
+The existing orchestrator is whole-day deterministic: only `ALL_TARGETS_RESOLVED` reaches replay, while a partial resolution already returns without manifest or replay. The new policy blocks the entire day whenever any target lacks qualifying authority; it never removes a target. If blocked, `_resolve_evidence()` is not called. Instead the orchestrator constructs a complete deterministic `DailyHistoricalReplayEvidenceResolution` for the unchanged denominator: every target is `UNSUPPORTED`; targets lacking authority have exact reason `ENTRY_STATUS_AUTHORITY_UNAVAILABLE`, while otherwise-authorized targets blocked only by another target have exact reason `WHOLE_DAY_BLOCKED_BY_ENTRY_STATUS_AUTHORITY`. The resulting day state is `NO_EXECUTABLE_TARGETS`, and the existing execution state remains `NOT_RUN_NO_EXECUTABLE_TARGETS`; manifest, replay, and summary are absent.
+
+`NARDailyReplayOrchestrationResult`, its audit identity, and production result persistence therefore need no structural change. Existing persistence already stores and validates each outcome's complete `reason_codes` in `resolution_outcomes_json`; the new reason codes survive via the existing contract. The future persistence test must update its direct `run_nar_daily_replay()` helper for the required authority input and prove the diagnostic codes round-trip unchanged.
+
+The exhaustive direct-call audit found exactly two direct callers: `tests/test_nar_daily_replay_orchestrator.py` and `tests/test_nar_daily_replay_result_persistence.py`. The final future implementation scope is seven paths: create `scripts/simulation/nar_historical_replay_eligibility.py` and `tests/test_nar_historical_replay_eligibility.py`; modify `scripts/simulation/nar_daily_replay_orchestrator.py`, `tests/test_nar_daily_replay_orchestrator.py`, `tests/test_nar_daily_replay_result_persistence.py`, and the two phase-control documents. No production persistence-schema/module change is needed.
+
+Future tests require the normal resolver path only when every target has valid pre-cutoff authority; one or multiple omissions must bypass `_resolve_evidence()`, preserve the entire denominator, and produce the exact per-target reason codes and `NO_EXECUTABLE_TARGETS` / `NOT_RUN_NO_EXECUTABLE_TARGETS` state without manifest, replay, or summary. They must also reject after-cutoff, target-mismatched, duplicate, or malformed authority, prove deterministic audit identity, and verify persisted diagnostic reason-code round trips.
+
+`NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE` remains unresolved. Market eligibility, positive-market eligibility, whole-meeting cancellation, historical availability, and snapshot inclusion remain `UNSUPPORTED`.
+
+The new pure authority module has frozen/slotted authority, authority-set, decision, and resolution types. The closed semantic is `COMPLETE_PRE_CUTOFF_ENTRY_STATUS_UNIVERSE`; the cutoff is each `target.scheduled_start_at`, and both availability and observation must be no later. The orchestrator requires the explicit keyword-only `historical_entry_status_authorities` input. A blocked target creates an exact whole-day diagnostic resolution with `UNSUPPORTED` dispositions and the approved `ENTRY_STATUS_AUTHORITY_UNAVAILABLE` / `WHOLE_DAY_BLOCKED_BY_ENTRY_STATUS_AUTHORITY` reasons, while preserving `NOT_RUN_NO_EXECUTABLE_TARGETS` and bypassing the resolver, manifest writer, and replay runner. The production persistence module/schema is unchanged; an exact SQLite round trip retained the diagnostic reason code.
+
+Required tests passed in order: eligibility `7 passed, 5 subtests passed`; orchestrator `23 passed, 11 subtests passed`; persistence `11 passed, 12 subtests passed`; SQLite NAR resolver `26 passed, 38 subtests passed`; Phase90 interpretation `27 passed`; daily aggregation `20 passed`; full suite `4515 passed, 2 skipped, 2846 subtests passed`.
+
+Provider HTTP / Phase44 / GET: `0 / 0 / 0`. New policy DB writes: `0`. Phase41 remains unresolved. The exact seven approved paths were changed; final Git commit and push state is authoritative in the execution handoff.
+
+Next: `CHATGPT_REVIEW_PHASE93_IMPLEMENTATION`.
+
+## Historical Record — POST_V0_8_DAILY_REPLAY_91 — HISTORICAL NAR ENTRY-STATUS AUTHORITY DISCOVERY
+
+**Status:** DRAFT_FOR_REVIEW
+
+**Outcome:** READY_FOR_ARCHITECTURAL_REVIEW
+
+**Audit:** HISTORICAL_NAR_ENTRY_STATUS_AUTHORITY_DISCOVERY_COMPLETE
+
+Phase90 is reconciled as independently verified: `PHASE90_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`; `POST_V0_8_DAILY_REPLAY_90 = FORMALLY_COMPLETE`; `NAR_CURRENT_ENTRY_STATUS_INTERPRETATION = FORMALLY_INTEGRATED`. Its committed state is `01524006b23a0496d084f0d605f31cba8e6b87f9` / `149cc925cc296726c1d8e92e5d3faa207b9ad9eb`, parent `115cd9489d1a13a6cffc99e85d1c79b8cca72194`, message `feat: add NAR current entry status interpretation`.
+
+### Candidate authorities and causal result
+
+- The frozen V3 DebaTable/RaceList, Phase85 bundle, Phase88 binding, and Phase90 interpreter establish only current observation: the manifest identifies Deba and RaceList observations/captures on 2026-09-21. They exactly associate horse 14's `出走取消`, but the manifest expressly says `CURRENT_ACQUISITION_CONCERNING_HISTORICAL_TARGET`; it has no provider-publication `available_at`. They cannot establish 2025 prediction-time status.
+- The older daily-target RaceList fixture is the same target RaceList byte family, but its `provenance.json` records a 2026-09-03 request/observation and `provider_available_at: null`. The target date encoded in the URL and filename is race identity, not historical publication-time authority.
+- `HistoricalInputEvidenceReference` and the historical snapshot provenance schema can represent `available_at` and `observed_at`, and `build_historical_input_snapshot` rejects either timestamp when later than the information cutoff. They contain no target-specific entry-status record; `HistoricalInputSourceRecord` has no entry-status kind.
+- The NAR official/daily capture domains retain exact capture timing, but do not supply a pre-cutoff target status capture. Read-only inspection of the local persisted database found only `races` and `horses`; it has no NAR capture, historical-target capture, snapshot, or provenance-evidence table.
+- NAR `RACE_MARK_TABLE` result/payout persistence and settlement/replay-result records are post-race outcome domains. They are excluded from identity/status reconstruction by the causal firewall and cannot prove withdrawal at the prediction cutoff.
+
+### Architectural decision
+
+Primary classification: **`HISTORICAL_ENTRY_STATUS_AUTHORITY_REQUIRES_NEW_CAPTURE_SOURCE`**.
+
+The missing authority is a provider-scoped, immutable pre-cutoff status publication for exact target `NAR / 21 / 2025-01-01 / 6`, with exact raw bytes, canonical request/race-entry identity, response hash, and a verifiable provider publication/availability timestamp no later than the historical prediction cutoff. It must evidence status directly—not a later result, payout, settlement, odds absence, current page, or name-based association.
+
+`NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE` remains unresolved. No historical entry status, market eligibility, positive-market eligibility, whole-meeting cancellation, or snapshot-inclusion claim is made; all remain `UNSUPPORTED` as applicable.
+
+The smallest next step is a separately reviewed research design for an official historical NAR archive/version that can show target `changeInfo` (or an equivalent entry-status publication) with a provider-verifiable pre-cutoff timestamp. A current-only provider page is insufficient. A third-party archive requires a new explicit provenance/timestamp contract before it could be admitted; if neither source exists, the historical period remains unsupported. This Phase91 performed no acquisition and grants no live authorization.
+
+Provider HTTP / Phase44 / GET: `0 / 0 / 0`. DB writes: `0` (one read-only local schema/archive inspection only). Tests, staging, commit, and push: none. Modified paths are exactly the two phase-control documents; staged and untracked sets are empty.
+
+Next: `CHATGPT_REVIEW_PHASE91_HISTORICAL_STATUS_AUTHORITY`.
+
+## Historical Record — POST_V0_8_DAILY_REPLAY_90 — NAR ENTRY-STATUS INTERPRETATION AUTHORITY AUDIT
 
 **Formal Status:** READY_FOR_REVIEW
 
