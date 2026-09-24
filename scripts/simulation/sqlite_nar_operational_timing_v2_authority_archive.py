@@ -27,11 +27,11 @@ class SQLiteNAROperationalTimingV2AuthorityArchive:
     def __init__(self, *, connection: sqlite3.Connection) -> None:
         if type(connection) is not sqlite3.Connection or connection.in_transaction:
             raise TimingArchiveError("V2 archive requires exact idle caller-owned connection")
-        schema.require_nar_operational_timing_v2_authority_archive_schema(connection)
+        schema.require_nar_operational_timing_v2_authority_archive_compatible_schema(connection)
         self._connection = connection
 
     def _row(self, table: str, column: str, identity: str) -> tuple[str, ...] | None:
-        schema.require_nar_operational_timing_v2_authority_archive_schema(self._connection)
+        schema.require_nar_operational_timing_v2_authority_archive_compatible_schema(self._connection)
         try:
             rows = self._connection.execute(
                 f"SELECT * FROM {table} WHERE {column}=?", (identity,)
@@ -46,7 +46,7 @@ class SQLiteNAROperationalTimingV2AuthorityArchive:
               row: tuple[str, ...], columns: str) -> None:
         if self._connection.in_transaction:
             raise TimingArchiveError("V2 authority writes require no caller transaction")
-        schema.require_nar_operational_timing_v2_authority_archive_schema(self._connection)
+        schema.require_nar_operational_timing_v2_authority_archive_compatible_schema(self._connection)
         try:
             self._connection.execute("BEGIN IMMEDIATE")
             existing = self._connection.execute(

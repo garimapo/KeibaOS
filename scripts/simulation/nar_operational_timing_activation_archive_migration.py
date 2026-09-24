@@ -82,9 +82,13 @@ def require_nar_operational_timing_archive_compatible_schema(connection: sqlite3
         require_nar_operational_timing_activation_archive_schema(connection)
     else:
         from scripts.simulation import nar_operational_timing_v2_authority_archive_migration as v2
-        if objects != base._DDL | _DDL | v2._DDL:
-            raise RuntimeError("timing archive is not an exact registered known union")
-        v2.require_nar_operational_timing_v2_authority_archive_schema(connection)
+        if objects == base._DDL | _DDL | v2._DDL:
+            v2.require_nar_operational_timing_v2_authority_archive_schema(connection)
+        else:
+            from scripts.simulation import nar_operational_timing_runtime_execution_archive_migration as runtime
+            if objects != base._DDL | _DDL | v2._DDL | runtime._DDL:
+                raise RuntimeError("timing archive is not an exact registered known union")
+            runtime.require_nar_operational_timing_runtime_execution_archive_schema(connection)
 
 
 def require_nar_operational_timing_activation_archive_compatible_schema(connection: sqlite3.Connection) -> None:
@@ -95,9 +99,13 @@ def require_nar_operational_timing_activation_archive_compatible_schema(connecti
         require_nar_operational_timing_activation_archive_schema(connection)
     else:
         from scripts.simulation import nar_operational_timing_v2_authority_archive_migration as v2
-        if objects != base._DDL | _DDL | v2._DDL:
-            raise RuntimeError("timing activation archive is not an exact known union")
-        v2.require_nar_operational_timing_v2_authority_archive_schema(connection)
+        if objects == base._DDL | _DDL | v2._DDL:
+            v2.require_nar_operational_timing_v2_authority_archive_schema(connection)
+        else:
+            from scripts.simulation import nar_operational_timing_runtime_execution_archive_migration as runtime
+            if objects != base._DDL | _DDL | v2._DDL | runtime._DDL:
+                raise RuntimeError("timing activation archive is not an exact known union")
+            runtime.require_nar_operational_timing_runtime_execution_archive_schema(connection)
 
 
 def require_nar_operational_timing_activation_archive_schema(connection: sqlite3.Connection) -> None:

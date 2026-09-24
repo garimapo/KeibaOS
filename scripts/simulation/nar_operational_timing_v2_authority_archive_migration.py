@@ -77,6 +77,19 @@ def require_nar_operational_timing_v2_authority_archive_schema(connection: sqlit
         raise RuntimeError("timing V2 authority foreign-key integrity failed")
 
 
+def require_nar_operational_timing_v2_authority_archive_compatible_schema(connection: sqlite3.Connection) -> None:
+    """Repository gate for exact Phase103 or exact Phase104 union; strict gate remains."""
+    connection = base._connection(connection)
+    objects = base._objects(connection)
+    if objects == base._DDL | activation._DDL | _DDL:
+        require_nar_operational_timing_v2_authority_archive_schema(connection)
+    else:
+        from scripts.simulation import nar_operational_timing_runtime_execution_archive_migration as runtime
+        if objects != base._DDL | activation._DDL | _DDL | runtime._DDL:
+            raise RuntimeError("V2 authority archive is not an exact known union")
+        runtime.require_nar_operational_timing_runtime_execution_archive_schema(connection)
+
+
 def apply_nar_operational_timing_v2_authority_archive_migrations(connection: sqlite3.Connection) -> None:
     """Atomically add V2 authority only to an exact Phase100-installed archive."""
     connection = base._connection(connection)

@@ -1,5 +1,173 @@
 # Latest Codex Report
 
+## POST_V0_8_DAILY_REPLAY_104 — RUNTIME AND EXECUTION AUTHORITY FOUNDATION
+
+Phase: `POST_V0_8_DAILY_REPLAY_104`
+
+Formal Status: `READY_FOR_REVIEW`
+
+State: `IMPLEMENTED_FOR_REVIEW`
+
+Outcome: `READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`
+
+Audit: `NAR_RUNTIME_BINDING_AND_CAMPAIGN_EXECUTION_AUTHORITY_DESIGN_COMPLETE`
+
+Design Review: `PHASE104_RUNTIME_AND_EXECUTION_AUTHORITY_DESIGN_REVIEW_PASS`
+
+Implementation: `NAR_RUNTIME_BINDING_AND_CAMPAIGN_EXECUTION_AUTHORITY_IMPLEMENTED`
+
+### Implementation verification
+
+Starting HEAD/tree: `1236f1e0db84ce6025d07c052abbb3c7348aab3e` /
+`7d882808308c5850b424a1ee38b710fe0df2a0d9`.
+
+The Git-object source bundle binds exact commit/tree and ordered member bytes;
+materialization is atomic outside the developer worktree and rejects corruption.
+Official runner issuance checks isolated `-I -B` execution, sole sealed namespace,
+critical and loaded KeibaOS module origins, and the exact Git manifest. Runtime
+dependency identity and a static profile are derived locally from actual production
+transport constructors/constants and fixed request-call flags, without HTTP. All
+four transports retain their current 10/10 or 10/20 timeout, retry, redirect,
+stream, TLS and `trust_env` behavior. Request-specific proxy/environment effects
+are not claimed to be proven or sanitized as official request authority; that
+requirement is explicitly deferred to Phase105 by the approved clarification.
+
+The local Windows-compatible archive lock is held from bootstrap through authority
+life. The separate Phase104 companion stores source/profile/binding/claim/readiness
+parents append-only with restrictive ancestry. A unique session claim remains
+consumed after normal release or failed/late readiness. The UTC readiness clock is
+sampled after exact binding and claim reload; late readiness creates no official
+current-process capability. The capability is valid only for the currently locked
+runner and its newly issued claim. No v2 attempt/terminal schema or passive timing
+wrapper was added. The top-level bootstrap accepts only exact empty/base/activation/
+v2/Phase104 states and does not reinterpret historical validators.
+
+Focused new tests: 16 passed. Phase99–103 regression tests: 70 passed. Full suite:
+4,633 passed, 2 skipped, 2,846 subtests passed. Temporary test Git/SQLite writes
+occurred; no production DB writes, provider HTTP, live campaign, or Delta selection.
+`REQUEST_EFFECTIVE_NETWORK_ENVIRONMENT_BINDING_REQUIRED_FOR_OFFICIAL_ATTEMPTS`,
+Phase105 passive wrappers, the concrete-Delta timing audit, and Phase94/95/41
+source-semantic blockers remain unresolved. No scope deviation is known.
+
+Next: `CHATGPT_REVIEW_PHASE104_IMPLEMENTATION`.
+
+### Historical Phase104 design report
+
+Starting HEAD/tree: `1236f1e0db84ce6025d07c052abbb3c7348aab3e` /
+`7d882808308c5850b424a1ee38b710fe0df2a0d9`; branch
+`feature/post-v0.8-daily-replay`. Remote branch matched this baseline. The worktree
+was initially clean. This is a documentation-only design revision, not Phase104
+implementation.
+
+### Reconciliation and primary decision
+
+Independent Phase103 verdict:
+`PHASE103_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`,
+`POST_V0_8_DAILY_REPLAY_103 = FORMALLY_COMPLETE`,
+`NAR_V2_MEASUREMENT_CONFIG_SESSION_ACTIVATION_FOUNDATION = FORMALLY_INTEGRATED`,
+`V2_PERSISTENCE_BOUNDARY_CONFIG_SESSION_ACTIVATION_ONLY = VERIFIED`, and
+`V2_ATTEMPT_TERMINAL_PERSISTENCE_DEFERRED_PENDING_EXECUTION_PARENT = CONFIRMED`.
+The Phase102 review pass and crash-no-resume contract remain frozen. The v2 domain
+prerequisite for runtime-binding **design** is resolved, but runtime binding itself
+is not implemented. Official ancestry must remain v2 configuration → session →
+activation declaration → verification → runtime binding → one-shot execution claim
+→ future attempt → terminal. `PROCESS_LOCK != PERSISTENT_SESSION_CONSUMPTION_AUTHORITY`.
+
+### Phase104 authority decisions
+
+Sealed source: `CONTROLLED_SEALED_GIT_SOURCE_BUNDLE_V1` materializes exclusively
+from local exact Git commit/tree objects, then independently verifies sorted member
+paths, Git types/modes, byte lengths and SHA-256 values. The manifest identity is
+`nar-runtime-source-bundle-v1:<sha256>`. Initial deterministic member rule includes
+tracked `scripts/**/*.py`, `main.py`, `config/**`, `prompts/**`, and
+`requirements.txt`; it excludes DB/logs/tests/docs. Worktree cleanliness is an
+operator preflight, not runtime-source authority. The official code runs in a new
+isolated child (`-I -B` or equivalent); controlled `sys.path`, exact sole PEP420
+`scripts.__path__`, and critical-module manifest origins reject worktree/PYTHONPATH
+shadowing. No mutable-worktree copy is authoritative.
+
+Dependency profile: exact Python implementation/version, Requests, urllib3,
+SQLite runtime, OS release/build and architecture are timing-compatibility
+material; unrelated packages are not. Effective transport profiles must derive
+from actual standard collaborators, not caller numbers. Current four transports
+use 10/10, 10/10, 10/10, and 10/20-second connect/read timeouts, respectively,
+`HTTPAdapter(max_retries=0)`, no redirects, streaming, TLS verification, and
+`Accept-Encoding: identity`. Market odds sets `trust_env=False`; the other three
+do not. The v2 configuration records timeouts/retry but not proxy/redirect/TLS
+details, so Phase104 adds a supplemental closed runtime-profile identity without
+reinterpreting v2 canonical JSON. Future official aggregation must require exact
+configuration **and** relevant runtime-profile compatibility. The initial reviewed
+official mode is direct/no effective proxy or environment CA/auth override; URL-
+dependent Requests environment settings require Phase105 per-request verification.
+`HTTPAdapter(max_retries=0)` does not prove no kernel/network retransmission.
+
+Concurrency and lock: the controlled runner has one workflow and HTTP operation,
+no worker pool/async fan-out, and sequential RaceList; only the runner issues the
+serial authority. A Windows process-held exclusive file lock keys on the existing
+non-reparse archive **parent** directory's volume/file identity and normalized DB
+basename, stable even before DB creation; the DB file's later ID is not part of the
+key. The same scope lock is held before schema bootstrap
+through campaign execution, avoiding a bootstrap-to-run gap. It excludes compliant
+local runners, not copied archives or distributed actors. A separate immutable
+claim with `UNIQUE(v2_session_identity)` permanently consumes the session.
+
+Runtime binding: `nar-operational-timing-runtime-binding-v1:<sha256>` binds exact
+v2 activation ancestry, sealed bundle, dependency/transport/retry/environment
+profile identities, stage/version and runner-issued concurrency/scope. Mismatch or
+missing proof is closed nonqualification, not a caller `matches=True`. Binding is
+not campaign execution or prediction-policy authority.
+
+Execution: `nar-operational-timing-campaign-execution-v1:<sha256>` is an immutable
+one-shot claim binding session/activation/binding/bundle/lock scope. Save and exact-
+reload binding, then save and exact-reload claim; only then sample a controlled UTC
+`readiness_verified_at` for a separate append-only campaign-readiness receipt.
+Receipt save/reload precedes any official attempt. Binding and claim must be proven
+by `measurement_start_at`, with equality allowed; a late receipt-reload/launch
+check also refuses official execution without moving the fixed window. The receipt
+timestamp proves its **parents** were already committed and exact-reloaded, not
+that the receipt itself was published then. A failed/late receipt after claim
+publication leaves the session consumed. A current-process-only capability requires
+the held lock and newly published claim; loading an old claim cannot recreate it.
+Crash or normal shutdown releases the OS lock but never the claim:
+`CRASHED_OFFICIAL_SESSION_REQUIRES_NEW_PREDECLARED_SESSION`. No mutable status or
+completion receipt is required now.
+
+Persistence: a separate same-database Phase104 companion registry adds typed
+append-only bundle/profile/binding/claim/readiness families, exact FKs/contradiction
+checks, one claim/session, exact reload, and no backfill. Top-level bootstrap under
+the scope lock recognizes only empty, Phase99 base, Phase100 companion, Phase103
+companion, and exact Phase104 union, installing missing companions in order; all
+partial/unknown states fail. Historical strict validators keep their meaning.
+Phase104 creates **execution parents only**. Phase105 creates attempt/terminal
+domains and tables with restrictive FK to the already-existing claim/attempt at
+table creation, not speculative weak text-parent tables.
+
+Likely Phase104 production paths are new runtime-source, dependency/profile,
+binding, execution/runner, bootstrap, companion-migration and SQLite repository
+modules under `scripts/simulation/`; narrow read-only descriptors in the four
+NAR transport files and exact compatible-schema gate extensions require explicit
+Allowed Files review. Matching future tests cover Git-object bundle and import
+isolation, dependency/transport/proxy mismatch, exact ancestry and timing,
+cross-process lock exclusion, crash/no-resume, one-shot claim/capability, all
+bootstrap transitions and malformed schemas, with no provider HTTP. The full
+file-by-file test plan is in `docs/CURRENT_PHASE.md`.
+
+Remaining blockers: runtime software/configuration proof not yet implemented;
+`EFFECTIVE_REQUEST_ENVIRONMENT_BINDING_REQUIRED`; Phase105 wrappers and claim-bound
+attempt/terminal persistence; separate live-campaign authorization;
+`CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`; and Phase94/95/41
+source-semantic authority. No concrete Delta, policy activation, ROI, or live timing.
+
+Only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` were modified.
+No production/test change, provider HTTP, live campaign, production DB write,
+staging, commit, or push. No tests were run for this design-only phase.
+
+Recommended disposition: `DRAFT_FOR_REVIEW`.
+
+Next: `CHATGPT_REVIEW_PHASE104_RUNTIME_AND_EXECUTION_AUTHORITY`.
+
+---
+
 ## POST_V0_8_DAILY_REPLAY_103 — V2 MEASUREMENT AUTHORITY FOUNDATION
 
 Phase: `POST_V0_8_DAILY_REPLAY_103`
