@@ -1,5 +1,323 @@
 # Current Phase
 
+## POST_V0_8_DAILY_REPLAY_106
+
+Title: NAR No-Network Diagnostic Campaign Rehearsal and Timing Qualification
+
+Formal Status: READY_FOR_REVIEW
+
+State: IMPLEMENTED_FOR_REVIEW
+
+Outcome: READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW
+
+Implementation: NAR_DIAGNOSTIC_CAMPAIGN_AND_TIMING_QUALIFICATION_IMPLEMENTED
+
+Base Commit and Branch: `d250e0954f50dfe27d6efe569f149a876b8ca684` / `feature/post-v0.8-daily-replay`
+
+Design Review: PHASE106_DIAGNOSTIC_CAMPAIGN_AND_TIMING_QUALIFICATION_DESIGN_REVIEW_PASS
+
+Allowed Files: `docs/CURRENT_PHASE.md`, `docs/LATEST_CODEX_REPORT.md`, new Phase106 diagnostic domain, fixture, migration, SQLite archive, harness and reconciliation modules under `scripts/simulation/`, narrow Phase99–105 compatible-schema gates, the four NAR transport modules for private adapter injection, and matching Phase106 tests under `tests/`.
+
+Forbidden Files: Phase99–105 canonical authority payloads, ordinary transport request semantics, normal Phase105 bootstrap, production databases, logs, and unrelated production/tests.
+
+Required Tests: Phase106 focused tests; Phase105 and Phase104 focused suites; Phase103/100/99 timing and archive regressions; affected transport tests; full repository pytest; `git diff --check`; exact changed-path audit.
+
+Stop Condition: baseline advances, unexpected initial files appear, ordinary provider behavior or immutable Phase104/105 semantics must change, diagnostic schema must enter normal bootstrap, Git-object fixture authority or no-network adapter boundary cannot be proven, out-of-scope tests fail, or normal push requires force.
+
+Implementation boundary: a Git-object-derived fixture manifest, fixed diagnostic
+plan/DAG, one declaration per existing Phase104 claim, explicit diagnostic-only
+companion, controlled Phase105 attempt admission, fake-adapter guarded HTTP,
+and read-only reconciliation. A plan node's `sequence` is its fixed scheduled
+slot; Phase105 attempt sequences remain dense among nodes actually executed.
+The maximum attempt count is predeclared, but upstream failures may causally
+disable dependent nodes without erasing the qualified upstream observation.
+`DIAGNOSTIC_ONLY` overrides every inner observation for official eligibility.
+No normal Phase105 bootstrap installs the companion. The diagnostic rehearsal
+does not authorize provider HTTP or a concrete Delta.
+
+### Phase105 reconciliation
+
+`PHASE105_CORRECTION_REMOTE_VERIFICATION_PASS`;
+`PHASE105_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`; and
+`POST_V0_8_DAILY_REPLAY_105 = FORMALLY_COMPLETE`. Retain
+`NAR_PASSIVE_TIMING_AND_ACTUAL_SEND_ENVIRONMENT_AUTHORITY = FORMALLY_INTEGRATED`
+and `CONTROLLED_TIMING_EVIDENCE_ISSUANCE = VERIFIED`. Phase104 remains
+formally complete with
+`NAR_RUNTIME_BINDING_AND_CAMPAIGN_EXECUTION_AUTHORITY = FORMALLY_INTEGRATED`.
+
+Freeze `DIAGNOSTIC_DRY_RUN != PROSPECTIVE_OFFICIAL_CAMPAIGN`,
+`SYNTHETIC_TRANSPORT_TIMING != PROVIDER_OPERATIONAL_TIMING_EVIDENCE`,
+`INSTRUMENTATION_COVERAGE != CONCRETE_DELTA_AUTHORITY`, and
+`STAGE_DURATION_SUM != CRITICAL_PATH_DURATION_UNLESS_COMPOSITION_PROVEN`.
+The design preparation itself authorized no production-code or test change;
+the subsequent explicit Phase106 implementation instruction authorized the
+restricted implementation and one normal commit/push after verification.
+Provider HTTP, live campaign, production DB writes, and Delta choice remain
+forbidden.
+
+### Primary finding: generic measurement is present; operational wiring is not
+
+Phase105 supplies `measure_nar_operation`, controlled attempt/terminal/
+overhead publication, `NAROfficialTimingGuardedSession`, and private Session
+factory hooks. A source audit found no production call site of
+`measure_nar_operation`; it is currently exercised only by focused tests.
+Consequently no V2 production stage is already an end-to-end wired timing
+campaign stage. The first rehearsal must be an explicit diagnostic composition,
+not an assertion that the ordinary acquisition/prediction applications are
+already measured.
+
+### Exact V2 stage coverage matrix
+
+| Stage | Current callable boundary / artifact | Role | State | Diagnostic design decision |
+| --- | --- | --- | --- | --- |
+| `CAMPAIGN_EXECUTION_PREPARATION` | runner bootstrap, lock, source/runtime derivation | campaign control | BLOCKED_BY_UNRESOLVED_SEMANTICS | occurs before a capability; use a non-attempt control receipt, never Phase105 recursive attempt |
+| `RUNTIME_BINDING_READINESS` | `issue_current_process_execution` readiness receipt | campaign control | BLOCKED_BY_UNRESOLVED_SEMANTICS | same pre-capability boundary; report provenance, not an attempt duration |
+| `SCHEDULER_DISPATCH` | none; no scheduler is authorized | PRE_C | NOT_CURRENTLY_REACHABLE | exclude from diagnostic plan and future stage set until a separately reviewed runner dispatch boundary exists |
+| `BOOTSTRAP_HOME_ACQUISITION` | `capture_official_home` -> bootstrap transport `fetch`; supplier capture | PRE_C / HTTP | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | transport proxy + guarded bootstrap Session; provider correlation; output supplier capture SHA/ID |
+| `MONTHLY_ROOT_ACQUISITION` | `capture_monthly_root` -> bootstrap transport; root locator | PRE_C / HTTP | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | same; correlation is provider/target-date plan instance; output supplier capture |
+| `LOCATOR_SCRIPT_ACQUISITION` | `capture_locator_script` -> bootstrap transport; script resolution | PRE_C / HTTP | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | same; output capture and deterministic locator material |
+| `MONTHLY_SCHEDULE_ACQUISITION` | daily `capture_supplied_response` for monthly request | PRE_C / HTTP | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | guarded daily-target transport proxy; output monthly capture |
+| `RACE_LIST_ACQUISITION` | daily capture for each normalized venue locator | PRE_C / HTTP | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | one predeclared diagnostic instance per fixture venue, serial order, capture output |
+| `OFFICIAL_RESPONSE_ACQUISITION` | `NAROfficialLiveResponseCaptureService.capture_response` -> private Requests transport | PRE_C / HTTP | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | needs diagnostic composition factory for its private transport; output official capture |
+| `MARKET_ODDS_RAW_ACQUISITION` | `acquire_nar_market_odds_raw_response` -> market transport `fetch` | PRE_C / HTTP | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | public transport with guarded Session factory; output raw capture SHA/ID |
+| `RAW_CAPTURE_VALIDATION` | validation is interleaved with each capture transport/service | PRE_C | BLOCKED_BY_UNRESOLVED_SEMANTICS | do not relabel a composite capture as validation; require a reviewed split boundary |
+| `RAW_CAPTURE_PERSISTENCE` | `save_supplier_capture` / `save_capture` on distinct evidence archives | PRE_C | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | archive proxy can time exact save/reload per concrete capture type; no composite capture double count |
+| `PARSING` | daily `_parse`, bootstrap parser, market parser, historical-input parser | PRE_C | BLOCKED_BY_UNRESOLVED_SEMANTICS | current public functions combine parsing and normalization; no separate attempt until boundary is reviewed |
+| `NORMALIZATION` | `normalize_nar_monthly_convene_info`, `normalize_nar_race_list`, source parsers | PRE_C | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | only whole public pure operation may be measured as inclusive diagnostic dimension; never summed with child parse time |
+| `SOURCE_RECORD_CONSTRUCTION` | `normalize_nar_historical_input_source_records` / daily target bundle construction | PRE_C | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | wrap exact public constructor once fixture capture ancestry is present; artifact is resulting source-record/bundle digest |
+| `PROVIDER_IDENTITY_BINDING` | target/evidence identities are constructed inside daily source functions | PRE_C | BLOCKED_BY_UNRESOLVED_SEMANTICS | no standalone callable; require a narrow identity-binding adapter if separately measured |
+| `SNAPSHOT_CONSTRUCTION` | `build_historical_input_snapshot` | PRE_C | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | direct pure wrapper; output snapshot content SHA |
+| `SNAPSHOT_PERSISTENCE` | `SQLiteHistoricalInputSnapshotRepository.save_snapshot` | PRE_C | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | exact repository-save adapter; output snapshot identity/content SHA |
+| `SNAPSHOT_EXACT_RELOAD_CONFIRMATION` | `load_snapshot_by_identity` comparison | PRE_C | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | separate exact-load adapter; no inferred reload success |
+| `FREEZE_RECEIPT_CONSTRUCTION` | internal part of `issue_historical_input_snapshot_freeze_receipt` | freeze provenance | BLOCKED_BY_UNRESOLVED_SEMANTICS | receipt construction/publication/reload are currently one controlled function; do not claim three timings until reviewed callbacks exist |
+| `FREEZE_RECEIPT_PUBLICATION` | controlled receipt archive save | freeze provenance | BLOCKED_BY_UNRESOLVED_SEMANTICS | same composite limitation; required provenance cost remains visible, not zero |
+| `FREEZE_RECEIPT_EXACT_RELOAD` | controlled receipt archive load | freeze provenance | BLOCKED_BY_UNRESOLVED_SEMANTICS | same composite limitation |
+| `ATTEMPT_START_PUBLICATION` | Phase105 nonrecursive attempt save/reload overhead | observability overhead | WIRED_AND_DIAGNOSTICALLY_EXECUTABLE | automatically emitted by real wrapper; never a recursive attempt |
+| `TERMINAL_PUBLICATION` | Phase105 nonrecursive terminal save/reload overhead | observability overhead | WIRED_AND_DIAGNOSTICALLY_EXECUTABLE | automatically emitted after terminal publication; never recursive |
+| `SNAPSHOT_ADAPTER` | `build_simulation_race_input_from_historical_snapshot` | POST_C | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | pure direct wrapper from a frozen fixture snapshot |
+| `PREDICTION_PIPELINE` | `PredictionPipeline.run` through historical plan execution | POST_C | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | direct wrapper over frozen adapter output; no provider collaborator |
+| `ALLOCATION` | `FixedStakeBetAllocator.allocate` inside persisted plan service | POST_C | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | requires a service-level adapter to avoid reimplementing allocation |
+| `BET_PLAN_CONSTRUCTION` | `SimulationBetPlanBuilder.build` inside persisted plan service | POST_C | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | requires same narrow service decomposition or inclusive service measurement |
+| `BET_PLAN_PERSISTENCE` | bet-plan snapshot repository `save_snapshot` | POST_C | WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED | repository proxy after exact builder output |
+| `SHADOW_ARTIFACT_PUBLICATION` | no NAR Phase105 shadow publication path | POST_C | NOT_CURRENTLY_REACHABLE | exclude until a separately reviewed shadow artifact exists |
+
+`NARTimingCorrelation` remains descriptive only: it supports provider,
+target-set, and race/cutoff joins, but not a nested operation tree, target date,
+venue, request URL, or snapshot edge. The diagnostic plan therefore owns
+non-authoritative instance keys, fixture digests, and a composition DAG; it
+does not retrofit authority into correlation.
+
+### Diagnostic authority and archive decision
+
+Do not alter the immutable Phase104 execution-claim payload. Phase106 should
+add a distinct immutable `NAROperationalTimingDiagnosticCampaignPlanV1` and
+an immutable post-claim `NAROperationalTimingDiagnosticExecutionDeclarationV1`.
+The plan is persisted and exact-reloaded before V2 activation. It binds
+`DIAGNOSTIC_NO_NETWORK_V1`, exact V2 configuration/session, sealed fixture
+manifest, fixed expected stage instances, sequence/order/composition rules,
+and a fixed-window stopping rule. The declaration, issued only after exact
+Phase104 claim/readiness reload and before any attempt, binds exact plan,
+claim, configuration/session/activation/runtime ancestry, and fixture manifest.
+It is not an official execution claim and supplies no `official=True` flag.
+
+Use a separate temporary diagnostic SQLite archive with a Phase106 diagnostic
+companion registry. Its exact union contains the Phase99--105 tables plus
+diagnostic plan/declaration tables and an append-only trigger requiring a
+diagnostic declaration for every Phase105 attempt insert. Phase106-compatible
+gates may accept this exact union; historical strict validators remain strict.
+Future official aggregation must reject both a diagnostic companion registry
+and any diagnostic execution declaration. Thus copied diagnostic evidence
+retains its `DIAGNOSTIC_ONLY` structural marker and cannot qualify merely by
+having valid V2/Phase104/Phase105 ancestry.
+
+The controlled no-network order is:
+
+1. Materialize and enter the sealed `python -I -B` child; bootstrap the temporary diagnostic archive.
+2. Archive exact V2 configuration/session and diagnostic plan; exact-reload the plan.
+3. Issue the normal prospective V2 activation chain.
+4. Acquire the normal Phase104 lock, binding, one-shot claim, readiness, and current-process capability.
+5. Persist/reload the diagnostic execution declaration; only a diagnostic capability wrapper exposing that live Phase104 capability may call Phase105 measurement.
+6. Execute only predeclared fixture operations. HTTP uses guarded Sessions with deterministic fake adapters below `Session.send`; no NAR bytes are requested.
+7. Close the runner and derive a read-only reconciliation. No retry, no resume, no plan mutation, and no post-hoc stage selection occur.
+
+The diagnostic plan's exact fixture stage instances fix sequence numbers and
+expected cardinality. The first rehearsal must be complete only relative to
+that exact fixture plan; it is not a claim of full V2 taxonomy coverage. For a
+future live plan, discovery must itself be predeclared: bootstrap=3,
+monthly=1, and every race-list locator produced by the canonical monthly
+discovery rule is acquired once in canonical serial order. A discovery-closure
+receipt must be immutable before iterating those derived requests. Neither
+success, timeout, nor executability may determine whether an already-planned
+operation is retained.
+
+### Qualification and reconciliation contract
+
+The reconciliation is a pure, read-only `NAROperationalTimingCampaignReconciliation`
+derived from archive rows and the immutable plan. It neither saves a summary
+nor repairs evidence. It reports expected instances; observed attempts;
+terminals; sequence gaps/conflicts; unresolved attempts; environment rows;
+nonqualifying HTTP preconditions; overhead coverage; activation/readiness/
+claim ancestry; the separately derived plan-node state; and a closed campaign
+completeness result. It does not use a generic “missing required stage” result
+that can erase or misclassify an upstream provider observation.
+
+`PHASE106_ARCHITECTURAL_REVIEW_REQUIRES_REVISION` is recorded. Freeze
+`UPSTREAM_PROVIDER_FAILURE_MUST_NOT_CAUSE_DENOMINATOR_ERASURE`,
+`DIAGNOSTIC_PLAN_MUST_DISTINGUISH_CAUSAL_NONEXECUTION_FROM_MISSING_STAGE`,
+`QUALIFIED_PROVIDER_FAILURE_REMAINS_IN_DENOMINATOR`, and
+`DOWNSTREAM_CAUSAL_NONEXECUTION_DOES_NOT_ERASE_UPSTREAM_FAILURE`. The prior
+single vocabulary is replaced by two independent, non-convertible layers.
+
+**Observation qualification** is derived per persisted operation attempt and
+its child evidence. Its closed states are
+`QUALIFIED_OPERATIONAL_TIMING_OBSERVATION`,
+`NONQUALIFYING_REQUEST_ENVIRONMENT`, `UNRESOLVED_ATTEMPT`,
+`EXECUTION_ANCESTRY_INVALID`, and `DIAGNOSTIC_ONLY`. Terminal disposition
+(`SUCCESS`, provider `FAILURE`, or provider `TIMEOUT`) remains a separate fact:
+a qualified provider failure or timeout is still a qualified observation. A
+missing terminal is instead `UNRESOLVED_ATTEMPT`, an evidence-integrity issue.
+For HTTP, qualification requires exact attempt/execution ancestry, a terminal,
+and a qualifying actual-send environment verification; a terminal alone is
+not enough. A diagnostic declaration has structural precedence:
+`DIAGNOSTIC_ONLY_OVERRIDES_INNER_OBSERVATION_QUALIFICATION`. Thus a diagnostic
+fake HTTP request with a qualifying direct environment and a successful or
+timeout terminal remains `DIAGNOSTIC_ONLY` and cannot enter official
+aggregation.
+
+**Plan-node reconciliation** is independently derived from the immutable plan
+and archive evidence. Its closed states are `OBSERVED_AS_PLANNED`,
+`EXPECTED_NOT_EXECUTABLE_DUE_TO_UPSTREAM_FAILURE`,
+`PRECONDITION_BLOCKED`, `MISSING_UNEXPLAINED`, and
+`EVIDENCE_INTEGRITY_FAILURE`. A reconciliation state never retroactively
+changes an observation qualification. Example: a planned HTTP node that
+qualifies at the send guard and then produces a proven `READ_TIMEOUT` is
+`OBSERVED_AS_PLANNED`; its provider timeout remains in the future official
+denominator. Parsing, normalization, and snapshot nodes that predeclared
+`REQUIRES_ALL_PREDECESSOR_SUCCESSFUL_OUTPUTS` are
+`EXPECTED_NOT_EXECUTABLE_DUE_TO_UPSTREAM_FAILURE`, not missing. In contrast,
+a successful acquisition followed by no parsing evidence is
+`MISSING_UNEXPLAINED`; an environment rejection is `PRECONDITION_BLOCKED`; and
+an attempt without terminal is `EVIDENCE_INTEGRITY_FAILURE`.
+
+Freeze `MEASUREMENT_DENOMINATOR_MUST_BE_PREDECLARED_BEFORE_FIRST_ATTEMPT`.
+The plan fixes its scheduled operation population, stopping rule, dependency
+DAG, and continuation semantics before any attempt. It never uses “continue
+until N successful observations.” Each node declares one closed continuation
+rule: `INDEPENDENT`, `EXECUTE_AFTER_PREDECESSORS_TERMINATE_REGARDLESS_OUTCOME`,
+or `REQUIRES_ALL_PREDECESSOR_SUCCESSFUL_OUTPUTS`, together with any branch
+terminal rule. Therefore independent later work still executes after a branch
+failure when planned, while genuinely dependent work is causally nonexecutable
+without becoming unexplained missing evidence.
+
+Critical-path reconstruction uses the plan's directed dependency/composition
+graph, not a sum of rows. An inclusive composite dimension and any contained
+leaf attempts may both be recorded for diagnosis, but reconciliation labels
+them non-additive and computes no Delta. HTTP elapsed intentionally includes
+environment verification publication/reload; attempt and terminal publication
+costs remain separate nonrecursive overhead records.
+
+### Revised plan identity, diagnostic isolation, and fixture contract
+
+Each `NARDiagnosticCampaignPlanNodeV1` has a deterministic identity distinct
+from a Phase105 attempt: exact plan identity; deterministic node key; stage;
+expected sequence for an **operation-attempt** node only; target/race/request
+scope; correlation material; expected HTTP transport, direct-policy semantic,
+and safe canonical URL digest where applicable; predecessor node keys;
+continuation rule; branch-terminal rule; and composition role. A future
+attempt cannot be fully predeclared because it includes the causal admission
+time. The diagnostic execution context instead validates the next exact plan
+node before invoking `measure_nar_operation`; the reconciler independently
+maps the resulting attempt by execution identity, sequence, stage, scope,
+correlation, expected policy, and URL digest. An extra or mismatched attempt
+is rejected at the gate where possible and is always an integrity failure in
+read-only reconciliation.
+
+Do not model all V2 stages as normal attempts. The plan separates (1)
+operation-attempt nodes, (2) nonrecursive Phase105 overhead evidence for
+`ATTEMPT_START_PUBLICATION` and `TERMINAL_PUBLICATION`, and (3)
+control/provenance evidence such as runner/readiness and the currently
+composite freeze receipt. Overhead records receive no fake attempt sequence;
+control prerequisites are required evidence rather than invented timing
+attempts. Stages whose truthful boundary remains unresolved stay
+`BLOCKED_BY_UNRESOLVED_SEMANTICS`; Phase106 must not refactor the freeze receipt
+or composite capture pipeline merely to report complete enum coverage.
+
+Freeze `DIAGNOSTIC_SCHEMA_INSTALLATION != NORMAL_OFFICIAL_ARCHIVE_UPGRADE`.
+Only an explicit `bootstrap_nar_operational_timing_diagnostic_archive` may
+install the exact Phase106 companion on a temporary diagnostic archive. The
+normal Phase105 bootstrap and its official-parent known state remain unchanged.
+The diagnostic repository accepts only the exact Phase99--105 union plus the
+Phase106 diagnostic registry/tables/triggers; partial or unknown state fails
+closed. Historical strict validators remain strict. Controlled plan and
+declaration issuance require private trusted-composition markers, exact
+save/reload, and active Phase104 capability respectively. They cannot
+retrospectively label an unrelated archive or backfill a declaration. The
+order is immutable plan construction -> plan save/reload -> normal authority
+chain -> diagnostic declaration save/reload -> first attempt.
+
+Freeze `FIXTURE_PATH != DIAGNOSTIC_FIXTURE_CONTENT_AUTHORITY`. A
+`NARDiagnosticFixtureBundleV1` is content addressed from local Git objects,
+not mutable worktree paths: repository identity, commit and tree SHA, ordered
+repository paths, Git blob identity where available, byte length, SHA-256, and
+a canonical member manifest are bound to one bundle identity. The plan binds
+that identity; fixture materialization verifies those bytes before use. A
+worktree edit after bundle materialization cannot change diagnostic inputs.
+
+Diagnostic fake adapters sit below the real guarded `Session.send` path and
+never contact NAR. Private diagnostic adapter-factory injection must preserve
+the direct default `_HTTPAdapter(max_retries=0)` branch in all four transports,
+including market odds, or narrowly update the Phase104 AST inspector. In both
+cases regression tests must prove that the default derived static profile is
+exactly unchanged for timeout, retry, redirect, TLS, stream,
+`Accept-Encoding`, and `trust_env`; a diagnostic adapter identity is never
+production runtime-profile authority.
+
+### Required future implementation and tests
+
+Likely new paths are
+`scripts/simulation/nar_operational_timing_diagnostic_campaign.py`,
+`scripts/simulation/nar_operational_timing_diagnostic_archive_migration.py`,
+`scripts/simulation/sqlite_nar_operational_timing_diagnostic_archive.py`, and
+`scripts/simulation/nar_operational_timing_campaign_reconciliation.py`, with
+matching focused tests and a real sealed-child no-network E2E. Narrow
+compatibility-gate/bootstrap updates are permissible; Phase99--105 canonical
+domains and claim payload remain untouched. A diagnostic adapter factory may
+need a private default-preserving HTTP-adapter injection at the four transport
+constructors because their current constructors install a normal
+`HTTPAdapter` after Session construction; a fake adapter must sit below the
+guarded `Session.send` path without global monkeypatching.
+
+Required tests include the full sealed-child diagnostic path; fake HTTP success,
+ConnectTimeout, ReadTimeout, generic transport error, and direct-policy
+rejection; and real guarded pre-send fake-adapter ordering. They must prove
+that a qualified provider timeout remains an observation while its dependent
+parse/normalize/snapshot nodes become
+`EXPECTED_NOT_EXECUTABLE_DUE_TO_UPSTREAM_FAILURE`; that an independent later
+node still executes when the predeclared rule requires it; and that successful
+upstream work followed by an absent runnable node is
+`MISSING_UNEXPLAINED`, not causal nonexecution. An unresolved terminal is an
+integrity failure, never an inferred provider outcome.
+
+Also require fixed-plan/no-success-stopping behavior, plan save/reload before
+declaration and declaration save/reload before first attempt, rejection or
+deterministic detection of unexpected attempts, diagnostic structural
+precedence over inner environment/terminal success, exact diagnostic-only
+bootstrap (and proof normal Phase105 bootstrap does not install it), immutable
+Git-object fixture manifests, worktree-mutation/corruption rejection, all
+currently wired overhead records, deterministic pure reconciliation,
+nested/inclusive no-double-count labels, POST_C no-provider proof, and default
+four-transport/market-odds static-runtime-profile equivalence after private
+adapter-factory injection. Use committed fixtures and temporary archives only.
+
+Remaining blockers are `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`,
+Phase94 historical entry-status authority, Phase95 prospective entry-status
+semantics, Phase41 market eligibility, explicit prospective live-campaign
+authorization, and reviewed exact split boundaries for the currently composite
+raw-validation/parsing/freeze stages. Recommended disposition:
+`DRAFT_FOR_REVIEW`; do not authorize an all-stage diagnostic claim until the
+diagnostic authority/plan/reconciliation contract and the exact selected
+stage-adapter set receive architectural review.
+
 ## POST_V0_8_DAILY_REPLAY_105
 
 Title: NAR V2 Passive Timing, Request-Effective Environment, and Sealed-Child E2E

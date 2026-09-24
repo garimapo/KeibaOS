@@ -1,5 +1,198 @@
 # Latest Codex Report
 
+## POST_V0_8_DAILY_REPLAY_106 — IMPLEMENTED FOR INDEPENDENT REVIEW
+
+Phase: `POST_V0_8_DAILY_REPLAY_106`
+
+Formal Status: `READY_FOR_REVIEW`
+
+State: `IMPLEMENTED_FOR_REVIEW`
+
+Outcome: `READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`
+
+Design Review: `PHASE106_DIAGNOSTIC_CAMPAIGN_AND_TIMING_QUALIFICATION_DESIGN_REVIEW_PASS`
+
+Implementation: `NAR_DIAGNOSTIC_CAMPAIGN_AND_TIMING_QUALIFICATION_IMPLEMENTED`
+
+Starting HEAD/TREE: `d250e0954f50dfe27d6efe569f149a876b8ca684` /
+`209149123f26e5962526d66d47d3ad7f69f07f02`.
+Phase105 and Phase104 remain formally complete. Phase106 is **not** formally
+complete pending independent implementation verification.
+
+The implementation adds exact Git-object fixture byte authority; a fixed,
+content-addressed diagnostic plan with deterministic node identities, explicit
+DAG continuation and inclusive/exclusive composition; and a diagnostic
+declaration bound to one current Phase104 claim. The companion schema is
+installed only by explicit diagnostic bootstrap under the held campaign lock,
+after Phase104 capability issuance. The ordinary Phase105 bootstrap remains
+diagnostic-table-free. Narrow compatible gates accept only the exact approved
+union; historical strict validators remain strict.
+
+The diagnostic context requires a live current-process capability and an exact
+predeclared next node before calling the controlled Phase105 wrapper. Four NAR
+transports retain their default adapter construction, request arguments and
+Phase104 static transport-profile identity; private diagnostic adapter
+injection permits fake outcomes below the actual-send guarded Session. The
+sealed `python -I -B` no-network rehearsal executes real bootstrap capture
+and normalization code with the real source-isolation check.
+
+Read-only reconciliation keeps observation qualification separate from plan
+completeness. A qualified fake-adapter timeout remains an inner timeout
+observation, but all Phase106 evidence is structurally `DIAGNOSTIC_ONLY` for
+official eligibility. Dependent absent nodes are causal nonexecution only
+after a proven terminal failure; unresolved predecessors are integrity
+defects, not inferred failures. Missing publication overhead is a separate
+defect and does not erase a provider observation. Fixed plan slots map to
+dense Phase105 sequences among executed nodes. No stage-duration sum or
+concrete Delta is calculated.
+
+Verification: Phase106 dedicated tests passed (`22 passed`); related
+Phase99–105/transport regressions passed (`143 passed`, `50 subtests passed`);
+the full repository suite passed (`4682 passed`, `2 skipped`, `2846 subtests
+passed`). Staged-diff check and exact final-commit sealed-child smoke are run
+separately before handoff and reported in the final task response. No real
+provider HTTP, live
+campaign, production DB write, ROI calculation or source-semantic change was
+performed; tests use temporary SQLite and Git repositories only. Remaining
+blockers: `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`, Phase94/95
+entry-status semantics, Phase41 market eligibility, prospective live-campaign
+authorization, and unresolved composite stage boundaries.
+
+## POST_V0_8_DAILY_REPLAY_106 — PREPARED FOR ARCHITECTURAL REVIEW
+
+Phase: `POST_V0_8_DAILY_REPLAY_106`
+
+Status: `DRAFT_FOR_REVIEW`
+
+Outcome: `READY_FOR_ARCHITECTURAL_REVIEW`
+
+Audit: `NAR_DIAGNOSTIC_CAMPAIGN_AND_TIMING_QUALIFICATION_DESIGN_COMPLETE`
+
+Starting/verified HEAD/TREE: `d250e0954f50dfe27d6efe569f149a876b8ca684` /
+`209149123f26e5962526d66d47d3ad7f69f07f02` on
+`feature/post-v0.8-daily-replay`; origin agrees and the initial worktree was
+clean. Phase105 is reconciled as formally complete:
+`PHASE105_CORRECTION_REMOTE_VERIFICATION_PASS`,
+`PHASE105_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`,
+`NAR_PASSIVE_TIMING_AND_ACTUAL_SEND_ENVIRONMENT_AUTHORITY = FORMALLY_INTEGRATED`,
+and `CONTROLLED_TIMING_EVIDENCE_ISSUANCE = VERIFIED`. Phase104 remains
+formally complete and integrated.
+
+The audit found that Phase105 provides generic controlled measurement,
+nonrecursive overhead, and actual-send guarded-Session primitives, but there
+is no production call site for `measure_nar_operation`. Accordingly no V2
+stage is already end-to-end wired into ordinary acquisition, snapshot, or
+prediction execution. Bootstrap/daily/official/market HTTP, snapshot,
+adapter, prediction, allocation, plan, and persistence have candidate
+callable boundaries but need explicit diagnostic composition. Scheduler and
+shadow-artifact stages are not reachable; campaign/readiness and several
+raw-validation/parsing/provider-binding/freeze substage boundaries are not
+currently separable without a reviewed adapter. The full stage matrix is in
+`CURRENT_PHASE.md`.
+
+The recommended Phase106 design adds a temporary diagnostic-only archive
+companion, a predeclared immutable diagnostic plan, and a post-claim diagnostic
+execution declaration. It leaves the Phase104 execution claim canonical
+payload unchanged. A trigger requires the declaration before any diagnostic
+attempt. Future official aggregation must reject a diagnostic companion or
+declaration, making diagnostic rows structurally `DIAGNOSTIC_ONLY` rather than
+merely caller-labelled. The harness still uses the actual sealed child, V2
+session/activation, Phase104 runtime/claim/readiness/capability, and Phase105
+controlled attempt/terminal/guard paths; its HTTP adapters are deterministic
+fakes beneath actual `Session.send`, so it emits no NAR request.
+
+The plan predeclares fixture instances, sequences, fixed stopping/window rule,
+correlations, expected output artifacts, and a composition DAG. Reconciliation
+is pure/read-only: it reports attempts, terminals, unresolved rows, environment
+qualification, sequence/missing-stage errors, overhead, and exact ancestry.
+It never repairs rows, calculates Delta, or authorizes a campaign. Synthetic
+successes/failures/timeouts remain visible diagnostics but are not provider
+timing observations. For later official work, provider failures/timeouts after
+qualified preconditions remain denominator members; unresolved attempts fail
+closed; and a critical path may only be calculated from proven composition, not
+by summing nested durations.
+
+Frozen distinctions: `DIAGNOSTIC_DRY_RUN != PROSPECTIVE_OFFICIAL_CAMPAIGN`,
+`SYNTHETIC_TRANSPORT_TIMING != PROVIDER_OPERATIONAL_TIMING_EVIDENCE`,
+`INSTRUMENTATION_COVERAGE != CONCRETE_DELTA_AUTHORITY`, and
+`STAGE_DURATION_SUM != CRITICAL_PATH_DURATION_UNLESS_COMPOSITION_PROVEN`.
+
+No production or test code was modified, no provider HTTP/live campaign/
+production DB write/Delta selection occurred, and no tests were run because
+this was a design-only audit. `git diff --check` and final worktree status are
+recorded after this preparation. Remaining blockers are concrete-Delta audit,
+Phase94/95/41 source semantics, prospective campaign authorization, and the
+reviewed split boundaries required for the composite V2 stages.
+
+### Architectural revision
+
+`PHASE106_ARCHITECTURAL_REVIEW_REQUIRES_REVISION` is recorded with
+`UPSTREAM_PROVIDER_FAILURE_MUST_NOT_CAUSE_DENOMINATOR_ERASURE` and
+`DIAGNOSTIC_PLAN_MUST_DISTINGUISH_CAUSAL_NONEXECUTION_FROM_MISSING_STAGE`.
+The design now freezes two independent classifications rather than one
+campaign status vocabulary.
+
+At the observation level, the closed states are
+`QUALIFIED_OPERATIONAL_TIMING_OBSERVATION`,
+`NONQUALIFYING_REQUEST_ENVIRONMENT`, `UNRESOLVED_ATTEMPT`,
+`EXECUTION_ANCESTRY_INVALID`, and `DIAGNOSTIC_ONLY`. Terminal disposition is
+separate: `SUCCESS`, provider `FAILURE`, and provider `TIMEOUT` can each be an
+otherwise qualified observation. Therefore
+`QUALIFIED_PROVIDER_FAILURE_REMAINS_IN_DENOMINATOR`; absence of a terminal is
+instead unresolved evidence, never an inferred provider result.
+
+Plan-node reconciliation is separately closed as `OBSERVED_AS_PLANNED`,
+`EXPECTED_NOT_EXECUTABLE_DUE_TO_UPSTREAM_FAILURE`, `PRECONDITION_BLOCKED`,
+`MISSING_UNEXPLAINED`, or `EVIDENCE_INTEGRITY_FAILURE`. A qualified HTTP
+ReadTimeout stays an observed provider timeout, while predeclared parsing,
+normalization, and snapshot nodes needing successful response bytes become
+expected-not-executable. This freezes
+`DOWNSTREAM_CAUSAL_NONEXECUTION_DOES_NOT_ERASE_UPSTREAM_FAILURE`. Missing
+parsing after an HTTP success is unexplained; terminal absence is integrity
+failure. The pure reconciler reports both layers without changing observation
+qualification.
+
+`MEASUREMENT_DENOMINATOR_MUST_BE_PREDECLARED_BEFORE_FIRST_ATTEMPT`: each
+deterministic diagnostic plan node binds plan/node identities, stage, operation
+sequence where applicable, scope/correlation, HTTP URL digest/policy/transport,
+predecessors, continuation rule, branch terminal behavior, and composition
+role. The three continuation rules are `INDEPENDENT`,
+`EXECUTE_AFTER_PREDECESSORS_TERMINATE_REGARDLESS_OUTCOME`, and
+`REQUIRES_ALL_PREDECESSOR_SUCCESSFUL_OUTPUTS`. No success-count stopping or
+post-outcome plan rewrite is permitted. The controlled context rejects an
+unplanned attempt and reconciliation detects extras or sequence conflicts.
+
+The plan separates operation attempts from nonrecursive publication-overhead
+records and runner/readiness/freeze control evidence; it does not fabricate
+attempt sequences for the latter. The DAG labels inclusive composites,
+exclusive leaves, sequential siblings, and dependency-only edges, retaining
+`STAGE_DURATION_SUM != CRITICAL_PATH_DURATION_UNLESS_COMPOSITION_PROVEN`.
+
+Diagnostic installation remains explicit and temporary:
+`DIAGNOSTIC_SCHEMA_INSTALLATION != NORMAL_OFFICIAL_ARCHIVE_UPGRADE`. Normal
+Phase105 bootstrap remains the official-parent state. Plan save/reload,
+normal Phase104 authority, then controlled declaration save/reload precede any
+attempt. `DIAGNOSTIC_ONLY_OVERRIDES_INNER_OBSERVATION_QUALIFICATION`, so no
+inner terminal/environment success promotes fake-adapter data. Fixture inputs
+are a Git-object-derived manifest (repository, commit/tree, member blobs,
+lengths, hashes) rather than worktree paths:
+`FIXTURE_PATH != DIAGNOSTIC_FIXTURE_CONTENT_AUTHORITY`.
+
+Fake adapters remain below real guarded `Session.send`; private factory
+injection must preserve the default direct `_HTTPAdapter(max_retries=0)`
+profile and the market-odds AST inspection, or narrowly update that inspector
+with exact semantic-equivalence tests. Diagnostics remain no-network and the
+adapter is not production runtime-profile authority. The revised tests cover
+timeout retention/causal nonexecution, independent continuation, unexplained
+omission, unresolved terminal, fixed-plan ordering, structural diagnostic
+precedence, explicit bootstrap, immutable fixtures, fake adapter ordering,
+static-profile equivalence, pure reconciliation, and sealed-child no-network
+execution.
+
+Recommendation: `DRAFT_FOR_REVIEW`.
+
+Next: `CHATGPT_REVIEW_PHASE106_DIAGNOSTIC_CAMPAIGN_AND_QUALIFICATION`.
+
 ## POST_V0_8_DAILY_REPLAY_105 — CONTROLLED ISSUANCE CORRECTION FOR REVIEW
 
 Phase: `POST_V0_8_DAILY_REPLAY_105`; Formal Status: `READY_FOR_REVIEW`;

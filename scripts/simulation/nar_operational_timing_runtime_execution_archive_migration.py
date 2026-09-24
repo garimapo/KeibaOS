@@ -105,9 +105,7 @@ def require_nar_operational_timing_runtime_execution_archive_compatible_schema(c
         require_nar_operational_timing_runtime_execution_archive_schema(connection)
     else:
         from scripts.simulation import nar_operational_timing_attempt_archive_migration as attempt
-        if objects != base._DDL | activation._DDL | v2._DDL | _DDL | attempt._DDL:
-            raise RuntimeError("runtime/execution archive is not an exact known union")
-        attempt.require_nar_operational_timing_attempt_archive_schema(connection)
+        attempt.require_nar_operational_timing_attempt_archive_compatible_schema(connection)
 
 
 def apply_nar_operational_timing_runtime_execution_archive_migrations(connection: sqlite3.Connection) -> None:

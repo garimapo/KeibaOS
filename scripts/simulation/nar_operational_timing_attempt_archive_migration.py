@@ -88,6 +88,19 @@ def require_nar_operational_timing_attempt_archive_schema(connection: sqlite3.Co
         raise RuntimeError("Phase105 archive foreign key integrity failed")
 
 
+def require_nar_operational_timing_attempt_archive_compatible_schema(connection: sqlite3.Connection) -> None:
+    """Normal repository use accepts only exact Phase105 or explicit diagnostic union."""
+    connection = base._connection(connection)
+    objects = base._objects(connection)
+    if objects == base._DDL | activation._DDL | v2._DDL | runtime._DDL | _DDL:
+        require_nar_operational_timing_attempt_archive_schema(connection)
+    else:
+        from scripts.simulation import nar_operational_timing_diagnostic_archive_migration as diagnostic
+        if objects != base._DDL | activation._DDL | v2._DDL | runtime._DDL | _DDL | diagnostic._DDL:
+            raise RuntimeError("attempt archive is not an exact known union")
+        diagnostic.require_nar_operational_timing_diagnostic_archive_schema(connection)
+
+
 def apply_nar_operational_timing_attempt_archive_migrations(connection: sqlite3.Connection) -> None:
     connection = base._connection(connection)
     if connection.in_transaction:

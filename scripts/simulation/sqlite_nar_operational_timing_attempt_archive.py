@@ -28,12 +28,12 @@ class SQLiteNAROperationalTimingAttemptArchive:
     def __init__(self, *, connection: sqlite3.Connection) -> None:
         if type(connection) is not sqlite3.Connection or connection.in_transaction:
             raise TimingArchiveError("attempt archive requires exact idle SQLite connection")
-        schema.require_nar_operational_timing_attempt_archive_schema(connection)
+        schema.require_nar_operational_timing_attempt_archive_compatible_schema(connection)
         self._connection = connection
         self.runtime = SQLiteNAROperationalTimingRuntimeExecutionArchive(connection=connection)
 
     def _row(self, table: str, column: str, identity: str) -> tuple | None:
-        schema.require_nar_operational_timing_attempt_archive_schema(self._connection)
+        schema.require_nar_operational_timing_attempt_archive_compatible_schema(self._connection)
         rows = self._connection.execute(f"SELECT * FROM {table} WHERE {column}=?", (identity,)).fetchall()
         if len(rows) > 1:
             raise TimingArchiveError("attempt natural identity duplicated")
@@ -43,7 +43,7 @@ class SQLiteNAROperationalTimingAttemptArchive:
               natural_value: object | None = None) -> bool:
         if self._connection.in_transaction:
             raise TimingArchiveError("attempt evidence write requires idle connection")
-        schema.require_nar_operational_timing_attempt_archive_schema(self._connection)
+        schema.require_nar_operational_timing_attempt_archive_compatible_schema(self._connection)
         key = row[0] if natural_value is None else natural_value
         try:
             self._connection.execute("BEGIN IMMEDIATE")
@@ -194,7 +194,7 @@ class SQLiteNAROperationalTimingAttemptArchive:
                           columns="identity,claim_identity,attempt_identity,stage,payload_json")
 
     def list_unresolved_attempts(self, *, claim_identity: str) -> tuple[NAROperationalTimingAttemptV2, ...]:
-        schema.require_nar_operational_timing_attempt_archive_schema(self._connection)
+        schema.require_nar_operational_timing_attempt_archive_compatible_schema(self._connection)
         rows = self._connection.execute(
             f"SELECT a.identity FROM {schema.ATTEMPTS} a LEFT JOIN {schema.TERMINALS} t "
             "ON t.attempt_identity=a.identity WHERE a.claim_identity=? AND t.identity IS NULL ORDER BY a.attempt_sequence",
@@ -204,7 +204,7 @@ class SQLiteNAROperationalTimingAttemptArchive:
 
     def list_nonqualifying_http_attempts(self, *, claim_identity: str) -> tuple[NAROperationalTimingAttemptV2, ...]:
         """Future official aggregation must fail closed if this is nonempty."""
-        schema.require_nar_operational_timing_attempt_archive_schema(self._connection)
+        schema.require_nar_operational_timing_attempt_archive_compatible_schema(self._connection)
         rows = self._connection.execute(
             f"SELECT a.identity FROM {schema.ATTEMPTS} a LEFT JOIN {schema.ENVIRONMENTS} e "
             "ON e.attempt_identity=a.identity WHERE a.claim_identity=? AND a.http_policy IS NOT NULL "

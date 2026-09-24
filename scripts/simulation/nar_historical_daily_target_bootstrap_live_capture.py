@@ -84,9 +84,10 @@ class RequestsNARMonthlyConveneInfoBootstrapHTTPTransport:
 
     __slots__ = ("_session",)
 
-    def __init__(self, *, _session_factory=None) -> None:
+    def __init__(self, *, _session_factory=None, _diagnostic_adapter_factory=None) -> None:
         session = (_session_factory or _requests.Session)()
-        adapter = _HTTPAdapter(max_retries=0)
+        adapter = (_HTTPAdapter(max_retries=0) if _diagnostic_adapter_factory is None
+                   else _diagnostic_adapter_factory())
         session.mount("https://", adapter)
         session.mount("http://", adapter)
         session.headers.update({"User-Agent": _USER_AGENT})

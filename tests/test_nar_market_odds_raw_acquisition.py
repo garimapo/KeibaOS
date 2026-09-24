@@ -433,6 +433,20 @@ class _Session:
 
 
 class RequestsTransportTests(unittest.TestCase):
+    def test_private_diagnostic_adapter_factory_preserves_request_semantics(self) -> None:
+        request = _request()
+        session = _Session(_HTTPResponse(request))
+        sentinel = object()
+        response = RequestsNARMarketOddsRawAcquisitionTransport(
+            _session_factory=lambda: session,
+            _diagnostic_adapter_factory=lambda: sentinel,
+        ).fetch(request_identity=request, requested_at=_T0)
+        self.assertEqual(session.mounts, [("https://", sentinel)])
+        self.assertEqual(session.calls[0][0], request.canonical_request_url)
+        self.assertEqual(session.calls[0][1]["timeout"], (10.0, 20.0))
+        self.assertFalse(session.trust_env)
+        self.assertEqual(response.response_body, _BODY)
+
     def test_concrete_transport_makes_one_exact_raw_get_and_whitelists_headers(self) -> None:
         request = _request()
         http_response = _HTTPResponse(request)
