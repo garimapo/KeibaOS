@@ -8,8 +8,11 @@ import pytest
 import requests
 
 from scripts.simulation.nar_operational_timing_attempt_v2 import (
-    NARRequestEnvironmentQualification, NARTimingTerminalDispositionV2,
+    NAROperationalTimingAttemptV2, NAROperationalTimingTerminalV2,
+    NARRequestEnvironmentQualification, NARTimingPublicationOverheadV2,
+    NARTimingTerminalDispositionV2,
 )
+from scripts.simulation import nar_operational_timing_attempt_archive_migration as attempt_schema
 from scripts.simulation.nar_operational_timing_campaign_runner import NAROperationalTimingCampaignRunner
 from scripts.simulation.nar_operational_timing_guarded_session import (
     NAROfficialTimingGuardedSession, NARRequestEnvironmentRejected,
@@ -28,6 +31,9 @@ from scripts.simulation.nar_operational_timing_runtime_profile import derive_sta
 from scripts.simulation.nar_operational_timing_runtime_source_provenance import _git_manifest
 from scripts.simulation.nar_operational_timing_session_activation_v2 import issue_nar_operational_timing_session_activation_v2
 from scripts.simulation.sqlite_nar_operational_timing_observability_archive import TimingArchiveError
+from scripts.simulation.sqlite_nar_operational_timing_attempt_archive import (
+    SQLiteNAROperationalTimingAttemptArchive, _TIMING_EVIDENCE_ISSUANCE_MARKER,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -81,14 +87,78 @@ def test_attempt_precedes_callable_and_success_result_identity_is_preserved(tmp_
         attempt = runner.attempt_archive.load_attempt(attempt_identity=attempt_id)
         terminal = runner.attempt_archive.load_terminal_for_attempt(attempt_identity=attempt_id)
         assert terminal.disposition is NARTimingTerminalDispositionV2.SUCCESS
-        assert runner.attempt_archive.save_attempt(attempt=attempt) is False
-        assert runner.attempt_archive.save_terminal(terminal=terminal) is False
+        overhead = NARTimingPublicationOverheadV2.from_json(runner._connection.execute(
+            "SELECT payload_json FROM nar_operational_timing_publication_overhead LIMIT 1").fetchone()[0])
+        for save, value in ((runner.attempt_archive.save_attempt, {"attempt": attempt}),
+                            (runner.attempt_archive.save_terminal, {"terminal": terminal}),
+                            (runner.attempt_archive.save_overhead, {"overhead": overhead})):
+            with pytest.raises(TimingArchiveError, match="controlled current-process issuance"):
+                save(**value)
+            capability.require_current_owner(runner)
+            assert save(**value, _issuance_marker=_TIMING_EVIDENCE_ISSUANCE_MARKER) is False
         for table in ("nar_operational_timing_v2_attempts", "nar_operational_timing_v2_terminals"):
             with pytest.raises(sqlite3.DatabaseError):
                 runner._connection.execute(f"UPDATE {table} SET identity='other'")
             with pytest.raises(sqlite3.DatabaseError):
                 runner._connection.execute(f"DELETE FROM {table}")
         assert runner._connection.execute("SELECT COUNT(*) FROM nar_operational_timing_publication_overhead").fetchone()[0] == 2
+
+
+def test_closed_runner_claim_cannot_publish_backdated_attempt_or_timing_evidence(tmp_path, monkeypatch):
+    runner, config, session = _campaign(tmp_path, monkeypatch)
+    with runner:
+        capability = _activate(runner, config, session)
+        measure_nar_operation(runner=runner, capability=capability,
+                              stage=Stage.SNAPSHOT_CONSTRUCTION, correlation=CORRELATION,
+                              load_context=LOAD, operation=lambda: "completed")
+        attempt = runner.attempt_archive.load_attempt(attempt_identity=runner._connection.execute(
+            "SELECT identity FROM nar_operational_timing_v2_attempts").fetchone()[0])
+        terminal = runner.attempt_archive.load_terminal_for_attempt(attempt_identity=attempt.attempt_identity)
+        overhead = NARTimingPublicationOverheadV2.from_json(runner._connection.execute(
+            "SELECT payload_json FROM nar_operational_timing_publication_overhead LIMIT 1").fetchone()[0])
+    with pytest.raises(RuntimeError):
+        capability.require_current_owner(runner)
+    with sqlite3.connect(runner.lock.archive_path) as connection:
+        connection.execute("PRAGMA foreign_keys=ON")
+        later_archive = SQLiteNAROperationalTimingAttemptArchive(connection=connection)
+        historical = NAROperationalTimingAttemptV2(
+            config.configuration_identity, session.session_identity, capability.claim_identity,
+            Stage.SNAPSHOT_CONSTRUCTION, CORRELATION, 1, START + timedelta(seconds=1), LOAD)
+        with pytest.raises(TimingArchiveError, match="controlled current-process issuance"):
+            later_archive.save_attempt(attempt=historical)
+        with pytest.raises(TimingArchiveError, match="controlled current-process issuance"):
+            later_archive.save_terminal(terminal=terminal)
+        with pytest.raises(TimingArchiveError, match="controlled current-process issuance"):
+            later_archive.save_overhead(overhead=overhead)
+        assert connection.execute("SELECT COUNT(*) FROM nar_operational_timing_v2_attempts").fetchone()[0] == 1
+        assert connection.execute("SELECT COUNT(*) FROM nar_operational_timing_v2_terminals").fetchone()[0] == 1
+        assert connection.execute("SELECT COUNT(*) FROM nar_operational_timing_publication_overhead").fetchone()[0] == 2
+
+
+def test_backdated_terminal_rejected_on_save_and_corrupt_exact_load(tmp_path, monkeypatch):
+    runner, config, session = _campaign(tmp_path, monkeypatch)
+    with runner:
+        capability = _activate(runner, config, session)
+        measure_nar_operation(runner=runner, capability=capability,
+                              stage=Stage.SNAPSHOT_CONSTRUCTION, correlation=CORRELATION,
+                              load_context=LOAD, operation=lambda: "completed")
+        attempt = runner.attempt_archive.load_attempt(attempt_identity=runner._connection.execute(
+            "SELECT identity FROM nar_operational_timing_v2_attempts").fetchone()[0])
+        backdated = NAROperationalTimingTerminalV2(
+            attempt.attempt_identity, attempt.attempt_admitted_at - timedelta(microseconds=1),
+            0, NARTimingTerminalDispositionV2.SUCCESS)
+        with pytest.raises(TimingArchiveError, match="causal UTC finish precedes attempt admission"):
+            runner.attempt_archive.save_terminal(
+                terminal=backdated, _issuance_marker=_TIMING_EVIDENCE_ISSUANCE_MARKER)
+        trigger = f"trg_{attempt_schema.TERMINALS}_no_update"
+        runner._connection.execute(f"DROP TRIGGER {trigger}")
+        runner._connection.execute(
+            f"UPDATE {attempt_schema.TERMINALS} SET identity=?, payload_json=? WHERE attempt_identity=?",
+            (backdated.terminal_identity, backdated.canonical_bytes().decode("utf-8"), attempt.attempt_identity))
+        runner._connection.execute(attempt_schema._DDL[trigger])
+        runner._connection.commit()
+        with pytest.raises(TimingArchiveError, match="stored terminal evidence is corrupt"):
+            runner.attempt_archive.load_terminal_for_attempt(attempt_identity=attempt.attempt_identity)
 
 
 def test_original_exception_preserved_and_terminal_failure_unresolved(tmp_path, monkeypatch):

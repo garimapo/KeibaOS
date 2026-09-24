@@ -19,6 +19,7 @@ from scripts.simulation.sqlite_nar_operational_timing_runtime_execution_archive 
 
 
 _SEND_VERIFICATION_ISSUANCE_MARKER = object()  # Trusted API discipline, not cryptographic security.
+_TIMING_EVIDENCE_ISSUANCE_MARKER = object()  # Wrapper-held current-process authority discipline.
 
 
 class SQLiteNAROperationalTimingAttemptArchive:
@@ -83,9 +84,11 @@ class SQLiteNAROperationalTimingAttemptArchive:
             raise TimingArchiveError("attempt lacks qualifying runtime readiness")
         return claim
 
-    def save_attempt(self, *, attempt: NAROperationalTimingAttemptV2) -> bool:
-        if type(attempt) is not NAROperationalTimingAttemptV2:
-            raise TimingArchiveError("exact V2 attempt required")
+    def save_attempt(self, *, attempt: NAROperationalTimingAttemptV2,
+                     _issuance_marker: object = None) -> bool:
+        if (type(attempt) is not NAROperationalTimingAttemptV2
+                or _issuance_marker is not _TIMING_EVIDENCE_ISSUANCE_MARKER):
+            raise TimingArchiveError("attempt publication requires controlled current-process issuance")
         self._claim(attempt)
         row = (attempt.attempt_identity, attempt.campaign_execution_identity, attempt.session_identity,
                attempt.configuration_identity, attempt.attempt_sequence, attempt.stage.value,
@@ -149,9 +152,16 @@ class SQLiteNAROperationalTimingAttemptArchive:
         except (KeyError, TypeError, ValueError) as error:
             raise TimingArchiveError("stored environment evidence is corrupt") from error
 
-    def save_terminal(self, *, terminal: NAROperationalTimingTerminalV2) -> bool:
-        if type(terminal) is not NAROperationalTimingTerminalV2 or self.load_attempt(attempt_identity=terminal.attempt_identity) is None:
+    def save_terminal(self, *, terminal: NAROperationalTimingTerminalV2,
+                      _issuance_marker: object = None) -> bool:
+        if (type(terminal) is not NAROperationalTimingTerminalV2
+                or _issuance_marker is not _TIMING_EVIDENCE_ISSUANCE_MARKER):
+            raise TimingArchiveError("terminal publication requires controlled current-process issuance")
+        attempt = self.load_attempt(attempt_identity=terminal.attempt_identity)
+        if attempt is None:
             raise TimingArchiveError("terminal requires exact archived attempt")
+        if terminal.operation_finished_at < attempt.attempt_admitted_at:
+            raise TimingArchiveError("terminal causal UTC finish precedes attempt admission")
         row = (terminal.terminal_identity, terminal.attempt_identity, terminal.canonical_bytes().decode("utf-8"))
         return self._save(table=schema.TERMINALS, row=row, columns="identity,attempt_identity,payload_json",
                           natural_column="attempt_identity", natural_value=terminal.attempt_identity)
@@ -162,15 +172,19 @@ class SQLiteNAROperationalTimingAttemptArchive:
             return None
         try:
             value = NAROperationalTimingTerminalV2.from_json(row[-1])
-            if (value.terminal_identity, value.attempt_identity) != row[:-1] or self.load_attempt(attempt_identity=value.attempt_identity) is None:
+            attempt = self.load_attempt(attempt_identity=value.attempt_identity)
+            if ((value.terminal_identity, value.attempt_identity) != row[:-1] or attempt is None
+                    or value.operation_finished_at < attempt.attempt_admitted_at):
                 raise ValueError("terminal row/content mismatch")
             return value
         except (KeyError, TypeError, ValueError) as error:
             raise TimingArchiveError("stored terminal evidence is corrupt") from error
 
-    def save_overhead(self, *, overhead: NARTimingPublicationOverheadV2) -> bool:
-        if type(overhead) is not NARTimingPublicationOverheadV2:
-            raise TimingArchiveError("exact nonrecursive overhead required")
+    def save_overhead(self, *, overhead: NARTimingPublicationOverheadV2,
+                      _issuance_marker: object = None) -> bool:
+        if (type(overhead) is not NARTimingPublicationOverheadV2
+                or _issuance_marker is not _TIMING_EVIDENCE_ISSUANCE_MARKER):
+            raise TimingArchiveError("overhead publication requires controlled current-process issuance")
         attempt = self.load_attempt(attempt_identity=overhead.attempt_identity)
         if attempt is None or attempt.campaign_execution_identity != overhead.campaign_execution_identity:
             raise TimingArchiveError("overhead attempt ancestry mismatch")

@@ -1,5 +1,66 @@
 # Latest Codex Report
 
+## POST_V0_8_DAILY_REPLAY_105 — CONTROLLED ISSUANCE CORRECTION FOR REVIEW
+
+Phase: `POST_V0_8_DAILY_REPLAY_105`; Formal Status: `READY_FOR_REVIEW`;
+State: `IMPLEMENTED_FOR_REVIEW`; Outcome:
+`READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`. Design Review:
+`PHASE105_PASSIVE_TIMING_AND_REQUEST_ENVIRONMENT_DESIGN_REVIEW_PASS`.
+Implementation:
+`NAR_PASSIVE_TIMING_AND_ACTUAL_SEND_ENVIRONMENT_AUTHORITY_IMPLEMENTED`.
+Phase105 is **not** formally complete.
+
+Starting HEAD/TREE: `7e82b5c870e153eefac14cc7cdfbd00c126f8983` /
+`26de34ffb07f4ce88bf0645e4975173791fcd648` on
+`feature/post-v0.8-daily-replay`. Independent review required correction of
+`PERSISTED_TIMING_EVIDENCE_CAN_BYPASS_CURRENT_PROCESS_CAPABILITY` and
+`ATTEMPT_TERMINAL_CONTROLLED_ISSUANCE_REQUIRED`. Freeze
+`PERSISTED_CLAIM_ANCESTRY != CONTROLLED_TIMING_EVIDENCE_ISSUANCE` and
+`TIMING_EVIDENCE_PUBLICATION_REQUIRES_CURRENT_PROCESS_CONTROLLED_ISSUANCE`.
+
+The Phase105 attempt archive now requires a private controlled issuance marker
+for `save_attempt`, `save_terminal`, and `save_overhead` before insertion or
+idempotent duplicate handling. The passive wrapper supplies this marker only
+after validating the live runner's exact current-process capability, including
+before terminal and overhead publication. The guarded pre-network Session
+continues to use its separate existing environment-verification marker; the
+direct-policy guard and nonqualifying-send rejection are unchanged. These
+markers enforce trusted KeibaOS API discipline, not cryptographic security.
+
+Terminal publication and reload now verify the exact archived attempt and
+require `operation_finished_at >= attempt_admitted_at`. Monotonic elapsed
+microseconds remain independent of causal UTC. A focused regression closes
+the runner, reopens the same archive, and rejects historical-window attempt
+publication plus uncontrolled terminal/overhead direct saves. Controlled
+exact duplicates remain idempotent; uncontrolled exact duplicates are also
+rejected. Another regression rejects a backdated terminal on save and after
+test-only corruption of the temporary archive. The normal wrapper and guarded
+HTTP fake-adapter tests still succeed.
+
+Changed paths are limited to `docs/CURRENT_PHASE.md`, this report,
+`scripts/simulation/sqlite_nar_operational_timing_attempt_archive.py`,
+`scripts/simulation/nar_operational_timing_passive_wrapper.py`, and
+`tests/test_nar_operational_timing_passive_wrapper.py`. No Phase99–104 domain,
+schema, transport, provider, cutoff, or policy implementation was changed.
+
+Verification: corrected passive-wrapper focus `20 passed`; Phase99–105 and
+freeze/cutoff/transport regressions `197 passed, 68 subtests passed`; full
+repository suite `4659 passed, 2 skipped, 2846 subtests passed`.
+`git diff --check` passed (line-ending notifications only). A separate
+post-commit, no-network `python -I -B` sealed-child smoke against the final
+correction commit is required and will be reported in the handoff, because an
+uncommitted source tree cannot stand in for Git-object source authority.
+
+No provider HTTP, live timing campaign, production DB write, Delta selection,
+ROI evaluation, or Phase94/95/41 source-semantic work occurred. Tests used
+temporary SQLite and Git-object fixtures. Correction remains pending
+independent verification. Prospective campaign authorization and
+`CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT` remain unresolved.
+
+Next: `CHATGPT_REVIEW_PHASE105_CORRECTION`.
+
+## Prior Phase105 implementation report
+
 ## POST_V0_8_DAILY_REPLAY_105 — IMPLEMENTED FOR REVIEW
 
 Phase: `POST_V0_8_DAILY_REPLAY_105`

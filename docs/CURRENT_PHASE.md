@@ -16,7 +16,51 @@ Design Review: PHASE105_PASSIVE_TIMING_AND_REQUEST_ENVIRONMENT_DESIGN_REVIEW_PAS
 
 Implementation: NAR_PASSIVE_TIMING_AND_ACTUAL_SEND_ENVIRONMENT_AUTHORITY_IMPLEMENTED
 
-Base Commit and Branch: `8d6411f7d886caf70db44e1e92ccd1f5bd6711d8` / `feature/post-v0.8-daily-replay`
+Base Commit and Branch: `7e82b5c870e153eefac14cc7cdfbd00c126f8983` / `feature/post-v0.8-daily-replay`
+
+### Limited controlled-issuance correction authorization
+
+Independent verdict: `PHASE105_IMPLEMENTATION_REMOTE_VERIFICATION_REQUIRES_CORRECTION`.
+Blockers: `PERSISTED_TIMING_EVIDENCE_CAN_BYPASS_CURRENT_PROCESS_CAPABILITY` and
+`ATTEMPT_TERMINAL_CONTROLLED_ISSUANCE_REQUIRED`. Freeze
+`PERSISTED_CLAIM_ANCESTRY != CONTROLLED_TIMING_EVIDENCE_ISSUANCE` and
+`TIMING_EVIDENCE_PUBLICATION_REQUIRES_CURRENT_PROCESS_CONTROLLED_ISSUANCE`.
+Attempt, terminal, and nonrecursive overhead saves require a private controlled
+issuance marker before either insertion or exact-duplicate handling. The passive
+wrapper supplies it only while holding a live matching runner capability;
+request-environment issuance remains restricted to the existing guarded
+pre-network-send marker. Terminal save and load additionally require causal
+UTC finish no earlier than the archived attempt admission timestamp. These are
+trusted-composition/API-discipline rules, not cryptographic authority.
+
+Correction implementation: attempt, terminal, and nonrecursive overhead
+publication now reject an uncontrolled call, including an exact duplicate.
+The passive wrapper rechecks its live current-process capability before each
+controlled publication. The existing guarded pre-send environment marker is
+unchanged. Terminal publication and exact reload require
+`operation_finished_at >= attempt_admitted_at` against the archived attempt.
+A closed runner's persisted claim/readiness cannot authorize direct timing
+evidence publication. Focused stale-runner, direct-save, duplicate, and
+backdated/corrupt-terminal regressions passed; the independent correction
+review remains pending. The correction neither changes Phase104 authority nor
+claims cryptographic protection against code operating outside trusted
+composition.
+
+Allowed Files for this correction: `docs/CURRENT_PHASE.md`,
+`docs/LATEST_CODEX_REPORT.md`,
+`scripts/simulation/sqlite_nar_operational_timing_attempt_archive.py`,
+`scripts/simulation/nar_operational_timing_passive_wrapper.py`, and
+`tests/test_nar_operational_timing_passive_wrapper.py`.
+Forbidden Files: every other production module and test, production databases,
+logs, Phase99–104 contracts, provider transports, cutoff/policy code.
+Required Tests: corrected Phase105 focused tests; all Phase104 focused tests;
+Phase99/100/103 timing/archive regressions; affected transport tests; full
+repository pytest; `git diff --check`; exact changed-path audit; final clean
+`git status --short`; and a post-commit no-network sealed-child smoke of the
+correction commit using real `python -I -B` isolation.
+Stop Condition: a wider production/schema change is necessary, provider HTTP
+or production DB write becomes necessary, tests fail outside the correction,
+unexpected paths change, or normal push would require force.
 
 ### Implementation for independent review
 

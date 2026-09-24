@@ -24,6 +24,7 @@ from scripts.simulation.nar_operational_timing_observability import (
 from scripts.simulation.nar_operational_timing_observability_v2 import (
     NAROperationalTimingStageV2, _REQUIRED_TRANSPORT,
 )
+from scripts.simulation.sqlite_nar_operational_timing_attempt_archive import _TIMING_EVIDENCE_ISSUANCE_MARKER
 
 
 T = TypeVar("T")
@@ -110,7 +111,8 @@ def measure_nar_operation(
         sha256(expected_url.encode("utf-8")).hexdigest() if is_http else None,
     )
     publication_start_ns = runner.monotonic_timer_ns()
-    archive.save_attempt(attempt=attempt)
+    capability.require_current_owner(runner)
+    archive.save_attempt(attempt=attempt, _issuance_marker=_TIMING_EVIDENCE_ISSUANCE_MARKER)
     if archive.load_attempt(attempt_identity=attempt.attempt_identity) != attempt:
         raise RuntimeError("attempt publication did not exact-reload; operation not invoked")
     publication_finish_ns = runner.monotonic_timer_ns()
@@ -118,7 +120,8 @@ def measure_nar_operation(
         claim.claim_identity, attempt.attempt_identity, NAROperationalTimingStageV2.ATTEMPT_START_PUBLICATION,
         elapsed_microseconds_from_ns(publication_start_ns, publication_finish_ns),
     )
-    archive.save_overhead(overhead=overhead)
+    capability.require_current_owner(runner)
+    archive.save_overhead(overhead=overhead, _issuance_marker=_TIMING_EVIDENCE_ISSUANCE_MARKER)
     context = (NARHTTPAttemptContext(runner=runner, capability=capability, attempt=attempt,
                                      expected_url=expected_url, transport_kind=transport_kind)
                if is_http else nullcontext())
@@ -126,20 +129,22 @@ def measure_nar_operation(
 
     def publish(disposition: NARTimingTerminalDispositionV2,
                 failure: NARTimingFailureClassificationV2 | None) -> None:
+        capability.require_current_owner(runner)
         finish_ns = runner.monotonic_timer_ns()
         finished_at = _utc(runner.utc_clock())
         terminal = NAROperationalTimingTerminalV2(attempt.attempt_identity, finished_at,
                                                   elapsed_microseconds_from_ns(start_ns, finish_ns),
                                                   disposition, failure, artifact_sha256 if failure is None else None)
         terminal_start_ns = runner.monotonic_timer_ns()
-        archive.save_terminal(terminal=terminal)
+        archive.save_terminal(terminal=terminal, _issuance_marker=_TIMING_EVIDENCE_ISSUANCE_MARKER)
         if archive.load_terminal_for_attempt(attempt_identity=attempt.attempt_identity) != terminal:
             raise RuntimeError("terminal publication did not exact-reload")
         terminal_end_ns = runner.monotonic_timer_ns()
+        capability.require_current_owner(runner)
         archive.save_overhead(overhead=NARTimingPublicationOverheadV2(
             claim.claim_identity, attempt.attempt_identity, NAROperationalTimingStageV2.TERMINAL_PUBLICATION,
             elapsed_microseconds_from_ns(terminal_start_ns, terminal_end_ns),
-        ))
+        ), _issuance_marker=_TIMING_EVIDENCE_ISSUANCE_MARKER)
 
     try:
         with context:
