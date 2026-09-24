@@ -97,6 +97,19 @@ def require_nar_operational_timing_runtime_execution_archive_schema(connection: 
         raise RuntimeError("runtime/execution archive foreign key integrity failed")
 
 
+def require_nar_operational_timing_runtime_execution_archive_compatible_schema(connection: sqlite3.Connection) -> None:
+    """Normal repository gate; historical Phase104 exact validator remains strict."""
+    connection = base._connection(connection)
+    objects = base._objects(connection)
+    if objects == base._DDL | activation._DDL | v2._DDL | _DDL:
+        require_nar_operational_timing_runtime_execution_archive_schema(connection)
+    else:
+        from scripts.simulation import nar_operational_timing_attempt_archive_migration as attempt
+        if objects != base._DDL | activation._DDL | v2._DDL | _DDL | attempt._DDL:
+            raise RuntimeError("runtime/execution archive is not an exact known union")
+        attempt.require_nar_operational_timing_attempt_archive_schema(connection)
+
+
 def apply_nar_operational_timing_runtime_execution_archive_migrations(connection: sqlite3.Connection) -> None:
     connection = base._connection(connection)
     if connection.in_transaction:

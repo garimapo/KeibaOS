@@ -183,6 +183,9 @@ class NARMarketOddsRawAcquisitionClock(_Protocol):
 class RequestsNARMarketOddsRawAcquisitionTransport:
     """Bounded no-retry transport for one exact Phase32 canonical request."""
 
+    def __init__(self, *, _session_factory=None) -> None:
+        self._session_factory = _session_factory or _requests.Session
+
     def fetch(
         self,
         *,
@@ -203,7 +206,7 @@ class RequestsNARMarketOddsRawAcquisitionTransport:
         session = None
         response = None
         try:
-            session = _requests.Session()
+            session = self._session_factory()
             session.trust_env = False
             session.headers.clear()
             adapter = _HTTPAdapter(max_retries=0)

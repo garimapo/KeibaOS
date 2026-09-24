@@ -12,9 +12,11 @@ import importlib
 import re
 import sqlite3
 import sys
+import time
 from typing import Callable
 
 from scripts.simulation.nar_operational_timing_archive_bootstrap import bootstrap_nar_operational_timing_runtime_archive
+from scripts.simulation.nar_operational_timing_attempt_archive_bootstrap import bootstrap_nar_operational_timing_attempt_archive
 from scripts.simulation.nar_operational_timing_campaign_lock import NAROperationalTimingCampaignLock
 from scripts.simulation.nar_operational_timing_runtime_source_provenance import (
     NARRuntimeSourceBundle, require_sealed_module_origins, verify_bundle_against_git_objects,
@@ -77,11 +79,14 @@ class NAROperationalTimingCampaignRunner:
     """Holds one archive lock across bootstrap and one claim; no provider operation."""
 
     __slots__ = ("lock", "repository_root", "bundle_root", "bundle", "utc_clock",
-                 "session_identity", "_connection", "_archive", "_attempted", "_active_claim_identity")
+                 "session_identity", "_connection", "_archive", "_attempted", "_active_claim_identity",
+                 "_attempt_archive", "_enable_attempt_archive", "monotonic_timer_ns", "_next_attempt_sequence")
 
     def __init__(self, *, archive_path: Path, repository_root: Path,
                  bundle_root: Path, bundle: NARRuntimeSourceBundle, session_identity: str,
-                 utc_clock: Callable[[], datetime] | None = None) -> None:
+                 utc_clock: Callable[[], datetime] | None = None,
+                 monotonic_timer_ns: Callable[[], int] | None = None,
+                 enable_attempt_archive: bool = False) -> None:
         self.lock = NAROperationalTimingCampaignLock(archive_path=archive_path)
         self.repository_root = repository_root.resolve(strict=True)
         self.bundle_root = bundle_root.resolve(strict=True)
@@ -93,10 +98,16 @@ class NAROperationalTimingCampaignRunner:
             raise ValueError("runner requires one exact V2 session identity")
         self.session_identity = session_identity
         self.utc_clock = utc_clock or (lambda: datetime.now(timezone.utc))
+        if type(enable_attempt_archive) is not bool:
+            raise ValueError("attempt archive option must be exact bool")
+        self._enable_attempt_archive = enable_attempt_archive
+        self.monotonic_timer_ns = monotonic_timer_ns or time.perf_counter_ns
+        self._next_attempt_sequence = 0
         self._connection = None
         self._archive = None
         self._attempted = False
         self._active_claim_identity = None
+        self._attempt_archive = None
 
     def __enter__(self) -> NAROperationalTimingCampaignRunner:
         self.lock.acquire()
@@ -104,8 +115,14 @@ class NAROperationalTimingCampaignRunner:
             connection = sqlite3.connect(self.lock.archive_path)
             self._connection = connection
             connection.execute("PRAGMA foreign_keys=ON")
-            bootstrap_nar_operational_timing_runtime_archive(connection=connection, campaign_lock=self.lock)
+            if self._enable_attempt_archive:
+                bootstrap_nar_operational_timing_attempt_archive(connection=connection, campaign_lock=self.lock)
+            else:
+                bootstrap_nar_operational_timing_runtime_archive(connection=connection, campaign_lock=self.lock)
             self._archive = SQLiteNAROperationalTimingRuntimeExecutionArchive(connection=connection)
+            if self._enable_attempt_archive:
+                from scripts.simulation.sqlite_nar_operational_timing_attempt_archive import SQLiteNAROperationalTimingAttemptArchive
+                self._attempt_archive = SQLiteNAROperationalTimingAttemptArchive(connection=connection)
             return self
         except BaseException:
             if self._connection is not None:
@@ -119,8 +136,23 @@ class NAROperationalTimingCampaignRunner:
             self._connection.close()
             self._connection = None
             self._archive = None
+            self._attempt_archive = None
         self._active_claim_identity = None
         self.lock.release()
+
+    @property
+    def attempt_archive(self):
+        if not self._enable_attempt_archive or self._attempt_archive is None or not self.lock.held_by_current_process:
+            raise RuntimeError("Phase105 attempt archive requires current locked runner")
+        return self._attempt_archive
+
+    def next_attempt_sequence(self, capability: NARCurrentProcessExecutionCapability) -> int:
+        capability.require_current_owner(self)
+        if self._attempt_archive is None:
+            raise RuntimeError("Phase105 attempt archive is not active")
+        sequence = self._next_attempt_sequence
+        self._next_attempt_sequence += 1
+        return sequence
 
     def _require_isolated_source(self) -> None:
         if not sys.flags.isolated or not sys.dont_write_bytecode:
@@ -128,6 +160,13 @@ class NAROperationalTimingCampaignRunner:
         verify_bundle_against_git_objects(repository_root=self.repository_root, bundle=self.bundle)
         import scripts
         tuple(importlib.import_module(name) for name in _CRITICAL_MODULES)
+        if self._enable_attempt_archive:
+            tuple(importlib.import_module(name) for name in (
+                "scripts.simulation.nar_operational_timing_attempt_v2",
+                "scripts.simulation.nar_operational_timing_guarded_session",
+                "scripts.simulation.nar_operational_timing_passive_wrapper",
+                "scripts.simulation.sqlite_nar_operational_timing_attempt_archive",
+            ))
         modules = tuple(module for name, module in sys.modules.items()
                         if name.startswith("scripts.") and getattr(module, "__file__", None))
         for name, module in tuple(sys.modules.items()):

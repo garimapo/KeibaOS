@@ -1,5 +1,116 @@
 # Current Phase
 
+## POST_V0_8_DAILY_REPLAY_105
+
+Title: NAR V2 Passive Timing, Request-Effective Environment, and Sealed-Child E2E
+
+Formal Status: READY_FOR_REVIEW
+
+State: IMPLEMENTED_FOR_REVIEW
+
+Outcome: READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW
+
+Audit: NAR_PASSIVE_TIMING_AND_REQUEST_ENVIRONMENT_DESIGN_COMPLETE
+
+Design Review: PHASE105_PASSIVE_TIMING_AND_REQUEST_ENVIRONMENT_DESIGN_REVIEW_PASS
+
+Implementation: NAR_PASSIVE_TIMING_AND_ACTUAL_SEND_ENVIRONMENT_AUTHORITY_IMPLEMENTED
+
+Base Commit and Branch: `8d6411f7d886caf70db44e1e92ccd1f5bd6711d8` / `feature/post-v0.8-daily-replay`
+
+### Implementation for independent review
+
+Phase105 adds separate V2 attempt and terminal canonical domains, an append-only
+same-database companion with a restrictive execution-claim FK, one environment
+verification per HTTP attempt, and nonrecursive publication-overhead records.
+The campaign runner owns UTC/monotonic providers and a one-shot sequence
+allocator. An admitted attempt is committed and exact-reloaded before the
+underlying callable begins. A terminal write failure leaves that attempt
+discoverable; it does not replace the production result or exception.
+HTTP attempts bind a safe exact expected-request-URL SHA-256; the later child
+verification binds the prepared URL SHA-256 and must agree with that ancestry
+when marked as an exact URL match. The actual environment verification identity
+remains absent from the earlier attempt payload.
+
+The guarded Requests Session checks the actual PreparedRequest and merged send
+kwargs immediately before adapter I/O. It publishes and exact-reloads a
+non-secret child verification before delegating. A proxy, CA path override,
+authorization, client certificate, URL mismatch, or static-profile mismatch
+records nonqualifying evidence and prevents send. `PERSISTED_ATTEMPT !=
+OFFICIAL_TIMING_SAMPLE`; an HTTP sample requires its own
+`QUALIFIED_DIRECT_REQUEST_ENVIRONMENT` child. Request-environment publication
+cost is inside HTTP elapsed time. The four NAR transports gained only a private
+default-preserving Session factory; no default URL, header, timeout, retry,
+parsing, or prediction semantics were changed. No provider request, live
+campaign, Delta calculation, or production-database write was performed.
+
+A real Git-object-derived sealed `python -I -B` child test obtains the Phase104
+current-process capability without monkeypatching the isolation check or making
+an HTTP request. This test exercises the reviewed committed Phase104 bundle;
+Phase105 official code must itself be run from its subsequently reviewed sealed
+commit before a future authorized campaign. Phase105 remains not formally
+complete pending independent implementation review. Prospective live campaign
+authorization, `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`, and
+Phase94/95/41 source-semantic blockers remain unresolved.
+
+### Phase104 reconciliation
+
+`PHASE104_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`; `POST_V0_8_DAILY_REPLAY_104 = FORMALLY_COMPLETE`; `NAR_RUNTIME_BINDING_AND_CAMPAIGN_EXECUTION_AUTHORITY = FORMALLY_INTEGRATED`; and `ONE_SHOT_CAMPAIGN_EXECUTION_PARENT = VERIFIED` are reconciled. Phase103 remains formally complete. Retain `REQUEST_EFFECTIVE_NETWORK_ENVIRONMENT_BINDING_REQUIRED_FOR_OFFICIAL_ATTEMPTS` and `SEALED_BUNDLE_ISOLATED_CHILD_SUCCESS_PATH_REQUIRES_PHASE105_E2E`.
+
+### Architectural revision markers
+
+`PHASE105_ARCHITECTURAL_REVIEW_REQUIRES_REVISION` is accepted. The resolved design blockers are `PRECOMPUTED_REQUEST_ENVIRONMENT_DESCRIPTOR_NOT_CAUSALLY_BOUND_TO_ACTUAL_SEND` and `ATTEMPT_ENVIRONMENT_IDENTITY_CAUSAL_ORDER_CONFLICT`. Freeze `PRE_REQUEST_ENVIRONMENT_OBSERVATION != REQUEST_EFFECTIVE_SEND_CONFIGURATION` and `ATTEMPT_PUBLICATION_PRECEDES_ACTUAL_SEND_ENVIRONMENT_RESOLUTION`. A pre-call observation may be diagnostic but cannot qualify an official provider send.
+
+### Authority, attempt, and terminal contract
+
+Official ancestry is V2 configuration -> V2 session -> V2 activation -> runtime binding -> campaign execution claim -> current-process capability -> V2 attempt -> V2 terminal. `PERSISTED_EXECUTION_CLAIM != CURRENT_PROCESS_EXECUTION_CAPABILITY`. A Phase105 attempt table must reference the Phase104 claim with `ON UPDATE RESTRICT ON DELETE RESTRICT` from creation; a terminal must strictly reference its attempt. No weak text parent, table rebuild, synthetic capability, or backfill.
+
+`NAROperationalTimingAttemptV2` is `nar-operational-timing-attempt-v2:<sha256>` over canonical JSON and binds exact V2 configuration/session/claim, stage, version-independent descriptive correlation, runner-owned sequence, `attempt_admitted_at`, closed load context, and only the closed expected HTTP policy semantic `DIRECT_REQUEST_ENVIRONMENT_V1` where applicable. It must **not** bind a future actual-send verification identity. Enforce `UNIQUE(claim_identity, attempt_sequence)`. `attempt_admitted_at` is `MEASUREMENT_ATTEMPT_ADMISSION_TIMESTAMP`: a campaign-owned UTC sample before durable publication and callable entry. Membership remains `start <= admitted < end`; callable entry may be later because publication overhead.
+
+`NAROperationalTimingTerminalV2` is `nar-operational-timing-terminal-v2:<sha256>` and binds attempt, causal UTC finish, integer monotonic microseconds, closed disposition/failure classification, and optional existing artifact SHA. It excludes exception text, results, payouts, ROI, and policy material. Coherent initial states are `SUCCESS`/none; `TIMEOUT`/`CONNECT_TIMEOUT|READ_TIMEOUT`; `FAILURE`/`TRANSPORT|VALIDATION|PERSISTENCE|INTERNAL`; and `UNSUPPORTED`/`UNSUPPORTED`.
+
+### Timing order, propagation, and overhead
+
+The sole production elapsed source is campaign-owned `time.perf_counter_ns()` with `(finish_ns - start_ns) // 1000`, integer-only, nonnegative, floor-truncated, and zero below one microsecond. UTC is causal only. Non-HTTP ordering is capability validation -> UTC admission -> half-open check -> attempt save and exact reload -> monotonic start -> untouched callable -> monotonic finish -> UTC finish -> terminal publication. HTTP uses this same order through monotonic start, then enters the guarded Requests send boundary below.
+
+Successful return values and all provider/prediction inputs and outputs remain exact. On a production exception, record finish values, classify exact types/cause ancestry, try terminal publication, then re-raise the original exception unchanged. Existing transports wrap Requests errors, so timeout inference is allowed only from exact direct or `__cause__` type chains; otherwise use conservative `TRANSPORT`, never message text. Attempt publication/reload failure fails the official wrapper before callable execution. Terminal publication failure preserves the operation's result/exception and leaves the prior attempt unresolved; it is diagnostic only.
+
+`ATTEMPT_START_PUBLICATION` and `TERMINAL_PUBLICATION` use a direct nonrecursive publication-overhead family bound to claim/attempt/terminal where available, not recursively emitted attempts. Missing overhead evidence is explicit and cannot alter production behavior; later Delta review must not treat mandatory overhead as zero.
+
+### Request-effective environment verification authority
+
+`STATIC_RUNTIME_TRANSPORT_PROFILE != REQUEST_EFFECTIVE_NETWORK_ENVIRONMENT`. Replace the precomputed descriptor with `NARRequestEffectiveEnvironmentVerification`, `nar-request-effective-environment-verification-v1:<sha256>`, a strict child of the exact V2 attempt. Its direction is `verification -> attempt`, never an impossible forward `attempt -> future verification`. Persistent HTTP ancestry is claim -> attempt -> verification -> terminal; non-HTTP attempts have no verification row.
+
+The verification is made at the actual Requests pre-network boundary: after `Session.prepare_request(...)` and `Session.merge_environment_settings(...)` produce the concrete `PreparedRequest` and send kwargs, but immediately before adapter network I/O. `NAROfficialTimingGuardedSession` preserves normal Requests preparation and `send` semantics, but its `send` guard validates live capability and exact attempt/session/claim ancestry; validates PreparedRequest URL against the domain-expected URL; inspects actual send kwargs; persists and exact-reloads one verification; then delegates to ordinary `Session.send`. It does not recompute proxies or environment settings. Environment changes after merge cannot change the resolved kwargs for that invocation, without claiming protection against kernel/network changes after send begins.
+
+The payload is limited to schema/version, attempt identity, canonical PreparedRequest URL identity, transport/static-profile identity, `trust_env`, non-secret effective proxy mode/material, effective verify mode, client-cert presence/mode, Authorization-present state, Proxy-Authorization-present state, and direct-policy semantic. It stores neither credentials, proxy passwords, netrc contents, private-key material, nor secret-bearing URLs. The URL must be exact canonical HTTPS without userinfo and equal the stage/correlation-derived expected URL; `allow_redirects=False` prevents redirect reuse.
+
+`DIRECT_REQUEST_ENVIRONMENT_V1` requires before send: empty actual effective proxy mapping; `verify is True`; no client certificate; no Authorization; no Proxy-Authorization; exact reviewed static ancestry; and still-valid capability. This observes concrete send inputs rather than inferring absent environment variables, naturally covering proxy variables, `NO_PROXY`, Windows/system proxy resolution, CA bundles, and netrc auth. Market odds (`trust_env=False`) is not exempt and must pass the same send guard. Violation means no network send. `UNIQUE(attempt_identity)` enforces one verification per official HTTP attempt. Verification save/reload occurs inside the already-started monotonic HTTP interval and is included in HTTP elapsed duration; direct nonrecursive overhead may also record it.
+
+### Composition boundaries and E2E
+
+Use decorators around injected protocol boundaries, not provider rewrites. The three persistent-session transports (bootstrap, daily target, official response) receive an optional private Session-factory dependency whose default remains `requests.Session`; market odds receives the same factory at its fetch-local construction point. Official composition supplies the guarded factory; ordinary callers retain the default path. Global monkeypatching of `requests.Session` is forbidden. Bootstrap `fetch` maps page kind to home/root/locator stages; daily-target `fetch` maps validated request identity to schedule/race-list stages; official and market-odds transport `fetch` compose at canonical URLs. Existing `NARDailyTargetLiveAcquisitionApplication` already accepts both transport protocols. Decorate exact validated boundaries for raw validation/persistence, parsing, normalization, source-record/provider identity, snapshot build/save/exact reload, Phase99 freeze receipt construction/publication/reload, and POST-C snapshot adapter/pipeline/allocation/plan build/save/shadow publication. No wrapper may acquire provider information after C or change Phase99 freeze meaning.
+
+Phase105 requires a real no-network isolated-child E2E, without monkeypatching `_require_isolated_source`: materialize the Git-object bundle, launch `python -I -B`, use a minimal stdlib-only launcher that rejects `PYTHONPATH`/`PYTHONHOME` ambiguity, changes outside the worktree, inserts only sealed root, validates sole `scripts` namespace and critical origins, bootstraps a temporary archive with a prospective activated V2 session, and obtains the genuine Phase104 capability with no provider operation. The launcher is not a provider client and never imports mutable KeibaOS modules before sealed-root setup.
+
+### Persistence, bootstrap, and separation
+
+A new Phase105 same-database companion persists attempts, terminals, request-effective environment verification records, and nonrecursive overhead records. It requires exact Phase99 + Phase100 + Phase103 + Phase104 schema, adds atomically, validates only the exact State-5 union, has append-only triggers and exact-reload/idempotency/conflict rules, and makes no backfill. Its FKs are attempt -> claim, verification -> attempt, and terminal -> attempt; HTTP verification has `UNIQUE(attempt_identity)`. Bootstrap advances only known State 0/1/2/3/4 to State 5 under the existing archive lock; partial/unknown topology fails and historical strict validators remain strict.
+
+No caller `official=True` authorizes evidence. Official attempts require archived V2 activation, Phase104 binding/claim/readiness, live current-process capability, qualified request environment when HTTP, and strict attempt/terminal ancestry. Diagnostic evidence stays separately classified and cannot enter official Delta aggregation. Phase105 implementation would still not authorize provider HTTP or a live campaign.
+
+### Expected scope, tests, and stop condition
+
+Likely new paths are `scripts/simulation/nar_operational_timing_attempt_v2.py`, `nar_operational_timing_request_environment.py`, `nar_operational_timing_passive_wrappers.py`, `nar_operational_timing_isolated_child_launcher.py`, `nar_operational_timing_attempt_archive_migration.py`, and `sqlite_nar_operational_timing_attempt_archive.py`; narrow bootstrap/compatible-schema changes and optional private Session-factory injection in the four transport modules require review. Provider request arguments and semantics, timeout/retry, parsing, cutoff, and Phase99 receipt semantics are forbidden from change.
+
+Future tests cover claim/capability/FKs, admission/reload-before-call, deterministic sequence, elapsed conversion, result/exception preservation, type-based timeout handling, unresolved attempts, actual PreparedRequest/send proxy/CA/auth verification (including `trust_env`, proxy, `NO_PROXY`, CA bundle, and netrc without secrets), rejection before adapter send, one verification/HTTP attempt, sealed-child success/shadow rejection, nonrecursive overhead, exact schema transitions, append-only behavior, and Phase99-104 coexistence; then all Phase99-104 regression suites and full pytest.
+
+Allowed Files for implementation: `docs/CURRENT_PHASE.md`, `docs/LATEST_CODEX_REPORT.md`, new Phase105 attempt, request environment, wrapper, isolated launcher, migration and SQLite archive modules under `scripts/simulation/`, the four reviewed NAR live transport modules, Phase99–104 compatible schema gate modules, `scripts/simulation/nar_operational_timing_archive_bootstrap.py`, `scripts/simulation/nar_operational_timing_campaign_runner.py`, and matching new Phase105 tests under `tests/`. Forbidden Files: all other production modules, existing tests, production database and logs. Required Tests: new Phase105 focused tests; Phase99–104 timing/archive/activation tests; affected transport tests; full repository pytest; `git diff --check` and exact changed-path audit. Stop Condition: changed provider semantics, a weak execution parent, leaked secret material, unguarded network send, unexpected initial worktree files, out-of-scope test failure, or non-fast-forward push requirement.
+
+Remaining blockers: independent Phase105 implementation review; later prospective-campaign authorization; `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`; Phase94/95 entry-status authority; and Phase41 market eligibility. Recommended disposition: `READY_FOR_REVIEW`.
+
+Next: `CHATGPT_REVIEW_PHASE105_IMPLEMENTATION`.
+
 ## POST_V0_8_DAILY_REPLAY_104
 
 Title: NAR Runtime Binding and One-Shot Campaign Execution Authority

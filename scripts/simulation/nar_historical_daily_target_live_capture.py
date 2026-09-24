@@ -57,8 +57,8 @@ class NARHistoricalDailyTargetHTTPTransport(_Protocol):
 class _RequestsNARHistoricalDailyTargetHTTPTransport:
     __slots__ = ("_session",)
 
-    def __init__(self) -> None:
-        session = _requests.Session()
+    def __init__(self, *, _session_factory=None) -> None:
+        session = (_session_factory or _requests.Session)()
         adapter = _HTTPAdapter(max_retries=0)
         session.mount("https://", adapter)
         session.mount("http://", adapter)

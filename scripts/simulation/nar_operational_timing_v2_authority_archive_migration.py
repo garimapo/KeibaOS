@@ -85,9 +85,7 @@ def require_nar_operational_timing_v2_authority_archive_compatible_schema(connec
         require_nar_operational_timing_v2_authority_archive_schema(connection)
     else:
         from scripts.simulation import nar_operational_timing_runtime_execution_archive_migration as runtime
-        if objects != base._DDL | activation._DDL | _DDL | runtime._DDL:
-            raise RuntimeError("V2 authority archive is not an exact known union")
-        runtime.require_nar_operational_timing_runtime_execution_archive_schema(connection)
+        runtime.require_nar_operational_timing_runtime_execution_archive_compatible_schema(connection)
 
 
 def apply_nar_operational_timing_v2_authority_archive_migrations(connection: sqlite3.Connection) -> None:

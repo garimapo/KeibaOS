@@ -34,6 +34,4 @@ def bootstrap_nar_operational_timing_runtime_archive(
         v2.require_nar_operational_timing_v2_authority_archive_schema(connection)
         runtime.apply_nar_operational_timing_runtime_execution_archive_migrations(connection)
         objects = base._objects(connection)
-    if objects != base._DDL | activation._DDL | v2._DDL | runtime._DDL:
-        raise RuntimeError("archive topology is partial or unknown")
-    runtime.require_nar_operational_timing_runtime_execution_archive_schema(connection)
+    runtime.require_nar_operational_timing_runtime_execution_archive_compatible_schema(connection)

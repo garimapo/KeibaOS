@@ -30,12 +30,12 @@ class SQLiteNAROperationalTimingRuntimeExecutionArchive:
     def __init__(self, *, connection: sqlite3.Connection) -> None:
         if type(connection) is not sqlite3.Connection or connection.in_transaction:
             raise TimingArchiveError("runtime archive requires exact idle SQLite connection")
-        schema.require_nar_operational_timing_runtime_execution_archive_schema(connection)
+        schema.require_nar_operational_timing_runtime_execution_archive_compatible_schema(connection)
         self._connection = connection
         self.v2 = SQLiteNAROperationalTimingV2AuthorityArchive(connection=connection)
 
     def _row(self, table: str, column: str, identity: str) -> tuple | None:
-        schema.require_nar_operational_timing_runtime_execution_archive_schema(self._connection)
+        schema.require_nar_operational_timing_runtime_execution_archive_compatible_schema(self._connection)
         rows = self._connection.execute(f"SELECT * FROM {table} WHERE {column}=?", (identity,)).fetchall()
         if len(rows) > 1:
             raise TimingArchiveError("runtime authority natural identity is duplicated")
@@ -45,7 +45,7 @@ class SQLiteNAROperationalTimingRuntimeExecutionArchive:
               row: tuple, columns: str) -> bool:
         if self._connection.in_transaction:
             raise TimingArchiveError("runtime authority write requires idle connection")
-        schema.require_nar_operational_timing_runtime_execution_archive_schema(self._connection)
+        schema.require_nar_operational_timing_runtime_execution_archive_compatible_schema(self._connection)
         try:
             self._connection.execute("BEGIN IMMEDIATE")
             rows = self._connection.execute(
