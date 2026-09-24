@@ -24,20 +24,20 @@ class SQLiteNAROperationalTimingActivationArchive:
     def __init__(self, *, connection: sqlite3.Connection) -> None:
         if type(connection) is not sqlite3.Connection or connection.in_transaction:
             raise TimingArchiveError("activation archive requires exact idle SQLite connection")
-        schema.require_nar_operational_timing_activation_archive_schema(connection)
+        schema.require_nar_operational_timing_activation_archive_compatible_schema(connection)
         self._connection = connection
         self._base = SQLiteNAROperationalTimingObservabilityArchive(connection=connection)
 
     def load_configuration(self, *, configuration_identity: str):
-        schema.require_nar_operational_timing_activation_archive_schema(self._connection)
+        schema.require_nar_operational_timing_activation_archive_compatible_schema(self._connection)
         return self._base.load_configuration(configuration_identity=configuration_identity)
 
     def load_session(self, *, session_identity: str):
-        schema.require_nar_operational_timing_activation_archive_schema(self._connection)
+        schema.require_nar_operational_timing_activation_archive_compatible_schema(self._connection)
         return self._base.load_session(session_identity=session_identity)
 
     def _row(self, table: str, column: str, identity: str) -> tuple[str, ...] | None:
-        schema.require_nar_operational_timing_activation_archive_schema(self._connection)
+        schema.require_nar_operational_timing_activation_archive_compatible_schema(self._connection)
         try:
             rows = self._connection.execute(
                 f"SELECT * FROM {table} WHERE {column}=?", (identity,)
@@ -85,7 +85,7 @@ class SQLiteNAROperationalTimingActivationArchive:
               row: tuple[str, ...], columns: str) -> None:
         if self._connection.in_transaction:
             raise TimingArchiveError("activation writes require no caller transaction")
-        schema.require_nar_operational_timing_activation_archive_schema(self._connection)
+        schema.require_nar_operational_timing_activation_archive_compatible_schema(self._connection)
         try:
             self._connection.execute("BEGIN IMMEDIATE")
             existing = self._connection.execute(

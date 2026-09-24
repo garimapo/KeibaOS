@@ -73,7 +73,7 @@ def _require_base_registry(connection: sqlite3.Connection) -> None:
 
 
 def require_nar_operational_timing_archive_compatible_schema(connection: sqlite3.Connection) -> None:
-    """Accept only exact historical base v1 or exact base with companion v1."""
+    """Accept only exact registered base, activation, or V2 authority unions."""
     connection = base._connection(connection)
     objects = base._objects(connection)
     if objects == base._DDL:
@@ -81,7 +81,23 @@ def require_nar_operational_timing_archive_compatible_schema(connection: sqlite3
     elif objects == base._DDL | _DDL:
         require_nar_operational_timing_activation_archive_schema(connection)
     else:
-        raise RuntimeError("timing archive is neither exact base v1 nor exact companion v1")
+        from scripts.simulation import nar_operational_timing_v2_authority_archive_migration as v2
+        if objects != base._DDL | _DDL | v2._DDL:
+            raise RuntimeError("timing archive is not an exact registered known union")
+        v2.require_nar_operational_timing_v2_authority_archive_schema(connection)
+
+
+def require_nar_operational_timing_activation_archive_compatible_schema(connection: sqlite3.Connection) -> None:
+    """Normal Phase100 repository gate; historical exact validator stays strict."""
+    connection = base._connection(connection)
+    objects = base._objects(connection)
+    if objects == base._DDL | _DDL:
+        require_nar_operational_timing_activation_archive_schema(connection)
+    else:
+        from scripts.simulation import nar_operational_timing_v2_authority_archive_migration as v2
+        if objects != base._DDL | _DDL | v2._DDL:
+            raise RuntimeError("timing activation archive is not an exact known union")
+        v2.require_nar_operational_timing_v2_authority_archive_schema(connection)
 
 
 def require_nar_operational_timing_activation_archive_schema(connection: sqlite3.Connection) -> None:

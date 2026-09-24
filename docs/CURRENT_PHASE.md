@@ -1,5 +1,810 @@
 # Current Phase
 
+## POST_V0_8_DAILY_REPLAY_103
+
+Title: NAR V2 Measurement Authority Foundation
+
+Formal Status: READY_FOR_REVIEW
+
+State: IMPLEMENTED_FOR_REVIEW
+
+Outcome: READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW
+
+Audit: NAR_V2_MEASUREMENT_AUTHORITY_DESIGN_COMPLETE
+
+Design Review: PHASE103_V2_MEASUREMENT_AUTHORITY_DESIGN_REVIEW_PASS
+
+Implementation: NAR_V2_MEASUREMENT_CONFIG_SESSION_ACTIVATION_FOUNDATION_IMPLEMENTED
+
+Authorization: POST_V0_8_DAILY_REPLAY_103 = APPROVED_FOR_IMPLEMENTATION
+
+Base Commit and Branch: `703d429113e58ddfe721dd2c1ab1297d511a6ef5` / `feature/post-v0.8-daily-replay`
+
+### Implementation result (pending independent verification)
+
+The separate V2 configuration/session and stage/budget-role domains, controlled
+two-artifact V2 activation, and exact same-database V2 authority companion are
+implemented. The companion persists only V2 configuration, session, activation
+declaration, and activation verification. It creates no runtime-binding,
+campaign-execution, attempt, or terminal table. Phase99/100 canonical payloads,
+identities, rows, and historical strict validators remain unchanged; narrow
+compatible gates accept only the exact Phase103 union for existing repositories.
+The migration performs no backfill. `V1_MEASUREMENT_AUTHORITY_REMAINS_IMMUTABLE` and
+`V2_ATTEMPT_TERMINAL_PERSISTENCE_DEFERRED_PENDING_EXECUTION_PARENT` remain explicit.
+
+Four new focused test files: 27 passed. Required Phase99/100, snapshot-freeze,
+and Phase96/97 cutoff regression files: 66 passed. Full repository suite:
+4,617 passed, 2 skipped, 2,846 subtests passed. No provider HTTP, live campaign,
+production timing collection, or production database write occurred; in-memory
+SQLite writes were used by tests. `PHASE102_RUNTIME_BINDING_IMPLEMENTATION_DEFERRED_PENDING_V2_AUTHORITY_CONTRACT`
+remains pending independent verification, along with runtime source/configuration
+proof, execution authority, and `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`.
+
+Next: `CHATGPT_REVIEW_PHASE103_IMPLEMENTATION`.
+
+### Historical Phase103 PREPARE contract
+
+Allowed Files in PREPARE: `docs/CURRENT_PHASE.md`, `docs/LATEST_CODEX_REPORT.md`.
+Forbidden Files: all production code, tests, migrations, archive/database files,
+and logs. Required Tests: none (static design audit); run `git diff --check` and
+inspect Git status. Stop Condition: v2 ancestry needs a speculative parent,
+existing v1 semantics would need reinterpretation, a non-document path needs
+mutation, or baseline/scope differs.
+
+### Phase102 reconciliation and primary finding
+
+`PHASE102_CAMPAIGN_RUNNER_AND_RUNTIME_AUTHORITY_REVIEW_PASS`;
+`POST_V0_8_DAILY_REPLAY_102 = ARCHITECTURAL_AUDIT_COMPLETE`;
+`CRASH_NO_OFFICIAL_RESUME_CONTRACT = FROZEN`;
+`PHASE102_V2_MEASUREMENT_AUTHORITY_EXTENSION_REQUIRED = CONFIRMED`; and
+`PHASE102_RUNTIME_BINDING_IMPLEMENTATION_DEFERRED_PENDING_V2_AUTHORITY_CONTRACT = CONFIRMED`.
+Phase101 remains architectural-audit complete and Phase100 remains formally complete
+with `NAR_PRE_MEASUREMENT_SESSION_ACTIVATION_AUTHORITY = FORMALLY_INTEGRATED`.
+The Phase102 material below is historical architectural audit.
+
+Primary finding: `V2_CONFIG_SESSION_ACTIVATION_AUTHORITY_CAN_BE_FROZEN_NOW`, but
+`V2_ATTEMPT_TERMINAL_PERSISTENCE_REQUIRES_PHASE104_EXECUTION_PARENT`. Phase103 must
+freeze a new immutable authority family, not reinterpret Phase99/100. The safe
+implementation boundary is configuration/session/activation only; attempt/terminal
+tables wait until Phase104 creates their exact runtime-binding/campaign-execution
+parents with restrictive foreign keys.
+
+Freeze `V1_MEASUREMENT_AUTHORITY_REMAINS_IMMUTABLE`. Existing Phase99 v1
+configuration, session, attempt, terminal and Phase100 v1 declaration/verification
+types, canonical JSON, identities, archive rows, registries, and qualification
+meanings are unchanged. No v1 class accepts schema version 2, no v1 identity migrates,
+and no backfill/conversion exists. V1 and v2 are never interchangeable or silently
+aggregated.
+
+### V2 domains, identities, and canonical configuration
+
+Use separate frozen/slotted types with independent explicit serialization; do not
+inherit a v1 dataclass serializer. Public V2 identities are:
+
+* `nar-operational-timing-config-v2:<sha256>`
+* `nar-operational-timing-session-v2:<sha256>`
+* `nar-operational-timing-activation-declaration-v2:<sha256>`
+* `nar-operational-timing-activation-verification-v2:<sha256>`
+* reserved `nar-operational-timing-attempt-v2:<sha256>`
+* reserved `nar-operational-timing-terminal-v2:<sha256>`
+
+Phase104 parent namespaces are frozen as
+`nar-operational-timing-runtime-binding-v1:<sha256>` and
+`nar-operational-timing-campaign-execution-v1:<sha256>`. Prefixes are exact and may
+not substitute for one another even where human-readable fields coincide. All V2
+payloads use NFC exact text, UTF-8, `ensure_ascii=False`, `allow_nan=False`, sorted
+keys, compact separators, fixed-microsecond UTC datetime text, and SHA-256 of exact
+canonical bytes.
+
+`NAROperationalTimingMeasurementConfigurationV2` binds exactly: schema version 2;
+repository identity; declared lowercase 40-hex software commit; NAR/nar_official
+scope; instrumentation schema version 2; ordered nonempty closed V2 stage set;
+canonical transport profiles; closed retry/backoff profile; closed concurrency regime;
+sample-admission semantic version; and execution-authority semantic version. The
+existing immutable low-level HTTP transport-profile, retry, and concurrency values
+may be reused only where their exact semantics are unchanged. V2 has its own payload
+writer/reader and configuration identity; it does not call v1 serialization.
+
+### V2 stages and budget roles
+
+V2 preserves the Phase99 acquisition/input operation boundaries: runner dispatch;
+bootstrap home, monthly root, and locator-script acquisition; monthly schedule and
+RaceList acquisition; official-response and market-odds acquisition; raw validation
+and persistence; parsing; normalization; source-record construction; provider
+identity binding; snapshot construction, persistence, and exact reload; snapshot
+adapter; prediction pipeline; allocation; bet-plan construction/persistence; and
+shadow artifact publication. Boundary meaning remains the existing production
+operation, not a new provider semantic.
+
+Add only Phase102-required boundaries with exact meanings:
+
+* `CAMPAIGN_EXECUTION_PREPARATION`: controlled runner setup before it may publish
+  official attempts; no provider call.
+* `RUNTIME_BINDING_READINESS`: save/reload/verification work establishing Phase104
+  runtime readiness; no provider call.
+* `FREEZE_RECEIPT_CONSTRUCTION`: construction after snapshot save/commit and exact
+  snapshot reload, preserving Phase99 `freeze_completed_at` semantics.
+* `FREEZE_RECEIPT_PUBLICATION` and `FREEZE_RECEIPT_EXACT_RELOAD`: distinct receipt
+  archive operations, never folded into snapshot persistence.
+* `ATTEMPT_START_PUBLICATION` and `TERMINAL_PUBLICATION`: observability writes around
+  an operation, not that operation's elapsed time.
+
+Each stage has one wrapper/call boundary; no generic/free-text stage exists. Use a
+closed V2 budget role separate from the stage name:
+`PRE_C_FREEZE`, `FREEZE_PROVENANCE`, `OBSERVABILITY_OVERHEAD`, `POST_C_COMPUTE`, and
+`CAMPAIGN_CONTROL`. `PRE_C_FREEZE` is always part of the future pre-C envelope.
+`FREEZE_PROVENANCE` enters it whenever strict official qualification requires the
+receipt. Synchronous pre-call attempt publication is mandatory overhead and must be
+included in the operational budget; terminal publication is separately measured and
+does not automatically become a pre-C condition. `POST_C_COMPUTE` is excluded from
+Delta unless a later action-deadline contract says otherwise. `CAMPAIGN_CONTROL` is
+reported separately; this classification defines no aggregation arithmetic by itself.
+
+### Session, activation, attempt, and terminal contracts
+
+`NAROperationalTimingMeasurementSessionV2` retains exact fixed-window semantics:
+aware UTC, canonical fixed-microsecond text, `measurement_start_at <
+measurement_end_at`, closed fixed-wall-clock completion, and the half-open rule.
+Its V2 `attempt_admitted_at` explicitly means
+`MEASUREMENT_ATTEMPT_ADMISSION_TIMESTAMP`: sampled before durable attempt publication
+and before callable entry. Membership is exactly `start <= attempt_admitted_at < end`.
+An admitted attempt remains a member even when publication or callable entry finishes
+after the window; failures/timeouts remain in the denominator. No adaptive completion
+or success-count rule is allowed.
+
+V2 activation is a separate two-artifact chain. A timestamp-free declaration binds
+only exact V2 session/configuration and a closed declaration semantic; it is
+saved/reloaded before a controlled UTC sample. A verification receipt binds exact
+declaration/session/configuration, closed verification semantic, and that sampled
+time, then is saved/reloaded. One declaration per V2 session and one verification per
+declaration are enforced; exact retry reuses an existing receipt, while a
+declaration-only retry samples current time and never reconstructs/backdates it.
+Official predeclaration requires verification time no later than session start.
+`SESSION_IDENTITY != PRE_MEASUREMENT_ACTIVATION_AUTHORITY` and
+`ACTIVATION_DECLARATION_IDENTITY != VERIFIED_PRESTART_ACTIVATION_AUTHORITY` remain
+true. A v1 activation cannot activate a V2 session.
+
+The future V2 attempt is content-addressed from exact V2 session/configuration,
+**required** campaign-execution identity, stage, schema-independent exact correlation,
+attempt sequence, `attempt_admitted_at`, and closed load context.
+`V2_ATTEMPT_REQUIRES_CAMPAIGN_EXECUTION_ANCESTRY`. It does not redundantly store the
+runtime-binding identity: strict ancestry is attempt → execution claim → runtime
+binding, and the future database FK chain plus reload validation detect contradictions.
+Correlation stays a provider/race/target-set/plan join only and grants no authority.
+The existing `NARTimingCorrelation` can be reused unchanged because its payload does
+not encode measurement version or authority; V2 must not extend it with detached
+execution text. Existing closed load context can also be reused as an observation
+(`active_target_workflows`, `active_http_requests`, `process_cold_start`), never as
+self-asserted serial-concurrency authority.
+
+The future V2 terminal binds one exact V2 attempt, causal finish UTC,
+nonnegative exact elapsed microseconds, closed disposition, closed failure
+classification, and optional produced-artifact content SHA. It includes no exception
+text, outcome, payout, or ROI. Retain `SUCCESS`, `FAILURE`, `TIMEOUT`, and
+`UNSUPPORTED`; add only V2 `INTERNAL` failure classification for unexpected internal
+error. A clock-order failure is not backdated into a terminal; it leaves the attempt
+unresolved under a separately surfaced clock failure. The pure V2 domain owns
+`elapsed_microseconds_from_perf_counter_ns(start_ns, finish_ns)`: exact `int` inputs,
+`finish >= start`, `(finish_ns - start_ns) // 1000`, no float, and sub-microsecond
+duration equal to zero. Wrappers later own timer sampling and pass its result.
+
+### Persistence boundary and Phase104 handoff
+
+Choose architecture **A**: Phase103 persists only V2 configurations, V2 sessions,
+V2 activation declarations, and V2 activation verification receipts in a new
+same-database Phase103 V2-authority companion registry. It has independent exact DDL,
+append-only records/triggers, restrictive configuration/session/declaration FKs,
+exact reload, idempotent exact duplicates, conflict rejection, no backfill, and no
+runtime/execution placeholders.
+
+Do **not** create V2 attempt/terminal tables yet. A weak text
+`campaign_execution_identity` without a Phase104 parent FK would require rebuilding
+immutable tables later. Phase104 must first create exact runtime-binding, readiness,
+and campaign-execution tables/identities; Phase105 then creates V2 attempt/terminal
+tables with restrictive `campaign_execution_identity` and attempt-parent FKs. This
+preserves the required ancestry without speculative writable authority tables.
+
+The archive bootstrap state machine evolves only through exact union gates: empty →
+Phase99 base v1 → Phase100 activation companion v1 → Phase103 V2 authority companion
+→ Phase104 runtime/execution companion → Phase105 V2 observation companion. Existing
+strict validators stay strict for the topology they own; a top-level bootstrap alone
+recognizes exact extended unions. Unknown or partial objects always fail closed.
+
+Official/diagnostic classification belongs to the future execution authority, not an
+attempt `official=True` field. V2 attempts derive their classification from exact
+archived execution ancestry; diagnostics use a distinct future execution authority
+and are excluded from official Delta aggregation. Future aggregation requires exact
+compatible V2 configuration identity or a separately reviewed compatibility rule;
+stage-name comparison alone is insufficient.
+
+Phase103 does not implement sealed source, process lock, runtime profile/binding,
+readiness, execution claim, passive wrappers, HTTP, campaign execution, or Delta
+selection. Phase104 consumes the persisted V2 parent identities in the strict chain:
+V2 session → V2 activation verification → runtime binding → campaign execution claim.
+Phase105 alone may add attempt/terminal persistence and passive wrapper composition.
+
+Likely Phase103 paths: new V2 observability domain, V2 activation domain, V2
+authority companion migration, V2 authority repository, and their focused tests;
+narrow top-level bootstrap changes only if required to recognize the V2 union. Phase104
+adds runner/source/profile/runtime/execution modules and companion; Phase105 adds
+passive wrappers plus the V2 attempt/terminal observation companion. No existing
+Phase99/100 production path is authorized to change semantically.
+
+Required future tests: V1 canonical bytes/identities/rows unchanged; exact V2
+prefixes and distinct equivalent-content identities; canonical V2 configuration and
+stage order; closed stage/budget roles; fixed UTC session window and half-open
+admission; no adaptive termination; V2 declaration-before-clock/reload chain;
+late/nonofficial verification; V1 activation rejection; V2 config/session
+contradictions; no detached identity; attempt execution identity required and
+cross-session/config rejection; V2 terminal ancestry, integer timing conversion,
+closed disposition/internal class and no outcome fields; exact V2 companion schema,
+no Phase99/100 changes/backfill, and partial/unknown union rejection; preservation of
+the Phase104 strict execution-parent FK path. No tests run in this PREPARE.
+
+Remaining blockers: `PHASE102_V2_MEASUREMENT_AUTHORITY_EXTENSION_REQUIRED`,
+`PHASE102_RUNTIME_BINDING_IMPLEMENTATION_DEFERRED_PENDING_V2_AUTHORITY_CONTRACT`,
+`RUNTIME_SOFTWARE_COMMIT_PROVENANCE_REQUIRED`,
+`RUNTIME_MEASUREMENT_CONFIGURATION_BINDING_REQUIRED`,
+`CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`, and the Phase94/95/41
+source/market-semantic blockers. Recommended disposition: `DRAFT_FOR_REVIEW`.
+
+Next: `CHATGPT_REVIEW_PHASE103_V2_MEASUREMENT_AUTHORITY`.
+
+---
+
+## POST_V0_8_DAILY_REPLAY_102
+
+Title: NAR Campaign Runner and Runtime Execution Authority Architecture
+
+Formal Status: DRAFT_FOR_REVIEW
+
+State: DRAFT_FOR_REVIEW
+
+Outcome: READY_FOR_ARCHITECTURAL_REVIEW
+
+Audit: NAR_CAMPAIGN_RUNNER_AND_RUNTIME_EXECUTION_AUTHORITY_DESIGN_COMPLETE
+
+Authorization: NONE_REQUIRED_AUDIT_ONLY
+
+Base Commit and Branch: `703d429113e58ddfe721dd2c1ab1297d511a6ef5` / `feature/post-v0.8-daily-replay`
+
+Allowed Files in PREPARE: `docs/CURRENT_PHASE.md`, `docs/LATEST_CODEX_REPORT.md`.
+Forbidden Files: all production code, tests, migrations, archive/database files,
+and logs. Required Tests: none (static architectural audit); run
+`git diff --check` and inspect Git status. Stop Condition: a required runtime
+authority needs an unreviewed semantic, a non-document path needs mutation, or the
+baseline/scope differs.
+
+### Formal reconciliation and findings
+
+`PHASE101_RUNTIME_BINDING_AND_WIRING_ARCHITECTURE_REVIEW_PASS`;
+`POST_V0_8_DAILY_REPLAY_101 = ARCHITECTURAL_AUDIT_COMPLETE`;
+`PHASE101_CAMPAIGN_RUNNER_REQUIRED_FOR_CONCURRENCY_BINDING = CONFIRMED`;
+`RUNTIME_SOFTWARE_COMMIT_PROVENANCE_REQUIRED = CONFIRMED`; and
+`PASSIVE_LIVE_TIMING_WIRING = DEFERRED_PENDING_RUNTIME_EXECUTION_AUTHORITY`.
+Record `PHASE102_ARCHITECTURAL_REVIEW_REQUIRES_REVISION`: primary
+`PROCESS_LIFETIME_LOCK_DOES_NOT_ENFORCE_CRASH_NO_RESUME`; secondary
+`V2_MEASUREMENT_AUTHORITY_MUST_PRECEDE_RUNTIME_BINDING_IMPLEMENTATION`.
+The Phase101 section below is historical audit material. Phase100 remains
+`PHASE100_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`,
+`POST_V0_8_DAILY_REPLAY_100 = FORMALLY_COMPLETE`, and
+`NAR_PRE_MEASUREMENT_SESSION_ACTIVATION_AUTHORITY = FORMALLY_INTEGRATED`.
+
+Primary findings are `CONTROLLED_RUNTIME_SOURCE_PROVENANCE_REQUIRED`,
+`PHASE102_CAMPAIGN_RUNNER_REQUIRED_FOR_CONCURRENCY_BINDING`, and
+`PHASE102_V2_MEASUREMENT_AUTHORITY_EXTENSION_REQUIRED`. The present code has no
+process-wide campaign owner, source-bundle/build provenance, or runtime profile
+issuer. The Phase99 v1 configuration/session/activation identities cannot express
+the additional observer-publication and runtime-overhead stage meanings required for
+official passive wiring. Thus `RUNTIME_MEASUREMENT_CONFIGURATION_BINDING_REQUIRED`
+remains unresolved until a reviewed controlled composition is implemented.
+
+Preserve `LOCAL_CALL_GRAPH_SERIALITY != PROCESS_CAMPAIGN_CONCURRENCY_AUTHORITY`,
+`DECLARED_SOFTWARE_COMMIT != RUNTIME_BOUND_SOFTWARE_COMMIT`, and
+`GIT_HEAD_MATCH != RUNTIME_SOURCE_TREE_PROVENANCE`. Also preserve
+`MEASUREMENT_SESSION_IDENTITY != PRE_MEASUREMENT_SESSION_ACTIVATION_AUTHORITY`,
+`ACTIVATION_DECLARATION_IDENTITY != VERIFIED_PRESTART_ACTIVATION_AUTHORITY`,
+`OBSERVABILITY_RECORD != POLICY_ACTIVATION_AUTHORITY`,
+`POLICY_IDENTITY != PRE_OUTCOME_POLICY_AUTHORITY`, and
+`CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`.
+Freeze `PROCESS_LOCK != PERSISTENT_SESSION_CONSUMPTION_AUTHORITY`,
+`LOCK_RELEASE_AFTER_CRASH_MUST_NOT_ENABLE_SAME_SESSION_OFFICIAL_RESUME`, and
+`OFFICIAL_CAMPAIGN_EXECUTION_AUTHORITY = PROCESS_LOCK + PERSISTENT_EXECUTION_CLAIM`.
+
+### Controlled runner and serial concurrency authority
+
+The proposed narrow `NAROperationalTimingCampaignRunner` is an execution envelope,
+not a race scheduler. In official v1 it owns exactly one activated measurement
+session, invokes one target workflow at a time, exposes no worker pool or async
+fan-out, performs no intentionally parallel provider HTTP, and calls the existing
+RaceList sequence only serially. Its authority is limited to official compositions
+that enter through this runner; it cannot prove unrelated external processes have
+not ignored the contract.
+
+Use a process-lifetime OS advisory exclusive lock at a deterministic canonical local
+scope: repository identity, resolved observability-archive identity, and the serial
+regime. The lock location is a regular, non-reparse/non-symlink file under a reviewed
+archive-control directory. A narrow platform adapter holds it without a time lease;
+release on normal process exit or crash is expected. It prevents two compliant
+runners entering simultaneously but cannot itself consume a session, because the OS
+normally releases it after a crash.
+
+Add immutable, append-only `NAROperationalTimingCampaignExecutionClaim`. It
+content-addresses exact v2 configuration/session, activation declaration/verification,
+runtime binding/readiness, runner semantic, canonical lock-scope identity, sealed
+source provenance, and instrumentation version. It has no outcome or timing-quality
+material. The archive enforces exactly one claim per session (`UNIQUE(session_identity)`).
+`ONE_MEASUREMENT_SESSION = AT_MOST_ONE_OFFICIAL_CAMPAIGN_EXECUTION`: an existing
+claim consumes the session regardless of normal completion or crash. No status row,
+claim deletion, backfill, or reconstructed continuation is allowed.
+
+Exact official-start order is: bootstrap exact known archive state; acquire process
+campaign lock; exact-reload v2 configuration/session, activation chain, and runtime
+binding/readiness; prove no claim exists; construct, save, and exact-reload claim;
+issue a new in-process execution capability; only then allow official attempt
+publication. The capability is trusted API discipline issued only while the current
+process holds the lock and has just created the claim. It is not a cryptographic
+primitive, and `PERSISTED_EXECUTION_CLAIM != CURRENT_PROCESS_EXECUTION_CAPABILITY`:
+loading an old claim never resumes a campaign. If claim persistence succeeds then the
+process dies, the OS lock may release but the session remains consumed; unresolved
+attempts remain unresolved and a new prospective activated session is required
+(`CRASHED_OFFICIAL_SESSION_REQUIRES_NEW_PREDECLARED_SESSION`). A future append-only
+completion receipt may document closure but cannot permit reuse.
+
+The canonical local archive scope resolves absolute paths and rejects aliases,
+symlinks/junctions, and reparse points before lock acquisition. It does not claim to
+prevent an adversary running a copied archive elsewhere: the trust boundary is the
+controlled single-machine KeibaOS composition, not distributed cryptographic
+uniqueness. Acquire a short bootstrap lock for topology transitions, release it after
+success, then acquire and retain the execution lock. Setup/migration and active
+execution authority remain distinct.
+
+### Runtime source and import provenance
+
+Select `CONTROLLED_SEALED_GIT_SOURCE_BUNDLE_V1`, built from reviewed Git object-tree
+material rather than copied mutable worktree bytes. `SEALED_BUNDLE_BYTES_MUST_DERIVE_FROM_REVIEWED_GIT_OBJECT_TREE`.
+The causal chain is repository → exact commit SHA → exact commit tree SHA → Git
+object/tree materialization → ordered included-member paths and byte SHA-256 values
+→ canonical manifest SHA → sealed-bundle identity. File mtimes and a post-check copy
+from the developer tree are not authority.
+
+`CONTROLLED_CLEAN_GIT_WORKTREE_V1` is still an operator preflight: verify repository
+identity/root and approved branch where composition binds it; exact lowercase
+40-hex `HEAD` matching configuration; `HEAD^{tree}`; no staged/unstaged tracked
+change; no ordinary untracked file; and no merge, cherry-pick, or rebase state. It
+does not prove runtime source. Ignored files may be tolerated only when excluded from
+the materialized bundle and unreachable from approved runtime import roots; ignored
+executable/source candidates reachable from those roots fail closed.
+
+The official process runs critical KeibaOS modules from the sealed bundle under an
+isolated Python invocation and controlled `sys.path`; mutable worktree current
+directory and caller `PYTHONPATH` are excluded. The runner verifies resolved
+`__file__`/origin for operational-timing, activation/archive, snapshot, prediction,
+and live NAR acquisition modules against the sealed-bundle manifest. This blocks
+namespace/package shadowing without claiming to attest every stdlib/dependency file.
+Later developer worktree mutation cannot alter running official source:
+`DEVELOPER_WORKTREE_STATE != SEALED_RUNTIME_SOURCE_AUTHORITY`. Pre/post worktree
+checks are diagnostic only. No such bundle/build authority exists today.
+
+The runtime source provenance identity binds repository, HEAD, HEAD tree SHA, sealed
+bundle/manifest SHA, source-isolation semantic, and critical-module origin manifest.
+Because the process runs the bundle, later worktree mutation cannot change its
+measurement code. A clean pre/post worktree check is diagnostic defense only, not a
+substitute for sealed execution. `GIT_HEAD_MATCH` alone never qualifies.
+
+Python implementation and major/minor/micro version, `requests`, `urllib3`, and
+SQLite runtime versions are material timing compatibility values. Bind them to the
+runtime compatibility profile; platform/architecture and storage location may be
+recorded as reviewed timing-context material. A mismatch is nonqualifying for the
+official population. This does not content-address an entire installed environment
+or claim dependency-source attestation.
+
+### Runtime transport/retry profile and binding
+
+The four inspected transport factories currently construct these local profiles:
+bootstrap/daily-target/official-response `10s/10s`; market-odds raw `10s/20s`;
+each configures `HTTPAdapter(max_retries=0)`, no redirects, streaming, and TLS
+verification. Market odds explicitly has `trust_env=False`; the other factories use
+Requests' default environment behavior. Public services accept injected protocols,
+so private constants and sequential source do not prove the actual collaborator.
+
+Introduce a pure `NAROperationalTimingRuntimeProfile` builder fed only by closed
+descriptors from the actual standard transport composition. Do not let a campaign
+caller provide timeout values. The later implementation should promote narrow
+read-only production transport descriptors rather than duplicate literals. A v2
+descriptor must bind transport kind, integer-microsecond connect/read timeouts,
+adapter effective retry fields, redirect/TLS/stream mode, environment/proxy mode,
+and the absence of a runner-level retry loop. `HTTPAdapter(max_retries=0)` proves
+the adapter construction argument, not the absence of TCP retransmission, DNS work,
+proxy behavior, pooling behavior, or every lower-layer retry. The binding therefore
+claims only the reviewed application/Requests-adapter regime. Any exact mismatch to
+the declared v2 profile is nonqualifying.
+
+The immutable, content-addressed `NAROperationalTimingRuntimeBinding` must bind
+exact **v2** configuration/session, v2 activation declaration/verification, source
+bundle identity, runtime dependency compatibility, actual transport/retry profile,
+runner concurrency authority, enabled v2 stages, and schema semantics. It has no
+outcome, payout, ROI, policy authorization, or `runtime_matches` caller flag. The
+issuer reloads exact archived ancestry, holds the campaign lock, validates the sealed
+runtime/imports, derives actual profile material, reconstructs expected v2
+configuration, saves/reloads the binding, then issues a controlled readiness receipt
+no later than session start. The execution claim is created only after that chain.
+
+Persist binding, readiness receipt, and execution claim in a separate same-database
+runtime companion registry/table family with restrictive ancestry FKs. Phase99/100
+historical schemas/rows remain immutable; no backfill or synthetic authority. The
+existing Phase99/100 v1 family is not a safe target for this implementation. Freeze
+`PHASE102_RUNTIME_BINDING_IMPLEMENTATION_DEFERRED_PENDING_V2_AUTHORITY_CONTRACT`.
+
+Closed qualification must distinguish at least
+`OFFICIAL_RUNTIME_CONFIGURATION_MATCH`, `RUNTIME_SOURCE_PROVENANCE_UNAVAILABLE`,
+`RUNTIME_SOFTWARE_OR_TREE_MISMATCH`, `RUNTIME_TRANSPORT_PROFILE_MISMATCH`,
+`RUNTIME_RETRY_PROFILE_MISMATCH`, `RUNTIME_CONCURRENCY_AUTHORITY_UNAVAILABLE`,
+`RUNTIME_ACTIVATION_ANCESTRY_MISMATCH`, and `RUNTIME_BINDING_VERIFIED_AFTER_SESSION_START`.
+Missing or contradictory ancestry fails closed; do not collapse it into a vague
+failure state.
+
+### Archive bootstrap and versioned measurement contract
+
+Add one top-level archive bootstrap, not a call to the historical strict base
+migration on every open. It recognizes only explicitly reviewed transitions: empty →
+Phase99 base v1 → Phase100 activation companion v1 → future v2/runtime companions;
+base-only → activation → future v2/runtime; activation-installed → future v2/runtime;
+and exact final union → no-op. Partial, malformed, or unknown states fail closed.
+Existing strict Phase99 base and Phase100 union validators remain strict and
+unmodified in meaning.
+
+Phase99 v1 has no closed stages for `ATTEMPT_START_PUBLICATION`,
+`TERMINAL_PUBLICATION`, `FREEZE_RECEIPT_PUBLICATION`,
+`FREEZE_RECEIPT_EXACT_RELOAD`, or runner/runtime overhead, and its configuration,
+session, attempt, terminal, and Phase100 activation identities explicitly bind v1
+semantic formats. Use a separate `NAROperationalTimingMeasurementConfigurationV2`
+family with v2 session/attempt/terminal and v2 activation authority, canonical
+identity prefixes, parallel archive tables, and a new configuration identity. V2
+execution ancestry is configuration → session → activation declaration → activation
+verification → runtime binding → campaign execution claim → attempt → terminal; the
+v2 attempt payload binds the exact execution claim identity. Do not extend or
+reinterpret v1 JSON, rows, stages, or activation ancestry. Existing v1 data remains
+diagnostic/historical and cannot silently join v2 official timing aggregation. This
+V2 authority extension requires its own reviewed implementation contract before
+runtime binding or wrapper work.
+
+### Attempt, clocks, modes, and Phase103 handoff
+
+`operation_started_at` is frozen as the
+`MEASUREMENT_ATTEMPT_ADMISSION_TIMESTAMP`: it is sampled before durable attempt
+publication and before the underlying callable, not claimed as exact callable-entry
+time. Half-open membership remains based on this timestamp, so an attempt admitted
+before session end remains a member even when publication overhead delays callable
+entry/completion until afterward.
+
+The controlled runner owns one injected aware-UTC causal clock and one monotonic
+provider for the whole official campaign. A later wrapper must write/reload the
+attempt before sampling monotonic start, then invoke the unchanged operation, sample
+monotonic finish, sample UTC finish, and publish a closed terminal while preserving
+the original return/exception. With `time.perf_counter_ns()`, store
+`(finish_ns - start_ns) // 1000`: negative differences reject, sub-microsecond spans
+become zero, and no float or wall-clock subtraction is used. Attempt-publication and
+terminal-publication cost are v2 overhead stages and must enter later PRE_C budgeting;
+terminal write failure leaves an unresolved attempt without changing production
+behavior. Snapshot construction, save/commit, exact reload, receipt publication,
+and receipt reload remain separate; Phase99 `freeze_completed_at` is unchanged.
+Post-C wrappers may only consume the frozen snapshot and approved configuration.
+
+`DIAGNOSTIC_TIMING` may run without the complete official chain but is permanently
+segregated from official Delta evidence. `OFFICIAL_ACTIVATED_TIMING` requires the
+exact v2 activated session, pre-start runtime readiness, held campaign lock, runtime
+profile/source equality, execution claim/capability, and admitted binding-linked
+attempts. Phase102 never authorizes HTTP. Revised decomposition is fixed:
+
+1. Phase102 is this architectural revision only.
+2. Phase103 designs and implements the v2 configuration/session/activation/attempt/
+   terminal authority, stage taxonomy, and archive foundation.
+3. Phase104 implements archive bootstrap, controlled runner/lock, sealed source,
+   runtime profile/binding/readiness, execution claim, and in-process capability.
+4. Phase105 implements passive timing wrappers.
+5. Only then may diagnostic dry-run, review, and separately authorized prospective
+   official campaign be considered.
+
+Likely future paths are new v2 observability/activation domain and archive modules
+(Phase103); new `scripts/simulation/nar_operational_timing_campaign_runner.py`,
+`scripts/simulation/nar_operational_timing_runtime_source_provenance.py`,
+`scripts/simulation/nar_operational_timing_runtime_profile.py`,
+`scripts/simulation/nar_operational_timing_runtime_binding.py`,
+`scripts/simulation/nar_operational_timing_archive_bootstrap.py`, and runtime
+companion migration/repository modules (Phase104); and a passive-wrapper module plus
+only reviewed composition changes (Phase105). No live transport or prediction module
+is authorized to change in this PREPARE.
+
+Future tests require: two concurrent compliant runners permit one authority only;
+one session permits one immutable execution claim; crash/released lock and normal
+completion cannot resume that session; old claim cannot issue a new-process
+capability; new preactivated session can execute; canonical archive path alias/
+symlink handling; exact commit/tree materialization; worktree mutation after bundle
+creation cannot alter bundled code; member/manifest/origin/PYTHONPATH shadow mismatch
+rejection; clean/dirty/staged/untracked/merge/rebase source checks; exact actual
+profile derivation and timeout/retry/config mismatches; full v2 activation/runtime
+ancestry and no caller authority/outcome fields; all bootstrap topology transitions
+while historical validators stay strict; v1 immutability, v2 distinct identity, and
+exact claim-bound attempt ancestry; admission boundary, clock/timer conversion,
+wrapper exception preservation, unresolved terminal failure, no HTTP mutation, and
+no prediction-output mutation. No tests run in this PREPARE.
+
+Remaining blockers: `RUNTIME_SOFTWARE_COMMIT_PROVENANCE_REQUIRED`,
+`RUNTIME_MEASUREMENT_CONFIGURATION_BINDING_REQUIRED`,
+`PHASE102_CAMPAIGN_RUNNER_REQUIRED_FOR_CONCURRENCY_BINDING`,
+`PHASE102_V2_MEASUREMENT_AUTHORITY_EXTENSION_REQUIRED`,
+`PHASE102_RUNTIME_BINDING_IMPLEMENTATION_DEFERRED_PENDING_V2_AUTHORITY_CONTRACT`,
+`CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`,
+`HISTORICAL_ENTRY_STATUS_AUTHORITY_ISSUER_BLOCKED_SOURCE_SEMANTICS`,
+`PROSPECTIVE_NAR_ENTRY_STATUS_AUTHORITY_CAPTURE_BLOCKED_SOURCE_SEMANTICS`, and
+`NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE`.
+Recommended disposition: `DRAFT_FOR_REVIEW`; independently review the sealed-source,
+runner lock, and v2 authority contracts before any implementation.
+
+Next: `CHATGPT_REVIEW_PHASE102_CAMPAIGN_RUNNER_AND_RUNTIME_AUTHORITY`.
+
+---
+
+## POST_V0_8_DAILY_REPLAY_101
+
+Title: NAR Runtime Measurement Binding and Passive Wiring Architecture
+
+Formal Status: DRAFT_FOR_REVIEW
+
+State: DRAFT_FOR_REVIEW
+
+Outcome: READY_FOR_ARCHITECTURAL_REVIEW
+
+Audit: NAR_RUNTIME_MEASUREMENT_BINDING_AND_PASSIVE_WIRING_DESIGN_COMPLETE
+
+Authorization: NONE_REQUIRED_AUDIT_ONLY
+
+Base Commit and Branch: `703d429113e58ddfe721dd2c1ab1297d511a6ef5` / `feature/post-v0.8-daily-replay`
+
+Allowed Files in PREPARE: `docs/CURRENT_PHASE.md`, `docs/LATEST_CODEX_REPORT.md`.
+Forbidden Files: all production code, tests, migrations, archives/database files,
+and logs. Required Tests: none (static design audit); run `git diff --check` and
+inspect Git status. Stop Condition: a required runtime authority cannot be proved
+from existing contracts, an extra path needs mutation, or baseline/scope differs.
+
+### Formal reconciliation and primary finding
+
+`PHASE100_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`;
+`POST_V0_8_DAILY_REPLAY_100 = FORMALLY_COMPLETE`;
+`NAR_PRE_MEASUREMENT_SESSION_ACTIVATION_AUTHORITY = FORMALLY_INTEGRATED`.
+Phase99 likewise remains `PHASE99_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`,
+`POST_V0_8_DAILY_REPLAY_99 = FORMALLY_COMPLETE`, and
+`NAR_PRE_C_FREEZE_PROVENANCE_AND_TIMING_OBSERVABILITY_FOUNDATION = FORMALLY_INTEGRATED`.
+The Phase100 section below is its historical implementation handoff; its then-pending
+remote review is superseded by these formal verdicts.
+
+Primary finding: `PHASE101_CAMPAIGN_RUNNER_REQUIRED_FOR_CONCURRENCY_BINDING`.
+The existing `NARDailyTargetLiveAcquisitionApplication.acquire()` calls supplier
+home, monthly root, locator script, monthly capture/normalization, and RaceList
+captures sequentially inside one invocation. No repository campaign runner or
+cross-process exclusion proves that only one invocation, HTTP request, race, or venue
+is active globally. Therefore `LOCAL_CALL_GRAPH_SERIALITY !=
+PROCESS_CAMPAIGN_CONCURRENCY_AUTHORITY`. A declared
+`CONTROLLED_SINGLE_WORKER_SERIAL_V1` value does not establish execution reality.
+`RUNTIME_SOFTWARE_COMMIT_PROVENANCE_REQUIRED` is a second blocker: the repository
+has a validated declared Git SHA in the Phase99 configuration, but no reviewed
+build/deployment identity bound to the executing process. Thus
+`RUNTIME_MEASUREMENT_CONFIGURATION_BINDING_REQUIRED` remains unresolved.
+
+### Runtime binding and authority chain
+
+Preserve configuration identity → session identity → Phase100 declaration →
+verification receipt → future runtime binding → future attempts/terminals. A proposed
+frozen, versioned `NAROperationalTimingRuntimeBinding` would content-address the
+exact four existing ancestry identities; the runtime build manifest/commit identity;
+actual closed transport descriptors (timeouts and request mode); retry/backoff
+descriptor; process campaign exclusivity claim; enabled stages; instrumentation
+schema/version; and canonical binding SHA/identity. It contains no result, payout,
+ROI, policy authorization, or caller-supplied `runtime_matches` flag. Exact archived
+activation qualification must be official before binding issuance. Bind attempts to
+the exact runtime binding with a reviewed append-only per-attempt companion link or
+a versioned attempt contract; session identity alone is insufficient because the
+existing Phase99 attempt repository can publish independently of runtime binding.
+Neither linkage is approved for implementation yet.
+
+`MEASUREMENT_SESSION_IDENTITY != PRE_MEASUREMENT_SESSION_ACTIVATION_AUTHORITY`;
+`ACTIVATION_DECLARATION_IDENTITY != VERIFIED_PRESTART_ACTIVATION_AUTHORITY`;
+`DECLARED_SOFTWARE_COMMIT != RUNTIME_BOUND_SOFTWARE_COMMIT`;
+`OBSERVABILITY_RECORD != POLICY_ACTIVATION_AUTHORITY`;
+`POLICY_IDENTITY != PRE_OUTCOME_POLICY_AUTHORITY`.
+
+The future runtime commit must come from a reviewed, immutable build/deployment
+manifest produced by the trusted build, loaded once at process composition, bound to
+the actual deployed artifact, and compared with the configuration's lowercase
+40-hex `software_commit_sha`. Mutable branch names, a per-attempt caller string,
+runtime `git rev-parse`, or GitHub lookup do not establish this provenance. No such
+manifest issuer/runtime binding exists today; fail closed rather than treating a
+declared SHA as an executing-code attestation.
+
+### Actual transport, retry, and concurrency profile
+
+The bootstrap, daily-target, and official-response transports each use connect/read
+timeouts `10s/10s`, `HTTPAdapter(max_retries=0)`, `allow_redirects=False`, streamed
+body reads, and their own `requests.Session`. Market-odds raw uses `10s/20s`, the
+same explicit adapter/redirect settings, and `trust_env=False`; the other three do
+not set `trust_env=False`. These are verified implementation facts, not a complete
+future retry or total-duration guarantee. A connect/read timeout is not an overall
+request deadline. There is no explicit application retry loop in these boundaries;
+external proxy/environment and library behavior still need a reviewed runtime
+descriptor. `max_retries=0` proves only the configured adapter setting.
+
+Official composition must instantiate exact closed transport collaborators and
+derive a canonical runtime profile from their production constants/descriptors and
+effective adapter/session settings. It must compare that profile with Phase99's
+configuration, including enabled transport families, exact integer-microsecond
+timeouts, `NO_RETRY/0/0`, redirect mode, environment/proxy mode, and execution class.
+Reading constants alone is insufficient when public service constructors accept
+injected transport protocols. Do not duplicate numeric values in a second
+authoritative table. Transport/profile mismatch is nonqualifying. A controlled
+runner must additionally prove one active workflow and HTTP operation across the
+campaign's intended process scope; sequential source syntax alone cannot do this.
+The exclusion/lease mechanism, crash recovery, and scope across processes/venues
+require separate review before a formal single-worker claim can be issued.
+
+### Bootstrap, schema, and persistence plan
+
+The historical Phase99 base migration is intentionally exact-v1 and rejects a DB
+after Phase100 companion installation. A future top-level bootstrap must inspect the
+exact known object set: empty → apply base v1 then activation companion v1;
+base-only → apply companion; exact companion-installed → no-op; partial/unknown →
+fail. It must not rerun the strict base migration on an installed companion DB or
+weaken the historical base validator.
+
+Runtime binding should use another append-only, same-database companion with its
+own exact registry and restrictive foreign keys to the Phase100 verification receipt
+and session, plus any separately reviewed attempt-binding records. Preserve all
+Phase99/100 rows and validators; no backfill or synthetic runtime binding. A new
+composed schema gate must distinguish exact base, base+activation, and
+base+activation+runtime states according to caller capability, rejecting malformed,
+partial, and unknown objects. The controlled issuer must reload exact activated
+ancestry, obtain the trusted build identity, inspect actual transport/retry profile,
+obtain a runner exclusivity claim, compare the reconstructed configuration identity,
+save the binding, exact-reload it, and only then admit official attempts.
+
+### Stage version, clocks, and passive observer contract
+
+Phase99 stage/version 1 includes snapshot persistence and exact reload but lacks
+attempt-start publication, terminal publication, and freeze-receipt archive
+publication/reload stages. Its failure enum also lacks an `INTERNAL` class. Reusing
+v1 names for these new meanings would corrupt configuration compatibility. Recommend
+an explicit instrumentation schema v2 and new content-addressed configuration
+identity for the expanded closed stage/failure taxonomy. Existing v1 rows remain
+immutable and must not silently aggregate with v2. Activation/runtime setup costs
+outside per-race PRE_C may be measured separately; mandatory per-race observer and
+freeze-receipt overhead must enter the PRE_C envelope.
+
+One campaign-owned injected causal clock returns aware UTC-compatible timestamps;
+one campaign-owned injected monotonic provider measures elapsed time. Candidate
+production monotonic source is `time.perf_counter_ns()`. For nonnegative nanosecond
+differences, store exact integer microseconds by floor division `elapsed_ns // 1000`
+(sub-microsecond spans become zero); reject negative samples. Wall-clock subtraction
+must not determine latency. Do not let each wrapper choose its own clock.
+
+Future official wrapper order: verify archived official activation, exact runtime
+binding, and campaign claim; sample UTC attempt start; construct and durably save the
+Phase99 attempt together with its reviewed runtime-binding ancestry; exact-reload
+if required; sample monotonic start; call the unchanged operation; sample monotonic
+finish and causal UTC finish; publish a closed terminal. Phase99's
+`operation_started_at` denotes the attempt-admission boundary before observer
+publication, while the measured invocation begins after publication; even if
+publication delays invocation past session end, that admitted attempt remains in
+the denominator. Attempt publication cost is its own v2 overhead stage. An
+attempt-write failure creates no official sample; the underlying operation may
+proceed only as diagnostic behavior under an explicit composition contract.
+Terminal publication failure must preserve the operation's value/exception and
+leave the archived attempt unresolved for reconciliation.
+
+Preserve original exception propagation. Map requests connect/read timeout causes
+to `TIMEOUT/TIMEOUT`, other known transport failures to `FAILURE/TRANSPORT`, source
+validation to `FAILURE/VALIDATION`, archive/SQLite persistence failures to
+`FAILURE/PERSISTENCE`, and unsupported profiles to `UNSUPPORTED/UNSUPPORTED`.
+An unexpected internal exception needs a reviewed v2 closed classification;
+do not mislabel it as transport or swallow it. Transport services wrap requests
+errors with causes, so wrappers must inspect the stable cause chain without
+persisting unstable exception text. If UTC jumps backward so a terminal would
+violate Phase99's time ordering, retain the unresolved attempt and surface clock
+failure; never adjust its timestamp to pass validation.
+
+### Audited composition boundaries
+
+| Stage | Existing exact boundary | Current wrapper feasibility and correlation |
+| --- | --- | --- |
+| Bootstrap home/root/script | `NARMonthlyConveneInfoBootstrapLiveCaptureService.capture_official_home/capture_monthly_root/capture_locator_script` | Injected transport/archive wrappers can time fetch and persistence; pre-target-set provider/workflow correlation must be derived by the runner. |
+| Monthly/RaceList | `NARHistoricalDailyTargetLiveCaptureService.capture_supplied_response`; outer `NARDailyTargetLiveAcquisitionApplication.acquire` | Transport wrapper can time one exact request; outer workflow captures sequential order. Target-set SHA does not yet exist at initial capture; do not attach it retrospectively. |
+| Official response | `NAROfficialLiveResponseCaptureService.capture_response` | Wrap injected transport/archive at canonical URL; record capture `capture_id` and raw `response_sha256` from returned capture. |
+| Market odds raw | `acquire_nar_market_odds_raw_response` | Wrap injected transport/function, derive exact request/race identity and returned capture digest; this alone grants no odds or market authority. |
+| Snapshot | `build_historical_input_snapshot`; `SQLiteHistoricalInputSnapshotRepository.save_snapshot/load_snapshot_by_identity`; `issue_historical_input_snapshot_freeze_receipt` | Pure builder and repository protocol can be wrapped. Time construction, commit, exact reload, receipt publication, and receipt reload separately. Bind snapshot `content_sha256` and receipt identity. |
+| Post-C compute | `execute_and_persist_historical_bet_plan`; `PersistedSimulationBetPlanService.build_and_save` | Outer call can be timed without changing output. Fine-grained pipeline/plan-builder proxies are constrained by concrete `isinstance` checks; any hooks require later review. Bind bet-plan snapshot identity/content where available. |
+
+Phase99 `freeze_completed_at` remains the service-owned UTC sample after snapshot
+save/commit and exact reload, before receipt archive publication. Time receipt
+publication and reload separately; do not redefine that timestamp or backdate it.
+Post-C wrappers consume only the frozen snapshot and approved strategy/configuration;
+no new provider evidence may enter through timing code. For correlation, use exact
+provider objects before target-set construction, then exact target set, race,
+cutoff plan, and policy objects when available. The current Phase99 correlation
+domain has no pre-target-set workflow/request scope; v2 must add a closed identity
+or runner-bound link rather than accept detached free text. Correlation is not
+eligibility or policy authority.
+
+### Diagnostic/official population and implementation split
+
+`DIAGNOSTIC_TIMING` can inspect wrappers without qualifying for concrete Delta
+selection. `OFFICIAL_ACTIVATED_TIMING` requires exact Phase100 activation, trusted
+runtime commit, actual profile equality, process campaign exclusivity, exact
+attempt-to-binding ancestry, and Phase99 half-open admission. Missing any element
+blocks the whole selected timing population from official Delta review; no silent
+sample filtering. No provider HTTP or live campaign is authorized by completing
+this design or a future implementation. A separate reviewed campaign execution
+approval remains required.
+
+Choose decomposition **C: campaign runner must come first**. Phase101 should
+design/implement only a bounded serial campaign composition and trusted runtime
+build/profile provenance, with exact bootstrap and exclusion contracts reviewed
+before live operation. Runtime binding companion issuance and passive wrappers
+follow in separately reviewed work; adding wrappers before runner authority would
+mislabel concurrency. This is not permission to implement a full race scheduler.
+
+Likely future production paths for the first boundary: new
+`scripts/simulation/nar_operational_timing_campaign_runner.py`,
+`scripts/simulation/nar_operational_timing_runtime_profile.py`,
+`scripts/simulation/nar_operational_timing_archive_bootstrap.py`, and a reviewed
+build-manifest producer/loader path (not present today). Later runtime issuance:
+new `scripts/simulation/nar_operational_timing_runtime_binding.py`,
+`scripts/simulation/nar_operational_timing_runtime_archive_migration.py`,
+`scripts/simulation/sqlite_nar_operational_timing_runtime_archive.py`, with narrow
+composed-gate changes to the Phase100 activation/archive repository paths. Later
+wrappers: new `scripts/simulation/nar_operational_timing_passive_wrappers.py` and,
+only if reviewed hooks prove necessary, the exact live/snapshot/post-C files in the
+table above and a versioned extension of
+`scripts/simulation/nar_operational_timing_observability.py`.
+
+Future tests should cover: exact activated ancestry; software commit/profile/retry/
+concurrency mismatches; no caller authority flag or outcome input; exact runtime
+archive roundtrip and attempt ancestry; empty/base/companion bootstrap and malformed
+rejection while keeping the base validator strict; process-wide single-workflow
+exclusion including a second process and crash recovery; attempt persisted before
+operation and monotonic start; floor-ns conversion and wall-clock jumps; success,
+timeout, validation, persistence, unsupported, and internal failures preserving
+production exceptions; terminal-write failure leaving unresolved attempts;
+attempt-write failure producing no official sample; post-window completion retained;
+unchanged HTTP request and prediction output; exact correlation; and v1/v2
+configuration separation. No tests are run in this PREPARE.
+
+Likely new tests: `tests/test_nar_operational_timing_campaign_runner.py`,
+`tests/test_nar_operational_timing_runtime_profile.py`,
+`tests/test_nar_operational_timing_archive_bootstrap.py`,
+`tests/test_nar_operational_timing_runtime_binding.py`,
+`tests/test_nar_operational_timing_runtime_archive_migration.py`,
+`tests/test_sqlite_nar_operational_timing_runtime_archive.py`, and
+`tests/test_nar_operational_timing_passive_wrappers.py`. Required regressions include
+the existing Phase99/100 observability/activation tests plus
+`tests/test_nar_daily_target_live_acquisition.py`,
+`tests/test_nar_official_response_live_capture.py`,
+`tests/test_nar_market_odds_raw_acquisition.py`,
+`tests/test_historical_input_snapshot_freeze_receipt.py`, and
+`tests/test_historical_prediction_bet_plan_execution.py`. Each implementation
+subphase must specify its own exact focused/regression/full-suite commands.
+
+Remaining blockers: `RUNTIME_SOFTWARE_COMMIT_PROVENANCE_REQUIRED`,
+`PHASE101_CAMPAIGN_RUNNER_REQUIRED_FOR_CONCURRENCY_BINDING`,
+`RUNTIME_MEASUREMENT_CONFIGURATION_BINDING_REQUIRED`,
+`CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`,
+`HISTORICAL_ENTRY_STATUS_AUTHORITY_ISSUER_BLOCKED_SOURCE_SEMANTICS`,
+`PROSPECTIVE_NAR_ENTRY_STATUS_AUTHORITY_CAPTURE_BLOCKED_SOURCE_SEMANTICS`, and
+`NAR_MARKET_ELIGIBILITY_REQUIRES_INDEPENDENT_ENTRY_STATUS_CAPTURE`.
+Recommended disposition: `DRAFT_FOR_REVIEW`; review the runner/build authority
+boundary before authorizing implementation. Next:
+`CHATGPT_REVIEW_PHASE101_RUNTIME_BINDING_AND_WIRING`.
+
+---
+
 ## POST_V0_8_DAILY_REPLAY_100
 
 Title: NAR Timing Campaign Activation and Passive Wiring Architecture
