@@ -28,6 +28,18 @@ after Phase104 capability issuance. The ordinary Phase105 bootstrap remains
 diagnostic-table-free. Narrow compatible gates accept only the exact approved
 union; historical strict validators remain strict.
 
+Documentation correction: the plan is constructed from reviewed Git objects
+before entering the runner, but durable plan publication is intentionally not
+before V2 activation or Phase104 authority issuance. The implemented causal
+order is: enter normal Phase105 runner/archive; establish the prospectively
+activated V2 session; issue Phase104 binding, one-shot claim, readiness and
+current-process capability; confirm zero attempts; install the diagnostic
+companion under the same lock; save/reload fixture authority; save/reload the
+diagnostic plan; save/reload the declaration binding that plan and claim; then
+allow the first Phase105 attempt. This preserves
+`MEASUREMENT_DENOMINATOR_MUST_BE_PREDECLARED_BEFORE_FIRST_ATTEMPT` without
+claiming plan persistence before the Phase104 authority chain.
+
 The diagnostic context requires a live current-process capability and an exact
 predeclared next node before calling the controlled Phase105 wrapper. Four NAR
 transports retain their default adapter construction, request arguments and

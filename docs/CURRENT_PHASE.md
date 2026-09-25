@@ -112,10 +112,12 @@ does not retrofit authority into correlation.
 Do not alter the immutable Phase104 execution-claim payload. Phase106 should
 add a distinct immutable `NAROperationalTimingDiagnosticCampaignPlanV1` and
 an immutable post-claim `NAROperationalTimingDiagnosticExecutionDeclarationV1`.
-The plan is persisted and exact-reloaded before V2 activation. It binds
-`DIAGNOSTIC_NO_NETWORK_V1`, exact V2 configuration/session, sealed fixture
-manifest, fixed expected stage instances, sequence/order/composition rules,
-and a fixed-window stopping rule. The declaration, issued only after exact
+The plan object is constructed from reviewed Git objects before entering the
+runner, but it is not durably persisted before V2 activation or Phase104
+authority issuance. It binds `DIAGNOSTIC_NO_NETWORK_V1`, exact V2
+configuration/session, sealed fixture manifest, fixed expected stage
+instances, sequence/order/composition rules, and a fixed-window stopping rule.
+The declaration, issued only after exact
 Phase104 claim/readiness reload and before any attempt, binds exact plan,
 claim, configuration/session/activation/runtime ancestry, and fixture manifest.
 It is not an official execution claim and supplies no `official=True` flag.
@@ -130,15 +132,24 @@ and any diagnostic execution declaration. Thus copied diagnostic evidence
 retains its `DIAGNOSTIC_ONLY` structural marker and cannot qualify merely by
 having valid V2/Phase104/Phase105 ancestry.
 
-The controlled no-network order is:
+The final implemented no-network authority order is:
 
-1. Materialize and enter the sealed `python -I -B` child; bootstrap the temporary diagnostic archive.
-2. Archive exact V2 configuration/session and diagnostic plan; exact-reload the plan.
-3. Issue the normal prospective V2 activation chain.
-4. Acquire the normal Phase104 lock, binding, one-shot claim, readiness, and current-process capability.
-5. Persist/reload the diagnostic execution declaration; only a diagnostic capability wrapper exposing that live Phase104 capability may call Phase105 measurement.
-6. Execute only predeclared fixture operations. HTTP uses guarded Sessions with deterministic fake adapters below `Session.send`; no NAR bytes are requested.
-7. Close the runner and derive a read-only reconciliation. No retry, no resume, no plan mutation, and no post-hoc stage selection occur.
+1. Construct immutable fixture and plan objects from reviewed Git objects.
+2. Enter the normal Phase105 runner/archive composition.
+3. Establish the prospectively activated V2 session.
+4. Issue the Phase104 runtime binding, one-shot claim, readiness, and current-process capability.
+5. Confirm that zero attempts exist for the claim.
+6. Under the same held campaign lock, explicitly install the Phase106 diagnostic companion.
+7. Persist and exact-reload the fixture authority.
+8. Persist and exact-reload the diagnostic plan.
+9. Persist and exact-reload the diagnostic execution declaration binding the exact plan and claim.
+10. Only then allow the first Phase105 timing attempt. Execute only predeclared fixture operations; HTTP uses guarded Sessions with deterministic fake adapters below `Session.send`, so no NAR bytes are requested.
+
+The plan population and continuation rules are immutable before step 10;
+durable plan publication is deliberately after the normal Phase104 authority
+chain and still before the first attempt. Close the runner and derive a
+read-only reconciliation. No retry, resume, plan mutation, or post-hoc stage
+selection occurs.
 
 The diagnostic plan's exact fixture stage instances fix sequence numbers and
 expected cardinality. The first rehearsal must be complete only relative to
@@ -252,8 +263,11 @@ closed. Historical strict validators remain strict. Controlled plan and
 declaration issuance require private trusted-composition markers, exact
 save/reload, and active Phase104 capability respectively. They cannot
 retrospectively label an unrelated archive or backfill a declaration. The
-order is immutable plan construction -> plan save/reload -> normal authority
-chain -> diagnostic declaration save/reload -> first attempt.
+final implemented order is immutable plan construction -> normal Phase105
+runner/archive -> prospectively activated V2 session -> Phase104 binding,
+claim, readiness, and current-process capability -> zero-attempt check ->
+diagnostic companion installation under the same lock -> fixture save/reload ->
+plan save/reload -> diagnostic declaration save/reload -> first attempt.
 
 Freeze `FIXTURE_PATH != DIAGNOSTIC_FIXTURE_CONTENT_AUTHORITY`. A
 `NARDiagnosticFixtureBundleV1` is content addressed from local Git objects,
