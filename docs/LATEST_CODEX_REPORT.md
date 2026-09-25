@@ -182,9 +182,10 @@ exclusive leaves, sequential siblings, and dependency-only edges, retaining
 
 Diagnostic installation remains explicit and temporary:
 `DIAGNOSTIC_SCHEMA_INSTALLATION != NORMAL_OFFICIAL_ARCHIVE_UPGRADE`. Normal
-Phase105 bootstrap remains the official-parent state. Plan save/reload,
-normal Phase104 authority, then controlled declaration save/reload precede any
-attempt. `DIAGNOSTIC_ONLY_OVERRIDES_INNER_OBSERVATION_QUALIFICATION`, so no
+Phase105 bootstrap remains the official-parent state. Normal Phase104
+authority and the zero-attempt check precede explicit diagnostic-companion
+installation; fixture, plan, and controlled declaration save/reload then
+precede the first attempt. `DIAGNOSTIC_ONLY_OVERRIDES_INNER_OBSERVATION_QUALIFICATION`, so no
 inner terminal/environment success promotes fake-adapter data. Fixture inputs
 are a Git-object-derived manifest (repository, commit/tree, member blobs,
 lengths, hashes) rather than worktree paths:
