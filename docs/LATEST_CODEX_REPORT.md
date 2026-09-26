@@ -1,5 +1,715 @@
 # Latest Codex Report
 
+## POST_V0_8_DAILY_REPLAY_108 — CORRECTIVE IMPLEMENTATION FOR INDEPENDENT REVIEW
+
+Phase: `POST_V0_8_DAILY_REPLAY_108`
+
+Formal Status: `READY_FOR_REVIEW`
+
+State: `IMPLEMENTED_FOR_REVIEW`
+
+Outcome: `READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`
+
+Design Review: `PHASE108_PRE_C_CRITICAL_PATH_ENVELOPE_WIRING_DESIGN_REVIEW_PASS`
+
+Implementation: `NAR_TARGET_SCOPED_PRE_C_CRITICAL_PATH_ENVELOPE_IMPLEMENTED`
+
+Correction disposition: `PHASE108_IMPLEMENTATION_REVIEW_CORRECTIONS_APPLIED`
+
+HEAD remains `fefcda45ce9e01a13724209ae6012b81bbc0bd46`; tree remains `12ed5913461e87b7d8f88243b4ff24df45f8da5c`; branch remains `feature/post-v0.8-daily-replay`. Local/remote baseline, approved correction status/state/outcome, Allowed Files, existing uncommitted implementation, and empty index passed preflight. This activity corrects only the two reviewed issues. No stage, commit, or push was performed.
+
+### Request-family identity correction
+
+The execution plan's `request_families` is immutable canonical serialized content: `("deba_table", "horse_mark_info", "race_mark_table")`, equivalent to the three reviewed enum names. Its exact tuple/order is validated on construction/deserialization/archive reload and participates in plan identity. Generated mode converts only those identity-bound values to existing enum members; it does not iterate the installed enum. Modified/expanded/reordered tuples change the canonical hash and are rejected under V1. A hypothetical future-member test demonstrates no implicit authorization. Prestaged mode retains its existing DebaTable-only execution restriction.
+
+### Shared request and dependency correction
+
+`nar_pre_c_authorized_request_projection` now has one immutable node keyed by `(start_identity, url_sha256)`, with canonical URL and first authorized sequence. The start binds the exact target root. `nar_pre_c_history_request_dependencies` holds separately immutable `(history_closure_identity, url_sha256)` edges, with restrictive foreign keys to the history closure, start, and composite request node. A trigger rejects cross-root/orphan/unrelated-URL dependencies. Closure publication atomically creates/reuses the exact node and creates its edge; exact reload validates both. Historical strict validators remain strict and the companion still requires explicit installation.
+
+The first closure exact-reloads before one provider acquisition. Later closures exact-reload their own dependency before consuming the prior persisted exact capture. Reuse checks current-process authority, same-root attempt ancestry, successful terminal, qualified environment, exact canonical URL, and capture reload. Raw duplicate acquisition remains rejected. A failed prior acquisition has no reusable capture and is never retried. Children/completion evidence remain unique per provider request.
+
+Read-only reconciliation now reports `provider_request_nodes`, `closure_request_dependencies`, and `unsatisfied_closure_dependencies` separately. It reconstructs the exact graph, checks first admission against the earliest authorizing closure, validates every dependency, deduplicates only the canonical provider traversal, and independently fails closed on missing/extra graph evidence. The root remains the sole additive duration owner. A shared failure remains one provider observation and leaves all dependent edges unsatisfied.
+
+### Corrective verification
+
+* Existing Phase108/freeze focused run: **37 passed, 2 intentionally deferred sealed tests skipped**.
+* New correction-focused run (`-k 'request_family or shared'`): **5 passed**.
+* Required historical-input/capture/Phase99–106 regressions: **191 passed, 201 subtests passed**.
+* Full repository pytest on the final corrective source: **4718 passed, 4 skipped, 2846 subtests passed**, exit 0, 1059.27 seconds. XML: `C:/Users/garim/AppData/Local/Temp/keibaos-phase108-correction-full.xml`. Two skips defer Phase108 final sealed verification; two are existing Windows symlink-capability conditions.
+
+Both primary worktree rehearsals reran successfully: `PRESTAGED_HISTORY_REHEARSAL` and `ROOT_GENERATED_HISTORY_REHEARSAL` are `PRECOMMIT_NO_NETWORK_REHEARSAL_PASS`; the original genuine zero-history branch remains covered. The new shared-page integration completes with 4 total unique provider requests (current page, 2 horse pages, 1 shared result page), 2 history dependency edges, and no duplicate result IO. Both entries normalize against the same exact capture through unchanged production source functions. ReadTimeout and transport-failure variants retain exactly one failed result observation, leave both edges unsatisfied, and do not complete the root or retry. Unsaved later closures, missing dependency evidence, orphan/unrelated edges, duplicate nodes, and append-only violations are rejected.
+
+The committed minimized result fixture contains one horse row. The shared test deterministically extends that verified Git-object fixture in memory to two structurally valid horse rows and pairs the second history row accordingly. Existing normalizers independently validate both entries; no fixture file or source semantics changed. This synthetic fixture composition is diagnostic only and has no official evidence standing.
+
+Regression coverage includes snapshot freeze/builder/repository, official response capture/live capture, current normalization, past-race discovery/source/absence, Phase104 runner/runtime/source profile, Phase105 passive/attempt/guarded/sealed paths, Phase106 diagnostic campaign and its existing committed sealed child, and timing archive/activation ancestry. `KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE` names the exact approved existing base for the Phase106 regression; it does not attest Phase108 worktree bytes.
+
+Static searches find no enum-derived V1 family authority, new page kind, retry, caller official flag, UTC elapsed reconstruction, additive root/child arithmetic, or ordinary Phase105 bootstrap installation. Remaining duplicate-URL rejection prevents a second provider acquisition; the closure-specific reuse path admits only a reloaded current dependency. URL matches are the three existing canonical fixture page kinds. Mapping remains the previously reviewed exact prestaged fixture authority. Read/use-only and forbidden canonical source files have no diff. The unchanged static transport profile is `nar-static-runtime-transport-profile-v1:4d5cc1d495cdfc4a24561b85a2ad90c980438320f1cc36e8f0dec47fcd3e537c`.
+
+### Exact uncommitted paths and final Git checks
+
+* `docs/CURRENT_PHASE.md`
+* `docs/LATEST_CODEX_REPORT.md`
+* `scripts/simulation/historical_input_snapshot_freeze_receipt.py`
+* `scripts/simulation/nar_operational_timing_attempt_archive_migration.py`
+* `scripts/simulation/sqlite_nar_operational_timing_attempt_archive.py`
+* `scripts/simulation/nar_pre_c_operational_envelope.py`
+* `scripts/simulation/nar_pre_c_operational_envelope_archive_bootstrap.py`
+* `scripts/simulation/nar_pre_c_operational_envelope_archive_migration.py`
+* `scripts/simulation/nar_pre_c_operational_envelope_harness.py`
+* `scripts/simulation/nar_pre_c_operational_envelope_reconciliation.py`
+* `scripts/simulation/sqlite_nar_pre_c_operational_envelope_archive.py`
+* `tests/test_historical_input_snapshot_freeze_receipt.py`
+* `tests/test_nar_pre_c_operational_envelope.py`
+* `tests/test_nar_pre_c_operational_envelope_sealed_child.py`
+
+All 14 paths are Allowed Files; this activity changes only the two docs, five Phase108 implementation files, and the Phase108 focused test file. Previously reviewed implementation remains uncommitted. Final `git diff --check` and Allowed-Files audit passed; `git status --short` lists exactly the 6 modified tracked and 8 untracked approved paths above, and the Git index is empty. No provider HTTP, live campaign, production DB writes, ROI, Delta/statistical selection, Phase94/95/41 changes, stage/commit/push occurred. Temporary tests wrote only fixture/source bundles, capture/snapshot/timing SQLite archives, and result XML. Scope deviations: none; synthetic fixture composition is disclosed above.
+
+`PRECOMMIT_IMPLEMENTATION_VERIFICATION != FINAL_COMMIT_SEALED_SOURCE_VERIFICATION`
+
+`FINAL_COMMIT_SEALED_SOURCE_VERIFICATION = PENDING_EXPLICIT_COMMIT_APPROVAL`
+
+Final Phase108 sealed Git-object verification remains post-review/post-approved-commit and pre-push. Phase108 is not formally complete. `LIVE_CAMPAIGN_AUTHORIZATION = BLOCKED`; `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT` remains unresolved, as do production NAR mapping/internal-race authority and Phase94/95/41. Next: `CHATGPT_REVIEW_PHASE108_IMPLEMENTATION`.
+
+## POST_V0_8_DAILY_REPLAY_108 — HISTORICAL INDEPENDENT REVIEW CORRECTION APPROVAL
+
+Phase: `POST_V0_8_DAILY_REPLAY_108`
+
+Disposition: `PHASE108_IMPLEMENTATION_REVIEW_REQUIRES_REVISION`
+
+Status: `APPROVED_FOR_CODEX`
+
+State: `IMPLEMENTATION_CORRECTION_APPROVED`
+
+Outcome: `READY_FOR_CORRECTIVE_IMPLEMENTATION`
+
+Design Review: `PHASE108_PRE_C_CRITICAL_PATH_ENVELOPE_WIRING_DESIGN_REVIEW_PASS`
+
+Base Commit: `fefcda45ce9e01a13724209ae6012b81bbc0bd46`
+
+Branch: `feature/post-v0.8-daily-replay`
+
+The independent ChatGPT implementation review requires two narrowly scoped pre-commit corrections. This activity is documentation/approval only. The prior implementation review work was not treated as an implementation failure: production code, tests, and schemas were not modified in this activity; no provider HTTP, live campaign, or production database activity occurred.
+
+Frozen correction markers:
+
+* `EXECUTION_PLAN_REQUEST_FAMILY_SET_MUST_BE_IDENTITY_BOUND`
+* `SHARED_DERIVED_PROVIDER_REQUEST_MUST_NOT_FORCE_DUPLICATE_IO_OR_ROOT_FAILURE`
+* `ONE_PROVIDER_REQUEST_MAY_SATISFY_MULTIPLE_PROSPECTIVELY_CLOSED_DEPENDENCIES`
+* `SHARED_CAPTURE_REUSE_REQUIRES_EXACT_PRIOR_AUTHORIZED_CAPTURE_AND_CURRENT_CLOSURE`
+* `SHARED_CAPTURE_REUSE != RETRY`
+* `SHARED_CAPTURE_REUSE != PRE_CLOSURE_DERIVED_WORK`
+* `PRIOR_CAPTURE_EXISTENCE_ALONE != LATER_CLOSURE_AUTHORITY`
+* `LATER_CLOSURE_EXACT_RELOAD_PRECEDES_SHARED_CAPTURE_REUSE`
+
+Correction 1 requires `NARPreCOperationalEnvelopeExecutionPlanV1` to canonically bind the exact reviewed V1 request-family tuple `(DEBA_TABLE, HORSE_MARK_INFO, RACE_MARK_TABLE)` as part of plan identity, rather than deriving authority from runtime enum iteration. Future provider page kinds require a new reviewed plan semantic/version.
+
+Correction 2 requires normalized shared RaceMarkTable request/capture authority with one provider acquisition per canonical URL and append-only dependency edges from every exact history closure that prospectively authorizes it. A later closure must be persisted and exact-reloaded before reusing an earlier exact capture. Shared reuse is not retry or pre-closure work; a shared failure remains one denominator observation and leaves every dependent closure incomplete without a second request. Reconciliation must distinguish unique provider requests/captures from closure dependency edges.
+
+Required focused correction coverage is recorded in `docs/CURRENT_PHASE.md`; existing Phase108 rehearsals and all prior authority, denominator, closure, freeze, timing, and regression requirements remain frozen. Verification ordering remains `PRECOMMIT_IMPLEMENTATION_VERIFICATION != FINAL_COMMIT_SEALED_SOURCE_VERIFICATION` with `FINAL_COMMIT_SEALED_SOURCE_VERIFICATION = PENDING_EXPLICIT_COMMIT_APPROVAL`.
+
+This approval activity modifies only the two phase-control documents. No implementation/test execution is authorized here. Next: `EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_108`.
+
+## POST_V0_8_DAILY_REPLAY_108 — HISTORICAL PRE-CORRECTION IMPLEMENTATION REPORT
+
+Phase: `POST_V0_8_DAILY_REPLAY_108`
+
+Formal Status: `READY_FOR_REVIEW`
+
+State: `IMPLEMENTED_FOR_REVIEW`
+
+Outcome: `READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`
+
+Design Review: `PHASE108_PRE_C_CRITICAL_PATH_ENVELOPE_WIRING_DESIGN_REVIEW_PASS`
+
+Implementation: `NAR_TARGET_SCOPED_PRE_C_CRITICAL_PATH_ENVELOPE_IMPLEMENTED`
+
+Starting and unchanged repository HEAD: `fefcda45ce9e01a13724209ae6012b81bbc0bd46`.
+Tree: `12ed5913461e87b7d8f88243b4ff24df45f8da5c`.
+Branch: `feature/post-v0.8-daily-replay`.
+Worktree: `C:\Users\garim\Desktop\KeibaOS-post-v0.8`.
+Local and remote identities matched the approved base during preflight and subsequent recheck.
+The initial dirty state was exactly the two approved documentation files; the index and untracked set were empty.
+AGENTS.md, the approved Phase108 Allowed/Forbidden/Required Tests/Stop Condition contract, approval state, and both exact verification-ordering markers passed preflight.
+
+### Exact uncommitted changed paths
+
+* `docs/CURRENT_PHASE.md`
+* `docs/LATEST_CODEX_REPORT.md`
+* `scripts/simulation/nar_pre_c_operational_envelope.py`
+* `scripts/simulation/nar_pre_c_operational_envelope_archive_migration.py`
+* `scripts/simulation/sqlite_nar_pre_c_operational_envelope_archive.py`
+* `scripts/simulation/nar_pre_c_operational_envelope_archive_bootstrap.py`
+* `scripts/simulation/nar_pre_c_operational_envelope_harness.py`
+* `scripts/simulation/nar_pre_c_operational_envelope_reconciliation.py`
+* `scripts/simulation/historical_input_snapshot_freeze_receipt.py`
+* `scripts/simulation/nar_operational_timing_attempt_archive_migration.py`
+* `scripts/simulation/sqlite_nar_operational_timing_attempt_archive.py`
+* `tests/test_nar_pre_c_operational_envelope.py`
+* `tests/test_nar_pre_c_operational_envelope_sealed_child.py`
+* `tests/test_historical_input_snapshot_freeze_receipt.py`
+
+No read/use-only provider/source module, Phase99–105 canonical payload/identity, normal Phase105 bootstrap, runtime inspector, existing provider request semantics, production database, or log path was changed. The compatibility chain already delegates through the Phase105 gate, so neither the Phase104 runtime migration nor its repository required modification.
+
+### Immutable authority and explicit schema
+
+The frozen domains have canonical exact-JSON reload and content-addressed versioned namespaces:
+
+* target scope: `nar-pre-c-target-scope-v1:<sha256>`;
+* manifest: `nar-pre-c-prestaged-input-manifest-v1:<sha256>`;
+* execution plan: `nar-pre-c-execution-plan-v1:<sha256>`;
+* target root: `nar-pre-c-operational-envelope-v1:<sha256>`;
+* start: `nar-pre-c-envelope-start-v1:<sha256>`;
+* current-entry closure: `nar-pre-c-current-entry-closure-v1:<sha256>`;
+* past-race closure: `nar-pre-c-past-race-closure-v1:<sha256>`;
+* completion: `nar-pre-c-envelope-completion-v1:<sha256>`.
+
+One root binds the exact claim, binding, session, runtime bundle, target-set SHA, cutoff-plan SHA/canonical decision/C, dataset/internal race, manifest, and plan. Completion additionally binds one exact snapshot identity/content SHA and UTC freeze completion. All Phase108 roots and derived summaries are structurally `DIAGNOSTIC_ONLY_NO_NETWORK`, not official campaign authorization.
+
+The explicit bootstrap requires the held runner/current capability and zero attempts before initial installation. The exact Phase108 union adds seven immutable authority tables, a registry, and an append-only request-admission projection derived transactionally from starts/closures. Restrictive FKs and triggers forbid update/delete, conflicting parents, start backfill, requests without an exact started root/authorized closure, mismatched target/cutoff/policy/stage, and repeated target requests. The projection is not an additional independent caller-issued authority family. Unknown/partial topology fails closed. Strict Phase105/104 validators still reject the companion; only the exact compatible chain accepts it. Normal Phase105 bootstrap remains companion-free; the Phase106 diagnostic union cannot be combined with Phase108.
+
+During development an older Phase106 sealed-bundle path exposed an unconditional optional-companion import in the new compatibility branch. The Allowed-File correction imports Phase108 only when its exact registry is present and then validates the entire exact union. It preserves older sealed bundles without weakening topology validation. An interim full-suite run predating final corrections was stopped and is not counted as final verification.
+
+### Prestaging, plan, start, and dynamic request admission
+
+The manifest binds verified Git fixture-bundle content, campaign-owned prospective availability UTC, exact explicit fixture entry mapping with its Git content authority, full source-record/evidence hashes for prestaged history, and exact dataset/target/cutoff scope. Pre-start verification rereads Git objects, validates the mapping against the committed explicit fixture dictionary, and recomputes any prestaged historical records through existing canonical production functions. Paths and mutable caller objects are not authority. Prework cannot be republished after the target start.
+
+The execution plan fixes the current DebaTable request, inclusive normalization, prerequisite proof, snapshot build/save/reload/freeze, allowed existing page families, reviewed discovery algorithms, serial canonical entry/event ordering, sibling continuation, fail-root-on-required-failure semantics, zero retries, and root-only additive composition before start. Required downstream work expands only through exact-reloaded closures.
+
+Controlled issuance checks the private trusted-composition marker before duplicate publication, current capability/held lock, same runner connection and exact claim/root. Start follows manifest reload → plan reload → capability/prework validation → runner monotonic sample → controlled start save/exact reload → causal work. Publication latency is inside the root interval. Persisted start rows cannot reconstruct live execution capability; closed/cross-process/clock-changed contexts cannot resume or backfill endpoint/completion.
+
+Current DebaTable capture/save/reload and `normalize_nar_historical_input_source_records(...)` remain the existing production functions. The canonical current-entry closure binds complete normalized-record hashes, exact entry/horse identities, ordered HorseMarkInfo URLs, causal UTC and sequence admission floor. Each successful HorseMarkInfo capture feeds the unchanged canonical discovery function; the exact-reloaded history closure binds parent evidence/attempt, entry/horse, all ordered events, true zero proof, and the complete authorized NAR RaceMarkTable population. JRA/non-start/unsupported states do not invent requests or source records. Derived admission is checked before Phase105 publication by the context and DB gate and independently rechecked in reconciliation.
+
+No reviewed NAR producer of `race_entry_id_by_external_entry_id` was found: the builder consumes it; the separate JRA producer is not NAR authority. Both rehearsals use the existing committed fixture's explicit mapping 101/102, never enumeration/horse-number/hash-derived IDs. A real NAR mapping producer and real dataset/internal-race binding remain production dependencies, not newly implemented source authority.
+
+### Two no-network rehearsal modes and prerequisite proof
+
+Both modes use exact Git-object fixtures and the existing capture/discovery/normalization/builder/repository functions. The existing fixtures have different current versus history horse lineages; a fixed, documented diagnostic-byte pairing aligns the two committed current lineage values with the committed history/result and zero-history lineages. Original Git member hashes remain verified, and the derived capture/source hashes bind the resulting synthetic bytes. This is synthetic fixture composition only, not new provider/source semantics or live evidence.
+
+Prestaged mode closes historical source records and the compatible mapping before start. Only the current DebaTable adapter is called; no HorseMarkInfo/RaceMarkTable acquisition occurs inside the root. Generated mode runs DebaTable → normalization → entry closure → two HorseMarkInfo children → canonical history closure(s) → one authorized RaceMarkTable child → unchanged historical/absence normalization → snapshot prerequisite proof → build → actual snapshot save/exact reload → UTC/monotonic endpoint → ordinary receipt → completion → reconciliation. The zero-history entry creates absence only through the reviewed canonical proof and absence normalizer, never from a failed request/discovery.
+
+Immediately before construction, independent prerequisite proof covers track, every entry/jockey/current odds record, each full historical record or proved absence, exact mapping, dataset/internal-race/C, and campaign-owned captured-at. Each dependency has exactly one prestaged or root-generated provenance. Snapshot validity alone does not establish execution-plan completeness.
+
+### Freeze endpoint, completion, elapsed, and child observations
+
+The only existing freeze-function change is a private optional observer after successful save/exact reload and the existing `completed = _utc(utc_clock())`, before receipt construction/save/reload. Default callers are unchanged. Ordinary observer exceptions do not rewrite the UTC value or invalidate semantic freeze; the root owner records incomplete telemetry. The endpoint is never reconstructed later. Completion publication/reload failure also preserves a valid semantic receipt but leaves timing incomplete.
+
+Start/end integer nanoseconds belong to one process/clock domain; elapsed uses the unchanged Phase105 floor conversion `(end - start) // 1000`, never UTC subtraction. Root duration includes start publication, capture checks/persistence, HTTP attempts/environment verification, discovery/closure gates, normalization, prerequisite proof, snapshot construction/save/exact reload, and UTC freeze sampling. Receipt publication and completion publication occur after the endpoint and are excluded.
+
+Phase105 children retain their exact controlled attempt/environment/terminal/overhead path through the guarded Session and deterministic fake adapter below `send`. Qualified READ_TIMEOUT, CONNECT_TIMEOUT, and generic transport failures remain observations, and authorized siblings continue. Environment rejection invokes no adapter and is not a provider observation. Missing start overhead prevents IO and leaves unresolved evidence; missing separate terminal overhead does not erase a successful operation observation. No root + child or stage-sum budget is calculated.
+
+### Deterministic read-only reconciliation
+
+The archive adapter enumerates immutable authority/capture/snapshot/receipt rows; mutable context result/children/endpoint state is not reconciliation proof. The pure derivation rechecks target/cutoff/claim/session/readiness, exact prestaging, complete canonical current/history transformations, every authorized request and ordering/sequence/closure gate, missing/unexpected children, environment/terminal qualification, overhead coverage, all snapshot prerequisites, exact rebuilt snapshot content, semantic receipt, same-process endpoint and elapsed. It never repairs evidence, samples clocks, writes SQLite, or calculates Delta.
+
+Summary identity: `nar-pre-c-envelope-reconciliation-v1:<sha256>`. It exposes entry/history closure identities, prerequisite proof, child inner qualifications/outcomes, semantic freeze and durable endpoint results, root elapsed, and structural diagnostic classification. Closed outcomes distinguish complete nonoverlapping envelope, provider failure, discovery/root execution failure, execution integrity, snapshot-freeze evidence incompleteness, timing telemetry incompleteness, session-window incompleteness, and completion after C. Campaign incompleteness never erases qualified child failures/timeouts. Root alone owns additive duration.
+
+### Verification and source-provenance boundary
+
+Final focused verification: `python -B -m pytest tests/test_nar_pre_c_operational_envelope.py tests/test_nar_pre_c_operational_envelope_sealed_child.py tests/test_historical_input_snapshot_freeze_receipt.py -q` — **37 passed, 2 intentionally deferred sealed tests skipped**. Both ordinary worktree rehearsals are `PRECOMMIT_NO_NETWORK_REHEARSAL_PASS`: prestaged mode has one DebaTable call and no history adapters; generated mode has four single calls including the genuine zero-history branch. Temporary result XML: `C:/Users/garim/AppData/Local/Temp/keibaos-phase108-focused-20260926-final.xml`.
+
+Final full repository pytest: **4713 passed, 4 skipped, 2846 subtests passed**, exit 0 (816.53 seconds). Two skips are the intentionally deferred Phase108 final sealed cases; the other two are existing Windows symlink-capability conditions. Temporary XML: `C:/Users/garim/AppData/Local/Temp/keibaos-phase108-full-20260926-final.xml` (zero failures/errors; its test count includes subtests). Historical-input/capture regressions: 157 passed / 236 subtests passed. Phase99–106 timing/activation/archive/runtime/runner/passive/diagnostic regressions: 112 passed. The final full-suite run sets `KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE` to the exact existing committed base, so Phase106's regression tests its real sealed committed source without pretending Phase108 worktree bytes are committed authority. Additional existing entry-status regression check: 104 passed; no related semantic changes were made. A repeated user request/resumption lost prior test-session handles; results were not inferred from cache, and focused/full runs were restarted with temporary JUnit result files.
+
+Precommit Phase108 tests explicitly isolate only the runner's source-origin dependency in test setup; all production lock/capability/claim/controlled issuance/environment mechanisms still run. That functional test dependency is NOT source-provenance proof or a production bypass. Normal real network adapters are rejected by the Phase108 test setup; only the fake adapter can perform diagnostic IO. The post-commit Phase108 sealed-child tests are implemented with real `python -I -B`, real isolation checks, exact commit materialization and module-origin verification, but remain intentionally skipped until approved final commit authority exists.
+
+`PRECOMMIT_IMPLEMENTATION_VERIFICATION != FINAL_COMMIT_SEALED_SOURCE_VERIFICATION`.
+`FINAL_COMMIT_SEALED_SOURCE_VERIFICATION = PENDING_EXPLICIT_COMMIT_APPROVAL`.
+No Phase108 temporary commit, staging, source-provenance bypass, or worktree-to-Git authority substitution was used.
+
+Static searches found only the three existing page kinds/canonical fixture URLs, zero-retry declarations/rejection, and the committed explicit mapping authority. No caller `official=True`, invented ID producer, UTC elapsed arithmetic, additive child arithmetic, or ordinary Phase105 bootstrap installation was found. The unchanged four-transport static profile identity is `nar-static-runtime-transport-profile-v1:4d5cc1d495cdfc4a24561b85a2ad90c980438320f1cc36e8f0dec47fcd3e537c`; no transport/provider module or AST inspector changed.
+
+Changed-path audit: 14 paths, all individually Allowed; zero unexpected paths and empty index. `git diff --check` passes (only ordinary LF/CRLF notices), and `git status --short` contains exactly the 6 modified tracked plus 8 new unstaged paths listed above. The worktree intentionally remains uncommitted for review, not clean of the approved implementation. All writes are authorized source/docs/tests or temporary pytest archives/snapshot/capture DBs, source-bundle fixtures and result XML. No provider HTTP, live campaign, production DB, ROI, concrete Delta/statistical policy, Phase94/95/41 change, repository stage/commit/push occurred. Scope deviations: none; synthetic fixture pairing and missing production mapping authority are explicitly disclosed, not promoted to real provider evidence.
+
+Remaining blockers: independent Phase108 implementation review; explicit commit approval; final-commit sealed-source verification; separate push approval; real NAR entry mapping/internal-race authority; prospective official campaign/discovery/authorization wiring and separately reviewed live authorization; `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`; Phase94/95/41. `LIVE_CAMPAIGN_AUTHORIZATION = BLOCKED` remains frozen. No Phase108 formal completion is claimed.
+
+Next: `CHATGPT_REVIEW_PHASE108_IMPLEMENTATION`.
+
+## Historical Phase108 preparation / approval activity
+
+The following records describe earlier, superseded activities, not the current implementation state.
+
+## POST_V0_8_DAILY_REPLAY_108 — EXECUTION PREFLIGHT STOP
+
+The requested `EXECUTE_APPROVED_PHASE` preflight verified the exact branch `feature/post-v0.8-daily-replay`, local and remote HEAD `fefcda45ce9e01a13724209ae6012b81bbc0bd46`, tree `12ed5913461e87b7d8f88243b4ff24df45f8da5c`, `CURRENT_PHASE.md` status `APPROVED_FOR_CODEX`, implementation `NOT_STARTED_APPROVED_FOR_CODEX`, matching Base Commit/Branch, and the presence of Allowed Files, Forbidden Files, Required Tests, and Stop Condition. The initial dirty state was limited to the approved two documentation files; the index and untracked set were empty.
+
+One mandatory preflight check failed: the approved Phase108 section of `docs/CURRENT_PHASE.md` does not include the exact frozen distinction `PRECOMMIT_IMPLEMENTATION_VERIFICATION != FINAL_COMMIT_SEALED_SOURCE_VERIFICATION`. It does include `FINAL_COMMIT_SEALED_SOURCE_VERIFICATION = PENDING_EXPLICIT_COMMIT_APPROVAL`. The execution instruction explicitly says to stop if either verification-ordering check fails, so no implementation or test edit began. The missing marker must be added through a documentation approval correction before repeating `EXECUTE_APPROVED_PHASE`.
+
+No production code, tests, schemas, provider HTTP, live campaign, production DB write, staging, commit, or push occurred. Phase108 remains `APPROVED_FOR_CODEX` and `NOT_STARTED_APPROVED_FOR_CODEX`; `LIVE_CAMPAIGN_AUTHORIZATION = BLOCKED` remains in force.
+
+The documentation-only correction is now applied: the exact invariant `PRECOMMIT_IMPLEMENTATION_VERIFICATION != FINAL_COMMIT_SEALED_SOURCE_VERIFICATION` is present in `docs/CURRENT_PHASE.md`. The prior `EXECUTE_APPROVED_PHASE` preflight stopped solely because this exact verification-ordering invariant was missing; no implementation failure occurred, and production code, tests, and schema remained untouched. No provider HTTP, live campaign, or production DB activity occurred.
+
+## POST_V0_8_DAILY_REPLAY_108 — APPROVAL CORRECTION: VERIFICATION ORDERING
+
+The Phase108 approval contract is corrected without changing status or implementation state. The verified base remains HEAD `fefcda45ce9e01a13724209ae6012b81bbc0bd46`, tree `12ed5913461e87b7d8f88243b4ff24df45f8da5c`, branch `feature/post-v0.8-daily-replay`; the initial dirty state contains only the two phase-control documents, with no staged or untracked files.
+
+The workflow is now explicit: implement only Allowed Files; run focused, integration, regression, full-suite, search/static, diff, and changed-path checks against the uncommitted worktree; run both deterministic no-network rehearsals as `PRECOMMIT_NO_NETWORK_REHEARSAL_PASS`; stop at `READY_FOR_REVIEW`; obtain independent review and explicit commit approval; create one local Phase108 commit; derive sealed source only from that final Git commit/tree; run the real `python -I -B` sealed-child verification; and push only after a separate explicit push approval. `UNCOMMITTED_WORKTREE_IMPLEMENTATION != SEALED_GIT_OBJECT_SOURCE` and `PRECOMMIT_IMPLEMENTATION_VERIFICATION != FINAL_COMMIT_SEALED_SOURCE_VERIFICATION`.
+
+During `EXECUTE_APPROVED_PHASE`, `FINAL_COMMIT_SEALED_SOURCE_VERIFICATION = PENDING_EXPLICIT_COMMIT_APPROVAL` is expected. It is not an implementation failure and does not require an unauthorized temporary commit. `FINAL_COMMIT_SEALED_VERIFICATION_REQUIRES_COMMIT_OBJECT`, `SEALED_FINAL_SOURCE_VERIFICATION_IS_POST_COMMIT_PRE-PUSH`, and `NO_PUSH_BEFORE_FINAL_COMMIT_SEALED_VERIFICATION_PASS` remain frozen. No production code, tests, schemas, staging, commit, push, provider HTTP, live campaign, production database write, or Delta selection occurs in this documentation correction.
+
+## POST_V0_8_DAILY_REPLAY_108 — APPROVED FOR CODEX
+
+Phase: `POST_V0_8_DAILY_REPLAY_108`
+
+Title: `NAR Target-Scoped PRE_C Critical-Path Envelope Wiring`
+
+Status: `APPROVED_FOR_CODEX`
+
+Implementation: `NOT_STARTED_APPROVED_FOR_CODEX`
+
+Design Review: `PHASE108_PRE_C_CRITICAL_PATH_ENVELOPE_WIRING_DESIGN_REVIEW_PASS`
+
+The approved implementation contract is now recorded in `docs/CURRENT_PHASE.md`. The verified base remains HEAD `fefcda45ce9e01a13724209ae6012b81bbc0bd46`, tree `12ed5913461e87b7d8f88243b4ff24df45f8da5c`, branch `feature/post-v0.8-daily-replay`. The initial worktree contains only the two expected modified phase-control documents; no files are staged or untracked.
+
+The contract permits only the listed Phase108 envelope domain/archive/bootstrap/harness/reconciliation files, narrow freeze/archive compatibility changes, and the listed focused/regression tests. It preserves Phase99–105 identities and semantics, requires sealed `python -I -B` rehearsals, and forbids provider HTTP, live campaigns, production database writes, concrete Delta/statistical choices, and Phase94/95/41 work. `LIVE_CAMPAIGN_AUTHORIZATION = BLOCKED` remains in force.
+
+This approval activity changed documentation only. No production code, tests, schema, staging, commit, push, provider HTTP, live campaign, or database write was performed. Next: `EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_108`.
+
+## POST_V0_8_DAILY_REPLAY_108 — PREPARED FOR ARCHITECTURAL REVIEW
+
+Phase: `POST_V0_8_DAILY_REPLAY_108`
+
+Status: `DRAFT_FOR_REVIEW`
+
+Outcome: `READY_FOR_ARCHITECTURAL_REVIEW`
+
+Audit: `NAR_PRE_C_CRITICAL_PATH_ENVELOPE_WIRING_DESIGN_COMPLETE`
+
+Starting/verified HEAD/TREE: `fefcda45ce9e01a13724209ae6012b81bbc0bd46` /
+`12ed5913461e87b7d8f88243b4ff24df45f8da5c` on
+`feature/post-v0.8-daily-replay`; the branch is exact and the inherited
+design-only changes are limited to the two phase-control documents. Phase107
+is reconciled as
+`PHASE107_PROSPECTIVE_OFFICIAL_TIMING_CAMPAIGN_AUTHORIZATION_DESIGN_REVIEW_PASS`,
+`POST_V0_8_DAILY_REPLAY_107 = ARCHITECTURAL_AUDIT_COMPLETE`,
+`LIVE_CAMPAIGN_AUTHORIZATION = BLOCKED`, and
+`LIVE_CAMPAIGN_AUTHORIZATION_BLOCKED_PENDING_END_TO_END_PRE_C_ENVELOPE_WIRING = CONFIRMED`.
+
+Architectural revision: `PHASE108_ARCHITECTURAL_REVIEW_REQUIRES_REVISION` is
+addressed in this final draft. The earlier root is refined into one
+authoritative envelope per exact target/cutoff rather than a potentially
+day-wide duration, and now separates prestaged dependencies from an immutable
+root-required-work plan plus controlled dynamic-discovery closures. The revision
+authorizes neither implementation nor provider HTTP.
+
+### Finding and exact live disposition
+
+Phase108 freezes that semantic substage granularity is not the live-campaign
+criterion: `SEMANTIC_SUBSTAGE_VISIBILITY != CRITICAL_PATH_COVERAGE_REQUIREMENT`
+and `UNRESOLVED_SUBSTAGE_LABEL != UNMEASURED_TIME_INTERVAL`. A campaign is
+sufficient only when a reviewed causal composition covers each interval once
+from `PRE_C_OPERATIONAL_ENVELOPE_START` to
+`SNAPSHOT_FREEZE_COMPLETION`, with monotonic elapsed evidence, exact authority
+ancestry, and declared nesting. `STAGE_DURATION_SUM != CRITICAL_PATH_DURATION_UNLESS_COMPOSITION_PROVEN`.
+
+Live authorization remains blocked. The precise reason is now absence of a
+reviewed production root envelope and no-network proof, not lack of a separate
+attempt for every internal helper:
+`LIVE_CAMPAIGN_AUTHORIZATION_BLOCKED_PENDING_END_TO_END_PRE_C_ENVELOPE_WIRING`.
+
+### Control plane versus target-scoped Delta candidate
+
+`PRE_C_ROOT_ENVELOPE_MUST_BE_TARGET_SCOPED` and
+`SHARED_DISCOVERY_CONTROL_PLANE != PER_TARGET_DELTA_ENVELOPE`.
+`NARHistoricalReplayPredictionCutoffPlan` derives one exact cutoff decision
+per target only after daily target discovery establishes the target and its
+scheduled start. Consequently supplier/bootstrap/monthly/RaceList discovery,
+target-set construction, cutoff-plan application, runtime/claim/readiness,
+authorization, and any closure completed before target dispatch are campaign
+control-plane work. They are referenced by target roots but are never copied
+as elapsed duration into every target Delta candidate.
+
+The pre-start `NARPreCOperationalEnvelopeDeclarationV1` binds exactly one
+Phase104 claim, official authorization, target-set content identity,
+cutoff-plan identity/SHA and decision, target identity, prediction cutoff `C`,
+dataset/source scope, sealed runtime ancestry, prestaged-input manifest, and
+envelope semantic. Its completed child `NARPreCOperationalEnvelopeV1` also
+binds the resulting exact snapshot identity/content SHA. This separates a
+truthful pre-dispatch declaration from a completed target-scoped Delta
+candidate; a whole-day elapsed span is not an operational observation.
+
+### Durable start and closed inputs
+
+`PRESTAGED_INPUT_AUTHORITY_MUST_BE_CLOSED_BEFORE_ENVELOPE_START`,
+`CALLER_SUPPLIED_SNAPSHOT_INPUT != FREE_PRE_C_DEPENDENCY`,
+`ENVELOPE_START_SAMPLE_REQUIRES_PREWORK_DURABLE_ISSUANCE`, and
+`ENVELOPE_START_AUTHORITY_MUST_PRECEDE_FIRST_CAUSAL_OPERATION` are frozen.
+Before a root sample, a controlled append-only prestaged-input manifest must
+be persisted/reloaded and identify every excluded dependency by exact
+identity/hash and prospective availability proof. Each builder input is either
+`PRESTAGED_AND_AUTHORITY_CLOSED_BEFORE_ROOT` or
+`GENERATED_INSIDE_TARGET_ROOT`; no implicit third category exists.
+
+The start order is exact: validate target envelope/cutoff/manifest and exact
+current process capability; sample the runner monotonic tick; construct and
+persist/reload controlled start evidence; only then dispatch acquisition,
+normalization, mapping, or snapshot work. The start issuer receives the real
+nonpersistent Phase104 capability object, verifies its live owner/lock, and
+returns a target-envelope capability retaining that object by reference.
+Persisted evidence binds serializable claim/binding/session/lock/runner
+ancestry but cannot recreate the process-local authority. Start-publication
+cost is inside the root; failure prevents any causal operation.
+
+`MONOTONIC_ENVELOPE_CANNOT_RESUME_ACROSS_PROCESS_BOUNDARY`. A completion
+artifact binds root-start, target/cutoff, snapshot identity/content SHA, receipt
+identity, causal UTC freeze time, same-domain monotonic start/end evidence, and
+a closed semantic. It is persisted after the captured endpoint and therefore
+does not extend the target freeze interval. Crash leaves the root incomplete;
+the consumed Phase104 session/claim requires a new prospective campaign rather
+than a cross-process monotonic subtraction or reconstructed completion.
+
+The complete snapshot inventory is now explicit. Prestaged items may include
+exact target/cutoff, dataset and internal-race mapping only with target-bound
+authority. Current track/entry/jockey/odds records normally generate inside
+root. `race_entry_id_by_external_entry_id` is merely a builder caller mapping,
+so it must be a complete manifest-bound authority or a root-contained controlled
+resolver after current entries are known. Every entry requires either
+`past_race` records or one `past_race_absence`; NAR past-race modules are source
+transformations, not free prospective availability. Default acquisition is
+inside root; prestaging requires exact same-entry immutable evidence available
+before start. `information_cutoff` is the prestaged `C`; `captured_at` is a
+root-owned UTC sample. Save/reload is always root-contained.
+
+`PRE_C_OPERATIONAL_ENVELOPE_START` is a campaign-owned `perf_counter_ns()`
+sample inside the controlled “execute one exact target PRE_C acquisition/freeze
+now” dispatch, after durable target/cutoff/manifest authority and the existing
+source, archive, V2 activation, Phase104 lock/binding/claim/readiness/current
+capability, and Phase107 authorization. It precedes start issuance and every
+causal operation. No hidden setup is permitted after dispatch and before that
+sample. Deferred authority work—including a genuinely target-time closure—must
+be an explicit root-contained segment:
+`TIME_CRITICAL_AUTHORITY_OVERHEAD_AFTER_ENVELOPE_START_MUST_BE_COVERED`.
+
+### Final revision — root execution plan and discovery closure
+
+The prestaged-input manifest is necessary but insufficient: it proves only
+which exact dependencies were available before the root. Phase108 additionally
+requires immutable `NARPreCOperationalEnvelopeExecutionPlanV1`, persisted and
+exact-reloaded before root start. It binds the root declaration, exact target
+and cutoff `C`, prestaged manifest, closed initial operations, allowed provider
+request families, canonical dynamic-discovery algorithms, ordering and
+continuation rules, zero retries, and exact snapshot-freeze terminal condition.
+`ROOT_CONTAINED_REQUIRED_WORK_MUST_BE_PROSPECTIVELY_CLOSED_OR_DISCOVERY_GOVERNED`.
+No result may rewrite the plan.
+
+Only material already knowable before dispatch can be an initial operation—for
+example, an exact target official-response request when its canonical identity
+is already authoritative. Current-response normalization then yields a
+controlled current-entry closure, saved/reloaded before it authorizes its
+canonical per-entry HorseMarkInfo requests. One failed entry remains an
+observation and cannot remove independent already-authorized entries.
+
+Each root-generated HorseMarkInfo result is processed by the existing canonical
+past-race discovery function and produces a persisted/reloaded
+`NARPastRaceDiscoveryClosureV1` (or reviewed equivalent) before any derived
+RaceMarkTable request. It binds parent evidence, target entry/horse, algorithm,
+ordered events, derived NAR request identities, and explicit non-NAR/JRA or
+unsupported states. `PAST_RACE_DISCOVERY_CLOSURE_REQUIRED_FOR_ROOT_GENERATED_HISTORY`
+and `DISCOVERED_HISTORY_IN_MEMORY != AUTHORIZED_DERIVED_REQUEST_POPULATION`.
+Partial history, omitted slow events, or a failed discovery cannot become a
+complete closure. A `past_race_absence` is permitted only for the canonical,
+evidence-proven zero-history state:
+`NO_DISCOVERED_HISTORY_WITHOUT_PROOF != PROVEN_ZERO_HISTORY`.
+
+`VALID_SNAPSHOT != COMPLETE_TIMING_EXECUTION_PLAN`. A snapshot builder can
+validate supplied records without proving every planned acquisition, closure,
+mapping, and required child occurred. Root reconciliation must independently
+prove every prerequisite is exactly either prestaged with pre-start authority
+or generated inside the root under the execution plan; in particular,
+`race_entry_id_by_external_entry_id` must be a compatible prestaged authority
+or a deterministic root-generated, authority-bound mapping. A stale mapping
+fails closed.
+
+### Root envelope and nested observations
+
+The selected minimum architecture is a dedicated append-only root envelope,
+not a sum of Phase105 operation records. A controlled start anchor binds exact
+claim/session/configuration/plan/composition ancestry and the raw monotonic
+start. A freeze endpoint binds it to exact snapshot/receipt ancestry, the
+existing UTC `freeze_completed_at`, and the raw monotonic endpoint. The root
+elapsed is exactly `(end_ns - start_ns) // 1000`; endpoint publication/reload
+is post-end evidence. Start-anchor publication is inside the root and must
+reload before an operation begins.
+
+This includes Phase105 attempt construction, save/reload, and
+`ATTEMPT_START_PUBLICATION`, which precede Phase105's own operation timer.
+Thus `PHASE105_OPERATION_ELAPSED_ALONE != FULL_DISPATCH_TO_FREEZE_ENVELOPE`
+without an overlap-prone arithmetic patch. Phase105 guarded HTTP attempts
+remain child observations for actual-send qualification, transport latency, and
+provider failure/timeout. `NESTED_HTTP_TIMING_IS_OBSERVABILITY_NOT_ADDITIVE_BUDGET`:
+they are never added to their containing capture or root duration.
+
+The existing daily `acquire()` application is the inclusive acquisition
+candidate for campaign control plane: home, root, script, monthly request,
+monthly normalization, sequential RaceList requests, and target-set
+construction. A closure completed there is referenced, not charged to every
+target. Only a request identity that cannot truthfully be closed until a target
+root begins creates a root-contained closure gate. Capture-service segments may
+contain actual-send children. The public
+`normalize_nar_historical_input_source_records(...)` is one inclusive pure
+normalization/source-record boundary; individual parser/validation/identity
+labels need not split. `build_historical_input_snapshot(...)` is a standalone
+pure `WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED` leaf.
+
+### Freeze endpoint and coverage proof
+
+Existing semantics are preserved exactly: snapshot save → exact reload → UTC
+`freeze_completed_at` → receipt construction/save/reload.
+`SNAPSHOT_FREEZE_COMPLETION = EXACT_SNAPSHOT_RELOAD_VERIFIED_BOUNDARY` and
+`FREEZE_RECEIPT_PUBLICATION_AFTER_FREEZE_COMPLETION != PRE_C_FREEZE_BUDGET`.
+Phase108 needs a controlled completion observer called only after the existing
+UTC sample, immediately taking a runner-owned monotonic tick; it therefore
+cannot precede causal freeze completion. The observer is strictly observational:
+if it fails after snapshot reload and the UTC sample, ordinary receipt
+construction/publication/reload continues where the existing business contract
+permits. It neither moves nor replaces `freeze_completed_at`, and cannot turn a
+semantic snapshot freeze into a snapshot failure:
+`TIMING_ENDPOINT_INSTRUMENTATION_FAILURE != SNAPSHOT_FREEZE_FAILURE` and
+`FREEZE_ENDPOINT_TELEMETRY_MUST_NOT_CHANGE_FREEZE_SEMANTICS`. A completion
+artifact requires the captured tick; observer or completion-publication failure
+leaves timing evidence incomplete, never reconstructed from snapshot/UTC
+metadata: `PERSISTED_SNAPSHOT_FREEZE != COMPLETE_OPERATIONAL_TIMING_EVIDENCE`.
+No UTC duration, float timing, or backdating is permitted. Receipt publication
+stays separately reportable post-freeze audit overhead.
+
+The initial evaluator treats each target root interval as the sole critical-path owner.
+Composition records explicitly label contained children, inclusive segments,
+exclusive leaves, sequential/dependency edges, discovery gates, and post-freeze
+overhead. Shared control-plane identities may be referenced but never selected
+as target elapsed. The evaluator validates declared ownership rather than
+inferring nesting by sorting timestamps. Only a future independently proven
+complete exclusive partition may replace root-only calculation. This produces
+no gap and no additive overlap.
+
+### Failure, rehearsal, reconciliation, and recommendation
+
+Qualified provider failures/timeouts remain observations; dependent nodes become
+causally nonexecutable only under the predeclared DAG, while independently
+authorized nodes follow its continuation rule. No successful endpoint is
+fabricated after a provider or snapshot save/reload failure. A late completion
+is retained without backdating but is session-window incomplete. One target
+failure never erases another target's observations or merges its duration.
+
+The future no-network rehearsal uses a sealed `python -I -B` child, Git-object
+fixtures, fake adapters below guarded `Session.send`, and Phase104/105
+authority. It has two required target-root modes: (1) an exact prestaged-history
+and compatible-entry-mapping case, proving those records are not reacquired;
+and (2) a root-generated-history case: current response, entry normalization,
+HorseMarkInfo children, persisted/reloaded history closure, derived result
+requests, past-race construction, snapshot build/freeze. It remains
+diagnostic-only and contacts no provider. Dynamic tests cover HorseMarkInfo
+timeout, discovery parse/validation failure, closure-publication failure, one
+derived RaceMarkTable timeout, genuine zero history, attempted child request
+before closure, partial-closure corruption, stale mapping, and endpoint
+telemetry failure after successful reload.
+
+A pure target-scoped `PRE_C_ENVELOPE_RECONCILIATION` reports target/cutoff,
+immutable execution-plan/manifest/start/endpoint authority, integer elapsed,
+same-process clock domain, initial-operation coverage, all dynamic closures and
+derived admissions, snapshot-prerequisite completeness, composition/nesting,
+child observations, failures, semantic freeze state, timing-evidence state,
+session compliance, coverage gaps/illegal overlaps, cross-target merge
+rejection, and official/diagnostic classification—without calculating Delta or
+repairing evidence. A valid snapshot alone cannot satisfy this reconciliation.
+
+Phase108 success requires
+`COMPLETE_NONOVERLAPPING_MONOTONIC_PRE_C_FREEZE_ENVELOPE` in that rehearsal.
+Tests must cover target/cutoff identity, durable prestaging before start,
+start-reload-before-operation, caller-input rejection, shared-control-plane
+nonduplication, contained attempt/HTTP timing, target-time closure overhead,
+inclusive normalization, past-race/mapping authority, snapshot build,
+dual-clock order, receipt exclusion, no-gap/no-overlap validation,
+provider/freeze/session failures, sealed-child execution, and deterministic
+target reconciliation. Remaining blockers are Phase108 implementation,
+unimplemented official plan/closure/authorization, official-response/market-
+odds closures, concrete-Delta audit, Phase94/95/41, and separate live
+authorization.
+
+No production code/tests/schema were modified; no tests, provider HTTP, live
+campaign, production DB write, Delta selection, commit, or push occurred.
+Recommendation: `DRAFT_FOR_REVIEW`; next
+`CHATGPT_REVIEW_PHASE108_PRE_C_ENVELOPE_WIRING`.
+
+## POST_V0_8_DAILY_REPLAY_107 — PREPARED FOR ARCHITECTURAL REVIEW
+
+Phase: `POST_V0_8_DAILY_REPLAY_107`
+
+Status: `DRAFT_FOR_REVIEW`
+
+Outcome: `READY_FOR_ARCHITECTURAL_REVIEW`
+
+Audit: `NAR_PROSPECTIVE_OFFICIAL_TIMING_CAMPAIGN_AUTHORIZATION_DESIGN_COMPLETE`
+
+Starting/verified HEAD/TREE: `fefcda45ce9e01a13724209ae6012b81bbc0bd46` /
+`12ed5913461e87b7d8f88243b4ff24df45f8da5c` on
+`feature/post-v0.8-daily-replay`; origin agrees and the initial worktree was
+clean. Phase106 is formally reconciled as
+`PHASE106_FINAL_DOCUMENTATION_CORRECTION_REMOTE_VERIFICATION_PASS`,
+`PHASE106_IMPLEMENTATION_REMOTE_VERIFICATION_PASS`,
+`POST_V0_8_DAILY_REPLAY_106 = FORMALLY_COMPLETE`,
+`NAR_DIAGNOSTIC_CAMPAIGN_AND_TIMING_QUALIFICATION = FORMALLY_INTEGRATED`, and
+`DIAGNOSTIC_DENOMINATOR_AND_RECONCILIATION_CONTRACT = VERIFIED`.
+
+Architectural revision: `PHASE107_ARCHITECTURAL_REVIEW_REQUIRES_REVISION` is
+addressed in this updated draft. The review preserves every authority and
+denominator invariant, but corrects the live blocker from independent
+substage visibility to exact end-to-end PRE_C envelope coverage. It authorizes
+neither implementation nor provider HTTP.
+
+### Primary finding and disposition
+
+`DIAGNOSTIC_CAMPAIGN_SUCCESS != OFFICIAL_LIVE_CAMPAIGN_AUTHORIZATION` and
+`SYNTHETIC_LATENCY != PROVIDER_OPERATIONAL_LATENCY`. Phase106 proves the
+sealed-child, actual-send-guard, controlled-issuance, fake-adapter, and
+read-only-reconciliation mechanics only. It cannot promote a diagnostic
+declaration or fixture timing into a prospective official authority.
+
+The current Phase105 wrapper is a generic primitive and has no production call
+site for `measure_nar_operation`. The bootstrap, daily-target, official, and
+market HTTP stages plus snapshot and post-C candidate boundaries are not wired;
+raw validation, parsing, provider identity binding, and freeze-receipt
+substage labels are not all independently observable. That is not itself a
+critical-path gap: `SEMANTIC_SUBSTAGE_VISIBILITY != CRITICAL_PATH_COVERAGE_REQUIREMENT`.
+The blocker is that no reviewed monotonic composition covers every interval
+from PRE_C operational start through exact snapshot-reload-verified freeze
+completion. Freeze
+`LIVE_CAMPAIGN_AUTHORIZATION_BLOCKED_PENDING_END_TO_END_PRE_C_ENVELOPE_WIRING`.
+
+`UNRESOLVED_SUBSTAGE_LABEL != UNMEASURED_TIME_INTERVAL`. A reviewed inclusive
+wrapper around `normalize_nar_historical_input_source_records(...)` may cover
+parsing, validation, provider/external identity derivation, normalization, and
+source-record construction without separately timing every internal helper.
+`build_historical_input_snapshot(...)` is an exact standalone pure boundary,
+so `SNAPSHOT_CONSTRUCTION` is reclassified as
+`WRAPPER_PRIMITIVE_AVAILABLE_NOT_WIRED`, not unresolved semantic timing.
+Likewise an inclusive `capture_supplied_response(...)` envelope may cover its
+clock work, transport fetch, response checks, capture construction, and archive
+save; its nested actual-send HTTP attempt is retained as a child and never
+added to its parent duration.
+
+No provider HTTP or live campaign is authorized by this design. This is an
+architectural prerequisite report, not a request authorization.
+
+### Prospective official authority
+
+The recommended future immutable envelope is
+`NAROperationalTimingProspectiveCampaignPlanV1`
+(`nar-operational-timing-prospective-campaign-plan-v1:<sha256>`). Before any
+provider request it binds the exact V2 configuration/session, repository and
+declared commit, target-day scope, serial/no-retry regime, fixed session/window
+and stopping rule, normal-load cap, ordered root nodes, allowed discovery
+graph, canonical discovery algorithms, continuation DAG, and composition
+roles. It contains no results, payouts, ROI, later entry status, success-count
+goal, or retrospective field. Its plan fixes the denominator shape before the
+first attempt.
+
+The root graph is exactly the current serial supplier path: official home,
+monthly root, locator script, then monthly schedule. Complete canonical
+monthly-schedule evidence is the first discovery closure point: its reviewed
+normalizer yields ordered venue locators, from which exact RaceList request
+nodes can be committed. A future append-only closure declaration plus
+exact-reloaded service-clock verification receipt binds source terminals,
+algorithm/version, ordered derived nodes, and causal close time. It is never
+an empty success after upstream failure. Partial or invalid monthly discovery
+is `DISCOVERY_CLOSURE_FAILED`/integrity failure, not a selectable partial
+population. Official-response and market-odds request populations still need
+separate source-bound canonical closure algorithms before inclusion.
+
+The official companion must be distinct from the Phase106 diagnostic companion
+and may only operate against the exact normal Phase105 parent schema; an archive
+containing diagnostic tables or declaration cannot be the first official
+campaign archive. Schema presence is not authority:
+`OFFICIAL_SCHEMA_PRESENT != OFFICIAL_LIVE_CAMPAIGN_AUTHORIZED`.
+
+The controlled future sequence is: archive V2 configuration/session and
+persist/reload the envelope; prospectively issue V2 activation; hold the
+Phase104 lock and issue sealed source/runtime binding, one-shot claim,
+readiness, and current-process capability; confirm no diagnostic state and
+zero attempts; persist/reload a controlled prospective execution authorization
+bound to the plan, activation, runtime/readiness, and claim; then issue a
+nonpersistent official-plan capability. Root nodes may then publish Phase105
+attempts. Derived nodes additionally require their exact closure-verification
+receipt before publication. All plan/activation/readiness/authorization timing
+must qualify before the immutable session start; none may be backdated.
+
+Every send retains Phase105 ordering: persisted/reloaded attempt, actual-send
+environment verification within guarded `Session.send`, then provider bytes
+only for `QUALIFIED_DIRECT_REQUEST_ENVIRONMENT`. `max_retries=0` remains
+unchanged. A qualified provider timeout/failure is one planned denominator
+observation, not a replacement request. Environment rejection sends no bytes
+and is not provider latency.
+
+### Denominator, failure continuation, and freeze
+
+The denominator is the exact union of predeclared root nodes and nodes in
+prospectively verified closures, under a fixed DAG; it is never the number of
+successful or observed samples. Qualified provider failures/timeouts remain
+visible observations. Only their dependent successful-output nodes become
+causally nonexecutable; independently authorized branches continue only where
+the predeclared plan requires. An unresolved attempt is integrity failure, not
+an inferred upstream failure. A runnable missing node is unexplained absence.
+Session expiry blocks late derived nodes without moving the window or
+backdating admission. A crash consumes its claim/session permanently and a
+replacement needs a wholly new session, activation, claim, plan, and
+authorization. Campaigns cannot silently merge across claims or target scopes.
+
+`SNAPSHOT_FREEZE_COMPLETION = EXACT_SNAPSHOT_RELOAD_VERIFIED_BOUNDARY`.
+`freeze_completed_at` remains the Phase99/98 UTC causal sample after snapshot
+repository save and exact reload, before receipt construction/archive
+publication, and must not be redefined. `FREEZE_RECEIPT_PUBLICATION_AFTER_FREEZE_COMPLETION
+!= PRE_C_FREEZE_BUDGET`: receipt construction/save/reload are separately useful
+post-freeze audit overhead, not an automatic extension of the prediction-cutoff
+Delta budget.
+
+Phase108 must capture a campaign-owned monotonic freeze-completion tick after
+the same save/reload verification and retain the existing controlled UTC sample
+without wall-clock subtraction, floats, or backdating. A future timing campaign
+is sufficient only if its reviewed causal graph covers every interval from
+`PRE_C_OPERATIONAL_ENVELOPE_START` to that endpoint once, gives every parent/
+leaf/sequential/dependency relationship an explicit nesting rule, and selects a
+non-overlapping composition for critical-path derivation. It must not sum all
+timing rows.
+
+### Future reconciliation, tests, and recommendation
+
+A future official reconciler must be pure/read-only and report exact
+plan/closure/authorization ancestry, qualified observations and qualified
+provider failures/timeouts, environment/precondition blocks, causal
+nonexecution, unresolved and missing authorized nodes, sequence/overhead
+defects, session-window blocks, closure failures, and integrity failures. It
+may classify campaign states such as
+`COMPLETE_OFFICIAL_MEASUREMENT_CAMPAIGN`, `INCOMPLETE_CAUSAL_PROVIDER_FAILURE`,
+`DISCOVERY_CLOSURE_FAILED`, `INCOMPLETE_SESSION_WINDOW`, and
+`INCOMPLETE_EVIDENCE_INTEGRITY_FAILURE`; it must never erase a qualified
+observation or repair evidence.
+
+The immediate prerequisite is **Phase108 — PRE_C Critical-Path Envelope
+Wiring**: wire approved production operations to Phase105 authority without
+changing business behavior; establish explicit inclusive parent, leaf,
+sequential, and dependency relations; cover acquisition, inclusive source
+normalization, standalone snapshot construction, persistence, exact reload,
+and the monotonic freeze endpoint; and implement the plan/closure/authorization
+and request-admission guards without HTTP. It must not split every unresolved
+substage merely to create telemetry. A deterministic no-network rehearsal must
+prove no coverage gap or double counting, retain qualified failures/timeouts,
+and report receipt publication separately. A later separate prospective
+live-campaign authorization review may choose a minimal normal-load scope only
+after it proves this complete PRE_C envelope and a prospective denominator.
+Required tests cover schema-without-authorization, root/derived admission,
+closure exact reload/failure/partial cases, timeout retention, independent
+continuation, session expiry, crash replacement, diagnostic exclusion,
+actual-send gating, zero retries/no redundant load, nested-duration exclusion,
+freeze-endpoint timing, and deterministic reconciliation.
+
+Remaining blockers are the Phase108 end-to-end PRE_C envelope/authority foundation,
+official-response and market-odds closure definitions,
+`CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`, Phase94/95
+entry-status authority, Phase41 market eligibility, and later explicit live
+campaign authorization. No production code/tests/schema were modified, no
+provider HTTP/live campaign/production DB write/Delta selection occurred, and
+no tests were run for this design-only activity.
+
+Recommendation: `DRAFT_FOR_REVIEW`; next
+`CHATGPT_REVIEW_PHASE107_PROSPECTIVE_CAMPAIGN_AUTHORIZATION`.
+
 ## POST_V0_8_DAILY_REPLAY_106 — IMPLEMENTED FOR INDEPENDENT REVIEW
 
 Phase: `POST_V0_8_DAILY_REPLAY_106`

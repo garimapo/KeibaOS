@@ -65,6 +65,28 @@ def test_clock_only_after_commit_and_exact_reload_then_archive():
     assert connection.execute("SELECT count(*) FROM nar_snapshot_freeze_receipts").fetchone() == (1,)
 
 
+def test_optional_endpoint_observer_after_utc_before_receipt_and_noninterfering_failure():
+    snapshot = _snapshot()
+    completed = snapshot.identity.captured_at + timedelta(minutes=2)
+    for fails in (False, True):
+        repo = SnapshotRepoSpy(snapshot)
+        _, archive = _archive()
+        def clock():
+            repo.events.append("utc")
+            return completed
+        def observer(value):
+            assert value == completed
+            assert archive._connection.execute("SELECT count(*) FROM nar_snapshot_freeze_receipts").fetchone() == (0,)
+            repo.events.append("monotonic-endpoint")
+            if fails:
+                raise RuntimeError("observational telemetry unavailable")
+        receipt = issue_historical_input_snapshot_freeze_receipt(snapshot=snapshot, snapshot_repository=repo,
+            archive=archive, utc_clock=clock, _freeze_endpoint_observer=observer)
+        assert repo.events == ["commit-return", "exact-reload", "utc", "monotonic-endpoint"]
+        assert receipt.freeze_completed_at == completed
+        assert archive.load_freeze_receipt(receipt_identity=receipt.receipt_identity) == receipt
+
+
 def test_missing_mismatched_reload_blocks_clock_and_receipt():
     snapshot = _snapshot()
     for loaded in (None, _snapshot(passing_order="2-2-2-2"), _snapshot(source_url="https://example.test/other")):

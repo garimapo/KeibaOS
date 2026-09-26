@@ -202,6 +202,23 @@ class SQLiteNAROperationalTimingAttemptArchive:
         ).fetchall()
         return tuple(self.load_attempt(attempt_identity=row[0]) for row in rows)
 
+    def load_overhead_for_attempt(self, *, attempt_identity: str) -> tuple[NARTimingPublicationOverheadV2, ...]:
+        """Read nonrecursive overhead with exact row/content/parent validation."""
+        schema.require_nar_operational_timing_attempt_archive_compatible_schema(self._connection)
+        parent = self.load_attempt(attempt_identity=attempt_identity)
+        rows = self._connection.execute(
+            f"SELECT * FROM {schema.OVERHEAD} WHERE attempt_identity=? ORDER BY stage", (attempt_identity,)
+        ).fetchall()
+        result = []
+        for row in rows:
+            value = NARTimingPublicationOverheadV2.from_json(row[-1])
+            if (parent is None or value.campaign_execution_identity != parent.campaign_execution_identity
+                    or (value.overhead_identity, value.campaign_execution_identity, value.attempt_identity,
+                        value.stage.value) != tuple(row[:-1])):
+                raise TimingArchiveError("stored overhead evidence is corrupt")
+            result.append(value)
+        return tuple(result)
+
     def list_nonqualifying_http_attempts(self, *, claim_identity: str) -> tuple[NAROperationalTimingAttemptV2, ...]:
         """Future official aggregation must fail closed if this is nonempty."""
         schema.require_nar_operational_timing_attempt_archive_compatible_schema(self._connection)

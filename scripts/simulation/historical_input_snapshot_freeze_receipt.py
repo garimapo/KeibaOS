@@ -112,6 +112,7 @@ class _ReceiptArchive(Protocol):
 def issue_historical_input_snapshot_freeze_receipt(
     *, snapshot: HistoricalInputSnapshot, snapshot_repository: _SnapshotRepository,
     archive: _ReceiptArchive, utc_clock: Callable[[], datetime],
+    _freeze_endpoint_observer: Callable[[datetime], None] | None = None,
 ) -> HistoricalInputSnapshotFreezeReceipt:
     """Save, exactly reload, sample the service clock, then durably archive proof.
 
@@ -130,6 +131,13 @@ def issue_historical_input_snapshot_freeze_receipt(
             or compute_historical_input_snapshot_content_sha256(snapshot=loaded) != snapshot.content_sha256):
         raise SnapshotFreezeError("committed snapshot did not reload exactly")
     completed = _utc(utc_clock())
+    if _freeze_endpoint_observer is not None:
+        try:
+            _freeze_endpoint_observer(completed)
+        except Exception:
+            # Timing telemetry cannot change an already verified semantic freeze.
+            # The observer owner retains incomplete telemetry; never reconstruct it.
+            pass
     receipt = HistoricalInputSnapshotFreezeReceipt(
         snapshot.identity, snapshot.internal_race_id, snapshot.content_sha256,
         snapshot.information_cutoff, completed)

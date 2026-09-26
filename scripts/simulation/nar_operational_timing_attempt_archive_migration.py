@@ -95,6 +95,12 @@ def require_nar_operational_timing_attempt_archive_compatible_schema(connection:
     if objects == base._DDL | activation._DDL | v2._DDL | runtime._DDL | _DDL:
         require_nar_operational_timing_attempt_archive_schema(connection)
     else:
+        # Do not import the optional Phase108 companion for older exact unions.
+        # Older sealed source bundles legitimately have no Phase108 module.
+        if "nar_pre_c_envelope_schema_migrations" in objects:
+            from scripts.simulation import nar_pre_c_operational_envelope_archive_migration as envelope
+            envelope.require_nar_pre_c_operational_envelope_archive_schema(connection)
+            return
         from scripts.simulation import nar_operational_timing_diagnostic_archive_migration as diagnostic
         if objects != base._DDL | activation._DDL | v2._DDL | runtime._DDL | _DDL | diagnostic._DDL:
             raise RuntimeError("attempt archive is not an exact known union")
