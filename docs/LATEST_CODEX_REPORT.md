@@ -1,6 +1,60 @@
 # Latest Codex Report
 
-## POST_V0_8_DAILY_REPLAY_108 — CORRECTIVE IMPLEMENTATION FOR INDEPENDENT REVIEW
+## POST_V0_8_DAILY_REPLAY_108 — FINAL DOCUMENTATION
+
+Phase: `POST_V0_8_DAILY_REPLAY_108`
+
+Formal Status: `FORMALLY_COMPLETE`
+
+State: `COMPLETED`
+
+Outcome: `PHASE108_TARGET_SCOPED_PRE_C_ENVELOPE_FORMALLY_INTEGRATED`
+
+Design Review: `PHASE108_PRE_C_CRITICAL_PATH_ENVELOPE_WIRING_DESIGN_REVIEW_PASS`
+
+Implementation: `NAR_TARGET_SCOPED_PRE_C_CRITICAL_PATH_ENVELOPE_IMPLEMENTED`
+
+Final dispositions:
+
+* `PHASE108_IMPLEMENTATION_REVIEW_PASS`
+* `PHASE108_REVIEW_CORRECTIONS_VERIFIED`
+* `PHASE108_POST_COMMIT_SEALED_VERIFICATION_REVIEW_PASS`
+* `PHASE108_IMPLEMENTATION_COMMIT_REMOTE_VERIFICATION_PASS`
+* `POST_V0_8_DAILY_REPLAY_108 = FORMALLY_COMPLETE`
+* `NAR_TARGET_SCOPED_PRE_C_CRITICAL_PATH_ENVELOPE = FORMALLY_INTEGRATED`
+* `TARGET_SCOPED_PRE_C_ENVELOPE_CONTRACT = VERIFIED`
+* `FINAL_COMMIT_SEALED_SOURCE_VERIFICATION = PASS`
+
+Implementation authority:
+
+* Commit: `f0bfaed77c86d266050e8e56afc4686936213492`
+* Tree: `66466e50cc36842c23daa7c42a180a66fbe7ecb3`
+* Parent: `fefcda45ce9e01a13724209ae6012b81bbc0bd46`
+* Message: `feat: add Phase108 PRE_C operational envelope`
+
+Precommit verification:
+
+* correction tests: **5 passed**;
+* Phase108/freeze focused tests: **37 passed, 2 deferred sealed tests skipped**;
+* relevant regressions: **191 passed, 201 subtests passed**;
+* full repository: **4718 passed, 4 skipped, 2846 subtests passed**;
+* prestaged-history and root-generated-history worktree rehearsals: `PRECOMMIT_NO_NETWORK_REHEARSAL_PASS`.
+
+Post-commit sealed verification used the exact Git-object source and real `python -I -B`. The sealed-child test passed **2 tests**, with both markers:
+
+`FINAL_COMMIT_SEALED_PHASE108_REHEARSAL_PASS:PRESTAGED_HISTORY`
+
+`FINAL_COMMIT_SEALED_PHASE108_REHEARSAL_PASS:ROOT_GENERATED_HISTORY`
+
+Remote implementation verification confirmed remote HEAD `f0bfaed77c86d266050e8e56afc4686936213492`, tree `66466e50cc36842c23daa7c42a180a66fbe7ecb3`, the required parent, and exactly the reviewed 14 changed paths. The implementation commit was pushed normally without force push. The final worktree and index were clean.
+
+The final architecture retains target-scoped roots, prestaged authority, prospective execution and discovery closures, identity-bound request families, shared provider request/dependency edges, exact start and freeze ordering, noninterfering timing telemetry, monotonic same-process evidence, nonadditive child timing, and deterministic read-only reconciliation. `PRECOMMIT_IMPLEMENTATION_VERIFICATION != FINAL_COMMIT_SEALED_SOURCE_VERIFICATION` remains a verification distinction; final sealed verification is now `PASS`.
+
+`PHASE108_FORMAL_COMPLETION != LIVE_CAMPAIGN_AUTHORIZATION` and `PRE_C_ENVELOPE_IMPLEMENTATION_COMPLETE != CONCRETE_DELTA_AUTHORITY` remain true. `LIVE_CAMPAIGN_AUTHORIZATION = BLOCKED` and `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT` remain unresolved, together with production NAR internal entry/race mapping authority and existing Phase94/95/41 blockers. No provider HTTP, live campaign, production DB writes, statistical/Delta selection, or Phase109 work occurred.
+
+Next: `CHATGPT_REVIEW_PHASE108_FINAL_DOCUMENTATION`.
+
+## POST_V0_8_DAILY_REPLAY_108 — HISTORICAL CORRECTIVE IMPLEMENTATION REPORT
 
 Phase: `POST_V0_8_DAILY_REPLAY_108`
 

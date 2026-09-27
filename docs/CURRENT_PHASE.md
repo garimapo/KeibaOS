@@ -4,13 +4,13 @@
 
 Title: NAR Target-Scoped PRE_C Critical-Path Envelope Wiring
 
-Status: READY_FOR_REVIEW
+Status: FORMALLY_COMPLETE
 
-Formal Status: READY_FOR_REVIEW
+Formal Status: FORMALLY_COMPLETE
 
-State: IMPLEMENTED_FOR_REVIEW
+State: COMPLETED
 
-Outcome: READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW
+Outcome: PHASE108_TARGET_SCOPED_PRE_C_ENVELOPE_FORMALLY_INTEGRATED
 
 Audit: NAR_PRE_C_CRITICAL_PATH_ENVELOPE_WIRING_DESIGN_COMPLETE
 
@@ -20,13 +20,31 @@ Implementation: NAR_TARGET_SCOPED_PRE_C_CRITICAL_PATH_ENVELOPE_IMPLEMENTED
 
 Base Commit and Branch: `fefcda45ce9e01a13724209ae6012b81bbc0bd46` / `feature/post-v0.8-daily-replay`
 
-### Independent implementation review corrections applied
+### Final implementation and verification disposition
 
-Prior disposition: `PHASE108_IMPLEMENTATION_REVIEW_REQUIRES_REVISION`.
+`PHASE108_IMPLEMENTATION_REVIEW_PASS`
 
-Current correction disposition: `PHASE108_IMPLEMENTATION_REVIEW_CORRECTIONS_APPLIED`.
+`PHASE108_REVIEW_CORRECTIONS_VERIFIED`
 
-Both approved pre-commit corrections are implemented and verified in the uncommitted worktree. The execution plan now canonically binds the closed V1 request-family tuple; unique provider request nodes and append-only history dependency edges support exact shared capture reuse after the later closure/dependency reload. Phase108 is returned for independent implementation review, is not formally complete, and cannot authorize a live campaign.
+`PHASE108_POST_COMMIT_SEALED_VERIFICATION_REVIEW_PASS`
+
+`PHASE108_IMPLEMENTATION_COMMIT_REMOTE_VERIFICATION_PASS`
+
+`POST_V0_8_DAILY_REPLAY_108 = FORMALLY_COMPLETE`
+
+`NAR_TARGET_SCOPED_PRE_C_CRITICAL_PATH_ENVELOPE = FORMALLY_INTEGRATED`
+
+`TARGET_SCOPED_PRE_C_ENVELOPE_CONTRACT = VERIFIED`
+
+`FINAL_COMMIT_SEALED_SOURCE_VERIFICATION = PASS`
+
+The reviewed implementation is authoritative in local and remote commit `f0bfaed77c86d266050e8e56afc4686936213492`, tree `66466e50cc36842c23daa7c42a180a66fbe7ecb3`, parent `fefcda45ce9e01a13724209ae6012b81bbc0bd46`. Phase108 is formally integrated. Formal completion does not authorize an official/live campaign.
+
+Sealed markers:
+
+`FINAL_COMMIT_SEALED_PHASE108_REHEARSAL_PASS:PRESTAGED_HISTORY`
+
+`FINAL_COMMIT_SEALED_PHASE108_REHEARSAL_PASS:ROOT_GENERATED_HISTORY`
 
 #### Correction 1 — identity-bound request-family authority
 
@@ -56,27 +74,29 @@ Reconciliation must report unique provider requests/captures separately from clo
 
 Required correction tests must cover canonical request-family identity/versioning, rejection of unreviewed page kinds, shared RaceMarkTable closure dependencies with exactly one fake provider request, later-closure exact reload before reuse, source-record reuse where existing normalizers permit it, shared failure retention/no retry, and deterministic reconciliation of one provider observation versus multiple dependency edges. Existing Phase108 rehearsals, zero-history, start/closure ordering, freeze/timing, crash/no-resume, schema, and regression requirements remain unchanged.
 
-The verification ordering remains frozen: `PRECOMMIT_IMPLEMENTATION_VERIFICATION != FINAL_COMMIT_SEALED_SOURCE_VERIFICATION`; `FINAL_COMMIT_SEALED_SOURCE_VERIFICATION = PENDING_EXPLICIT_COMMIT_APPROVAL`. Final sealed Git-object verification remains post-commit/pre-push.
+The verification distinction remains frozen: `PRECOMMIT_IMPLEMENTATION_VERIFICATION != FINAL_COMMIT_SEALED_SOURCE_VERIFICATION`; `FINAL_COMMIT_SEALED_SOURCE_VERIFICATION = PASS`. The sealed verification used the post-commit/pre-push Git-object workflow.
 
-### Current implementation and verification disposition
+### Verified implementation and verification disposition
 
-The implementation is uncommitted and confined to 14 Allowed Files. The target-scoped diagnostic root, immutable prestaged manifest/execution plan, controlled durable start, entry/history closures, append-only explicit companion, actual guarded Phase105 HTTP children, independent snapshot prerequisite proof, real builder/save/exact reload path, noninterfering freeze observer, same-process monotonic completion, and deterministic read-only reconciliation are implemented for review. No Phase108 formal completion or official/live authorization is claimed.
+The committed implementation is confined to the 14 reviewed Allowed Files. It provides the target-scoped diagnostic root, immutable prestaged manifest/execution plan, controlled durable start, entry/history closures, append-only explicit companion, guarded Phase105 HTTP children, independent snapshot prerequisite proof, real builder/save/exact reload path, noninterfering freeze observer, same-process monotonic completion, and deterministic read-only reconciliation. Phase108 formal completion is recorded; official/live authorization remains blocked.
 
 Both worktree modes are `PRECOMMIT_NO_NETWORK_REHEARSAL_PASS`: prestaged history uses one current DebaTable fake-adapter call and no history acquisition; root-generated history uses the current call, two HorseMarkInfo calls (including canonical proven zero history), and one authorized RaceMarkTable call. Existing source/discovery/builder/repository semantics are unchanged. The exact committed fixture mapping is prestaged in both modes; a production NAR entry-mapping/internal-race producer remains unresolved. Synthetic fixture lineage pairing is disclosed in `docs/LATEST_CODEX_REPORT.md` and has no official source standing.
 
 Correction verification was rerun: existing Phase108/freeze focused tests 37 passed / 2 deferred sealed tests skipped; new correction-focused tests 5 passed; required historical-input/capture/Phase99–106 regressions 191 passed / 201 subtests passed. Full repository pytest on the final corrective implementation: 4718 passed / 4 skipped / 2846 subtests passed. The other two skips are existing Windows symlink-capability conditions. Both primary rehearsals remain `PRECOMMIT_NO_NETWORK_REHEARSAL_PASS`. A synthetic two-horse shared-page integration also completes with one RaceMarkTable provider observation and two closure dependency edges; shared timeout/failure retains one observation and leaves both dependencies unsatisfied without retry. Static/search and Allowed-Files audits passed; final diff/status evidence is recorded in the latest report.
 
 `PRECOMMIT_IMPLEMENTATION_VERIFICATION != FINAL_COMMIT_SEALED_SOURCE_VERIFICATION`.
-`FINAL_COMMIT_SEALED_SOURCE_VERIFICATION = PENDING_EXPLICIT_COMMIT_APPROVAL`.
-Precommit tests explicitly isolate the source-origin dependency in test setup and prove functional composition only; they do not attest the uncommitted implementation as sealed Git source. Both real `python -I -B` Phase108 sealed rehearsals remain post-review/post-approved-commit and pre-push. Stage, commit, and push were not performed.
+`FINAL_COMMIT_SEALED_SOURCE_VERIFICATION = PASS`.
+Precommit tests proved functional composition; post-commit sealed verification used the exact Git-object source with real `python -I -B`. The verified implementation commit was pushed normally with no force push.
 
-`LIVE_CAMPAIGN_AUTHORIZATION = BLOCKED` and `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT` remain frozen. Next: `CHATGPT_REVIEW_PHASE108_IMPLEMENTATION`.
+`PHASE108_FORMAL_COMPLETION != LIVE_CAMPAIGN_AUTHORIZATION`.
+`PRE_C_ENVELOPE_IMPLEMENTATION_COMPLETE != CONCRETE_DELTA_AUTHORITY`.
+`LIVE_CAMPAIGN_AUTHORIZATION = BLOCKED` and `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT` remain frozen. Production NAR internal entry/race mapping authority, concrete operational timing/Delta decision, and Phase94/95/41 blockers remain downstream authorization dependencies. Next: `CHATGPT_REVIEW_PHASE108_FINAL_DOCUMENTATION`.
 
 ### Retained approved implementation contract
 
 Phase107 is reconciled: `PHASE107_PROSPECTIVE_OFFICIAL_TIMING_CAMPAIGN_AUTHORIZATION_DESIGN_REVIEW_PASS`, `POST_V0_8_DAILY_REPLAY_107 = ARCHITECTURAL_AUDIT_COMPLETE`, `LIVE_CAMPAIGN_AUTHORIZATION = BLOCKED`, and `LIVE_CAMPAIGN_AUTHORIZATION_BLOCKED_PENDING_END_TO_END_PRE_C_ENVELOPE_WIRING = CONFIRMED`. Phase106 remains formally complete. Phase99–107 authority, anti-hindsight, source isolation, actual-send, zero-retry, denominator, diagnostic-separation, and crash/no-resume invariants remain frozen.
 
-Architectural Revision: `PHASE108_ARCHITECTURAL_REVIEW_REQUIRES_REVISION` was addressed by the approved contract below. The root is refined from a potentially day-wide acquisition span into an exact target/cutoff envelope, with separately immutable root-required-work planning and controlled dynamic-discovery closures. The uncommitted implementation above follows that approval; live authorization does not follow.
+Architectural Revision: `PHASE108_ARCHITECTURAL_REVIEW_REQUIRES_REVISION` was addressed by the approved contract below. The root is an exact target/cutoff envelope, with separately immutable root-required-work planning and controlled dynamic-discovery closures. The committed implementation follows that approval; live authorization does not follow.
 
 Allowed Files:
 
@@ -196,7 +216,7 @@ Stop Condition: stop if the remote/base commit differs, unexpected initial files
 `FREEZE_ENDPOINT_TELEMETRY_MUST_NOT_CHANGE_FREEZE_SEMANTICS`.
 `PERSISTED_SNAPSHOT_FREEZE != COMPLETE_OPERATIONAL_TIMING_EVIDENCE`.
 
-**Live authorization remains blocked.** The exact blocker is not that every semantic V2 label lacks a distinct timer. The uncommitted no-network composition now proves the target-root mechanics, but independently reviewed final sealed-source verification and prospective official production composition/authorization remain absent. Retain `LIVE_CAMPAIGN_AUTHORIZATION_BLOCKED_PENDING_END_TO_END_PRE_C_ENVELOPE_WIRING`; precommit fixture success cannot authorize a provider operation.
+**Live authorization remains blocked.** The exact blocker is not that every semantic V2 label lacks a distinct timer. The committed no-network composition and post-commit sealed-source verification prove the target-root mechanics, but prospective official production composition/authorization remains absent. Retain `LIVE_CAMPAIGN_AUTHORIZATION_BLOCKED_PENDING_END_TO_END_PRE_C_ENVELOPE_WIRING`; fixture success cannot authorize a provider operation.
 
 ### Campaign control plane versus target PRE_C envelope
 
@@ -314,9 +334,9 @@ Both Phase108 cases have passed as ordinary precommit worktree tests. Only after
 
 Likely future paths are a narrow target PRE_C envelope/composition module, controlled envelope archive companion/repository, prestaged-input manifest authority, immutable root execution-plan and entry/history-closure authorities, a freeze-completion observer owned by campaign composition, narrow daily-acquisition closure seam, controlled entry-mapping resolver/authority, and focused tests. Required tests cover: exact target/cutoff identity; immutable plan and durable manifest before start; start sample then exact start reload before first causal operation; caller input cannot bypass manifest/root generation; shared control-plane duration nonduplication; attempt publication contained by root; child HTTP nonaddition; current-entry and past-race closure save/reload before derived children; inclusive source normalization; exact past-race/mapping authority; genuine zero-history versus failure; partial closure/stale mapping rejection; standalone snapshot construction; save/reload then UTC then monotonic endpoint order; endpoint telemetry noninterference; receipt publication excluded; no-gap/root-only and no-double-count validation; provider failure, discovery failure, snapshot persistence failure, and session-expiry outcomes; sealed-child two-mode fake-adapter rehearsal; and deterministic target reconciliation.
 
-Remaining blockers: independent Phase108 implementation review and final-commit sealed verification; `LIVE_CAMPAIGN_AUTHORIZATION_BLOCKED_PENDING_END_TO_END_PRE_C_ENVELOPE_WIRING`; unimplemented prospective official plan/closure/authorization and official production dispatch; real NAR entry-mapping/internal-race authority; official-response/market-odds closure definitions; `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`; Phase94 historical entry-status authority; Phase95 prospective entry-status semantics; Phase41 market eligibility; and separate explicit live-campaign authorization.
+Remaining blockers: `LIVE_CAMPAIGN_AUTHORIZATION_BLOCKED_PENDING_END_TO_END_PRE_C_ENVELOPE_WIRING`; unimplemented prospective official plan/closure/authorization and official production dispatch; real NAR entry-mapping/internal-race authority; official-response/market-odds closure definitions; `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`; Phase94 historical entry-status authority; Phase95 prospective entry-status semantics; Phase41 market eligibility; and separate explicit live-campaign authorization. Independent review, sealed verification, and implementation remote verification are complete.
 
-Recommendation: independently review this uncommitted `READY_FOR_REVIEW` implementation. Do not stage/commit without explicit approval, do not push without separate approval and successful final-commit sealed verification, and do not contact NAR or authorize a live campaign.
+The implementation and post-commit sealed verification have passed independent review, and the target-scoped envelope is formally integrated. Do not authorize a live campaign or concrete Delta selection from Phase108 alone, and do not contact NAR.
 
 ---
 
