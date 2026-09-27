@@ -1,5 +1,165 @@
 # Latest Codex Report
 
+## POST_V0_8_DAILY_REPLAY_110 — PREPARATION / ARCHITECTURAL AUDIT
+
+Phase: `POST_V0_8_DAILY_REPLAY_110`
+
+Status: `WAITING_FOR_PHASE_INSTRUCTION`
+
+Formal Status: `ARCHITECTURAL_AUDIT_COMPLETE`
+
+State: `BLOCKED_PENDING_TRUSTED_SINGLE_SEND_IDENTITY_INGESTION_PREREQUISITE`
+
+Outcome: `PHASE110_IDENTITY_PERSISTENCE_BLOCKED_BY_TRUSTED_ACQUISITION_AND_LEGACY_WRITER_SAFETY`
+
+Review disposition: `PHASE110_REVISED_ARCHITECTURAL_REVIEW_PASS`
+
+`POST_V0_8_DAILY_REPLAY_110 = ARCHITECTURAL_AUDIT_COMPLETE`.
+`PHASE110_IMPLEMENTATION = BLOCKED_PENDING_TRUSTED_INGESTION_PREREQUISITE`.
+
+Verified base: branch `feature/post-v0.8-daily-replay`, commit
+`64f9ad239cabad13feaa8febb6cb5754dce57a6b`, tree
+`caa62f5c4bb8971b158a8598d9cdb2d05448ae20`.
+
+### Reconciled predecessor state
+
+Phase108 remains formally complete and its final sealed-source verification passed.
+Phase109 remains an architectural audit only, with
+`PHASE109_PRODUCTION_ENTRY_MAPPING_BLOCKED_BY_IDENTITY_COMPLETE_INGESTION`.
+Neither conclusion authorizes provider operation, a live campaign, or a Delta.
+
+### Audit result
+
+The repository does not currently have an independent production producer for the
+complete NAR race-entry identity universe.
+
+`races.id` is allocated by legacy `save_race()` and can be the internal race namespace,
+but its lookup `(race_date, organization, place, race_no)` is a non-unique `LIMIT 1`
+lookup without a canonical-provider identity receipt.  `horses.id` is allocated by
+legacy `save_horse()` and is used by downstream code as a race-scoped `race_entry_id`,
+not as a proven global horse identity.  Its legacy source is incomplete: `HorseParser`
+skips cancelled/excluded Deba rows before a row or internal ID is created.
+
+The current prediction input path reads all `get_horses_by_race(race_id)` rows without
+an independent eligibility filter.  Therefore adding cancelled identity-only entries
+to the legacy entry namespace without a default-deny selection gate could make them
+predictable/rankable/selectable.  Identity persistence cannot be conflated with status
+or eligibility.
+
+V010 external race/entry rows remain relational consistency evidence only.  Snapshot
+save can create them from caller-supplied IDs, so a read-only reload cannot prove an
+independent mapping origin.
+
+### Architectural-review revision
+
+The revised architectural review passed with implementation still blocked.  The
+ordinary `LocalFetcher` path uses `NARProvider.fetch_deba_table()` and feeds decoded
+text to `HorseParser`; it does not naturally produce `NAROfficialResponseCapture`.
+`NAROfficialLiveResponseCaptureService` is a trusted exact-byte acquisition/persistence
+primitive, but does not itself prove campaign/workflow authorization.  A manually
+constructed capture or exact archive reload cannot establish prospective acquisition
+lineage.
+
+`IMMUTABLE_CAPTURE_CONTENT != AUTHORIZED_CAPTURE_PROVENANCE`.
+`CAPTURE_ARCHIVE_EXACT_RELOAD != ACQUISITION_AUTHORITY`.
+`PUBLICLY_CONSTRUCTIBLE_CAPTURE != OFFICIAL_LIVE_ACQUISITION_PROOF`.
+`LEGACY_LOCALFETCHER_DEBA_RESPONSE != TRUSTED_CAPTURE_LINEAGE`.
+`ARCHIVED_CAPTURE_EXISTENCE != PROSPECTIVE_CAPTURE_AUTHORITY`.
+
+No authorized pre-root Deba producer is wired today.  The prerequisite is one reviewed
+single-send prospective acquisition boundary: one authorized canonical request, one
+actual send, immutable capture and exact archive reload, with the same bytes passed to
+legacy enrichment and Phase110 identity extraction.  Phase110 must not issue a second
+request.  Capture lineage must bind authorization, target/URL, actual send, capture ID,
+response digest, observation time and source/runtime ancestry.
+
+The required future wiring is one normal race-day acquisition boundary:
+
+`authorised send once -> same exact bytes -> trusted capture/archive reload -> legacy
+parsing/enrichment + Phase110 identity extraction`.
+
+Phase110 adds no Deba fetch.  The pre-root capture requires prospective target/cutoff
+binding and, unless a narrower rule is reviewed, `observed_at <=
+prediction_information_cutoff`; post-cutoff or Phase108-root capture cannot qualify
+the Phase109 prestaged mapping.
+
+The accepted row ordering is: exact existing race row; trusted one-shot Deba capture;
+legacy parser persistence; complete status-independent extraction from the same
+bytes; exact adoption of matching existing rows; issue only missing identity-bearing
+entries; receipt publication.  Race adoption requires canonical Deba URL/external-race
+identity/target ancestry and one existing `races.id`; Phase110 does not issue a parent
+race.  Entry adoption requires the exact parent and canonical provider horse identity,
+not horse number alone.
+
+New missing rows receive explicit durable `IDENTITY_ONLY` provenance.  Current
+`save_horse()` checks `(race_id, horse_no)` and then inserts via another connection;
+the schema has no reviewed unique constraint making a concurrent Phase110 writer safe.
+Phase110 must not race it.  Also, later `save_horse()` calls suppress duplicates rather
+than enriching an existing identity-only row, so a controlled compatible enrichment
+path is required and must retain nonselection.
+
+`DatabaseRaceInputProvider.load()` uses `get_horses_by_race()` and places every returned
+row in `RacePredictionInput`.  A partial CLI-only gate is insufficient: all production
+horse readers that feed prediction/bet selection must be covered by a reviewed
+eligibility-filtered repository boundary or enforce the same explicit Phase110
+nonselection provenance.  If full reader coverage cannot be established, identity-row
+issuance remains blocked.  This gate never establishes ACTIVE or market eligibility.
+
+The future companion schema remains additive and distinct from V010: acquisition
+lineage, canonical race binding, complete entry bindings, provider horse identity,
+adopted-versus-issued disposition, explicit nonselection state, restrictive ancestry
+and append-only content-addressed receipt.  Missing-entry ID allocation, origin graph
+and receipt facts are transactionally inseparable; post-commit exact reload is required
+before usable authority.  Legacy rows receive Phase110 authority only from an explicit
+binding record.
+
+The required causal handoff is:
+
+`authorised prospective Deba acquisition lineage -> complete Phase110 identity universe
+-> adoption / controlled missing-ID issue -> Phase110 receipt exact reload -> Phase109
+mapping receipt -> Phase108 prestaged manifest -> PRE_C root start`.
+
+The Phase108 root capture remains a distinct target snapshot/freeze measurement unless
+the future contracts lawfully permit reusing the same observation.  Neither operation
+may be benchmark-only redundant provider load.
+
+### Required retained separations
+
+`IDENTITY_PERSISTENCE_AUTHORITY != ENTRY_STATUS_AUTHORITY`.
+`IDENTITY_PERSISTENCE_AUTHORITY != MARKET_ELIGIBILITY`.
+`IDENTITY_COMPLETE_POPULATION != PREDICTION_ELIGIBLE_POPULATION`.
+`ENTRY_IDENTITY_UNIVERSE != OBSERVED_ENTRY_STATUS_UNIVERSE`.
+`PHASE88_FIXTURE_BINDER != DYNAMIC_PRODUCTION_MAPPING_PRODUCER`.
+`V010_MAPPING_ROW_EXISTENCE != INDEPENDENT_PRODUCTION_MAPPING_AUTHORITY`.
+`IDENTITY_ONLY_INSERTION_MUST_NOT_BLOCK_LATER_ENRICHMENT`.
+`HORSE_NUMBER_ONLY_MATCH != EXISTING_INTERNAL_ENTRY_ADOPTION`.
+`IDENTITY_ONLY_DENIAL_MUST_BE_DURABLE_NOT_INFERRED`.
+`PHASE110_NONSELECTION_GATE != POSITIVE_ENTRY_STATUS_AUTHORITY`.
+`POST_C_CAPTURE != PRE_C_IDENTITY_MAPPING_AUTHORITY`.
+`PHASE110_ISSUANCE_MUST_NOT_RACE_LEGACY_SAVE_HORSE`.
+`ALL_HORSES_QUERY != PREDICTION_ELIGIBLE_POPULATION`.
+`IDENTITY_ONLY_DENIAL_MUST_BE_ENFORCED_BEFORE_RACE_PREDICTION_INPUT`.
+
+### Recommended disposition
+
+Phase110 is formally an architectural audit complete, with implementation blocked by
+the trusted single-send ingestion prerequisite and legacy writer/reader safety.  The
+recommended next design phase is `POST_V0_8_DAILY_REPLAY_111` — `NAR Trusted Single-Send
+Deba Acquisition and Identity-Ingestion Boundary`.  It designs authorized one-send
+capture, exact archive reload and same-byte fan-out; it does not create IDs, resolve
+Phase95, grant market eligibility, choose Delta or authorize a live campaign.
+
+The dependency chain remains Phase111 -> Phase110 implementation -> Phase109 mapping
+authority -> Phase108 prestaged manifest/root -> operational timing audit.  Phase95
+status authority and Phase41 market eligibility remain separate blockers.
+
+Activity scope: documentation only.  No production code, tests, schema, provider HTTP,
+production-database access, live campaign, staging, commit or push occurred in the
+preceding revision. This finalization records the architectural review and prerequisite
+disposition; commit/push are performed only after the checks below pass.
+
+---
+
 ## POST_V0_8_DAILY_REPLAY_109 — FINAL ARCHITECTURAL AUDIT
 
 Phase: `POST_V0_8_DAILY_REPLAY_109`
