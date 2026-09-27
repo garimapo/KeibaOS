@@ -1,6 +1,73 @@
 # Latest Codex Report
 
-## POST_V0_8_DAILY_REPLAY_108 — FINAL DOCUMENTATION
+## POST_V0_8_DAILY_REPLAY_109 — FINAL ARCHITECTURAL AUDIT
+
+Phase: `POST_V0_8_DAILY_REPLAY_109`
+
+Status: `WAITING_FOR_PHASE_INSTRUCTION`
+
+Formal Status: `ARCHITECTURAL_AUDIT_COMPLETE`
+
+State: `BLOCKED_PENDING_IDENTITY_COMPLETE_INGESTION_PREREQUISITE`
+
+Outcome: `PHASE109_PRODUCTION_ENTRY_MAPPING_BLOCKED_BY_IDENTITY_COMPLETE_INGESTION`
+
+Audit: `NAR_PRODUCTION_INTERNAL_RACE_AND_ENTRY_MAPPING_AUTHORITY_DESIGN_COMPLETE`
+
+Verified base: `6fc980ab89695b4a083d5e7b4d4811a7ec294d90` / `db06291060dfeebb146a376f27a53b597bff2eae` on `feature/post-v0.8-daily-replay`.
+
+`PHASE109_REVISED_ARCHITECTURAL_REVIEW_PASS`.
+`POST_V0_8_DAILY_REPLAY_109 = ARCHITECTURAL_AUDIT_COMPLETE`.
+`PHASE109_IMPLEMENTATION = BLOCKED_NOT_AUTHORIZED`.
+
+Phase108 is retained as formally complete and sealed-source verified, but `LIVE_CAMPAIGN_AUTHORIZATION = BLOCKED` and `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT` remain unchanged. Phase108's fixture-bound mapping is not production mapping authority.
+
+### Final audit findings
+
+V010 supplies strong relational consistency for exact external-race/internal-race and external-entry/internal-entry relations, including restrictive ancestry and uniqueness. It does not independently prove the origin of those relations.
+
+The V010 writer audit found exactly these committed paths. The migration creates no mapping rows. `SQLiteHistoricalInputSnapshotRepository.save_snapshot()` is a snapshot-derived writer: `_ensure_mappings()` can create absent V010 rows from caller-supplied `internal_race_id` and `race_entry_id`. The schema cannot distinguish those rows afterward from an independently populated relation. The JRA seed repository is independently sourced for JRA only. The Phase88 binder and NAR daily resolver are read-only consumers; tests/fixtures are not production producers.
+
+Therefore:
+
+`V010_MAPPING_ROW_EXISTENCE != INDEPENDENT_PRODUCTION_MAPPING_AUTHORITY`.
+`SNAPSHOT_SAVE_DERIVED_MAPPING != PRE_SNAPSHOT_MAPPING_AUTHORITY`.
+`READ_ONLY_RELOAD_CANNOT_LAUNDER_CALLER_SUPPLIED_MAPPING`.
+`PERSISTED_RELATION != PROVENANCE_OF_RELATION`.
+
+`sqlite_nar_daily_evidence_resolver.py::_prediction` remains a race-only exact read-side precedent, not an origin proof or complete-entry resolver.
+
+The core-table audit found that legacy `save_race()` allocates `races.id` from parsed race-list fields and `save_horse()` allocates `horses.id` from `Horse` rows. Neither table stores a reviewed canonical NAR external identity binding. The legacy race fields/DebaTable URL do not establish an enforced canonical join; horse rows do not persist exact external entry/horse identity.
+
+The normal NAR path is status-filtered: `HorseParser._is_cancelled()` skips `取消`, `除外`, `競走除外`, and `出走取消` rows before `Horse` construction and `horses.id` issuance. An identity-bearing DebaTable row can therefore be absent from ordinary `horses`. Phase88 includes the withdrawn identity in a frozen fixture, but is only a read-only precedent for one target, not a dynamic producer.
+
+`STATUS_FILTERED_HORSE_ROWS != COMPLETE_NAR_ENTRY_IDENTITY_UNIVERSE`.
+`CANCELLED_ENTRY != NONEXISTENT_ENTRY_IDENTITY`.
+`ENTRY_STATUS_INTERPRETATION != ENTRY_IDENTITY_BINDING`.
+`OMITTED_CANCELLED_HORSE_ROW != AUTHORIZED_MAPPING_ABSENCE`.
+`HORSES_TABLE_POPULATION != COMPLETE_MAPPING_POPULATION_UNLESS_PROVEN`.
+
+Conclusion: `RACE_BINDING_AUTHORITY_PARTIAL` and `ENTRY_BINDING_AUTHORITY_PARTIAL_AND_IDENTITY_INCOMPLETE`. The evidence-supported outcome is **C plus D**: V010 is consistency evidence with insufficient provenance, and ordinary NAR ingestion is not identity-complete. No generic V010 receipt may be implemented now. Missing, ambiguous, contradictory, cross-race, snapshot-derived, status-filtered, or incomplete material fails closed.
+
+### Authority layering and next prerequisite
+
+Any future receipt must separate internal-ID origin, external NAR identity observation, binding evidence, V010 relation, and the content-addressed receipt. V010 cannot be the sole provenance assertion.
+
+The required prerequisite is status-independent, independently provenance-bearing NAR race/entry identity persistence. It must preserve every identity-bearing current DebaTable row before status interpretation, bind exact parent-scoped IDs, retain immutable provenance, and expose a complete population read path independent of snapshot callers:
+
+`PHASE95_PROSPECTIVE_ENTRY_STATUS_SOURCE_SEMANTICS_OR_EQUIVALENT_STATUS_INDEPENDENT_IDENTITY_INGESTION = PREREQUISITE_TO_PHASE109_IMPLEMENTATION`.
+
+Phase95 already separates `ENTRY_IDENTITY_UNIVERSE != OBSERVED_ENTRY_STATUS_UNIVERSE`; complete status semantics are not required to define identity existence. The broader `PROSPECTIVE_NAR_ENTRY_STATUS_AUTHORITY_CAPTURE_BLOCKED_SOURCE_SEMANTICS` blocker remains unresolved. Phase94 and Phase41 do not produce mapping IDs and cannot justify omission. `ROOT_CURRENT_DEBA_CAPTURE != PRE_ROOT_MAPPING_AUTHORITY` remains frozen.
+
+After that prerequisite has been reviewed, a future content-addressed receipt may bind the producer evidence, exact target race/entry population, parent checks, V010 topology as consistency evidence, issuance time, and target/cutoff/claim ancestry. It must be persisted/reloaded before root start, then an official-manifest prerequisite check must prove exact equality with normalized current entries. Phase108 V1 stays diagnostic/fixture-bound; it cannot be rewritten or promoted.
+
+Future prerequisite tests must prove snapshot-created V010 rows are rejected as origin authority; read-only reload cannot launder caller data; cancelled identity rows cannot disappear; status-filtered horses cannot qualify without completeness proof; horse number is considered only after exact parent binding; Phase88 cannot bind an arbitrary target; and current-root Deba capture cannot authorize a pre-root manifest. No Phase109 implementation plan is authorized.
+
+No provider HTTP, production database read/write, live campaign, tests, staging, commit, or push occurred before this finalization. Recommendation: do not authorize Phase109 implementation; first prepare and review Phase110.
+
+Recommended next phase: `POST_V0_8_DAILY_REPLAY_110` — `NAR Prospective Identity-Complete Race and Entry Persistence Authority`.
+
+## Historical record — POST_V0_8_DAILY_REPLAY_108 — FINAL DOCUMENTATION
 
 Phase: `POST_V0_8_DAILY_REPLAY_108`
 
@@ -50,7 +117,7 @@ Remote implementation verification confirmed remote HEAD `f0bfaed77c86d266050e8e
 
 The final architecture retains target-scoped roots, prestaged authority, prospective execution and discovery closures, identity-bound request families, shared provider request/dependency edges, exact start and freeze ordering, noninterfering timing telemetry, monotonic same-process evidence, nonadditive child timing, and deterministic read-only reconciliation. `PRECOMMIT_IMPLEMENTATION_VERIFICATION != FINAL_COMMIT_SEALED_SOURCE_VERIFICATION` remains a verification distinction; final sealed verification is now `PASS`.
 
-`PHASE108_FORMAL_COMPLETION != LIVE_CAMPAIGN_AUTHORIZATION` and `PRE_C_ENVELOPE_IMPLEMENTATION_COMPLETE != CONCRETE_DELTA_AUTHORITY` remain true. `LIVE_CAMPAIGN_AUTHORIZATION = BLOCKED` and `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT` remain unresolved, together with production NAR internal entry/race mapping authority and existing Phase94/95/41 blockers. No provider HTTP, live campaign, production DB writes, statistical/Delta selection, or Phase109 work occurred.
+`PHASE108_FORMAL_COMPLETION != LIVE_CAMPAIGN_AUTHORIZATION` and `PRE_C_ENVELOPE_IMPLEMENTATION_COMPLETE != CONCRETE_DELTA_AUTHORITY` remain true. `LIVE_CAMPAIGN_AUTHORIZATION = BLOCKED` and `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT` remain unresolved, together with production NAR internal entry/race mapping authority and existing Phase94/95/41 blockers. No provider HTTP, live campaign, production DB writes, or statistical/Delta selection occurred as part of Phase108 finalization.
 
 Next: `CHATGPT_REVIEW_PHASE108_FINAL_DOCUMENTATION`.
 

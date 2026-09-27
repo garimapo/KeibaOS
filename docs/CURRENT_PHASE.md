@@ -1,6 +1,222 @@
 # Current Phase
 
-## POST_V0_8_DAILY_REPLAY_108
+## POST_V0_8_DAILY_REPLAY_109
+
+Title: NAR Production Internal Race and Entry Mapping Authority
+
+Status: WAITING_FOR_PHASE_INSTRUCTION
+
+Formal Status: ARCHITECTURAL_AUDIT_COMPLETE
+
+State: BLOCKED_PENDING_IDENTITY_COMPLETE_INGESTION_PREREQUISITE
+
+Outcome: PHASE109_PRODUCTION_ENTRY_MAPPING_BLOCKED_BY_IDENTITY_COMPLETE_INGESTION
+
+Audit: NAR_PRODUCTION_INTERNAL_RACE_AND_ENTRY_MAPPING_AUTHORITY_DESIGN_COMPLETE
+
+`PHASE109_REVISED_ARCHITECTURAL_REVIEW_PASS`.
+`POST_V0_8_DAILY_REPLAY_109 = ARCHITECTURAL_AUDIT_COMPLETE`.
+`PHASE109_IMPLEMENTATION = BLOCKED_NOT_AUTHORIZED`.
+
+Base Commit and Branch: `6fc980ab89695b4a083d5e7b4d4811a7ec294d90` / `feature/post-v0.8-daily-replay`
+
+Base Tree: `db06291060dfeebb146a376f27a53b597bff2eae`
+
+### Phase108 reconciliation and boundary
+
+`POST_V0_8_DAILY_REPLAY_108 = FORMALLY_COMPLETE`.
+`NAR_TARGET_SCOPED_PRE_C_CRITICAL_PATH_ENVELOPE = FORMALLY_INTEGRATED`.
+`FINAL_COMMIT_SEALED_SOURCE_VERIFICATION = PASS`.
+
+Phase108 proves only the no-network target-root mechanics. It does not supply a production NAR internal race/entry identity source, and formal completion does not authorize provider HTTP, a live campaign, or a concrete Delta. `LIVE_CAMPAIGN_AUTHORIZATION = BLOCKED` and `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT` remain frozen.
+
+The unresolved precondition is that `build_historical_input_snapshot(...)` still accepts caller-supplied `internal_race_id` and `race_entry_id_by_external_entry_id`. The Phase108 fixture manifest proves only an exact diagnostic fixture mapping. It is not production authority.
+
+`CALLER_SUPPLIED_INTERNAL_MAPPING != PRODUCTION_MAPPING_AUTHORITY`.
+`INTERNAL_RACE_ID_ARGUMENT != INTERNAL_RACE_AUTHORITY`.
+`RACE_ENTRY_MAPPING_REQUIRES_AUTHORITATIVE_PARENT_RACE_BINDING`.
+`HORSE_NUMBER != INTERNAL_RACE_ENTRY_ID`.
+`ENTRY_ENUMERATION != INTERNAL_RACE_ENTRY_ID`.
+`HASH_DERIVATION != INTERNAL_RACE_ENTRY_ID`.
+`EXTERNAL_ENTRY_ID != INTERNAL_RACE_ENTRY_ID`.
+`FIXTURE_MAPPING_AUTHORITY != PRODUCTION_MAPPING_AUTHORITY`.
+
+### Architectural-review revision — authoritative disposition
+
+`PHASE109_ARCHITECTURAL_REVIEW_REQUIRES_REVISION`.
+`PHASE109_IMPLEMENTATION_APPROVAL = NOT_GRANTED`.
+
+The revised audit ends in a specific architectural blocker, not an implementation-ready design:
+
+`PHASE109_PRODUCTION_ENTRY_MAPPING_BLOCKED_BY_IDENTITY_COMPLETE_INGESTION`.
+`PHASE109_MAPPING_AUTHORITY_REQUIRES_STATUS_INDEPENDENT_ENTRY_IDENTITY_PERSISTENCE`.
+
+The following layering is mandatory and must not be collapsed by a future receipt:
+
+```text
+internal ID origin authority
+!= external NAR identity observation authority
+!= binding authority
+!= V010 persisted relation
+!= Phase109 immutable mapping receipt
+```
+
+`INTERNAL_ID_ORIGIN != EXTERNAL_IDENTITY_OBSERVATION`.
+`EXTERNAL_IDENTITY_OBSERVATION != BINDING_AUTHORITY`.
+`BINDING_AUTHORITY != V010_ROW_EXISTENCE`.
+`V010_ROW_EXISTENCE != PHASE109_RECEIPT_AUTHORITY`.
+
+`V010_MAPPING_ROW_EXISTENCE != INDEPENDENT_PRODUCTION_MAPPING_AUTHORITY`.
+`SNAPSHOT_SAVE_DERIVED_MAPPING != PRE_SNAPSHOT_MAPPING_AUTHORITY`.
+`READ_ONLY_RELOAD_CANNOT_LAUNDER_CALLER_SUPPLIED_MAPPING`.
+`PERSISTED_RELATION != PROVENANCE_OF_RELATION`.
+
+`STATUS_FILTERED_HORSE_ROWS != COMPLETE_NAR_ENTRY_IDENTITY_UNIVERSE`.
+`CANCELLED_ENTRY != NONEXISTENT_ENTRY_IDENTITY`.
+`ENTRY_STATUS_INTERPRETATION != ENTRY_IDENTITY_BINDING`.
+`OMITTED_CANCELLED_HORSE_ROW != AUTHORIZED_MAPPING_ABSENCE`.
+`HORSES_TABLE_POPULATION != COMPLETE_MAPPING_POPULATION_UNLESS_PROVEN`.
+
+`ROOT_CURRENT_DEBA_CAPTURE != PRE_ROOT_MAPPING_AUTHORITY`.
+`PHASE88_FIXTURE_BINDER != DYNAMIC_PRODUCTION_MAPPING_PRODUCER`.
+
+### Authority inventory
+
+| Candidate | Inputs and output | Existing authority and integrity | Phase109 assessment |
+| --- | --- | --- | --- |
+| `scripts/migrations/versions/v010_historical_input_snapshot_schema.py` | Defines provider-scoped external race/entry relations to existing internal IDs. | `historical_input_external_races` has the provider-scoped primary key, reverse uniqueness, and FK to `races`; `historical_input_external_entries` has the provider-scoped entry key, reverse uniqueness, parent-race FK, and `(race_id,id)` horse-membership FK. | A relational consistency layer only. V010 stores neither the independent origin of an internal ID nor the provenance of the external-to-internal binding. Row existence is not self-authenticating production authority. |
+| `scripts/simulation/sqlite_nar_daily_evidence_resolver.py::_prediction` | exact NAR external race → internal race | Requires one forward row, one matching reverse row, and an existing `races.id`; absent map is `INTERNAL_RACE_MAPPING_MISSING`. | A race-only read-side precedent. It neither returns a complete entry map nor issues immutable pre-start authority. |
+| `scripts/simulation/repositories/sqlite_historical_input_snapshot_repository.py` | caller-supplied snapshot identities and IDs → source identity/V010 rows → snapshot | `save_snapshot()` calls `_ensure_mappings()` before the snapshot header; `_ensure_external_race()` and `_ensure_external_entry()` insert absent V010 rows using `snapshot.internal_race_id` and each caller-supplied `entry.race_entry_id`. | **Snapshot-derived writer.** This is production-capable persistence, but circular for Phase109: a later read-only reload cannot prove that its mapping existed independently before the supplied snapshot mapping. Current V010 schema has no origin discriminator to distinguish these rows afterward. |
+| `scripts/simulation/nar_race_entry_status_replay_identity_binding.py` | frozen Phase85 V3 Deba identity rows + V010 tables → complete internal binding | Read-only, query-only, schema-validated, full-set checked; validates parent race, entry membership, and horse number as a consistency check. | Strong implementation pattern, but hard-coded to the one published 2025-01-01 / baba 21 / race 6 fixture. It is not a dynamic production NAR campaign producer. |
+| `scripts/database.py`, `scripts/fetch_local.py`, `scripts/parsers/nar_parser.py`, `scripts/parsers/horse_parser.py`, `scripts/models.py` | legacy NAR pages → `races.id` / `horses.id` | `save_race()` and `save_horse()` allocate SQLite AUTOINCREMENT IDs. The race row holds date/place/race number/deba URL, but no exact provider external-race identity contract or enforcing uniqueness. Horse rows hold `race_id`, `horse_no`, and descriptive fields, but no exact external entry/horse identity. `HorseParser._is_cancelled()` skips cancellation/exclusion rows before `Horse` construction. | The only ordinary NAR internal-ID origin path, but it is neither a canonical external binding producer nor identity-complete. `races.id` is only partial internal-race evidence; `horses.id` cannot prove a complete NAR entry universe. |
+| `scripts/simulation/repositories/sqlite_race_entry_source.py` | selected internal horse IDs → same race-entry IDs | Read-only internal selection resolver over `horses`. | Not an external-NAR-to-internal mapper. It cannot establish the parent race or external entry mapping. |
+| `scripts/simulation/repositories/sqlite_jra_race_replay_seed_repository.py` / V015 | reviewed JRA source material → newly created internal IDs and V010 relations | Creates `historical_input_source_identities`, `races`, `horses`, and external mapping rows under its JRA seed proof. | **Independently authoritative producer for JRA only.** It cannot establish any NAR mapping and must not be generalized by provider substitution. |
+| Phase108 `NARPreCPrestagedInputManifestV1` | fixture SHA + tuple of external-entry → internal-entry values | Diagnostic fixture-specific content authority; its target scope receives caller `internal_race_id`. | Correct for sealed rehearsal only. It cannot promote a fixture mapping or its diagnostic schema into production authority. |
+
+### Race and entry findings
+
+NAR normalization in `scripts/simulation/nar_historical_input_source.py` deterministically emits `nar:YYYYMMDD:babaCode:raceNo` and `<external_race_id>:entry:<horse_no>`. These are source/provider identities. They are not database IDs, and neither entry order, horse name, jockey, approximate date/place, row position, a hash, nor horse number alone may bind them to internal rows.
+
+**Race finding: `RACE_BINDING_AUTHORITY_PARTIAL`.** V010 can prove relational consistency for a pre-existing `(NAR, nar_official, external_race_id)` row: one internal race ID, a reverse uniqueness check, and an FK to `races`. It cannot prove how that relation was produced. The legacy NAR writer allocates `races.id` from parsed race-list fields, but does not persist the canonical `nar:YYYYMMDD:babaCode:raceNo` identity as an independently observed binding. `deba_table_url` is legacy descriptive data, not a reviewed canonical-NAR-identity uniqueness contract. Therefore `INTERNAL_RACE_ID_ARGUMENT != INTERNAL_RACE_AUTHORITY` remains true.
+
+**Entry finding: `ENTRY_BINDING_AUTHORITY_PARTIAL_AND_IDENTITY_INCOMPLETE`.** V010's entry relation and `(internal_race_id, race_entry_id)` FK prove parent ancestry only after a row exists. The ordinary NAR path obtains `horses.id` only for `HorseParser` output; `HorseParser._is_cancelled()` skips rows containing `取消`, `除外`, `競走除外`, or `出走取消` before any `Horse` exists or is saved. A cancelled identity-bearing DebaTable row may consequently have no ordinary `horses` row or V010 row. The implementation has no general persisted external entry/horse identity field for that omitted row. Horse number is usable only as a post-binding contradiction check under a proven race binding, never as a producer or global key.
+
+The V010 writer audit is closed as follows:
+
+| Writer/path | Classification | Independent external observation? | Internal IDs already caller/producer supplied? | Durable origin distinguishable afterward? |
+| --- | --- | --- | --- | --- |
+| V010 migration | migration/schema only | No | No | No rows are produced. |
+| `SQLiteHistoricalInputSnapshotRepository.save_snapshot()` → `_ensure_mappings()` | snapshot-derived writer | Snapshot caller supplies source identity/entries | Yes: `internal_race_id` and `race_entry_id` already exist in the supplied snapshot | **No.** V010 has no producer-kind, receipt, or pre-snapshot-origin column. |
+| JRA replay seed repository | independently authoritative producer, JRA only | Yes, through reviewed JRA seed/source chain | It creates its own IDs when needed | JRA seed proof exists; it is inapplicable to NAR. |
+| Phase88 fixture binder / NAR daily resolver | read-only consumers | No new observation | No new IDs | They write no V010 rows and cannot remedy provenance. |
+| tests/fixtures | test/fixture writers | Fixture only | Test-controlled | Never production authority. |
+
+The evidence-supported revised outcome is **C plus D**: a relational V010 layer exists, but no independently provenance-bearing, identity-complete NAR producer exists today. A generic read-only receipt over extant V010 rows is **not** an implementation-safe Phase109 solution. It must fail closed rather than populate, repair, enumerate, hash-map, or launder a caller-derived relation.
+
+### Temporal and anti-hindsight conclusion
+
+`CURRENT_DB_MAPPING_EXISTENCE != HISTORICAL_MAPPING_AVAILABILITY_PROOF`.
+
+For historical replay, present-day V010 rows cannot prove they existed at a past cutoff. Phase109 must never backdate a receipt or use current mapping existence to validate historical availability. For a future prospective campaign, the mapping is limited to stable identity correspondence, not a race-status, odds, result, or feature claim. A controlled read before the target root, recorded with a campaign-owned UTC issuance time and exact mapping payload, may prove **prospective pre-start availability** only. It does not prove historical availability and cannot resolve Phase94/95/41 semantics.
+
+`MAPPING_LOOKUP_AFTER_ENVELOPE_START != PRESTAGED_MAPPING_AUTHORITY`.
+`PRODUCTION_MAPPING_AUTHORITY_PRECEDES_OFFICIAL_OPERATIONAL_TIMING_CAMPAIGN`.
+`PRODUCTION_MAPPING_AUTHORITY != LIVE_CAMPAIGN_AUTHORIZATION`.
+`MAPPING_AUTHORITY_COMPLETE != CONCRETE_DELTA_AUTHORITY`.
+
+### Conditional future immutable mapping authority
+
+**No Phase109 implementation is currently authorized or possible.** Only after an upstream, independently provenance-bearing and status-independent NAR identity producer exists may a later reviewed phase add an immutable `NARProductionInternalRaceEntryMappingAuthorityV1` with a content-addressed identity such as `nar-production-internal-race-entry-mapping-v1:<sha256>`. Its canonical payload must bind:
+
+* exact `NAR` / `nar_official` source-system identity and external race ID;
+* exact internal race ID and the checked parent `races` row identity;
+* canonical complete tuple of `(external_entry_id, race_entry_id, checked_horse_no)` entries;
+* one-to-one forward and reverse entry/race population proof;
+* exact upstream identity-producer receipt/identity-observation evidence, binding evidence, and V010 schema/topology fingerprint; V010 rows are consistency evidence, not the sole origin proof;
+* source-of-truth descriptor, controlled read/issuance UTC time, target/cutoff/claim ancestry where available, and semantic/version;
+* canonical entry ordering, expected entry population SHA, and a content SHA; and
+* an explicit `PROSPECTIVE_PRESTART_IDENTITY_RELATION` temporal semantic.
+
+The authority is invalid if its upstream binding is absent, snapshot-derived, unproven, or temporally incompatible; the race mapping is missing, duplicated, or reverse-inconsistent; any entry is missing, duplicated, cross-race, or maps twice; the internal horse row is absent; the horse number disagrees after binding; or the complete identity-bearing source set differs from the persisted mapping set. No cancellation/status filter, implicit extra-entry exception, or partial result is permitted. If a current source population is not yet available before root start, the authority still binds the complete independently observed expected population; Phase108-style prerequisite reconciliation must later prove exact equality with normalized current identities before snapshot construction, otherwise the root fails closed.
+
+The artifact must be persisted in an explicit append-only mapping-authority companion, then exact-reloaded. The companion is not a normal Phase105/Phase108 bootstrap upgrade and is not a production mapping-table writer. Controlled issuance must require a held runner lock, current-process Phase104 capability, exact claim/session/target ancestry, a separately supplied `query_only` mapping-source connection, and the upstream producer's immutable provenance. It must validate the exact V010 schema, foreign keys, and uniqueness under an owned read transaction that it rolls back; it must never create, update, attach, repair, or close the mapping source.
+
+### Phase108 integration boundary
+
+Phase108 V1 remains a diagnostic-only, fixture-bound authority family and must not be rewritten or promoted. Its manifest currently requires diagnostic fixture content for `mapping_content_authority`; changing that V1 payload would change its identity and is outside Phase109.
+
+The Phase109 mapping authority is therefore an additive prerequisite for the **future official Phase107/Phase108-style prestaged manifest**, not a replacement for the diagnostic V1 manifest. The required ordering remains:
+
+```text
+read exact V010 mapping relation (query_only)
+→ construct mapping authority
+→ persist and exact-reload mapping authority
+→ bind its identity and complete expected population into the future official prestaged manifest
+→ exact-reload manifest and validate target/cutoff/claim ancestry
+→ issue target-root start evidence
+→ current normalization proves mapping population equality
+→ snapshot assembly
+```
+
+No mapping lookup occurs after root start. No current Phase108 root timing rule changes: the mapping authority must be durable before `ENVELOPE_START_AUTHORITY_MUST_PRECEDE_FIRST_CAUSAL_OPERATION`, the root remains the sole additive elapsed owner, and a valid snapshot remains insufficient without execution-plan/prerequisite reconciliation. The later official-manifest implementation requires its own approved authority phase; Phase109 does not authorize that composition itself.
+
+### Required upstream dependency and future implementation boundary
+
+The immediate prerequisite is a separate reviewed workstream for **status-independent, independently provenance-bearing NAR race/entry identity persistence**. It must observe every identity-bearing current DebaTable row before status interpretation, bind canonical NAR race and entry/horse identities to internally created IDs under exact parent race ancestry, preserve immutable producer provenance, and make the complete identity population retrievable without a snapshot caller supplying the result. It must not assign synthetic IDs, alter source identities, or infer absence from a cancellation marker.
+
+`PHASE95_PROSPECTIVE_ENTRY_STATUS_SOURCE_SEMANTICS_OR_EQUIVALENT_STATUS_INDEPENDENT_IDENTITY_INGESTION = PREREQUISITE_TO_PHASE109_IMPLEMENTATION`.
+
+Phase94 historical entry-status authority is not itself the identity producer, and Phase41 market eligibility is not a mapping requirement. Neither may be silently used to omit identities. The current Phase95-class prospective source/status boundary is the direct dependency because current NAR ingestion discards identity-bearing cancelled/excluded rows before `horses.id` issuance. If that workstream is not approved as the appropriate producer, a new narrowly scoped prerequisite phase must be designed before Phase109; Phase109 must not fabricate an Allowed Files code plan while this authority is absent.
+
+Once that prerequisite is independently reviewed and integrated, a later Phase109 redesign may propose additive authority/archive/repository/bootstrap modules and focused tests. Its forbidden surface must retain Phase108 V1 domain/archive payloads, Phase99–105 canonical authority payloads, `historical_input_snapshot_builder.py`, NAR normalizers/capture code, legacy `database.py`, provider URLs/retries/TLS behavior, `database/keiba.db`, logs, Phase94/95/41 canonical semantics, and production mapping-table mutation. V010 may then remain consistency evidence only; the future authority must not seed or repair it.
+
+### Required future tests and stop conditions
+
+The prerequisite and any later Phase109 design must test exact race binding; complete entry binding; missing/duplicate/contradictory race mappings; missing/duplicate external entries; duplicate internal-entry assignment; wrong-race internal entry; horse-number consistency without horse-number lookup; incomplete and extra population; deterministic identity and exact reload; append-only conflict; stale/incompatible mapping; no enumeration/hash/external-entry-as-ID derivation; query-only/no-write enforcement; Phase108-style prestaged-manifest ancestry; durable mapping authority before root start; and proof that read capability cannot authorize a live campaign.
+
+It must additionally prove that a V010 row created by `save_snapshot()` / `_ensure_mappings()` cannot establish independent authority; read-only reload cannot launder caller-supplied IDs; independently authoritative and snapshot-derived mappings are durably distinguishable or the latter is rejected; an identity-bearing cancelled entry cannot disappear; status interpretation does not decide identity existence; a status-filtered `horses` population cannot qualify without full exact proof; a duplicate horse number under a wrong parent race cannot bind; a canonical parent race must be proven before horse number is considered; the frozen Phase88 binder cannot accept an arbitrary target; and current-root Deba capture cannot retroactively authorize a prestaged mapping. All tests use temporary SQLite databases and fixtures only: no provider HTTP and no production DB writes.
+
+Regression scope must include V010 migration, snapshot repository/builder, `sqlite_nar_daily_evidence_resolver`, Phase88 identity binding, and Phase108 envelope/reconciliation tests. A future full suite is required before implementation review.
+
+Stop rather than implement if an independent status-independent NAR producer is unavailable; internal race/entry IDs cannot be given their exact producer meanings; V010 remains the only evidence of provenance; the V010 schema admits ambiguity without an authoritative discriminator; a dynamic NAR binding requires changed source identity semantics; cancellation/status completeness requires unresolved Phase95-class source semantics; a synthetic enumeration/hash is the only source; or provider evidence after the prediction cutoff would be needed to form the mapping.
+
+### Remaining downstream blockers
+
+Phase109 design does not authorize live execution. Remaining blockers include the upstream status-independent identity-complete NAR ingestion/provenance workstream; only then a re-reviewed Phase109 implementation; a future official (non-diagnostic) prestaged-manifest/campaign authority that can consume the mapping receipt; exact production target/current-entry control-plane authority; Phase94 historical entry-status authority; Phase95 prospective source semantics; Phase41 market eligibility; prospective official timing-campaign authorization; and `CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`.
+
+### Phase95 relationship and recommended prerequisite
+
+Phase95 freezes `ENTRY_IDENTITY_UNIVERSE != OBSERVED_ENTRY_STATUS_UNIVERSE`. Complete status semantics are not required to define that an entry identity exists, but a status-independent identity persistence layer is required before Phase109 can issue a complete mapping authority. The broader Phase95 blocker `PROSPECTIVE_NAR_ENTRY_STATUS_AUTHORITY_CAPTURE_BLOCKED_SOURCE_SEMANTICS` remains unresolved and is not claimed solved here.
+
+Recommended next phase concept (design only; not started):
+
+`POST_V0_8_DAILY_REPLAY_110`
+
+Title: `NAR Prospective Identity-Complete Race and Entry Persistence Authority`
+
+Its scope is to preserve canonical external NAR race/entry identities, internally bind them under exact parent-race ancestry, include cancelled/withdrawn rows as identities, preserve durable provenance, and expose a complete read-only population. It must not decide positive ACTIVE semantics, full Phase95 status authority, market eligibility, concrete Delta, or live campaign authorization.
+
+`IDENTITY_PERSISTENCE_AUTHORITY != ENTRY_STATUS_AUTHORITY`.
+`IDENTITY_PERSISTENCE_AUTHORITY != MARKET_ELIGIBILITY`.
+`IDENTITY_PERSISTENCE_AUTHORITY != LIVE_CAMPAIGN_AUTHORIZATION`.
+
+The expected dependency chain is:
+
+```text
+Phase110 identity-complete persistence authority
+→ Phase109 production mapping authority
+→ Phase108 prestaged mapping manifest
+→ PRE_C root start
+→ later operational timing audit
+```
+
+Provider HTTP / production DB reads / production DB writes / live campaign: `0 / 0 / 0 / 0` for this PREPARE activity.
+
+Next: `CHATGPT_PREPARE_PHASE110`.
+
+---
+
+## Historical record — POST_V0_8_DAILY_REPLAY_108
 
 Title: NAR Target-Scoped PRE_C Critical-Path Envelope Wiring
 
