@@ -1,6 +1,584 @@
 # Current Phase
 
-## POST_V0_8_DAILY_REPLAY_110
+## POST_V0_8_DAILY_REPLAY_111
+
+Title: NAR Trusted Single-Send Deba Acquisition and Identity-Ingestion Boundary
+
+Status: `APPROVED_FOR_COMMIT`
+
+Formal Status: `APPROVED_FOR_COMMIT`
+
+State: `APPROVED_FOR_COMMIT`
+
+Outcome: `APPROVED_FOR_LOCAL_COMMIT`
+
+Review disposition: `PHASE111_FINAL_ARCHITECTURAL_REVIEW_PASS`
+
+`PHASE111_IMPLEMENTATION_READY`.
+`PHASE111_DESIGN_APPROVED_FOR_CODEX`.
+`PHASE111_IMPLEMENTATION_READY_FOR_CHATGPT_REVIEW`.
+
+Implementation review disposition: `PHASE111_IMPLEMENTATION_REVIEW_PASS`.
+`PHASE111_REVIEW_CORRECTIONS_VERIFIED`.
+`PHASE111_COMMIT_APPROVAL = GRANTED`.
+
+This approval authorizes one local commit containing the exact eight Allowed Files.
+It does not declare Phase111 formally complete, attest post-commit sealed source, or
+authorize a push. Those require their own review/authorization steps.
+
+Base Commit: `79428f6fd6ab62777a8c3f2c877eeddb632d319f`
+
+Base Tree: `f6d764607203b633b925056a4eac106d48eba11d`
+
+Base Parent: `64f9ad239cabad13feaa8febb6cb5754dce57a6b`
+
+Base Message: `docs: close Phase110 identity persistence audit`
+
+Branch: `feature/post-v0.8-daily-replay`
+
+### Frozen predecessor state
+
+`PHASE110_FINAL_DOCUMENTATION_REMOTE_VERIFICATION_PASS`.
+`PHASE110_REVISED_ARCHITECTURAL_REVIEW_PASS`.
+`POST_V0_8_DAILY_REPLAY_110 = ARCHITECTURAL_AUDIT_COMPLETE`.
+`PHASE110_IMPLEMENTATION = BLOCKED_PENDING_TRUSTED_INGESTION_PREREQUISITE`.
+`PHASE110_IDENTITY_PERSISTENCE_BLOCKED_BY_TRUSTED_ACQUISITION_AND_LEGACY_WRITER_SAFETY`.
+
+Phase111 designs only the trusted single-send upstream boundary.  It does not issue
+Phase110 internal IDs, repair `save_horse()`, define entry status, grant market
+eligibility, choose Delta, authorize a live campaign, or perform provider HTTP.
+
+Freeze:
+
+`IMMUTABLE_CAPTURE_CONTENT != AUTHORIZED_CAPTURE_PROVENANCE`.
+`CAPTURE_ARCHIVE_EXACT_RELOAD != ACQUISITION_AUTHORITY`.
+`PUBLICLY_CONSTRUCTIBLE_CAPTURE != OFFICIAL_LIVE_ACQUISITION_PROOF`.
+`LEGACY_LOCALFETCHER_DEBA_RESPONSE != TRUSTED_CAPTURE_LINEAGE`.
+`CAPTURE_IDENTITY != CAPTURE_ACQUISITION_LINEAGE`.
+`PHASE110_MUST_NOT_CREATE_REDUNDANT_DEBA_REQUEST`.
+`ONE_OPERATIONAL_DEBA_ACQUISITION_MAY_FEED_MULTIPLE_DOWNSTREAM_CONSUMERS`.
+`SAME_RESPONSE_BYTES_REQUIRED_FOR_CAPTURE_AND_IDENTITY_EXTRACTION`.
+`TRUSTED_DEBA_ACQUISITION_AUTHORITY != PHASE110_IDENTITY_PERSISTENCE_AUTHORITY`.
+`TRUSTED_DEBA_ACQUISITION_AUTHORITY != LIVE_CAMPAIGN_AUTHORIZATION`.
+
+### Current Deba acquisition inventory
+
+| Caller/path | Request and transport semantics | Capture/authority result | Classification |
+| --- | --- | --- | --- |
+| `LocalFetcher.get_today_races()` → `NARProvider.fetch_deba_table()` | Direct `requests.Session.get`, scalar 10-second timeout, default redirect behaviour, default TLS verification, no explicit retry adapter; response is decoded through `apparent_encoding`; HTML is logged. | No canonical URL declaration, no Phase104/105-like request authority, no immutable capture/archive, and no exact reload. | Ordinary legacy ingestion; unqualified for Phase111/110. |
+| `NAROfficialLiveResponseCaptureService.capture_response()` | Canonical official URL validation; private Requests transport with `max_retries=0`, redirects disabled, TLS verification enabled, 10-second connect/read limits, identity content encoding, bounded byte streaming, effective-URL equality and HTTP 200 validation. | Saves immutable strict-UTF-8 capture to the existing append-only archive but returns after save without archive exact reload; the public service has no prospective request declaration or campaign/workflow authorization. | Trusted byte acquisition primitive; usable transport, insufficient authority on its own. |
+| `NARPreCCurrentProcessRootContext` / Phase108 harness | Uses the live capture service through Phase105 `measure_nar_operation`, guarded session, exact expected URL and fake adapter beneath `Session.send`. | Child attempt, actual-send environment, capture and closures are bound to the diagnostic no-network root. | Phase108 rehearsal only; timing/diagnostic authority cannot authorize ordinary ingestion. |
+| Phase104/105 runner, passive wrapper and guarded session | Controlled V2 session, claim, readiness, attempt exact reload, one guarded send per attempt and terminal observation. | Correct authority for an operational-timing attempt under its own approved session/window. | Candidate transport/control mechanism only; not ordinary identity-ingestion authority. |
+| Daily-target bootstrap live-capture modules | Capture official home/monthly root/locator resources using a separate closed transport profile. | Produces bootstrap supplier captures for target discovery, not a DebaTable declaration/capture lineage. | Target-discovery evidence; may be upstream target ancestry, not a Deba send authorization. |
+
+Repository search found no other production-capable DebaTable request path.  The closed
+official capture URL vocabulary already admits `DEBA_TABLE`, `HORSE_MARK_INFO`, and
+`RACE_MARK_TABLE`; Phase111 concerns only an exact canonical `DEBA_TABLE` request.
+
+### Pre-send authority audit and decision
+
+Caller-supplied external race ID, Deba URL, date, baba code or race number cannot
+authorize a request.  A declaration is likewise not its own target authority.
+
+`CALLER_SUPPLIED_TARGET_FIELDS != PROSPECTIVE_TARGET_AUTHORITY`.
+`REQUEST_DECLARATION != ITS_OWN_TARGET_AUTHORITY`.
+
+The exact target-identity semantics already exist in
+`nar_historical_daily_target_source.py`.  `normalize_nar_race_list()` validates each
+RaceList target row's race number, scheduled time, exactly one title link and the Deba
+link grammar; it requires that the link's date, baba code and race number agree with
+the RaceList request and row.  It derives `nar:YYYYMMDD:babaCode:raceNo` and binds a
+provider-disposition reference to the exact RaceList capture and structural locator.
+`build_nar_historical_daily_replay_target_set()` deterministically combines the exact
+monthly/RaceList captures into a sorted `DailyHistoricalReplayTargetSet` whose
+`content_sha256` includes target and completeness evidence.
+
+This is suitable upstream target ancestry, subject to reconstruction.  It is not an
+automatic Deba request authorization: `DailyHistoricalReplayTarget` does not retain a
+raw Deba URL, and the daily-target archive stores source captures rather than an
+independently loadable target-set object.  Phase111 must exact-reload the referenced
+daily-target evidence captures, reconstruct the set through the reviewed source
+function, and require equality of the reconstructed content hash and target membership
+before declaration issuance.  A detached caller-supplied target-set hash cannot qualify.
+
+`DAILY_TARGET_IDENTITY_EVIDENCE != AUTOMATIC_DEBA_REQUEST_AUTHORIZATION`.
+`EXACT_RACELIST_DERIVED_TARGET_MAY_ANCHOR_PHASE111_REQUEST_AUTHORITY`.
+`DETACHED_TARGET_SET_HASH != TARGET_AUTHORITY`.
+`PHASE111_DECLARATION_REQUIRES_RECONSTRUCTIBLE_TARGET_ANCESTRY`.
+`TARGET_MEMBERSHIP_MUST_BE_EXACT`.
+
+No existing authority is semantically sufficient to authorize the request itself.
+Ordinary race-day ingestion has no durable exact pre-send declaration.  Phase104/105
+governs a timing campaign attempt, and Phase106 is diagnostic; neither may be promoted
+to ordinary production identity ingestion merely because it can control a send.
+
+Freeze:
+
+`TIMING_CAMPAIGN_AUTHORITY != ORDINARY_IDENTITY_INGESTION_AUTHORITY`.
+`DIAGNOSTIC_AUTHORITY != PRODUCTION_INGESTION_AUTHORITY`.
+`RESPONSE_EXISTENCE != PRE_SEND_REQUEST_AUTHORIZATION`.
+
+Phase111 therefore requires an additive immutable
+`NARProspectiveDebaAcquisitionDeclarationV1` (name subject to later review).  Its
+canonical payload binds provider/organisation, source system, canonical external race
+identity, exact scheduled start where present, exact target-set content identity,
+target provider-disposition reference, upstream RaceList capture/reference ancestry,
+exact canonical Deba URL, acquisition purpose and semantic version, issuance time,
+prediction-cutoff/allowed-observation window, one-send request identity, and schema
+version.  Its content identity is derived from this complete canonical payload.  It is
+persisted and exact-reloaded before an HTTP operation may begin.
+
+Phase111 has one canonical Deba derivation: parse the verified external race identity,
+construct the reviewed `DEBA_TABLE` candidate URL, pass it through
+`canonicalize_nar_official_capture_url(...)`, and require that its parsed date/baba/race
+components agree with the exact Deba href recorded by the RaceList target evidence. The
+result is the sole URL stored in the declaration:
+
+`https://www.keiba.go.jp/KeibaWeb/TodayRaceInfo/DebaTable?k_babaCode={babaCode}&k_raceDate={YYYY}%2F{MM}%2F{DD}&k_raceNo={raceNo}`.
+
+`EXTERNAL_RACE_ID_AND_DEBA_URL_MUST_SHARE_ONE_VERIFIED_ANCESTRY`.
+`HISTORICAL_TARGET_IDENTITY_EVIDENCE_REUSE != HISTORICAL_REPLAY_POLICY_REUSE`.
+
+`PRE_SEND_DECLARATION_MUST_PRECEDE_ACTUAL_SEND`.
+`REQUEST_AUTHORITY_CANNOT_BE_BACKFILLED_AFTER_RESPONSE`.
+
+### Recommended architecture — dedicated acquisition application
+
+| Option | Assessment |
+| --- | --- |
+| A. Extend `LocalFetcher` directly with the live capture service | Leaves declaration, durable send claim, archive reload and consumer authority entangled with the legacy orchestration path.  It also makes unqualified legacy entry points too easy to confuse with qualified ingestion. |
+| B. Add a dedicated Phase111 acquisition application and a read-only same-byte consumer boundary | Recommended. The application owns declaration, durable claim, transport invocation, capture save/reload, lineage receipt and same-byte fan-out. It proves a qualified consumer can strict-decode archived bytes for `HorseParser`, without globally routing `LocalFetcher` through this boundary. |
+| C. Replace all direct Deba transport with a capture-first upstream service | Strongest uniformity, but broader migration and compatibility scope than the currently identified prerequisite. |
+
+The recommended application uses `NAROfficialLiveResponseCaptureService`'s reviewed
+transport unchanged.  It must not redefine canonical URL, retry, redirect, TLS,
+timeout, maximum-response or official-host/path/query validation rules.
+
+`PHASE111_ORCHESTRATION_MUST_NOT_REDEFINE_PROVIDER_TRANSPORT_SEMANTICS`.
+`LEGACY_DEBA_FETCH != PHASE111_QUALIFIED_ACQUISITION`.
+
+For a qualified operation the causal sequence is:
+
+`reconstruct/verify target authority -> declaration save/reload -> durable one-send
+claim -> existing trusted capture service invocation -> immutable capture save -> capture
+exact reload -> lineage receipt save/reload -> same-byte consumer fan-out`.
+
+The ordinary direct `fetch_deba_table()` route may remain for legacy operations, but it
+is prohibited as the source of a Phase111-qualified result.  First implementation does
+not require a global LocalFetcher migration.  A qualified consumer demonstrates the
+strict-byte adapter directly; future Phase110/qualified ingestion composition consumes
+the Phase111 result and must not call the legacy fetch.  A LocalFetcher change is
+deferred unless later evidence shows a tiny adapter is necessary.
+
+`PHASE111_IMPLEMENTATION_COMPLETE != LEGACY_FETCHER_GLOBAL_MIGRATION_COMPLETE`.
+`PHASE111_RESULT_CONSUMPTION = NO_NETWORK`.
+
+### Single-send, terminal, crash and concurrency semantics
+
+Target authority, request declaration, one-send claim, and HTTP invocation are distinct
+authority events. The required order is exact target reconstruction and membership
+verification, declaration persistence and exact reload, atomic one-send claim
+acquisition, then invocation of the existing trusted capture service.
+
+`TARGET_AUTHORITY != REQUEST_DECLARATION`.
+`REQUEST_DECLARATION != SEND_CLAIM`.
+`SEND_CLAIM_MUST_PRECEDE_TRANSPORT_INVOCATION`.
+
+Single-send means at most one application-authorized provider send attempt for one
+declaration identity. It does not claim exactly-once receipt by the remote provider.
+There is no automatic retry, fallback to `NARProvider.fetch_deba_table()`, or consumer
+refetch. A later observation requires a distinct prospective declaration and may use one
+new send under that declaration.
+
+`AT_MOST_ONE_APPLICATION_AUTHORIZED_SEND_ATTEMPT`.
+`SINGLE_SEND_PER_AUTHORIZATION != SINGLE_LIFETIME_CAPTURE`.
+`NO_REDUNDANT_CONSUMER_FETCH != NO_SEPARATELY_AUTHORIZED_REFRESH`.
+`FAILED_AUTHORIZED_SEND != AUTHORITY_FOR_RETRY`.
+`ONE_AUTHORIZATION_MAXIMUM_ONE_SEND`.
+
+An additive companion archive should store append-only declarations, durable send
+claims, terminal/send evidence and acquisition receipts.  A declaration identity has
+one unique claim.  Claim publication occurs before the transport is invoked under a
+database transaction/lock so two processes cannot consume the same authorization.
+Terminal classifications include `SUCCESS`, `CONNECT_TIMEOUT`, `READ_TIMEOUT`,
+`TRANSPORT_FAILURE`, `VALIDATION_OR_UNSUPPORTED_RESPONSE`,
+`CAPTURE_PERSISTENCE_FAILURE`, and `UNKNOWN_SEND_OUTCOME`.
+
+The closed lifecycle is `DECLARED_NOT_CLAIMED`, then
+`CLAIMED_SEND_OUTCOME_UNKNOWN`, followed by either `SEND_TERMINAL_FAILURE`,
+`CAPTURE_PERSISTED`, or `RECEIPT_COMPLETE`. The claim is deliberately consumed before
+socket transmission can be proven, so a crash can conservatively retain
+`CLAIMED_SEND_OUTCOME_UNKNOWN` even if no provider receipt occurred.
+
+Crash after declaration before claim leaves the declaration unused.  Crash after claim
+and before a known terminal, during send, or after a successful send before durable
+capture/receipt publication remains indeterminate.  Restart must reconcile it as
+`UNKNOWN_SEND_OUTCOME`; it cannot resend under the same declaration.  A later refresh
+requires a new declaration after separate review.
+
+`UNKNOWN_SEND_OUTCOME != SAFE_TO_RETRY`.
+`CRASH_RECOVERY_MUST_NOT_DUPLICATE_PROVIDER_SEND`.
+
+### Capture lineage and deterministic byte fan-out
+
+The immutable `NARProspectiveDebaAcquisitionReceiptV1` (name subject to review) binds
+the declaration identity, send-claim identity, terminal disposition, exact target
+identity, canonical request and effective URL, capture ID, response SHA-256,
+requested/observed/stored timestamps, capture archive exact-reload result,
+target/cutoff ancestry, source/runtime provenance, and receipt semantic/schema version.
+It proves that the capture belongs to the exact pre-send declaration; capture ID alone
+is never sufficient. The application issues it only after the trusted capture service
+returns and its saved capture exact-reloads from the existing capture archive.
+
+`CAPTURE_ID_ALONE != ACQUISITION_LINEAGE`.
+`ACQUISITION_RECEIPT_MUST_BIND_REQUEST_AUTHORITY_TO_EXACT_CAPTURE`.
+
+The Phase111 application reloads the saved capture and exposes those exact archived
+bytes to named consumers.  It does not reconstruct HTML from a previous decoded string.
+The legacy adapter must decode `capture.response_body` once with `utf-8`, strict errors,
+then pass that text to the unchanged `HorseParser`; future Phase110 reads the same
+reloaded capture/receipt without provider operation.
+
+Strict UTF-8 is the reviewed supported profile for a Phase111-qualified capture; the
+existing trusted capture contract is retained. A non-UTF-8 Deba response fails closed
+as unsupported for this qualified path. It must not fall back to the legacy apparent-
+encoding behavior. This design does not require advance proof that every possible future
+production response is UTF-8: a later prospective profile-qualification or
+live-readiness activity determines observed operational compatibility.
+
+`LEGACY_APPARENT_ENCODING != TRUSTED_CAPTURE_ENCODING_AUTHORITY`.
+`NON_UTF8_DEBA_RESPONSE = UNSUPPORTED_FOR_PHASE111_QUALIFIED_ACQUISITION`.
+`UNSUPPORTED_ENCODING != AUTHORITY_FOR_LEGACY_FALLBACK`.
+
+`SEMANTICALLY_EQUIVALENT_HTML != SAME_CAPTURE_BYTES`.
+`DOWNSTREAM_DECODE_MUST_BE_DETERMINISTIC_AND_REVIEWED`.
+
+### Phase110 handoff, cutoff and timing relationship
+
+Future Phase110 consumes declaration identity, acquisition receipt identity, capture ID,
+canonical URL, response digest, exact reloaded bytes, external race identity,
+`observed_at`, and cutoff/window ancestry as read-only inputs.  It cannot issue HTTP.
+
+`PHASE110_CONSUMPTION_OF_PHASE111_AUTHORITY = READ_ONLY_NO_PROVIDER_SEND`.
+
+The intended ordering is:
+
+`prospective target authority -> Phase111 declaration -> Deba capture -> Phase111
+receipt -> Phase110 identity persistence -> Phase109 mapping receipt -> Phase108
+prestaged manifest -> Phase108 root start`.
+
+For a Phase109 mapping claimed as pre-cutoff authority, the minimum rule is
+`capture.observed_at <= prediction_information_cutoff`; a post-cutoff capture cannot
+establish that mapping.
+
+`POST_C_CAPTURE != PRE_C_IDENTITY_MAPPING_AUTHORITY`.
+
+Phase111 upstream ingestion must have an independently reviewed race-day purpose.  It
+cannot be declared pre-root solely to remove work from a target's timing envelope.  The
+later Phase108 current Deba capture may still have an independent snapshot/freeze
+purpose at root dispatch.  The two observations are not duplicates solely because their
+URLs match, but Phase110 and legacy enrichment may not add any further request.
+
+`PRE_ROOT_PREREQUISITE != FREE_TIMING_PREWORK_BY_ASSERTION`.
+`ORDINARY_UPSTREAM_INGESTION_MUST_HAVE_INDEPENDENT_OPERATIONAL_PURPOSE`.
+`MEASUREMENT_CAMPAIGN_MUST_NOT_GENERATE_REDUNDANT_PROVIDER_LOAD`.
+`TRUSTED_DEBA_CAPTURE != COMPLETE_ENTRY_STATUS_AUTHORITY`.
+`TRUSTED_DEBA_CAPTURE != ACTIVE_STATUS`.
+`TRUSTED_DEBA_CAPTURE != MARKET_ELIGIBILITY`.
+
+### Archive architecture
+
+The existing official-capture archive and capture identities remain unchanged. Phase111
+needs an additive companion authorization/lineage archive with exact references to the
+approved daily-target evidence archive, a declaration, one-send claim, terminal
+disposition, declaration-to-capture lineage, and receipt tables. It must not duplicate
+response bodies or full RaceList bytes, and it must not reuse Phase105 timing attempts
+as ordinary-ingestion rows.
+
+`PHASE111_LINEAGE_ARCHIVE != RESPONSE_BODY_ARCHIVE`.
+
+The archive must reject unknown/partial schema topology, orphan terminals/receipts,
+duplicate claims, receipt/capture contradiction, missing reconstructed target ancestry,
+and mutation.
+
+### Allowed Files
+
+The Phase111 implementation may modify or create only:
+
+- `docs/CURRENT_PHASE.md`
+- `docs/LATEST_CODEX_REPORT.md`
+- `scripts/simulation/nar_trusted_deba_acquisition.py`
+- `scripts/simulation/nar_trusted_deba_acquisition_archive_migration.py`
+- `scripts/simulation/sqlite_nar_trusted_deba_acquisition_archive.py`
+- `tests/test_nar_trusted_deba_acquisition.py`
+- `tests/test_nar_trusted_deba_acquisition_archive_migration.py`
+- `tests/test_sqlite_nar_trusted_deba_acquisition_archive.py`
+
+This is the complete Allowed Files set. A separate bootstrap module requires a contract
+amendment before it may be created.
+
+### Forbidden Files
+
+Every repository path not listed in Allowed Files is forbidden. In particular, Phase111
+must not modify:
+
+- `scripts/fetch_local.py`, `scripts/providers/nar_provider.py`,
+  `scripts/parsers/horse_parser.py`, `scripts/database.py`, or `scripts/models.py`;
+- `scripts/simulation/nar_official_response_capture.py`,
+  `scripts/simulation/nar_official_response_live_capture.py`, or
+  `scripts/simulation/repositories/sqlite_nar_official_response_capture_repository.py`;
+- `scripts/simulation/nar_historical_daily_target_source.py`,
+  `scripts/simulation/nar_historical_daily_target_capture.py`,
+  `scripts/simulation/nar_historical_daily_target_live_capture.py`,
+  `scripts/simulation/sqlite_nar_daily_target_evidence_archive.py`, or existing
+  daily-target migrations;
+- Phase104/105/106/108 authority modules, Phase109/110 implementation paths, prediction
+  pipeline/readers, `database/**`, or `logs/**`.
+
+These modules may be imported through their existing APIs. Phase111 may not change
+provider, transport, target-source, parser, or legacy-ingestion semantics.
+
+### Required Tests
+
+The implementation must add and pass:
+
+- `tests/test_nar_trusted_deba_acquisition.py`
+- `tests/test_nar_trusted_deba_acquisition_archive_migration.py`
+- `tests/test_sqlite_nar_trusted_deba_acquisition_archive.py`
+
+The focused tests must prove at minimum:
+
+1. Caller-supplied race fields or a detached target-set digest cannot self-authorize.
+2. Exact archived daily-target evidence reconstructs deterministically, reproduces the
+   target-set identity, proves target membership and external race identity, and derives
+   a canonical Deba URL with the same RaceList ancestry; any contradiction fails closed.
+3. The declaration is immutable/content-addressed, persists and exact-reloads before a
+   durable exclusive claim; concurrent claimants cannot both obtain send authority.
+4. Claim acquisition precedes transport; one declaration permits at most one
+   application-authorized send; unknown send, connect timeout, read timeout, and
+   transport failure do not retry; a distinct refresh declaration may send once.
+5. The existing trusted official capture service is reused without redefining retry,
+   redirect, TLS, timeout, body-limit, or canonical URL semantics.
+6. Returned captures exact-reload before receipt issuance; a missing or contradictory
+   reload blocks the receipt; the receipt binds target, declaration, claim, canonical
+   URL, capture, digest, timestamps, terminal disposition, and semantic version.
+7. A caller-constructed `NAROfficialResponseCapture` cannot replace Phase111 lineage;
+   the companion archive stores no response bytes; the qualified result has no refetch
+   capability; and exact archived bytes remain available to multiple consumers.
+8. Strict UTF-8 is enforced; non-UTF-8 fails closed; no apparent-encoding fallback
+   exists; and identical archived bytes can feed the `HorseParser` adapter and remain
+   available to Phase110.
+9. A post-cutoff observation cannot qualify as pre-cutoff Phase110/109 authority.
+10. Phase111 infers no ACTIVE/status/market eligibility, issues no `races.id` or
+    `horses.id`, and creates no V010 mapping.
+11. Focused tests use deterministic injected/fake no-network boundaries, make zero real
+    provider HTTP calls, and use only temporary/in-memory test databases, never
+    `database/keiba.db`.
+
+Required related regressions are `tests/test_nar_official_response_capture.py`,
+`tests/test_nar_official_response_live_capture.py`,
+`tests/test_sqlite_nar_official_response_capture_repository.py`, and the repository's
+matching existing daily-target capture/live-capture/archive tests, including where
+present `tests/test_nar_historical_daily_target_capture.py`,
+`tests/test_nar_historical_daily_target_live_capture.py`, and
+`tests/test_sqlite_nar_daily_target_evidence_archive.py`. Existing regression files are
+read-only under this contract. Then run the complete repository pytest suite.
+
+Required order: focused Phase111 tests, related official-capture/daily-target
+regressions, full repository suite, `git diff --check`, exact changed-path audit, and
+`git status --short`. No test may perform real provider HTTP.
+
+### Stop Condition
+
+Stop rather than broadening scope if exact upstream target ancestry cannot be
+reconstructed; the declaration would self-authorize; external race identity and
+canonical Deba URL cannot share exact RaceList ancestry; the only usable authority is
+Phase105 diagnostic/timing authority; trusted official transport semantics must change;
+an extra Deba request is required; crash/concurrency cannot guarantee at-most-one send;
+a bootstrap module outside Allowed Files is required; a forbidden module must change;
+LocalFetcher must be globally migrated; legacy apparent-encoding fallback is required;
+Phase110 internal-ID issuance, Phase95 status semantics, or Phase41 market eligibility
+is required; production database access or real provider HTTP is required for
+verification; or an unrelated failing test needs an out-of-scope change.
+
+### Approved implementation boundary
+
+Phase111 first implementation is additive only. It provides:
+
+`RaceList-derived target authority -> declaration -> exact reload -> exclusive send
+claim -> trusted capture-service invocation boundary -> exact capture reload ->
+acquisition lineage receipt -> no-network/read-only qualified result`.
+
+It does not provide global LocalFetcher migration, Phase110 ID persistence,
+cancelled-entry persistence, safe enrichment, prediction-reader filtering, Phase109
+mapping receipt, Phase95 status authority, Phase41 eligibility, operational Delta, or
+live campaign authorization.
+
+Phase111 implementation leaves Phase110 writer atomicity, compatible
+enrichment, complete prediction-reader nonselection coverage, Phase109 mapping receipt,
+Phase95 status authority, Phase41 market eligibility, official campaign authorization
+and operational timing audit unresolved.
+
+### Revised implementation-readiness decision
+
+`PHASE111_IMPLEMENTATION_READY` is approved by independent architectural review.
+The design now closes reconstructible target ancestry, canonical Deba derivation,
+immutable declaration, exclusive durable claim, conservative crash behavior, trusted
+transport reuse, exact capture reload, immutable receipt, no-refetch result, additive
+scope, and strict UTF-8 fail-closed handling. Global LocalFetcher migration, live
+profile qualification, Phase110 persistence, Phase109 mapping, Phase95, Phase41, and a
+live timing campaign remain later work and do not expand this first Phase111 scope.
+
+### Limited implementation-review correction
+
+Independent review found that `_publish_receipt()` and `_publish_failure()` checked
+only exact record types. Publicly constructed immutable receipts, even when backed by
+a manually archived public capture and genuine claim, could therefore be published
+without the controlled acquisition application. Persisted content did not prove
+controlled issuance.
+
+`PERSISTED_RECEIPT_CONTENT != CONTROLLED_RECEIPT_ISSUANCE`.
+`PUBLICLY_CONSTRUCTIBLE_RECEIPT != ACQUISITION_AUTHORITY`.
+`PUBLICLY_CONSTRUCTIBLE_CAPTURE != OFFICIAL_LIVE_ACQUISITION_PROOF`.
+`UNCONTROLLED_TERMINAL_PUBLICATION != PHASE111_LINEAGE_AUTHORITY`.
+`EXACT_DUPLICATE_CONTENT != CONTROLLED_ISSUANCE`.
+`ARBITRARY_CAPTURE_RESPONSE_PROTOCOL != TRUSTED_CAPTURE_SERVICE`.
+
+The archive now owns one private current-process
+`_PHASE111_TERMINAL_ISSUANCE_MARKER`. Both terminal publication methods require its
+exact identity before type/ancestry validation, duplicate handling or insertion.
+Missing or unrelated markers are rejected even for already-persisted exact duplicates.
+This follows Phase105 trusted API discipline; it is not cryptographic security.
+The marker is absent from every canonical record, persisted payload, qualified result
+and public application constructor.
+
+`NARTrustedDebaAcquisitionApplication.acquire()` supplies the marker after the existing
+success causal path, including renewed target reconstruction, durable claim, trusted
+capture invocation, official archive exact reload and capture verification. Known
+failure publication uses the same marker. Failure-publication failure still leaves
+the consumed claim `UNKNOWN_SEND_OUTCOME`; no retry or claim semantics changed.
+The application constructor requires
+`type(capture_service) is NAROfficialLiveResponseCaptureService`. The reviewed service
+with deterministic fake transport remains accepted; arbitrary protocol objects and
+overriding subclasses are rejected. No existing capture module changed.
+
+Correction changes are confined to the two Phase111 application/archive modules, their
+two focused test modules and these two docs. Migration/schema and migration tests are
+unchanged from the independent-review bundle. Ten new cases cover forged receipts,
+manual capture plus manual receipt, uncontrolled failure, absent/wrong markers on exact
+duplicates, pre-ancestry rejection, and arbitrary/subclass service rejection. All
+existing controlled-success/failure, publication-failure, concurrency and crash cases
+remain passing.
+
+Correction verification: focused tests **64 passed**; all eight related regression
+modules **84 passed, 76 subtests passed**; full repository **4782 passed, 4 skipped,
+2846 subtests passed**, exit 0, 1038.21 seconds. The full command was
+`python -m pytest -q --junitxml=C:/Users/garim/AppData/Local/Temp/keibaos-phase111-correction-full-20260928.xml`
+with
+`KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=79428f6fd6ab62777a8c3f2c877eeddb632d319f`.
+This is the established Phase106 committed-source regression configuration, not sealed
+verification of uncommitted Phase111 bytes. Static searches found no additional HTTP,
+fallback, repair or Phase110/V010 persistence. Marker exposure checks, whitespace
+checks, `git diff --check`, the exact eight-path Allowed-Files audit and empty-index
+check pass. Provider HTTP, production DB, live campaign, stage, commit and push activity
+were zero. No implementation-review PASS or commit approval is claimed.
+
+Next: `CHATGPT_REVIEW_PHASE111_IMPLEMENTATION_CORRECTION`.
+
+### Initial implementation and precommit verification record (before correction)
+
+The additive implementation consists only of the three approved production modules
+and three dedicated test modules, plus these two documents. No existing provider,
+transport, target-source, parser, ingestion, migration, or prediction module changed.
+There is no separate bootstrap module and no global LocalFetcher migration.
+
+`NARTrustedDebaAcquisitionApplication.declare()` exact-loads the monthly/envelope and
+RaceList capture identities from the existing daily-target archive. It reconstructs
+the target set using `build_nar_historical_daily_replay_target_set()`, checks its exact
+content hash and unique NAR/nar_official membership, verifies disposition capture/digest
+ancestry and evidence persistence before declaration issuance, and derives the Deba URL
+through the existing canonicalizer. It accepts no caller-created target as authority.
+The reviewed normalizer remains responsible for proving the RaceList href ancestry;
+Phase111 does not duplicate its HTML grammar or inherit historical replay policy.
+
+Frozen, versioned canonical records are
+`NARProspectiveDebaAcquisitionDeclarationV1`, `NARProspectiveDebaSendClaimV1`,
+`NARProspectiveDebaFailureV1`, and `NARProspectiveDebaAcquisitionReceiptV1`.
+Their complete canonical UTF-8 JSON payloads determine SHA-256 content identities.
+Exact reload rejects schema/content/identity or parent-ancestry contradictions.
+
+The explicit migration installs a dedicated V1 registry and `phase111_declarations`,
+`phase111_claims`, `phase111_failures`, and `phase111_receipts` tables. Exact topology,
+registry, restrictive foreign keys, append-only triggers, and exclusive terminal
+constraints are validated. Constructors never migrate or repair. Schema inspection
+excludes only the literal
+`sqlite_` internal-name prefix, not unrelated legal names such as `sqliteXunexpected`.
+Storage-layer `BEGIN IMMEDIATE` and a unique declaration-to-claim relation enforce
+one committed claim before transport without process-local exclusivity,
+including independent concurrent SQLite connections. A consumed claim with no durable
+terminal is `UNKNOWN_SEND_OUTCOME`; restart cannot resume/retry it. A separately
+declared refresh has a distinct identity and may acquire its own single claim.
+
+After exact declaration reload and renewed target reconstruction, the application
+invokes the existing trusted capture-service boundary once. It exact-reloads the
+returned capture from the unchanged official archive, compares it exactly, and verifies
+Deba target/page, strict UTF-8 and claim/request/observation/cutoff ordering before
+publishing and reloading a success receipt. Known failures are immutable terminal
+evidence; known repository publication errors are distinguished from transport errors,
+and failure-publication failure leaves the durable claim consumed/unknown.
+There is no retry, fallback, retrospective receipt reconstruction, or new HTTP stack.
+
+The receipt binds declaration, claim, provider, external target, canonical URL,
+capture/digest, requested/observed/stored timestamps, cutoff, success disposition and
+V1 identity. `NARQualifiedDebaResultV1` exposes no provider/refetch capability.
+`read_qualified_deba_bytes()` verifies exact receipt/declaration/claim/capture
+consistency and returns the existing archive's unchanged bytes without network access.
+The lineage archive stores neither Deba bodies nor RaceList bodies. Same-byte fan-out
+and strict decoding into the existing HorseParser boundary were tested. Unsupported
+UTF-8 and post-cutoff observations do not receive qualified receipts.
+
+`CAPTURE_RETURN_VALUE_ALONE != PHASE111_ACQUISITION_AUTHORITY`.
+`VALID_RAW_CAPTURE != VALID_PRE_C_IDENTITY_AUTHORITY`.
+`LIVE_CAMPAIGN_AUTHORIZATION = BLOCKED`.
+`CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`.
+
+Required verification was rerun on this uncommitted implementation:
+
+- Phase111 focused on final source: **54 passed**.
+- All eight required official-capture/daily-target regression modules: **84 passed,
+  76 subtests passed**.
+- Full repository, final invocation: **4772 passed, 4 skipped, 2846 subtests passed**,
+  exit 0, 947.86 seconds. XML has zero failures/errors.
+- Static prohibited-behavior searches, new-file whitespace audit, `git diff --check`,
+  exact eight-path Allowed-Files audit and empty-index check passed.
+
+The first full invocation without the established Phase106 smoke configuration ended
+with 1 existing diagnostic sealed-child failure, 4767 passes, 4 skips and 2846 subtests.
+Its temporary-clone diagnostic commit had no source difference; the clone remained
+clean at the approved base. No Phase111 failure or forbidden-file correction occurred.
+The existing test then passed separately and in the final full run with
+`KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=79428f6fd6ab62777a8c3f2c877eeddb632d319f`,
+the established committed-source regression mode. This does not seal or attest Phase111
+worktree bytes. The four full-suite skips are the existing two environment-gated
+Phase108 final-sealed cases and two unavailable Windows symlink-capability cases;
+Phase108's already-reviewed formal/sealed completion remains unchanged.
+
+An intermediate configured full run passed 4768 tests before four final focused cases
+were added for publication-error classification and literal SQLite internal-prefix
+schema rejection. An ensuing verification run was intentionally interrupted before
+completion to fix the reproduced schema-prefix issue; it is not counted as a pass.
+All focused, related and full verification was then rerun on the final source above.
+
+Provider HTTP, production DB reads/writes, live campaign, workspace staging, commit and
+push were zero. All new tests use fake transport and temporary/in-memory databases.
+The separate KeibaAI repository was untouched. Phase111 is not formally complete;
+independent implementation review and explicit commit approval remain required.
+
+Next: `CHATGPT_REVIEW_PHASE111_IMPLEMENTATION`.
+
+---
+
+## Historical record — POST_V0_8_DAILY_REPLAY_110
 
 Title: NAR Prospective Identity-Complete Race and Entry Persistence Authority
 
