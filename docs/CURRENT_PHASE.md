@@ -4,39 +4,108 @@
 
 Title: NAR Trusted Single-Send Deba Acquisition and Identity-Ingestion Boundary
 
-Status: `APPROVED_FOR_COMMIT`
+Status: `WAITING_FOR_PHASE_INSTRUCTION`
 
-Formal Status: `APPROVED_FOR_COMMIT`
+Formal Status: `FORMALLY_COMPLETE`
 
-State: `APPROVED_FOR_COMMIT`
+State: `FORMALLY_COMPLETE`
 
-Outcome: `APPROVED_FOR_LOCAL_COMMIT`
+Outcome: `PHASE111_TRUSTED_SINGLE_SEND_DEBA_ACQUISITION_BOUNDARY_FORMALLY_INTEGRATED`
 
-Review disposition: `PHASE111_FINAL_ARCHITECTURAL_REVIEW_PASS`
+Implementation Commit: `ba420cbc13a5bfbb35f3d66aa5c87873df2d11ac`
 
-`PHASE111_IMPLEMENTATION_READY`.
-`PHASE111_DESIGN_APPROVED_FOR_CODEX`.
-`PHASE111_IMPLEMENTATION_READY_FOR_CHATGPT_REVIEW`.
+Implementation Tree: `4cbbc14af5eed97b17c9c555c51fe5c7d1bcdec8`
 
-Implementation review disposition: `PHASE111_IMPLEMENTATION_REVIEW_PASS`.
-`PHASE111_REVIEW_CORRECTIONS_VERIFIED`.
-`PHASE111_COMMIT_APPROVAL = GRANTED`.
+Implementation Parent: `79428f6fd6ab62777a8c3f2c877eeddb632d319f`
 
-This approval authorizes one local commit containing the exact eight Allowed Files.
-It does not declare Phase111 formally complete, attest post-commit sealed source, or
-authorize a push. Those require their own review/authorization steps.
-
-Base Commit: `79428f6fd6ab62777a8c3f2c877eeddb632d319f`
-
-Base Tree: `f6d764607203b633b925056a4eac106d48eba11d`
-
-Base Parent: `64f9ad239cabad13feaa8febb6cb5754dce57a6b`
-
-Base Message: `docs: close Phase110 identity persistence audit`
+Implementation Message: `feat: add trusted NAR Deba acquisition boundary`
 
 Branch: `feature/post-v0.8-daily-replay`
 
-### Frozen predecessor state
+### Final independent review and closure evidence
+
+`PHASE111_FINAL_ARCHITECTURAL_REVIEW_PASS`.
+`PHASE111_IMPLEMENTATION_REVIEW_PASS`.
+`PHASE111_REVIEW_CORRECTIONS_VERIFIED`.
+`PHASE111_COMMITTED_DOCUMENTATION_DELTA_REVIEW_PASS`.
+`PHASE111_GIT_AWARE_SEALED_VERIFICATION_PASS`.
+`PHASE111_POST_COMMIT_SEALED_VERIFICATION_PASS`.
+`PHASE111_FINAL_FULL_SUITE_PASS`.
+`PHASE111_IMPLEMENTATION_PUSH_PASS`.
+`PHASE111_REMOTE_REF_POINTS_TO_IMPLEMENTATION_COMMIT`.
+`PHASE111_IMPLEMENTATION_COMMIT_REMOTE_VERIFICATION_PASS`.
+`POST_V0_8_DAILY_REPLAY_111 = FORMALLY_COMPLETE`.
+
+Implementation evidence: focused Phase111 tests **64 passed**; related regressions
+**84 passed / 76 subtests passed**; final full suite **4782 passed / 4 skipped /
+2846 subtests passed**; final sealed Git-blob verification **569/569 MATCH**; static
+audit **PASS — no prohibited production behavior**. The implementation commit was
+independently verified on the GitHub branch with its exact tree, parent, message and
+eight-file path set.
+
+### Formally integrated boundary
+
+Phase111 provides exact RaceList-derived target ancestry; an immutable prospective
+Deba request declaration; declaration persistence and exact reload; a durable exclusive
+one-send claim committed before transport; fail-closed crash/UNKNOWN handling; reuse of
+the reviewed `NAROfficialLiveResponseCaptureService`; exact official-capture archive
+reload before lineage issuance; controlled receipt/failure publication; an immutable
+acquisition receipt; strict-UTF-8 qualification and pre-cutoff observation enforcement;
+and a read-only/no-network qualified result that exposes the same exact archived Deba
+bytes to downstream consumers.
+
+Retain:
+
+`PUBLICLY_CONSTRUCTIBLE_CAPTURE != OFFICIAL_LIVE_ACQUISITION_PROOF`.
+`PUBLICLY_CONSTRUCTIBLE_RECEIPT != ACQUISITION_AUTHORITY`.
+`REQUEST_DECLARATION != SEND_CLAIM`.
+`ONE_AUTHORIZATION_MAXIMUM_ONE_SEND`.
+`UNKNOWN_SEND_OUTCOME != SAFE_TO_RETRY`.
+`PHASE111_RESULT_CONSUMPTION = NO_NETWORK`.
+`SAME_RESPONSE_BYTES_REQUIRED_FOR_CAPTURE_AND_IDENTITY_EXTRACTION`.
+
+### Explicit non-authorities and remaining dependencies
+
+Phase111 does not establish Phase110 identity persistence, issue `races.id` or
+`horses.id`, persist cancelled entries, repair legacy enrichment, prove complete
+prediction/betting-reader nonselection, create Phase109 mapping authority, resolve
+Phase95 status semantics, assert ACTIVE, grant Phase41 market eligibility, authorize a
+live campaign, choose operational Delta, or establish production readiness for the
+complete betting workflow.
+
+`TRUSTED_DEBA_ACQUISITION_AUTHORITY != PHASE110_IDENTITY_PERSISTENCE_AUTHORITY`.
+`TRUSTED_DEBA_CAPTURE != COMPLETE_ENTRY_STATUS_AUTHORITY`.
+`TRUSTED_DEBA_CAPTURE != ACTIVE_STATUS`.
+`TRUSTED_DEBA_CAPTURE != MARKET_ELIGIBILITY`.
+`IDENTITY_PERSISTENCE_AUTHORITY != LIVE_CAMPAIGN_AUTHORIZATION`.
+
+The trusted single-send acquisition prerequisite for Phase110 is now satisfied.
+Phase110 itself remains unimplemented and must address status-independent complete
+entry identity persistence, legacy writer atomicity/race safety, compatible enrichment
+of identity-only rows, and prediction/betting reader nonselection coverage. Phase109
+production mapping remains dependent on completed Phase110 identity persistence.
+Phase95 and Phase41 remain separate downstream blockers.
+
+Expected dependency chain:
+
+`Phase111 COMPLETE -> Phase110 implementation -> Phase109 production mapping ->
+Phase108 prestaged manifest integration -> PRE_C root / operational timing audit`.
+
+`LIVE_CAMPAIGN_AUTHORIZATION = BLOCKED`.
+`CONCRETE_FIXED_OFFSET_REQUIRES_OPERATIONAL_TIMING_AUDIT`.
+
+Next: `CHATGPT_PREPARE_PHASE110_IMPLEMENTATION`.
+
+---
+
+## Historical Phase111 design and implementation record (superseded)
+
+The material below preserves the design and execution audit trail. Its transitional
+status statements and next-action recommendations describe earlier points in the
+workflow; the authoritative current Phase111 state and closure evidence are recorded
+above.
+
+### Historical frozen predecessor state
 
 `PHASE110_FINAL_DOCUMENTATION_REMOTE_VERIFICATION_PASS`.
 `PHASE110_REVISED_ARCHITECTURAL_REVIEW_PASS`.
@@ -44,9 +113,10 @@ Branch: `feature/post-v0.8-daily-replay`
 `PHASE110_IMPLEMENTATION = BLOCKED_PENDING_TRUSTED_INGESTION_PREREQUISITE`.
 `PHASE110_IDENTITY_PERSISTENCE_BLOCKED_BY_TRUSTED_ACQUISITION_AND_LEGACY_WRITER_SAFETY`.
 
-Phase111 designs only the trusted single-send upstream boundary.  It does not issue
-Phase110 internal IDs, repair `save_horse()`, define entry status, grant market
-eligibility, choose Delta, authorize a live campaign, or perform provider HTTP.
+Historical design statement: Phase111 designs only the trusted single-send upstream
+boundary. It does not issue Phase110 internal IDs, repair `save_horse()`, define entry
+status, grant market eligibility, choose Delta, authorize a live campaign, or perform
+provider HTTP.
 
 Freeze:
 
@@ -61,7 +131,7 @@ Freeze:
 `TRUSTED_DEBA_ACQUISITION_AUTHORITY != PHASE110_IDENTITY_PERSISTENCE_AUTHORITY`.
 `TRUSTED_DEBA_ACQUISITION_AUTHORITY != LIVE_CAMPAIGN_AUTHORIZATION`.
 
-### Current Deba acquisition inventory
+### Current Deba acquisition inventory (historical audit)
 
 | Caller/path | Request and transport semantics | Capture/authority result | Classification |
 | --- | --- | --- | --- |

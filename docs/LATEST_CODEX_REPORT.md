@@ -1,6 +1,88 @@
 # Latest Codex Report
 
-## POST_V0_8_DAILY_REPLAY_111 — LOCAL COMMIT APPROVAL
+## POST_V0_8_DAILY_REPLAY_111 — FINAL DOCUMENTATION AND PHASE CLOSURE
+
+Phase: `POST_V0_8_DAILY_REPLAY_111`
+
+Status: `WAITING_FOR_PHASE_INSTRUCTION`
+
+Formal Status: `FORMALLY_COMPLETE`
+
+State: `FORMALLY_COMPLETE`
+
+Outcome: `PHASE111_TRUSTED_SINGLE_SEND_DEBA_ACQUISITION_BOUNDARY_FORMALLY_INTEGRATED`
+
+Implementation commit/tree/parent: `ba420cbc13a5bfbb35f3d66aa5c87873df2d11ac` /
+`4cbbc14af5eed97b17c9c555c51fe5c7d1bcdec8` /
+`79428f6fd6ab62777a8c3f2c877eeddb632d319f`.
+
+Implementation message: `feat: add trusted NAR Deba acquisition boundary`.
+Branch: `feature/post-v0.8-daily-replay`.
+
+Closure evidence:
+
+- `PHASE111_FINAL_ARCHITECTURAL_REVIEW_PASS`
+- `PHASE111_IMPLEMENTATION_REVIEW_PASS`
+- `PHASE111_REVIEW_CORRECTIONS_VERIFIED`
+- `PHASE111_COMMITTED_DOCUMENTATION_DELTA_REVIEW_PASS`
+- `PHASE111_GIT_AWARE_SEALED_VERIFICATION_PASS`
+- `PHASE111_POST_COMMIT_SEALED_VERIFICATION_PASS`
+- `PHASE111_FINAL_FULL_SUITE_PASS`
+- `PHASE111_IMPLEMENTATION_PUSH_PASS`
+- `PHASE111_REMOTE_REF_POINTS_TO_IMPLEMENTATION_COMMIT`
+- `PHASE111_IMPLEMENTATION_COMMIT_REMOTE_VERIFICATION_PASS`
+- `POST_V0_8_DAILY_REPLAY_111 = FORMALLY_COMPLETE`
+
+Final evidence: focused Phase111 tests **64 passed**; related regressions **84 passed /
+76 subtests passed**; sealed full suite **4782 passed / 4 skipped / 2846 subtests
+passed**; final exact sealed Git-blob comparison **569/569 MATCH**; static audit
+**PASS — no prohibited production behavior**. Independent remote verification confirmed
+the implementation commit's exact tree, parent, message and eight committed paths.
+
+Phase111 now provides exact RaceList-derived target ancestry, an immutable prospective
+Deba declaration, declaration persistence/exact reload, a durable exclusive one-send
+claim before transport, fail-closed crash/UNKNOWN behavior, reuse of the reviewed
+`NAROfficialLiveResponseCaptureService`, exact capture archive reload before controlled
+lineage receipt publication, strict-UTF-8 and pre-cutoff qualification, and a
+read-only/no-network result that exposes the same exact archived response bytes to
+downstream consumers.
+
+Retained non-authorities:
+
+`TRUSTED_DEBA_ACQUISITION_AUTHORITY != PHASE110_IDENTITY_PERSISTENCE_AUTHORITY`.
+`TRUSTED_DEBA_CAPTURE != COMPLETE_ENTRY_STATUS_AUTHORITY`.
+`TRUSTED_DEBA_CAPTURE != ACTIVE_STATUS`.
+`TRUSTED_DEBA_CAPTURE != MARKET_ELIGIBILITY`.
+`IDENTITY_PERSISTENCE_AUTHORITY != LIVE_CAMPAIGN_AUTHORIZATION`.
+
+The Phase110 trusted-acquisition prerequisite is satisfied, but Phase110 remains
+unimplemented. Its remaining work includes status-independent complete identity
+persistence, legacy writer atomicity/race safety, compatible enrichment for
+identity-only rows, and complete prediction/betting-reader nonselection coverage.
+Phase109 production mapping depends on Phase110 completion. Phase95 and Phase41 remain
+separate downstream blockers; live campaign authorization and the concrete operational
+timing/Delta audit remain blocked.
+
+Expected dependency chain:
+
+`Phase111 COMPLETE -> Phase110 implementation -> Phase109 production mapping ->
+Phase108 prestaged manifest integration -> PRE_C root / operational timing audit`.
+
+This finalization activity changes documentation only. It performed no provider HTTP,
+production DB access, live campaign, or action in the separate `KeibaAI` repository.
+Only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` are authorized for this
+documentation-finalization commit. No Phase110 implementation is started here.
+
+Next: `CHATGPT_PREPARE_PHASE110_IMPLEMENTATION`.
+
+---
+
+## Historical record — Phase111 local commit approval and implementation review
+
+The following report describes the pre-push, pre-formal-closure stage. Its transitional
+status and next-action claims are superseded by the final Phase111 closure record above.
+
+### Earlier local commit approval record
 
 Phase: `POST_V0_8_DAILY_REPLAY_111`
 
