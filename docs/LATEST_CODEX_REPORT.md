@@ -1,6 +1,6 @@
 # Latest Codex Report
 
-## Phase110 final documentation and formal closure
+## Phase110 final remote verification and documentation audit
 
 Phase: `POST_V0_8_DAILY_REPLAY_110`.
 
@@ -18,18 +18,30 @@ Implementation Tree: `1b9b1c5cdee549f31879b20af8cd077b58b1f38b`.
 
 Implementation Parent: `48dcc0a359a9b48b7f32fbe3fef846db1da31009`.
 
+Formal Closure Commit: `4e9f5b0081764cbd51460050b2d3d1bf87434dfd`.
+
+Formal Closure Tree: `48e61f3fa2a7f0b8ea73118f467a1990f6e03215`.
+
+Formal Closure Parent: `9500a7d4d4bbb0b9cc5e20df1a8dcce8921c2f75`.
+
 `PHASE110_IMPLEMENTATION_REVIEW_PASS`.
 `PHASE110_POST_COMMIT_VERIFICATION_PASS`.
 `PHASE110_REMOTE_IMPLEMENTATION_VERIFICATION_PASS`.
 `PHASE110_IMPLEMENTATION_REMOTE_ACCEPTED`.
 `PHASE110_FORMAL_CLOSURE_APPROVED`.
+`PHASE110_FORMAL_CLOSURE_REMOTE_VERIFICATION_PASS`.
+`PHASE110_FINAL_DOCUMENTATION_REMOTE_VERIFICATION_PASS`.
 `POST_V0_8_DAILY_REPLAY_110 = FORMALLY_COMPLETE`.
 
 The first independent implementation review returned `CHANGES_REQUIRED`. All four
 findings were repaired, and independent re-review passed. The 38-path implementation
 commit was created, independently post-commit verified, pushed without force, and
 independently verified on the GitHub remote branch at the exact commit/tree above.
-This docs-only closure step did not rerun tests. Accepted verification remains:
+The docs-only formal closure commit was pushed without force. Independent GitHub
+verification confirmed the branch HEAD at the exact closure commit/tree above,
+parented by the implementation commit, ahead 1 / behind 0 / total commits 1,
+and changing exactly `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`.
+This final docs-only audit did not rerun tests. Accepted verification remains:
 repair direct `5 passed`; Phase110 focused `142 passed / 51 subtests passed`;
 related regression `406 passed / 145 subtests passed`; full suite `4836 passed /
 4 skipped / 2846 subtests passed`; static audit PASS.
@@ -37,10 +49,10 @@ related regression `406 passed / 145 subtests passed`; full suite `4836 passed /
 Phase110 complete identity persistence does not establish Phase109 mapping, Phase95
 status, Phase41 market eligibility, Phase108 root, live campaign authorization,
 Operational Delta, or complete betting workflow readiness. Provider HTTP,
-production DB access, and KeibaAI changes remain zero. The closure documentation
-commit is local only; its push and remote verification are not claimed.
+production DB access, and KeibaAI changes remain zero. Phase110 is formally
+complete and waiting for the next phase instruction.
 
-Next: `CHATGPT_VERIFY_PHASE110_FORMAL_CLOSURE_COMMIT`.
+Next: `WAITING_FOR_PHASE_INSTRUCTION`.
 
 ## Historical record — Phase110 independent implementation review PASS and local commit approval
 

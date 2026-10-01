@@ -19,6 +19,8 @@ Independent implementation review: `CHATGPT_REVIEW_PHASE110_IMPLEMENTATION = PAS
 `PHASE110_REMOTE_IMPLEMENTATION_VERIFICATION_PASS`.
 `PHASE110_IMPLEMENTATION_REMOTE_ACCEPTED`.
 `PHASE110_FORMAL_CLOSURE_APPROVED`.
+`PHASE110_FORMAL_CLOSURE_REMOTE_VERIFICATION_PASS`.
+`PHASE110_FINAL_DOCUMENTATION_REMOTE_VERIFICATION_PASS`.
 `POST_V0_8_DAILY_REPLAY_110 = FORMALLY_COMPLETE`.
 The first independent review returned `CHANGES_REQUIRED`; its four findings were
 repaired and independently re-reviewed within the approved 38-path scope. The
@@ -30,6 +32,16 @@ Implementation Commit: `9500a7d4d4bbb0b9cc5e20df1a8dcce8921c2f75`
 Implementation Tree: `1b9b1c5cdee549f31879b20af8cd077b58b1f38b`
 
 Implementation Parent: `48dcc0a359a9b48b7f32fbe3fef846db1da31009`
+
+Formal Closure Commit: `4e9f5b0081764cbd51460050b2d3d1bf87434dfd`
+
+Formal Closure Tree: `48e61f3fa2a7f0b8ea73118f467a1990f6e03215`
+
+Formal Closure Parent: `9500a7d4d4bbb0b9cc5e20df1a8dcce8921c2f75`
+
+The closure commit was pushed without force. Independent GitHub verification found
+the remote branch at that exact commit/tree, with the implementation commit as its
+parent and exactly `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` changed.
 
 Review disposition: `PHASE110_REVISED_ARCHITECTURAL_REVIEW_PASS`.
 
@@ -65,9 +77,10 @@ Phase111 predecessor: `POST_V0_8_DAILY_REPLAY_111 = FORMALLY_COMPLETE`;
 
 Phase111's trusted single-send Deba acquisition prerequisite is satisfied. Phase110
 is formally complete within the approved 38-path scope. Its implementation commit
-and tree were independently verified on the remote branch. The documentation-only
-closure commit is local until separately approved for push. Phase110 grants no
-Phase109 mapping, Phase95 status, Phase41 market, Phase108 root, live-campaign, or
+and tree were independently verified on the remote branch. The docs-only closure
+commit was also pushed and independently verified remotely. Phase110 waits for the
+next phase instruction and grants no Phase109 mapping, Phase95 status, Phase41
+market, Phase108 root, live-campaign, or
 Operational Delta authority. Provider HTTP, production DB access, and KeibaAI
 changes remain zero.
 
@@ -396,7 +409,7 @@ outside Phase110 completion.
 The first repair verification did not itself grant review PASS or commit approval;
 subsequent independent review granted both for the exact repaired implementation.
 
-Next: `CHATGPT_VERIFY_PHASE110_FORMAL_CLOSURE_COMMIT` after the docs-only local commit.
+Next: `WAITING_FOR_PHASE_INSTRUCTION`.
 
 ---
 
