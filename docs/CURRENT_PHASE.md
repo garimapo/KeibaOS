@@ -4,20 +4,32 @@
 
 Title: NAR Identity-Complete Entry Persistence
 
-Status: `READY_FOR_REVIEW`
+Status: `WAITING_FOR_PHASE_INSTRUCTION`
 
-Formal Status: `READY_FOR_REVIEW`
+Formal Status: `FORMALLY_COMPLETE`
 
-State: `IMPLEMENTED_FOR_REVIEW`
+State: `FORMALLY_COMPLETE`
 
-Outcome: `READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`
+Outcome: `PHASE110_NAR_IDENTITY_COMPLETE_ENTRY_PERSISTENCE_FORMALLY_INTEGRATED`
 
 Independent implementation review: `CHATGPT_REVIEW_PHASE110_IMPLEMENTATION = PASS`.
 `PHASE110_IMPLEMENTATION_REVIEW_PASS`.
 `PHASE110_COMMIT_APPROVED`.
+`PHASE110_POST_COMMIT_VERIFICATION_PASS`.
+`PHASE110_REMOTE_IMPLEMENTATION_VERIFICATION_PASS`.
+`PHASE110_IMPLEMENTATION_REMOTE_ACCEPTED`.
+`PHASE110_FORMAL_CLOSURE_APPROVED`.
+`POST_V0_8_DAILY_REPLAY_110 = FORMALLY_COMPLETE`.
 The first independent review returned `CHANGES_REQUIRED`; its four findings were
-repaired and independently re-reviewed within the approved 38-path scope. This
-approves one local implementation commit, not formal completion or push.
+repaired and independently re-reviewed within the approved 38-path scope. The
+implementation commit was then independently post-commit verified, pushed without
+force, and independently verified on the GitHub remote branch before formal closure.
+
+Implementation Commit: `9500a7d4d4bbb0b9cc5e20df1a8dcce8921c2f75`
+
+Implementation Tree: `1b9b1c5cdee549f31879b20af8cd077b58b1f38b`
+
+Implementation Parent: `48dcc0a359a9b48b7f32fbe3fef846db1da31009`
 
 Review disposition: `PHASE110_REVISED_ARCHITECTURAL_REVIEW_PASS`.
 
@@ -52,9 +64,12 @@ Phase111 predecessor: `POST_V0_8_DAILY_REPLAY_111 = FORMALLY_COMPLETE`;
 `PHASE111_FINAL_DOCUMENTATION_REMOTE_VERIFICATION_PASS`.
 
 Phase111's trusted single-send Deba acquisition prerequisite is satisfied. Phase110
-is implemented and independently reviewed within the approved 38-path scope. This
-is not formal completion or push approval. Before this local commit activity, no
-provider HTTP, production DB access, staging, commit, or push occurred.
+is formally complete within the approved 38-path scope. Its implementation commit
+and tree were independently verified on the remote branch. The documentation-only
+closure commit is local until separately approved for push. Phase110 grants no
+Phase109 mapping, Phase95 status, Phase41 market, Phase108 root, live-campaign, or
+Operational Delta authority. Provider HTTP, production DB access, and KeibaAI
+changes remain zero.
 
 ### Objective and frozen authority boundaries
 
@@ -376,11 +391,12 @@ SQLite-generated `lastrowid` issuance were confirmed. All 38 dirty paths are wit
 the exact Approved Allowed Files; index is empty and `git diff --check` passes.
 
 Phase95 status authority, Phase41 market eligibility, Phase109 mapping authority,
-live campaign activation, and formal Phase110 completion remain outside this phase.
+Phase108 root authority, live campaign activation, and Operational Delta remain
+outside Phase110 completion.
 The first repair verification did not itself grant review PASS or commit approval;
 subsequent independent review granted both for the exact repaired implementation.
 
-Next: `CHATGPT_VERIFY_PHASE110_COMMIT` after the approved local commit.
+Next: `CHATGPT_VERIFY_PHASE110_FORMAL_CLOSURE_COMMIT` after the docs-only local commit.
 
 ---
 

@@ -1,6 +1,48 @@
 # Latest Codex Report
 
-## Phase110 independent implementation review PASS and local commit approval
+## Phase110 final documentation and formal closure
+
+Phase: `POST_V0_8_DAILY_REPLAY_110`.
+
+Status: `WAITING_FOR_PHASE_INSTRUCTION`.
+
+Formal Status: `FORMALLY_COMPLETE`.
+
+State: `FORMALLY_COMPLETE`.
+
+Outcome: `PHASE110_NAR_IDENTITY_COMPLETE_ENTRY_PERSISTENCE_FORMALLY_INTEGRATED`.
+
+Implementation Commit: `9500a7d4d4bbb0b9cc5e20df1a8dcce8921c2f75`.
+
+Implementation Tree: `1b9b1c5cdee549f31879b20af8cd077b58b1f38b`.
+
+Implementation Parent: `48dcc0a359a9b48b7f32fbe3fef846db1da31009`.
+
+`PHASE110_IMPLEMENTATION_REVIEW_PASS`.
+`PHASE110_POST_COMMIT_VERIFICATION_PASS`.
+`PHASE110_REMOTE_IMPLEMENTATION_VERIFICATION_PASS`.
+`PHASE110_IMPLEMENTATION_REMOTE_ACCEPTED`.
+`PHASE110_FORMAL_CLOSURE_APPROVED`.
+`POST_V0_8_DAILY_REPLAY_110 = FORMALLY_COMPLETE`.
+
+The first independent implementation review returned `CHANGES_REQUIRED`. All four
+findings were repaired, and independent re-review passed. The 38-path implementation
+commit was created, independently post-commit verified, pushed without force, and
+independently verified on the GitHub remote branch at the exact commit/tree above.
+This docs-only closure step did not rerun tests. Accepted verification remains:
+repair direct `5 passed`; Phase110 focused `142 passed / 51 subtests passed`;
+related regression `406 passed / 145 subtests passed`; full suite `4836 passed /
+4 skipped / 2846 subtests passed`; static audit PASS.
+
+Phase110 complete identity persistence does not establish Phase109 mapping, Phase95
+status, Phase41 market eligibility, Phase108 root, live campaign authorization,
+Operational Delta, or complete betting workflow readiness. Provider HTTP,
+production DB access, and KeibaAI changes remain zero. The closure documentation
+commit is local only; its push and remote verification are not claimed.
+
+Next: `CHATGPT_VERIFY_PHASE110_FORMAL_CLOSURE_COMMIT`.
+
+## Historical record — Phase110 independent implementation review PASS and local commit approval
 
 Phase: `POST_V0_8_DAILY_REPLAY_110`. Status / Formal Status: `READY_FOR_REVIEW`.
 State: `IMPLEMENTED_FOR_REVIEW`. Outcome:
