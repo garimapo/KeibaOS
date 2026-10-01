@@ -83,7 +83,7 @@ def _initialize(connection: sqlite3.Connection) -> sqlite3.Connection:
         """CREATE TABLE races(
             id INTEGER PRIMARY KEY, race_date TEXT, organization TEXT, place TEXT, race_no INTEGER,
             race_name TEXT, distance INTEGER, track TEXT, weather TEXT, track_condition TEXT,
-            horse_count INTEGER
+            horse_count INTEGER, deba_table_url TEXT
         )"""
     )
     connection.execute("CREATE TABLE horses(id INTEGER PRIMARY KEY, race_id INTEGER, horse_no INTEGER)")
@@ -132,7 +132,7 @@ def test_first_materialization_bootstraps_exact_identity_and_round_trips() -> No
 def test_prior_valid_seed_is_required_before_existing_mapping_reuse() -> None:
     connection = _connection()
     connection.execute("INSERT INTO historical_input_source_identities VALUES('JRA','jra_official')")
-    connection.execute("INSERT INTO races VALUES(1,'2025-01-05','JRA','東京',1,'テストレース',1600,'芝','晴','良',1)")
+    connection.execute("INSERT INTO races VALUES(1,'2025-01-05','JRA','東京',1,'テストレース',1600,'芝','晴','良',1,'https://example.test/1')")
     connection.execute("INSERT INTO historical_input_external_races VALUES('JRA','jra_official',?,1)", (RACE_ID,))
     connection.commit()
     with pytest.raises(RepositoryDataIntegrityError, match="prior d0 seed proof"):
@@ -172,7 +172,7 @@ def test_existing_entry_mapping_without_prior_seed_entry_proof_fails() -> None:
 
 def test_unproven_legacy_collisions_are_integrity_failures() -> None:
     connection = _connection()
-    connection.execute("INSERT INTO races VALUES(1,'2025-01-05','JRA','東京',1,'legacy',1600,'芝','晴','良',1)")
+    connection.execute("INSERT INTO races VALUES(1,'2025-01-05','JRA','東京',1,'legacy',1600,'芝','晴','良',1,'https://example.test/1')")
     connection.commit()
     with pytest.raises(RepositoryDataIntegrityError, match="legacy race collision"):
         _materialize(SQLiteJRARaceReplaySeedRepository(connection=connection))

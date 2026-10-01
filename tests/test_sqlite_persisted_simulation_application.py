@@ -133,12 +133,12 @@ class SQLitePersistedSimulationApplicationTests(unittest.TestCase):
         race_id: int,
         horse_id: int,
     ) -> None:
-        connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY)")
+        connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY, race_date TEXT, organization TEXT, place TEXT, race_no INTEGER, deba_table_url TEXT)")
         connection.execute(
             "CREATE TABLE horses ("
             "id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL, horse_no INTEGER NOT NULL)",
         )
-        connection.execute("INSERT INTO races (id) VALUES (?)", (race_id,))
+        connection.execute("INSERT INTO races (id, race_date, organization, place, race_no, deba_table_url) VALUES (?, '2025-01-01', 'JRA', '東京', 1, ?)", (race_id, f'https://example.test/{race_id}'))
         connection.execute(
             "INSERT INTO horses (id, race_id, horse_no) VALUES (?, ?, 1)",
             (horse_id, race_id),
@@ -389,7 +389,7 @@ class SQLitePersistedSimulationApplicationTests(unittest.TestCase):
         path = self._temporary_path()
         setup = sqlite3.connect(path)
         self.addCleanup(setup.close)
-        setup.execute("CREATE TABLE races (id INTEGER PRIMARY KEY)")
+        setup.execute("CREATE TABLE races (id INTEGER PRIMARY KEY, race_date TEXT, organization TEXT, place TEXT, race_no INTEGER, deba_table_url TEXT)")
         setup.execute(
             "CREATE TABLE horses (id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL, horse_no INTEGER NOT NULL)",
         )
@@ -415,7 +415,7 @@ class SQLitePersistedSimulationApplicationTests(unittest.TestCase):
         self.addCleanup(verification.close)
         self.assertEqual(
             dict(verification.execute("SELECT version, name FROM schema_migrations")),
-            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema", 14: "v014_historical_input_request_identity_schema", 15: "v015_jra_race_replay_seed_schema", 16: "v016_nar_daily_replay_result_schema", 17: "v017_nar_daily_replay_prediction_cutoff_schema"},
+            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema", 14: "v014_historical_input_request_identity_schema", 15: "v015_jra_race_replay_seed_schema", 16: "v016_nar_daily_replay_result_schema", 17: "v017_nar_daily_replay_prediction_cutoff_schema", 18: "v018_nar_identity_complete_entry_schema"},
         )
         self.assertIsNotNone(
             verification.execute(
@@ -542,7 +542,7 @@ class SQLitePersistedSimulationApplicationTests(unittest.TestCase):
         )
         self.assertEqual(
             dict(verification.execute("SELECT version, name FROM schema_migrations")),
-            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema", 14: "v014_historical_input_request_identity_schema", 15: "v015_jra_race_replay_seed_schema", 16: "v016_nar_daily_replay_result_schema", 17: "v017_nar_daily_replay_prediction_cutoff_schema"},
+            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema", 14: "v014_historical_input_request_identity_schema", 15: "v015_jra_race_replay_seed_schema", 16: "v016_nar_daily_replay_result_schema", 17: "v017_nar_daily_replay_prediction_cutoff_schema", 18: "v018_nar_identity_complete_entry_schema"},
         )
         self.assertFalse(verification.in_transaction)
         self.assertEqual(verification.execute("SELECT 1").fetchone(), (1,))

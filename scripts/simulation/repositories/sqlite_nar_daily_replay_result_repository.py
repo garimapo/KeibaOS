@@ -7,6 +7,8 @@ from pathlib import Path as _Path
 import json as _json
 import sqlite3 as _sqlite3
 
+from scripts.migrations.runner import MIGRATIONS as _APPLICATION_MIGRATIONS
+
 from scripts.migrations.versions.v016_nar_daily_replay_result_schema import (
     require_v016_schema_contract as _require_v016_schema_contract,
 )
@@ -56,20 +58,6 @@ _BET_COLUMNS = (
     "persisted_content_sha256", "bet_type", "bet_count", "settled_bet_count",
     "hit_bet_count", "investment", "payout", "profit", "roi_text", "bet_hit_rate_text",
 )
-
-_EXPECTED_MIGRATIONS = {
-    8: "v008_simulation_schema",
-    9: "v009_simulation_bet_plan_schema",
-    10: "v010_historical_input_snapshot_schema",
-    11: "v011_historical_past_race_time_difference_schema",
-    12: "v012_historical_input_evidence_schema",
-    13: "v013_historical_past_race_race_time_domain_schema",
-    14: "v014_historical_input_request_identity_schema",
-    15: "v015_jra_race_replay_seed_schema",
-    16: "v016_nar_daily_replay_result_schema",
-    17: "v017_nar_daily_replay_prediction_cutoff_schema",
-}
-
 
 class SQLiteNARDailyReplayResultRepository:
     """Exact-ID persistence in the caller's explicitly migrated main database."""
@@ -198,8 +186,11 @@ class SQLiteNARDailyReplayResultRepository:
             _require_v017_schema_contract(self._connection)
         except (_sqlite3.Error, RuntimeError) as error:
             raise RepositoryDataIntegrityError("v016/v017 daily replay result schema is unavailable") from error
-        if applied != _EXPECTED_MIGRATIONS:
-            raise RepositoryDataIntegrityError("registered migration state is not exact v017")
+        expected = {migration.VERSION: migration.NAME for migration in _APPLICATION_MIGRATIONS}
+        if applied != expected:
+            raise RepositoryDataIntegrityError(
+                "registered application migration state differs from current registry"
+            )
 
     def _insert(self, record: _Record) -> None:
         summary = record.summary

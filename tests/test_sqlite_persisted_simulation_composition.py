@@ -180,11 +180,11 @@ class SQLitePersistedSimulationCompositionTests(unittest.TestCase):
         race_id: int,
         horse_id: int,
     ) -> None:
-        connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY)")
+        connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY, race_date TEXT, organization TEXT, place TEXT, race_no INTEGER, deba_table_url TEXT)")
         connection.execute(
             "CREATE TABLE horses (id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL, horse_no INTEGER NOT NULL)",
         )
-        connection.execute("INSERT INTO races (id) VALUES (?)", (race_id,))
+        connection.execute("INSERT INTO races (id, race_date, organization, place, race_no, deba_table_url) VALUES (?, '2025-01-01', 'JRA', '東京', 1, ?)", (race_id, f'https://example.test/{race_id}'))
         connection.execute(
             "INSERT INTO horses (id, race_id, horse_no) VALUES (?, ?, ?)",
             (horse_id, race_id, 1),

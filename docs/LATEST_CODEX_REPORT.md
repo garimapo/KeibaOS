@@ -1,6 +1,499 @@
 # Latest Codex Report
 
-## POST_V0_8_DAILY_REPLAY_111 — FINAL DOCUMENTATION AND PHASE CLOSURE
+## Phase110 independent implementation review PASS and local commit approval
+
+Phase: `POST_V0_8_DAILY_REPLAY_110`. Status / Formal Status: `READY_FOR_REVIEW`.
+State: `IMPLEMENTED_FOR_REVIEW`. Outcome:
+`READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`. The independent final disposition is
+`CHATGPT_REVIEW_PHASE110_IMPLEMENTATION = PASS`.
+`PHASE110_IMPLEMENTATION_REVIEW_PASS`.
+`PHASE110_COMMIT_APPROVED`.
+The first independent review returned `CHANGES_REQUIRED`; the four findings and
+their repairs are preserved in the historical report below. The repaired
+implementation was independently re-reviewed and accepted. This approval permits
+one local Phase110 commit of the exact 38 approved paths. It does not establish
+formal Phase110 completion, push, or remote verification.
+
+Reviewed verification remains: repair direct `5 passed`; focused `142 passed / 51
+subtests passed`; related regression `406 passed / 145 subtests passed`; full suite
+`4836 passed / 4 skipped / 2846 subtests passed`; static audit PASS. No tests were
+rerun for this documentation-only review bookkeeping. Provider HTTP, production DB
+access, and KeibaAI changes remain zero. Push is not authorized.
+
+Next: `CHATGPT_VERIFY_PHASE110_COMMIT` after the approved local commit.
+
+## Historical record — Phase110 four-finding repair ready for independent re-review
+
+Phase: `POST_V0_8_DAILY_REPLAY_110`. Status / Formal Status: `READY_FOR_REVIEW`.
+State: `IMPLEMENTED_FOR_REVIEW`. Outcome:
+`READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`. Independent review disposition was
+`CHATGPT_REVIEW_PHASE110_IMPLEMENTATION = CHANGES_REQUIRED`; the four required
+repairs are complete within the existing 38-path scope. No implementation review
+PASS or commit approval was claimed at that earlier handoff; the final independent
+PASS and approval above supersede that pending disposition. Base HEAD/tree remain
+`48dcc0a359a9b48b7f32fbe3fef846db1da31009` /
+`67bf7387f189ba6ce40d6578aeaa7b5ccfdad79f`.
+
+Finding 1: exact parent natural-key selection remains required, and an independent
+NAR-wide canonical Deba URL query now rejects a second race row even when its place
+text differs. The ambiguity test proves zero horse, receipt, entry, and denial
+publication; the unique-parent integration test still succeeds.
+
+Finding 2: the V018 bound-horse immutability trigger now covers `id` as well as
+`race_id` and `horse_no`. A separate test connection with `PRAGMA foreign_keys=OFF`
+cannot mutate the issued ID; the original denial and both negative selection gates
+remain effective. Nonidentity enrichment remains permitted.
+
+Finding 3: the misleading pre-issuance extra-trigger rollback test was replaced by
+a SQLite authorizer failure on the first Phase110 entry-binding insert. The test
+observes horse and receipt insert attempts before denial and verifies rollback of
+all newly issued horses and all Phase110 authority rows, while an existing legacy
+row remains unchanged and the transaction closes.
+
+Finding 4: two independent file-backed SQLite connections now race Phase110
+issuance after a barrier. Exactly one succeeds; the other fails closed. One receipt,
+three unique horse numbers, three exact denials, and a clean foreign-key check prove
+single complete authority publication.
+
+Verification commands and results, in required order:
+
+- `python -m pytest -q --tb=short tests/test_sqlite_nar_identity_complete_entry_repository.py::test_same_canonical_deba_url_under_different_place_is_ambiguous tests/test_sqlite_nar_identity_complete_entry_repository.py::test_missing_ids_and_origin_denial_are_one_complete_transaction tests/test_sqlite_nar_identity_complete_entry_repository.py::test_failure_after_id_allocation_rolls_back_horses_and_authority tests/test_database_identity_only_entries.py::test_bound_horse_id_cannot_change_with_foreign_keys_off tests/test_database_identity_only_entries.py::test_two_phase110_issuers_publish_only_one_complete_authority` — `5 passed`.
+- `python -m pytest -q --tb=short tests/test_v018_nar_identity_complete_entry_schema.py tests/test_nar_identity_complete_entry_source.py tests/test_nar_identity_complete_entry_persistence.py tests/test_sqlite_nar_identity_complete_entry_repository.py tests/test_database_identity_only_entries.py tests/test_nar_identity_only_prediction_gate.py tests/test_sqlite_race_entry_source.py tests/test_simulation_migrations.py tests/test_historical_input_snapshot_migration.py tests/test_simulation_bet_plan_migration.py tests/test_nar_official_response_capture_migration.py` — `142 passed, 51 subtests passed`.
+- `python -m pytest -q --tb=short tests/test_database_past_races.py tests/test_run_prediction_cli.py tests/test_sqlite_race_entry_source.py tests/test_race_entry_source_contract.py tests/test_jra_race_replay_seed_migration.py tests/test_sqlite_jra_race_replay_seed_repository.py tests/test_jra_race_replay_seed.py tests/test_nar_trusted_deba_acquisition.py tests/test_nar_trusted_deba_acquisition_archive_migration.py tests/test_sqlite_nar_trusted_deba_acquisition_archive.py tests/test_historical_input_snapshot_builder.py tests/test_historical_input_snapshot_simulation_adapter.py tests/test_historical_input_snapshots.py tests/test_sqlite_historical_input_snapshot_repository.py tests/test_simulation_bet_plan_builder.py tests/test_simulation_bet_plan_snapshot.py tests/test_sqlite_simulation_bet_plan_snapshot_repository.py tests/test_simulation_bet_plan_identity.py` — `406 passed, 145 subtests passed`.
+- With `KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=48dcc0a359a9b48b7f32fbe3fef846db1da31009`, `python -m pytest -q --tb=short` — `4836 passed, 4 skipped, 2846 subtests passed` in 1031.16 seconds; exit 0. No provider/live mode.
+
+The final static audit found no direct HTTP client, legacy Deba refetch, apparent
+encoding fallback, fixed production DB path in new Phase110 modules, destructive
+repair, Phase109/V010 write, or Phase95/41 authority. The V018 `UPDATE`/`DELETE`
+search hits are restrictive triggers/FK clauses, the V010 hit checks the exact prior
+registry, and `lastrowid` is SQLite-issued. The tracked database `UPDATE horses` hit
+updates reviewed nonidentity enrichment fields only. Provider HTTP, production DB
+access, KeibaAI modification, stage, commit, and push: all zero.
+
+Final path/index/diff checks and SHA-256 comparison to the prior review bundle are
+recorded in the handoff report. `PHASE110_IMPLEMENTATION_REPAIR_VERIFIED_FOR_REVIEW`.
+
+Next: `CHATGPT_REVIEW_PHASE110_IMPLEMENTATION`.
+
+## Phase110 implementation ready for independent review — 38-path scope
+
+Phase: `POST_V0_8_DAILY_REPLAY_110`. Status / Formal Status:
+`READY_FOR_REVIEW`. State: `IMPLEMENTED_FOR_REVIEW`. Outcome:
+`READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`. Base HEAD/tree remain
+`48dcc0a359a9b48b7f32fbe3fef846db1da31009` /
+`67bf7387f189ba6ce40d6578aeaa7b5ccfdad79f` on
+`feature/post-v0.8-daily-replay`. This is not formal completion or commit approval.
+
+The final fixture correction added only
+`tests/test_persisted_simulation_request_application.py` to the approved 38-path
+scope. Its empty file-backed test still exercises the real unrestricted migration
+runner, now with V018-compatible parent columns and no seed rows. Two existing
+repository tests now insert only `races(id)` instead of using a one-column positional
+VALUES form against their six-column V018 fixture; all FK/transaction/round-trip
+assertions remain. Earlier Phase110 implementation and approved V018 repository and
+Phase108 harness corrections remain intact.
+
+Final verification commands and exact results:
+
+- `python -m pytest -q --tb=short tests/test_persisted_simulation_request_application.py::PersistedSimulationRequestApplicationTests::test_empty_file_backed_request_runs_the_real_chain tests/test_simulation_repositories.py::RepositoryTestCase::test_race_all_header_statuses_round_trip tests/test_simulation_repositories.py::RepositoryTestCase::test_repositories_preserve_caller_transaction` — `3 passed`.
+- `python -m pytest -q --tb=short tests/test_persisted_simulation_request_application.py tests/test_simulation_repositories.py` — `44 passed, 39 subtests passed`.
+- `python -m pytest -q --tb=short tests/test_v018_nar_identity_complete_entry_schema.py tests/test_nar_identity_complete_entry_source.py tests/test_nar_identity_complete_entry_persistence.py tests/test_sqlite_nar_identity_complete_entry_repository.py tests/test_database_identity_only_entries.py tests/test_nar_identity_only_prediction_gate.py tests/test_sqlite_race_entry_source.py tests/test_simulation_migrations.py tests/test_historical_input_snapshot_migration.py tests/test_simulation_bet_plan_migration.py tests/test_nar_official_response_capture_migration.py` — `139 passed, 51 subtests passed`.
+- `python -m pytest -q --tb=short tests/test_database_past_races.py tests/test_run_prediction_cli.py tests/test_sqlite_race_entry_source.py tests/test_race_entry_source_contract.py tests/test_jra_race_replay_seed_migration.py tests/test_sqlite_jra_race_replay_seed_repository.py tests/test_jra_race_replay_seed.py tests/test_nar_trusted_deba_acquisition.py tests/test_nar_trusted_deba_acquisition_archive_migration.py tests/test_sqlite_nar_trusted_deba_acquisition_archive.py tests/test_historical_input_snapshot_builder.py tests/test_historical_input_snapshot_simulation_adapter.py tests/test_historical_input_snapshots.py tests/test_sqlite_historical_input_snapshot_repository.py tests/test_simulation_bet_plan_builder.py tests/test_simulation_bet_plan_snapshot.py tests/test_sqlite_simulation_bet_plan_snapshot_repository.py tests/test_simulation_bet_plan_identity.py` — `406 passed, 145 subtests passed`.
+- With `KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=48dcc0a359a9b48b7f32fbe3fef846db1da31009`, `python -m pytest -q --tb=short` — `4833 passed, 4 skipped, 2846 subtests passed` in 1008.48 seconds; exit 0. No provider/live mode was used.
+
+The earlier post-harness Phase108/pre-C run passed `35 passed, 2 skipped`, and both
+PRESTAGED and GENERATED modes passed. The final full suite retested these unchanged
+production paths. The static audit inspected all Phase110 production changes and
+searched the new modules for direct `requests`, `httpx`, `urllib.request`, `urlopen`,
+legacy `fetch_deba_table`, apparent-encoding fallback, production `database/keiba.db`,
+`INSERT OR REPLACE`, destructive repair, and Phase109/V010/Phase95/Phase41 authority.
+No prohibited behavior was found. The existing `database.DB_PATH` constant was
+unchanged; the Phase108 harness's existing reviewed Requests transport adapter was
+unchanged by the V018 fixture correction. V018 `UPDATE`/`DELETE` hits were restrictive
+triggers; the lone V010 string in V018 is exact prior registry validation. New
+internal IDs use SQLite `lastrowid`, without arithmetic issuance. No provider HTTP,
+production DB access, KeibaAI change, staging, commit, or push occurred.
+
+The exact 38-path Approved Allowed Files list is in `docs/CURRENT_PHASE.md`. Final
+`git diff --check` passed, `git status --short` contained only those 38 paths, and
+the index was empty. Markers:
+`PHASE110_IMPLEMENTATION_READY_FOR_CHATGPT_REVIEW`,
+`PHASE110_IMPLEMENTATION_TESTS_PASS`,
+`PHASE110_IMPLEMENTATION_STATIC_AUDIT_PASS`.
+
+Next: `CHATGPT_REVIEW_PHASE110_IMPLEMENTATION`.
+
+## Phase110 37-path harness correction stopped at one forbidden full-migration test fixture
+
+Phase: `POST_V0_8_DAILY_REPLAY_110`. Status stays `APPROVED_FOR_CODEX`;
+implementation is incomplete. The approved scope is
+`PHASE110_ALLOWED_FILES = 37_PATH_SCOPE`, including the Phase108 no-network
+rehearsal harness. Its isolated snapshot DB now uses the existing 2026-07-04 NAR
+race 11 canonical Deba URL, race ID 1, and horse IDs 101/102 for horse numbers 1/2.
+It still calls unrestricted `apply_migrations()` and does not promote Phase110
+identity persistence into Phase108 authority.
+
+Verification after this production correction:
+
+- `python -m pytest -q --tb=short 'tests/test_nar_pre_c_operational_envelope.py::test_precommit_no_network_rehearsal_pass[PRESTAGED_HISTORY]'`: `1 passed`.
+- `python -m pytest -q --tb=short tests/test_nar_pre_c_operational_envelope.py -k precommit_no_network_rehearsal_pass`: `2 passed, 33 deselected` (PRESTAGED and GENERATED).
+- With `KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=48dcc0a359a9b48b7f32fbe3fef846db1da31009`, `python -m pytest -q --tb=short tests/test_nar_pre_c_operational_envelope.py tests/test_nar_pre_c_operational_envelope_sealed_child.py`: `35 passed, 2 skipped`.
+- `python -m pytest -q --tb=short tests/test_v018_nar_identity_complete_entry_schema.py tests/test_nar_identity_complete_entry_source.py tests/test_nar_identity_complete_entry_persistence.py tests/test_sqlite_nar_identity_complete_entry_repository.py tests/test_database_identity_only_entries.py tests/test_nar_identity_only_prediction_gate.py tests/test_sqlite_race_entry_source.py tests/test_simulation_migrations.py tests/test_historical_input_snapshot_migration.py tests/test_simulation_bet_plan_migration.py tests/test_nar_official_response_capture_migration.py`: `139 passed, 51 subtests passed`.
+- `python -m pytest -q --tb=short tests/test_database_past_races.py tests/test_run_prediction_cli.py tests/test_sqlite_race_entry_source.py tests/test_race_entry_source_contract.py tests/test_jra_race_replay_seed_migration.py tests/test_sqlite_jra_race_replay_seed_repository.py tests/test_jra_race_replay_seed.py tests/test_nar_trusted_deba_acquisition.py tests/test_nar_trusted_deba_acquisition_archive_migration.py tests/test_sqlite_nar_trusted_deba_acquisition_archive.py tests/test_historical_input_snapshot_builder.py tests/test_historical_input_snapshot_simulation_adapter.py tests/test_historical_input_snapshots.py tests/test_sqlite_historical_input_snapshot_repository.py tests/test_simulation_bet_plan_builder.py tests/test_simulation_bet_plan_snapshot.py tests/test_sqlite_simulation_bet_plan_snapshot_repository.py tests/test_simulation_bet_plan_identity.py`: `406 passed, 145 subtests passed`.
+- With the same sealed smoke value, the full `python -m pytest -q --tb=short` completed: `3 failed, 4830 passed, 4 skipped, 2846 subtests passed` in 1003.99 seconds.
+
+The three exact failures are:
+
+1. `tests/test_persisted_simulation_request_application.py::PersistedSimulationRequestApplicationTests::test_empty_file_backed_request_runs_the_real_chain` — `sqlite3.OperationalError: no such column: race_no` during V018 duplicate preflight. This **forbidden existing test** constructs a file-backed main DB with only `races(id)` and `horses(id,race_id,horse_no)` before calling the real request application, whose normal `run_sqlite_persisted_simulation()` path correctly runs the unrestricted standard migration registry. The defect is a full-migration success fixture missing V018's parent columns, not a production runner defect. Smallest proposed scope addition: `tests/test_persisted_simulation_request_application.py` for that fixture alone. The associated production path does not require change.
+2. `tests/test_simulation_repositories.py::RepositoryTestCase::test_race_all_header_statuses_round_trip` — `sqlite3.OperationalError: table races has 6 columns but 1 values were supplied`; its positional `INSERT OR IGNORE INTO races VALUES (?)` was not adapted after the already approved fixture added six parent columns. This test file is within the current 37 paths, but was not changed after the out-of-scope stop.
+3. `tests/test_simulation_repositories.py::RepositoryTestCase::test_repositories_preserve_caller_transaction` — the same column-count `sqlite3.OperationalError` from `INSERT INTO races VALUES (99)`. This test file is within the current 37 paths and remains unchanged at this stop.
+
+No forbidden path was modified. The first failure requires scope review before
+resumption; the two in-scope fixture INSERT corrections were intentionally deferred
+under the explicit stop rule. No final static production audit was run because the
+full suite failed. Do not claim `READY_FOR_REVIEW`, implementation completion,
+full-suite pass, or commit approval. No provider HTTP, production DB access,
+KeibaAI change, staging, commit, or push occurred.
+
+## Phase110 36-path compatibility correction stopped at Phase108 harness fixture
+
+Phase: `POST_V0_8_DAILY_REPLAY_110`. Status stays `APPROVED_FOR_CODEX`;
+implementation remains incomplete. The reviewed scope is now
+`PHASE110_ALLOWED_FILES = 36_PATH_SCOPE` with
+`PHASE110_V018_REPOSITORY_COMPATIBILITY_SCOPE_APPROVED`. Existing uncommitted
+work was preserved. Within the approved added path,
+`SQLiteNARDailyReplayResultRepository` now derives its exact expected application
+migration mapping from the standard runner registry, retains the exact V016 and V017
+schema gates, and rejects missing, renamed, or unknown registrations. The approved
+repository tests cover current V018 acceptance, stale V017-only state, wrong name,
+unknown future version, and runner idempotence.
+
+Verification after the change:
+
+- `python -m pytest -q --tb=short tests/test_sqlite_nar_daily_replay_result_repository.py tests/test_nar_daily_replay_aggregation.py`: `50 passed, 19 subtests passed`.
+- `python -m pytest -q --tb=short tests/test_v018_nar_identity_complete_entry_schema.py tests/test_nar_identity_complete_entry_source.py tests/test_nar_identity_complete_entry_persistence.py tests/test_sqlite_nar_identity_complete_entry_repository.py tests/test_database_identity_only_entries.py tests/test_nar_identity_only_prediction_gate.py tests/test_sqlite_race_entry_source.py tests/test_simulation_migrations.py tests/test_historical_input_snapshot_migration.py tests/test_simulation_bet_plan_migration.py tests/test_nar_official_response_capture_migration.py`: `139 passed, 51 subtests passed`.
+- `python -m pytest -q --tb=short tests/test_database_past_races.py tests/test_run_prediction_cli.py tests/test_sqlite_race_entry_source.py tests/test_race_entry_source_contract.py tests/test_jra_race_replay_seed_migration.py tests/test_sqlite_jra_race_replay_seed_repository.py tests/test_jra_race_replay_seed.py tests/test_nar_trusted_deba_acquisition.py tests/test_nar_trusted_deba_acquisition_archive_migration.py tests/test_sqlite_nar_trusted_deba_acquisition_archive.py tests/test_historical_input_snapshot_builder.py tests/test_historical_input_snapshot_simulation_adapter.py tests/test_historical_input_snapshots.py tests/test_sqlite_historical_input_snapshot_repository.py tests/test_simulation_bet_plan_builder.py tests/test_simulation_bet_plan_snapshot.py tests/test_sqlite_simulation_bet_plan_snapshot_repository.py tests/test_simulation_bet_plan_identity.py`: `406 passed, 145 subtests passed`.
+
+The full `python -m pytest -q --tb=short` used
+`KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=48dcc0a359a9b48b7f32fbe3fef846db1da31009`.
+It was interrupted after failures appeared near 25%; it did not pass. The targeted
+`python -m pytest -q -x --tb=short tests/test_nar_pre_c_operational_envelope.py`
+failed at `test_precommit_no_network_rehearsal_pass[PRESTAGED_HISTORY]`.
+The production function `run_phase108_no_network_rehearsal` in forbidden path
+`scripts/simulation/nar_pre_c_operational_envelope_harness.py` creates an isolated
+fixture database with only `races(id)` and `horses(id,race_id)` and then calls
+unrestricted `apply_migrations()`. V018 correctly fails duplicate preflight with
+`sqlite3.OperationalError: no such column: race_no`. The approved test fixture in
+`tests/test_nar_pre_c_operational_envelope.py` has already been updated, but this
+separate production harness fixture is not controlled by that test. The proper
+compatibility fix requires a reviewed scope extension for the harness path; no
+test-only workaround or forbidden-path edit was made.
+
+Because the full suite failed on an out-of-scope production fixture, no final static
+production audit was run and no review-ready/pass/completion/commit approval is
+claimed. No provider HTTP, production DB access, KeibaAI change, staging, commit,
+or push occurred.
+
+## Phase110 final 35-path scope: stopped on an out-of-scope V018 reader contract
+
+Phase: `POST_V0_8_DAILY_REPLAY_110`. Status remains `APPROVED_FOR_CODEX`;
+implementation is incomplete. `PHASE110_FINAL_TEST_SCOPE_APPROVED`,
+`PHASE110_V018_REGRESSION_IMPACT_AUDIT_APPROVED`, and
+`PHASE110_ALLOWED_FILES = 35_PATH_FINAL_SCOPE` were applied to the current phase
+contract. Existing uncommitted work was preserved. The approved V018 fixture and
+SQLiteRaceEntrySource structural corrections were made only within the 35 paths.
+The shared schema validator now accepts SQLite connection subclasses and propagates
+unexpected operational failures such as `database is locked`.
+
+Focused command: `python -m pytest -q tests/test_v018_nar_identity_complete_entry_schema.py tests/test_nar_identity_complete_entry_source.py tests/test_nar_identity_complete_entry_persistence.py tests/test_sqlite_nar_identity_complete_entry_repository.py tests/test_database_identity_only_entries.py tests/test_nar_identity_only_prediction_gate.py tests/test_sqlite_race_entry_source.py tests/test_simulation_migrations.py tests/test_historical_input_snapshot_migration.py tests/test_simulation_bet_plan_migration.py tests/test_nar_official_response_capture_migration.py --tb=short` — `139 passed, 51 subtests passed`.
+
+The exact related regression set from the previous `371 passed / 77 failed / 85
+subtests passed` run was rerun: `406 passed, 145 subtests passed` (exit 0).
+Command: `python -m pytest -q --tb=short tests/test_database_past_races.py tests/test_run_prediction_cli.py tests/test_sqlite_race_entry_source.py tests/test_race_entry_source_contract.py tests/test_jra_race_replay_seed_migration.py tests/test_sqlite_jra_race_replay_seed_repository.py tests/test_jra_race_replay_seed.py tests/test_nar_trusted_deba_acquisition.py tests/test_nar_trusted_deba_acquisition_archive_migration.py tests/test_sqlite_nar_trusted_deba_acquisition_archive.py tests/test_historical_input_snapshot_builder.py tests/test_historical_input_snapshot_simulation_adapter.py tests/test_historical_input_snapshots.py tests/test_sqlite_historical_input_snapshot_repository.py tests/test_simulation_bet_plan_builder.py tests/test_simulation_bet_plan_snapshot.py tests/test_sqlite_simulation_bet_plan_snapshot_repository.py tests/test_simulation_bet_plan_identity.py`.
+The full `python -m pytest -q --tb=short` attempt used
+`KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=48dcc0a359a9b48b7f32fbe3fef846db1da31009`.
+It was interrupted after multiple failures appeared. A diagnostic
+`python -m pytest -q -x --tb=short` with the same smoke value identified the first
+failure after `740 passed, 936 subtests passed`:
+`tests/test_nar_daily_replay_aggregation.py::NARDailyReplayAggregationTests::test_compatibility_key_is_exact_frozen_predicate`.
+Its standard full-migration setup now applies V018, but forbidden production path
+`scripts/simulation/repositories/sqlite_nar_daily_replay_result_repository.py`
+rejects any migration registry unequal to its V008–V017 constant at `_require_schema()`
+and raises `registered migration state is not exact v017`. This is a production
+compatibility conflict outside the 35-path contract, not a reason to weaken the
+full-migration fixture, omit V018, or alter the aggregation test. No forbidden path
+was modified. Independent scope review is required before resumption.
+
+The complete full suite did not pass. Final static production audit was not run
+because the out-of-scope stop condition was reached. Do not claim
+`READY_FOR_REVIEW`, implementation completion, test pass, or commit approval.
+No provider HTTP, production DB access, KeibaAI modification, staging, commit, or
+push occurred.
+
+## Phase110 resumed implementation stopped at second forbidden regression conflict
+
+Phase: `POST_V0_8_DAILY_REPLAY_110`. Status remains `APPROVED_FOR_CODEX`;
+implementation is incomplete and `READY_FOR_REVIEW` is not claimed.
+
+The limited scope correction below was applied. The V018 migration plus four newly
+allowed standard migration regressions passed (`63 passed / 33 subtests passed`).
+The remaining five new Phase110 focused modules passed (`40 passed`). An earlier
+combined focused run passed (`107 passed / 33 subtests passed`). Subsequent approved
+source/receipt/reader and concurrency hardening was not rerun through the complete
+focused matrix before the related-regression stop. No full suite was run.
+
+The broader related regression run stopped with `77 failed / 371 passed / 85 subtests
+passed`. At least these forbidden existing tests require a reviewed contract decision:
+
+- `tests/test_sqlite_historical_input_snapshot_repository.py` uses a minimal full-
+  registry fixture (`races(id)`, `horses(id,race_id)`) and calls standard
+  `apply_migrations()`. V018 legitimately requires race/horse natural-key columns;
+  this is the same legacy-fixture compatibility class as the four newly allowed
+  migration tests, but this path remains forbidden.
+- `tests/test_sqlite_simulation_bet_plan_snapshot_repository.py` likewise has
+  minimal full-registry fixtures at several call sites and fails before its
+  repository assertions when V018 duplicate preflight needs `race_no`. This path
+  remains forbidden.
+- `tests/test_sqlite_race_entry_source.py` freezes one `SELECT`, exact import
+  dependencies, and fake-connection query behavior. The required shared V018
+  schema-state check adds read-only schema queries and a migration-validator
+  dependency; these assertions now fail. This is a reader-contract test update,
+  not a reason to bypass the fail-closed V018 gate. This path remains forbidden.
+
+The observed related run also has additional failures in the same output; the three
+paths above are confirmed, not asserted to be exhaustive. Per the explicit stop
+instruction, no further related tests, full suite, or out-of-scope edits were made.
+The worktree retains only allowed partial Phase110 changes. No provider HTTP,
+production DB access, staging, commit, or push occurred; KeibaAI was untouched.
+
+
+## Phase110 limited implementation-scope correction and resumption
+
+`PHASE110_IMPLEMENTATION_SCOPE_CORRECTION_APPROVED`.
+`PHASE110_REQUIRED_MIGRATION_REGRESSION_FILES_ADDED_TO_ALLOWED_SET`.
+
+The prior stop below remains the audit record. The approved architecture is unchanged.
+The four standard-registry regression tests named in `docs/CURRENT_PHASE.md` are now
+allowed solely for exact V018 registry expectations and valid deterministic legacy
+fixtures. The existing partial Phase110 work is retained. Status remains
+`APPROVED_FOR_CODEX` until all focused, related and full-suite verification passes.
+
+
+## Phase110 execution stopped — approved test scope conflicts with V018 registration
+
+Phase: `POST_V0_8_DAILY_REPLAY_110`.
+
+Current phase status remains `APPROVED_FOR_CODEX`; implementation is incomplete and
+`READY_FOR_REVIEW` is not claimed. Base HEAD/tree remain
+`48dcc0a359a9b48b7f32fbe3fef846db1da31009` /
+`67bf7387f189ba6ce40d6578aeaa7b5ccfdad79f`.
+
+The approved contract requires V018 to be registered in the default migration runner,
+requires the related existing migration regressions to pass, and forbids modifying
+existing tests outside the six new Phase110 test files. The existing
+`tests/test_simulation_migrations.py::MigrationTests::test_apply_idempotent_and_utc_history`
+uses a minimal V017 test schema without the natural-key columns V018 needs and
+asserts the migration registry equals exactly versions 8–17. The targeted regression
+was run and failed at V018 duplicate preflight (`no such column: race_no`). Even if
+the minimal fixture were adapted by production migration logic, its exact 8–17
+registry assertion would fail once the required V018 registration succeeds.
+Another test in that forbidden file asserts the exact pre-V018 trigger set.
+Passing those existing regressions without changing their expectations or weakening
+V018/default-runner semantics is not supported by the approved file contract.
+
+Partial, unreviewed work was started only in approved paths (V018 migration and runner,
+Phase110 source/receipt/repository, database/CLI/entry-source gates). It has not passed
+focused, related, or full-suite verification and must not be treated as usable
+authority. The six new approved test files have not been added. Work stopped on the
+out-of-scope test conflict; a reviewed contract amendment is needed before resuming.
+No provider HTTP, production DB access, staging, commit, or push occurred. The separate
+`C:\Users\garim\Desktop\KeibaAI` repository was not touched.
+
+## POST_V0_8_DAILY_REPLAY_110 — IDENTITY-COMPLETE ENTRY PERSISTENCE PREPARATION
+
+Phase: `POST_V0_8_DAILY_REPLAY_110`
+
+Title: `NAR Identity-Complete Entry Persistence`
+
+Status / Formal Status: `APPROVED_FOR_CODEX`
+
+State: `IMPLEMENTATION_APPROVED`
+
+Outcome: `READY_FOR_PHASE110_IMPLEMENTATION`
+
+Review disposition: `PHASE110_REVISED_ARCHITECTURAL_REVIEW_PASS`.
+`PHASE110_IMPLEMENTATION_DESIGN_APPROVED`.
+`PHASE110_IMPLEMENTATION_READY`.
+`PHASE110_IMPLEMENTATION_APPROVAL = GRANTED`.
+`PHASE110_DESIGN_APPROVED_FOR_CODEX`.
+
+Base: `48dcc0a359a9b48b7f32fbe3fef846db1da31009` /
+`67bf7387f189ba6ce40d6578aeaa7b5ccfdad79f` on
+`feature/post-v0.8-daily-replay`.
+
+Phase111 is frozen `FORMALLY_COMPLETE` and its trusted single-send acquisition
+prerequisite is satisfied. The revised Phase110 architecture is now approved for
+implementation; this approval does not claim implementation completion. This activity
+changed only phase documentation. Production code, tests and schemas were not modified;
+provider HTTP, production DB access, staging, commit and push did not occur. The
+separate `C:\Users\garim\Desktop\KeibaAI` repository was not touched.
+
+### Approved implementation contract
+
+The approved implementation is limited to status-independent identity-complete entry
+persistence from the exact Phase111 read-only bytes; exact parent adoption; reuse of the
+existing `horses.id` namespace; atomic ID/provenance/denial issuance; immutable
+complete-population receipt; controlled in-place enrichment; and negative candidate
+selection gates. It does not create parent races, promote V010, determine entry status
+or market eligibility, implement Phase109, authorize a live campaign, or modify generic
+prediction/betting engines.
+
+`save_race()` and `save_horse()` must make lookup plus write on one SQLite connection
+under `BEGIN IMMEDIATE`; an application-level check on one connection and later insert
+on another is not the approved atomicity model. V018 must preflight natural-key
+duplicates and raise without destructive repair or residual registration/objects/indexes
+on failure.
+
+### Retained revised audit decisions
+
+- The local `(race_date, organization, place, race_no)` tuple is only a candidate and
+  concurrency key, never proof of external identity. Phase110 cannot create
+  `races.id`; the pre-existing unique NAR parent must have exact date/race number and a
+  nonempty stored Deba URL that canonicalizes to the exact URL in the Phase111
+  declaration/receipt/result. URL ancestry must agree on date, baba code and race
+  number. Missing, duplicate, URL-less, noncanonical or contradictory parent evidence
+  stops. V010 and place text cannot substitute.
+- V018 reader behavior is a closed three-state contract, validated identically by the
+  database helpers and `SQLiteRaceEntrySource`: proven absence with no Phase110 objects
+  (`PHASE110_SCHEMA_NOT_INSTALLED`) preserves legacy compatibility; exact registered
+  topology (`PHASE110_SCHEMA_ACTIVE`) enforces denial; any partial/unregistered or
+  contradictory topology (`PHASE110_SCHEMA_INTEGRITY_FAILURE`) fails closed. Corrupt
+  V018 never falls back to legacy selection.
+- Filtering denied rows is not enough because `DatabaseRaceInputProvider` forwards
+  `race_horse_count` to bet-type branching. When Phase110 denials exist, effective
+  prediction/bet population count must be the post-gate candidate count, not nominal
+  `races.horse_count`. The narrow CLI file `scripts/cli/run_prediction.py` is added to
+  the future Allowed Files; generic prediction pipeline, predictor, strategy, value
+  and bet-generator files remain forbidden.
+- Every newly issued Phase110 internal entry ID is durably denied even if immediate
+  HorseParser enrichment is possible. Denial is explicit, not inferred from null
+  fields; later enrichment cannot clear it or alter ID, race membership, horse number,
+  external identity or Phase111 provenance. Only the Phase110 repository issues a
+  missing `horses.id`, atomically with origin/provenance/denial; `save_horse()` may
+  update reviewed nonidentity fields only and is not identity adoption authority.
+- Derived external entry identity is versioned `nar-entry-v1`:
+  `<canonical_external_race_id>:entry:<canonical_ascii_decimal_horse_no>`, with the
+  horse number matching `[1-9][0-9]*`. It is not provider-issued. Zero, malformed,
+  duplicate or ambiguous horse numbers fail closed; external horse identity is
+  optional when the source does not expose one.
+
+### Audit findings
+
+- `races.id` and `horses.id` are SQLite `INTEGER PRIMARY KEY AUTOINCREMENT` values.
+  `horses.id` is used as a per-race entry ID throughout current code, not a global
+  horse entity. Legacy race lookup uses date/organization/place/race number and
+  `LIMIT 1`; this is only local lookup/concurrency context, not external identity
+  authority. Phase110 adopts no parent unless exactly one pre-existing NAR candidate
+  has the exact date/race number and a nonempty stored Deba URL that canonicalizes to
+  the exact Phase111 URL and agrees on date/babaCode/raceNo. Phase110 never creates
+  `races.id`; V010 and place text cannot substitute.
+- `horses` currently has no unique `(race_id, horse_no)` constraint. `save_horse()`
+  checks existence on a separate connection before inserting on another connection.
+  Legacy `save_race()` has the analogous check/insert gap and no unique natural key.
+  V010 only establishes `(race_id,id)` uniqueness; it does not close either gap.
+- `HorseParser` skips cancellation/exclusion rows and can skip rows lacking a usable
+  horse name. It is not an identity-universe source. The historical NAR normalizer
+  also rejects cancellation markers and requires status-adjacent/market fields. Phase88
+  supplies useful structural precedent but is fixed to one fixture, fixed target and
+  fourteen rows; it is not a generic producer.
+- The direct candidate reader is `database.get_horses_by_race()` followed by
+  `DatabaseRaceInputProvider.load()` placing all returned rows into
+  `RacePredictionInput`. The second DB-backed candidate-to-entry boundary is
+  `SQLiteRaceEntrySource`, used by the repository-backed bet-plan resolver. Existing
+  result/payout/saved-plan SQL joins read known historical selections rather than
+  discovering candidate populations. Pure caller-supplied pipeline/request-document
+  inputs do not query `horses` and must not be populated from Phase110 identity-only
+  rows.
+- V010 mapping rows can be snapshot-derived; Phase110 must use independent
+  Phase111-linked provenance and must not write or reinterpret V010.
+
+### Proposed narrow architecture
+
+Consume only `NARQualifiedDebaResultV1` via Phase111's read-only
+`read_qualified_deba_bytes()` API. Strictly decode the exact archived response bytes.
+An additive generic identity extractor enumerates each entry table row independently of
+status and market fields, derives `external_entry_id` using versioned `nar-entry-v1`:
+`<canonical_external_race_id>:entry:<canonical_ascii_decimal_horse_no>`, where horse
+number matches `[1-9][0-9]*`. This is derived rather than provider-issued; malformed,
+zero, duplicate or ambiguous numbers fail the complete operation. External horse
+identity is optional if absent in the source. The unchanged `HorseParser` may separately
+provide optional legacy enrichment from the same exact bytes; it cannot define the
+identity set.
+
+Adopt a `races.id` only for exactly one existing NAR race whose canonical stored Deba
+URL and date/race number match the Phase111 target. Do not create race IDs in Phase110.
+Adopt an existing `horses.id` only under the exact parent race and horse number with
+canonical provider-horse identity agreement. For truly absent entries, use SQLite's
+generated `horses.id` in the existing namespace and persist explicit
+`IDENTITY_ONLY_DENIED` provenance; no synthetic ID. A new v018 migration adds
+append-only Phase110 source/receipt/entry binding tables and unique populated race and
+entry natural-key indexes. Migration preflight reports and rejects legacy duplicates;
+it never repairs them.
+
+The selected direction is an additive identity-origin companion registry referencing
+the existing `horses.id` namespace, not a second registry-only ID namespace or a legacy
+schema rewrite. Phase110 issues a missing ID only inside its own transaction with its
+origin/provenance/denial receipt records. `save_horse()` is not identity adoption
+authority and may update only reviewed nonidentity fields on a matching Phase110-issued
+row; it cannot replace the ID or alter identity/provenance/denial. A newly issued ID
+remains explicitly denied even if immediately or later enriched.
+
+Explicit denial is enforced before DB-backed candidate construction by
+`get_horses_by_race()` and before DB-backed plan selection by `SQLiteRaceEntrySource`.
+Both use the same exact V018 three-state validator: proven absent with no Phase110
+objects permits legacy compatibility, exact V018 activates denial, and all partial or
+contradictory states fail closed without fallback. When active denial rows exist, the
+CLI's effective `race_horse_count` is the post-gate population count, never nominal
+`races.horse_count`. No positive status/eligibility is inferred. Phase95, Phase41 and
+Phase109 remain separate.
+
+Phase109 later exact-reloads Phase110 receipt and Phase111 ancestry, consuming complete
+forward/reverse fields: provider/source, external race/entry/horse identities, internal
+race/entry IDs, horse number, Phase111 declaration/receipt/capture IDs, response digest,
+observed time/cutoff, canonical ordering and full population digest/count. The relation
+is independent Phase110 provenance, not V010 row existence.
+
+### Proposed implementation contract
+
+The approved complete Allowed Files are listed in `docs/CURRENT_PHASE.md`; in
+addition to the additive v018 migration/runner, Phase110 source/application/repository,
+`scripts/database.py`, and `sqlite_race_entry_source.py`, the only candidate population
+composition change is `scripts/cli/run_prediction.py`. No generic prediction pipeline,
+predictor, strategy, value engine or bet generator change is proposed. Existing
+Phase111, parser/provider, Phase109, Phase95/41 and historical V010/V015 modules remain
+read-only/forbidden as specified in that contract.
+
+The design is approved for implementation only within its exact Allowed Files and Stop
+Condition. Migration deployment must stop if existing natural-key duplicates are found.
+No production DB was read to check that deployment precondition.
+
+Verification: `git diff --check` PASS. `git diff --name-only` is exactly
+`docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`. Worktree contains only these
+two modified docs; index is empty. No tests were run because this was documentation-only
+preparation. Provider HTTP / production DB read-write / live campaign / stage / commit /
+push: **0 / 0 / 0 / 0 / 0 / 0**.
+
+`PHASE110_REVISED_ARCHITECTURAL_REVIEW_PASS`.
+`PHASE110_IMPLEMENTATION_DESIGN_APPROVED`.
+`PHASE110_IMPLEMENTATION_READY`.
+`PHASE110_IMPLEMENTATION_APPROVAL = GRANTED`.
+`PHASE110_DESIGN_APPROVED_FOR_CODEX`.
+
+Next: `EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_110`.
+
+---
+
+## Historical report — POST_V0_8_DAILY_REPLAY_111 final documentation and phase closure
 
 Phase: `POST_V0_8_DAILY_REPLAY_111`
 

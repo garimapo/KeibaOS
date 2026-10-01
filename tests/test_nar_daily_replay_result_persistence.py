@@ -135,9 +135,9 @@ def _ensure_database_files(root: Path) -> tuple[Path, Path]:
     archive_path = root / "settlement.sqlite3"
     connection = sqlite3.connect(database_path)
     try:
-        connection.execute("CREATE TABLE IF NOT EXISTS races(id INTEGER PRIMARY KEY)")
+        connection.execute("CREATE TABLE IF NOT EXISTS races(id INTEGER PRIMARY KEY,race_date TEXT,organization TEXT,place TEXT,race_no INTEGER,deba_table_url TEXT)")
         connection.execute(
-            "CREATE TABLE IF NOT EXISTS horses(id INTEGER PRIMARY KEY,race_id INTEGER)"
+            "CREATE TABLE IF NOT EXISTS horses(id INTEGER PRIMARY KEY,race_id INTEGER,horse_no INTEGER)"
         )
         connection.commit()
     finally:

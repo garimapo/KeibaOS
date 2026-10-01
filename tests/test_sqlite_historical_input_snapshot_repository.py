@@ -53,12 +53,12 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
 
     def connection(self) -> sqlite3.Connection:
         connection = sqlite3.connect(":memory:")
-        connection.execute("CREATE TABLE races(id INTEGER PRIMARY KEY)")
-        connection.execute("CREATE TABLE horses(id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL)")
-        connection.executemany("INSERT INTO races(id) VALUES(?)", ((1,), (2,)))
+        connection.execute("CREATE TABLE races(id INTEGER PRIMARY KEY,race_date TEXT,organization TEXT,place TEXT,race_no INTEGER,deba_table_url TEXT)")
+        connection.execute("CREATE TABLE horses(id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL,horse_no INTEGER)")
+        connection.executemany("INSERT INTO races(id,race_date,organization,place,race_no,deba_table_url) VALUES(?,'2025-01-01','JRA','東京',?,?)", ((1, 1, 'https://example.test/1'), (2, 2, 'https://example.test/2')))
         connection.executemany(
-            "INSERT INTO horses(id,race_id) VALUES(?,?)",
-            ((11, 1), (12, 1), (21, 2)),
+            "INSERT INTO horses(id,race_id,horse_no) VALUES(?,?,?)",
+            ((11, 1, 1), (12, 1, 2), (21, 2, 1)),
         )
         connection.commit()
         apply_migrations(connection)
@@ -571,12 +571,12 @@ class SQLiteHistoricalInputSnapshotRepositoryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             database_path = f"{directory}/snapshots.sqlite3"
             connection = sqlite3.connect(database_path)
-            connection.execute("CREATE TABLE races(id INTEGER PRIMARY KEY)")
-            connection.execute("CREATE TABLE horses(id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL)")
-            connection.executemany("INSERT INTO races(id) VALUES(?)", ((1,), (2,)))
+            connection.execute("CREATE TABLE races(id INTEGER PRIMARY KEY,race_date TEXT,organization TEXT,place TEXT,race_no INTEGER,deba_table_url TEXT)")
+            connection.execute("CREATE TABLE horses(id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL,horse_no INTEGER)")
+            connection.executemany("INSERT INTO races(id,race_date,organization,place,race_no,deba_table_url) VALUES(?,'2025-01-01','JRA','東京',?,?)", ((1, 1, 'https://example.test/1'), (2, 2, 'https://example.test/2')))
             connection.executemany(
-                "INSERT INTO horses(id,race_id) VALUES(?,?)",
-                ((11, 1), (12, 1), (21, 2)),
+                "INSERT INTO horses(id,race_id,horse_no) VALUES(?,?,?)",
+                ((11, 1, 1), (12, 1, 2), (21, 2, 1)),
             )
             connection.commit()
             apply_migrations(connection)

@@ -69,8 +69,8 @@ class SQLiteNARDailyReplayResultRepositoryTests(unittest.TestCase):
         path = self.root / f"malformed-{name}.sqlite3"
         connection = sqlite3.connect(path)
         try:
-            connection.execute("CREATE TABLE races(id INTEGER PRIMARY KEY)")
-            connection.execute("CREATE TABLE horses(id INTEGER PRIMARY KEY,race_id INTEGER)")
+            connection.execute("CREATE TABLE races(id INTEGER PRIMARY KEY,race_date TEXT,organization TEXT,place TEXT,race_no INTEGER,deba_table_url TEXT)")
+            connection.execute("CREATE TABLE horses(id INTEGER PRIMARY KEY,race_id INTEGER,horse_no INTEGER)")
             connection.commit()
             apply_migrations(connection)
             original = connection.execute(
@@ -103,9 +103,52 @@ class SQLiteNARDailyReplayResultRepositoryTests(unittest.TestCase):
     def test_v016_identity_registration_schema_and_idempotent_runner(self) -> None:
         self.assertEqual(migration.VERSION, 16)
         self.assertEqual(migration.NAME, "v016_nar_daily_replay_result_schema")
-        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS)[-2:], (16, 17))
+        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS)[-3:], (16, 17, 18))
         self.assertEqual(tuple(item for item in MIGRATIONS if item.VERSION == 16), (migration,))
         self.assertEqual(get_applied_versions(self.connection)[16], migration.NAME)
+        expected = {item.VERSION: item.NAME for item in MIGRATIONS}
+        self.assertEqual(get_applied_versions(self.connection), expected)
+        apply_migrations(self.connection)
+        self.assertEqual(get_applied_versions(self.connection), expected)
+        SQLiteNARDailyReplayResultRepository(
+            connection=self.connection, database_path=self.record.database_path,
+        )
+
+    def test_rejects_stale_application_migration_registry(self) -> None:
+        legacy_root = self.root / "stale-registry"
+        legacy_root.mkdir()
+        record = build_record(legacy_root, NARDailyReplayExecutionState.FULL_DAY_REPLAY_COMPLETED)
+        connection = sqlite3.connect(record.database_path)
+        self.addCleanup(connection.close)
+        apply_migrations(connection, migrations=tuple(item for item in MIGRATIONS if item.VERSION <= 17))
+        migration.require_v016_schema_contract(connection)
+        cutoff_migration.require_v017_schema_contract(connection)
+        with self.assertRaisesRegex(RepositoryDataIntegrityError, "current registry"):
+            SQLiteNARDailyReplayResultRepository(
+                connection=connection, database_path=record.database_path,
+            )
+
+    def test_rejects_wrong_or_unknown_application_migration_registration(self) -> None:
+        self.connection.execute(
+            "UPDATE schema_migrations SET name='wrong-v018' WHERE version=18"
+        )
+        self.connection.commit()
+        with self.assertRaisesRegex(RepositoryDataIntegrityError, "current registry"):
+            SQLiteNARDailyReplayResultRepository(
+                connection=self.connection, database_path=self.record.database_path,
+            )
+        self.connection.execute(
+            "UPDATE schema_migrations SET name=? WHERE version=18",
+            (MIGRATIONS[-1].NAME,),
+        )
+        self.connection.execute(
+            "INSERT INTO schema_migrations(version,name,applied_at) VALUES(999,'unknown-future','2025-01-01')"
+        )
+        self.connection.commit()
+        with self.assertRaisesRegex(RepositoryDataIntegrityError, "current registry"):
+            SQLiteNARDailyReplayResultRepository(
+                connection=self.connection, database_path=self.record.database_path,
+            )
 
     def test_v017_companion_schema_and_v016_objects_unchanged(self) -> None:
         self.assertEqual((cutoff_migration.VERSION, cutoff_migration.NAME),

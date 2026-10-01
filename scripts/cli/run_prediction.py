@@ -7,6 +7,7 @@ import logging
 from typing import Protocol, Sequence
 
 from scripts import database
+from scripts.migrations.versions.v018_nar_identity_complete_entry_schema import PHASE110_SCHEMA_ACTIVE
 from scripts.models import Race
 from scripts.prediction.bet_strategy import SelectionStyle, SortCondition, StrategyConfig
 from scripts.prediction.prediction_pipeline import (
@@ -52,12 +53,19 @@ class DatabaseRaceInputProvider:
             jockey_names_by_horse[horse_id] = horse.jockey
             odds_by_horse[horse_id] = horse.odds
 
+        nominal_count = race.horse_count or len(horses)
+        effective_count = nominal_count
+        if nominal_count != len(horses):
+            effective_count = (len(horses)
+                if database.get_phase110_schema_state() == PHASE110_SCHEMA_ACTIVE
+                else nominal_count)
+
         return RacePredictionInput(
             horse_past_races=horse_past_races,
             jockey_names_by_horse=jockey_names_by_horse,
             track_conditions=database_to_track_conditions(race),
             odds_by_horse=odds_by_horse,
-            race_horse_count=race.horse_count or len(horses),
+            race_horse_count=effective_count,
             race_id=race_id,
             prediction_time=race.race_date,
         )

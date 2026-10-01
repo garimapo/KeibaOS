@@ -10,6 +10,10 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 
 from scripts.models import Horse, PastRace, Race
+from scripts.migrations.versions.v018_nar_identity_complete_entry_schema import (
+    PHASE110_SCHEMA_ACTIVE, PHASE110_SCHEMA_INTEGRITY_FAILURE,
+    phase110_schema_state,
+)
 
 
 DB_PATH = "database/keiba.db"
@@ -330,13 +334,21 @@ def save_race(
 
     try:
 
-        if race_exists(race):
-
-            return None
-
         with _connection() as conn:
 
+            conn.execute("BEGIN IMMEDIATE")
+
             cursor = conn.cursor()
+
+            existing = cursor.execute(
+                """SELECT id FROM races WHERE race_date=? AND organization=?
+                   AND place=? AND race_no=? LIMIT 2""",
+                (race.race_date, race.organization, race.place, race.race_no),
+            ).fetchall()
+            if len(existing) > 1:
+                raise RuntimeError("duplicate race natural key")
+            if existing:
+                return None
 
             cursor.execute(
                 """
@@ -416,7 +428,9 @@ def save_race(
 
         print(f"[DB ERROR] {e}")
 
-        return None# ==========================================================
+        return None
+
+# ==========================================================
 # Horse
 # ==========================================================
 
@@ -461,13 +475,49 @@ def save_horse(
 
     try:
 
-        if horse_exists(horse):
-
-            return False
-
         with _connection() as conn:
 
+            conn.execute("BEGIN IMMEDIATE")
+
             cursor = conn.cursor()
+
+            state = phase110_schema_state(conn)
+            if state == PHASE110_SCHEMA_INTEGRITY_FAILURE:
+                raise RuntimeError("Phase110 schema integrity failure")
+            matches = cursor.execute(
+                "SELECT id FROM horses WHERE race_id=? AND horse_no=? LIMIT 2",
+                (horse.race_id, horse.horse_no),
+            ).fetchall()
+            if len(matches) > 1:
+                raise RuntimeError("duplicate horse natural key")
+            if matches:
+                if state != PHASE110_SCHEMA_ACTIVE:
+                    return False
+                horse_id = matches[0][0]
+                binding = cursor.execute(
+                    """SELECT e.external_horse_id FROM nar_identity_complete_denials AS d
+                       JOIN nar_identity_complete_entries AS e
+                         ON e.receipt_id=d.receipt_id AND e.external_entry_id=d.external_entry_id
+                        AND e.race_id=d.race_id AND e.horse_id=d.horse_id
+                       WHERE d.horse_id=? AND d.race_id=?""",
+                    (horse_id, horse.race_id),
+                ).fetchone()
+                if binding is None:
+                    return False
+                from scripts.simulation.nar_historical_input_source import _canonical_horse_identity
+                if binding[0] is not None:
+                    if not horse.horse_detail_url or _canonical_horse_identity(horse.horse_detail_url) != binding[0]:
+                        raise ValueError("legacy enrichment horse identity contradiction")
+                elif horse.horse_detail_url:
+                    raise ValueError("legacy enrichment lacks trusted horse identity")
+                cursor.execute(
+                    """UPDATE horses SET frame_no=?,horse_name=?,jockey=?,trainer=?,
+                       odds=?,popularity=?,weight=? WHERE id=? AND race_id=? AND horse_no=?""",
+                    (horse.frame_no, horse.horse_name, horse.jockey, horse.trainer,
+                     horse.odds, horse.popularity, horse.weight,
+                     horse_id, horse.race_id, horse.horse_no),
+                )
+                return True
 
             cursor.execute(
                 """
@@ -794,8 +844,17 @@ def get_horses_by_race(
 
         cursor = conn.cursor()
 
+        state = phase110_schema_state(conn)
+        if state == PHASE110_SCHEMA_INTEGRITY_FAILURE:
+            raise RuntimeError("Phase110 schema integrity failure")
+
+        denial_clause = (
+            "AND NOT EXISTS (SELECT 1 FROM nar_identity_complete_denials AS d WHERE d.horse_id=horses.id)"
+            if state == PHASE110_SCHEMA_ACTIVE else ""
+        )
+
         cursor.execute(
-            """
+            f"""
             SELECT
 
                 race_id,
@@ -818,6 +877,8 @@ def get_horses_by_race(
             FROM horses
 
             WHERE race_id = ?
+
+            {denial_clause}
 
             ORDER BY horse_no
             """,
@@ -855,6 +916,15 @@ def get_horses_by_race(
             )
 
         return horses
+
+
+def get_phase110_schema_state() -> str:
+    """Expose the shared exact V018 validator to the DB-backed CLI boundary."""
+    with _connection() as conn:
+        state = phase110_schema_state(conn)
+        if state == PHASE110_SCHEMA_INTEGRITY_FAILURE:
+            raise RuntimeError("Phase110 schema integrity failure")
+        return state
 
 
 def get_past_races(

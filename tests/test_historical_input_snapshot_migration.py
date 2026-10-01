@@ -57,10 +57,10 @@ def _through(version: int) -> tuple[object, ...]:
 class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
     def db(self) -> sqlite3.Connection:
         connection = sqlite3.connect(":memory:")
-        connection.execute("CREATE TABLE races(id INTEGER PRIMARY KEY)")
-        connection.execute("CREATE TABLE horses(id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL)")
-        connection.executemany("INSERT INTO races(id) VALUES(?)", ((1,), (2,)))
-        connection.executemany("INSERT INTO horses(id, race_id) VALUES(?, ?)", ((11, 1), (12, 1), (21, 2)))
+        connection.execute("CREATE TABLE races(id INTEGER PRIMARY KEY, race_date TEXT, organization TEXT, place TEXT, race_no INTEGER, deba_table_url TEXT)")
+        connection.execute("CREATE TABLE horses(id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL, horse_no INTEGER)")
+        connection.executemany("INSERT INTO races(id,race_date,organization,place,race_no,deba_table_url) VALUES(?,?,?,?,?,?)", ((1,"2026-08-05","NAR","A",1,"https://example.invalid/1"), (2,"2026-08-05","NAR","A",2,"https://example.invalid/2")))
+        connection.executemany("INSERT INTO horses(id,race_id,horse_no) VALUES(?,?,?)", ((11,1,1), (12,1,2), (21,2,1)))
         connection.commit()
         return connection
 
@@ -144,10 +144,10 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         self.assertEqual(v015_jra_race_replay_seed_schema.NAME, "v015_jra_race_replay_seed_schema")
         self.assertEqual(v016_nar_daily_replay_result_schema.VERSION, 16)
         self.assertEqual(v016_nar_daily_replay_result_schema.NAME, "v016_nar_daily_replay_result_schema")
-        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS), (8, 9, 10, 11, 12, 13, 14, 15, 16, 17))
+        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS), (8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18))
         self.assertEqual(
             get_applied_versions(connection),
-            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema", 14: "v014_historical_input_request_identity_schema", 15: "v015_jra_race_replay_seed_schema", 16: "v016_nar_daily_replay_result_schema", 17: "v017_nar_daily_replay_prediction_cutoff_schema"},
+            {8: "v008_simulation_schema", 9: "v009_simulation_bet_plan_schema", 10: "v010_historical_input_snapshot_schema", 11: "v011_historical_past_race_time_difference_schema", 12: "v012_historical_input_evidence_schema", 13: "v013_historical_past_race_race_time_domain_schema", 14: "v014_historical_input_request_identity_schema", 15: "v015_jra_race_replay_seed_schema", 16: "v016_nar_daily_replay_result_schema", 17: "v017_nar_daily_replay_prediction_cutoff_schema", 18: "v018_nar_identity_complete_entry_schema"},
         )
         self.assertEqual(
             {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'historical_input_%'")},
@@ -171,7 +171,7 @@ class HistoricalInputSnapshotMigrationTests(unittest.TestCase):
         apply_migrations(connection)
         self.assertEqual(
             connection.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall(),
-            [(8,), (9,), (10,), (11,), (12,), (13,), (14,), (15,), (16,), (17,)],
+            [(8,), (9,), (10,), (11,), (12,), (13,), (14,), (15,), (16,), (17,), (18,)],
         )
         self.assertEqual(connection.execute("SELECT count(*) FROM historical_input_snapshots").fetchone()[0], 0)
         for table in HISTORICAL_TABLES:

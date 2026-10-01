@@ -167,8 +167,9 @@ class SQLiteRaceEntrySourceResolutionTests(unittest.TestCase):
         traced: list[str] = []
         self.connection.set_trace_callback(traced.append)
         self.source.load_race_entry_id_map(race_id=10, horse_ids=(1, 2))
-        selects = [statement for statement in traced if statement.lstrip().upper().startswith("SELECT")]
-        self.assertEqual(len(selects), 1)
+        selection_queries = [statement for statement in traced if "FROM horses AS h" in statement]
+        self.assertEqual(len(selection_queries), 1)
+        self.assertFalse(any("FROM races" in statement for statement in traced))
 
     def test_allows_active_caller_transaction_without_settlement(self) -> None:
         self.connection.execute("BEGIN")
@@ -250,7 +251,8 @@ class SQLiteRaceEntrySourceContractTests(unittest.TestCase):
         }
         self.assertEqual(
             imported_modules,
-            {"__future__", "sqlite3", "typing", "scripts.simulation.race_entry_source", "errors"},
+            {"__future__", "sqlite3", "typing", "scripts.simulation.race_entry_source",
+             "scripts.migrations.versions.v018_nar_identity_complete_entry_schema", "errors"},
         )
 
     def test_module_does_not_depend_on_composition_or_external_io(self) -> None:

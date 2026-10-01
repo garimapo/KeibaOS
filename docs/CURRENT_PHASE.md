@@ -1,6 +1,392 @@
 # Current Phase
 
-## POST_V0_8_DAILY_REPLAY_111
+## POST_V0_8_DAILY_REPLAY_110
+
+Title: NAR Identity-Complete Entry Persistence
+
+Status: `READY_FOR_REVIEW`
+
+Formal Status: `READY_FOR_REVIEW`
+
+State: `IMPLEMENTED_FOR_REVIEW`
+
+Outcome: `READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`
+
+Independent implementation review: `CHATGPT_REVIEW_PHASE110_IMPLEMENTATION = PASS`.
+`PHASE110_IMPLEMENTATION_REVIEW_PASS`.
+`PHASE110_COMMIT_APPROVED`.
+The first independent review returned `CHANGES_REQUIRED`; its four findings were
+repaired and independently re-reviewed within the approved 38-path scope. This
+approves one local implementation commit, not formal completion or push.
+
+Review disposition: `PHASE110_REVISED_ARCHITECTURAL_REVIEW_PASS`.
+
+`PHASE110_IMPLEMENTATION_DESIGN_APPROVED`.
+`PHASE110_IMPLEMENTATION_READY`.
+`PHASE110_IMPLEMENTATION_APPROVAL = GRANTED`.
+`PHASE110_DESIGN_APPROVED_FOR_CODEX`.
+`PHASE110_IMPLEMENTATION_SCOPE_CORRECTION_APPROVED`.
+`PHASE110_REQUIRED_MIGRATION_REGRESSION_FILES_ADDED_TO_ALLOWED_SET`.
+`PHASE110_FINAL_TEST_SCOPE_APPROVED`.
+`PHASE110_V018_REGRESSION_IMPACT_AUDIT_APPROVED`.
+`PHASE110_ALLOWED_FILES = 35_PATH_FINAL_SCOPE`.
+`PHASE110_IMPLEMENTATION_RESUME_APPROVED`.
+`PHASE110_V018_REPOSITORY_COMPATIBILITY_SCOPE_APPROVED`.
+`PHASE110_ALLOWED_FILES = 36_PATH_SCOPE`.
+`PHASE110_PHASE108_HARNESS_V018_COMPATIBILITY_SCOPE_APPROVED`.
+`PHASE110_ALLOWED_FILES = 37_PATH_SCOPE`.
+`PHASE110_FINAL_FIXTURE_COMPATIBILITY_SCOPE_APPROVED`.
+`PHASE110_ALLOWED_FILES = 38_PATH_SCOPE`.
+`PHASE110_IMPLEMENTATION_REPAIR_VERIFIED_FOR_REVIEW`.
+`PHASE110_IMPLEMENTATION_READY_FOR_CHATGPT_REVIEW`.
+`PHASE110_IMPLEMENTATION_TESTS_PASS`.
+`PHASE110_IMPLEMENTATION_STATIC_AUDIT_PASS`.
+
+Base Commit: `48dcc0a359a9b48b7f32fbe3fef846db1da31009`
+
+Base Tree: `67bf7387f189ba6ce40d6578aeaa7b5ccfdad79f`
+
+Branch: `feature/post-v0.8-daily-replay`
+
+Phase111 predecessor: `POST_V0_8_DAILY_REPLAY_111 = FORMALLY_COMPLETE`;
+`PHASE111_FINAL_DOCUMENTATION_REMOTE_VERIFICATION_PASS`.
+
+Phase111's trusted single-send Deba acquisition prerequisite is satisfied. Phase110
+is implemented and independently reviewed within the approved 38-path scope. This
+is not formal completion or push approval. Before this local commit activity, no
+provider HTTP, production DB access, staging, commit, or push occurred.
+
+### Objective and frozen authority boundaries
+
+Design a status-independent identity universe from only the exact bytes exposed by a
+Phase111 qualified result. Preserve every structurally identity-bearing NAR Deba row,
+including cancelled, withdrawn, excluded, and otherwise nonselected rows. Identity
+existence does not interpret status and does not create prediction/betting eligibility.
+
+Retain:
+
+`IDENTITY_PERSISTENCE_AUTHORITY != ENTRY_STATUS_AUTHORITY`.
+`IDENTITY_PERSISTENCE_AUTHORITY != MARKET_ELIGIBILITY`.
+`IDENTITY_PERSISTENCE_AUTHORITY != LIVE_CAMPAIGN_AUTHORIZATION`.
+`IDENTITY_COMPLETE_POPULATION != PREDICTION_ELIGIBLE_POPULATION`.
+`PERSISTED_ENTRY != SELECTABLE_ENTRY`.
+`STATUS_FILTERED_HORSE_ROWS != COMPLETE_NAR_ENTRY_IDENTITY_UNIVERSE`.
+`CANCELLED_ENTRY != NONEXISTENT_ENTRY_IDENTITY`.
+`ENTRY_STATUS_INTERPRETATION != ENTRY_IDENTITY_BINDING`.
+`OMITTED_CANCELLED_HORSE_ROW != AUTHORIZED_MAPPING_ABSENCE`.
+`HORSES_TABLE_POPULATION != COMPLETE_MAPPING_POPULATION_UNLESS_PROVEN`.
+`IDENTITY_ONLY_ENTRY != ACTIVE_ENTRY`.
+`IDENTITY_ONLY_ENTRY != PREDICTION_ELIGIBLE_ENTRY`.
+`LOCAL_RACE_NATURAL_KEY_UNIQUENESS != EXTERNAL_RACE_BINDING_AUTHORITY`.
+`PLACE_TEXT != NAR_BABA_CODE_AUTHORITY`.
+`V010_RACE_MAPPING_ROW != PHASE110_PARENT_BINDING_AUTHORITY`.
+`PHASE110_PARENT_RACE_MUST_PREEXIST`.
+`PHASE110_PARENT_BINDING_REQUIRES_EXACT_PHASE111_DEBA_ANCESTRY`.
+`SAVE_RACE_ATOMICITY != PHASE110_PARENT_RACE_AUTHORITY`.
+`V018_ABSENT != V018_CORRUPT`.
+`V018_CORRUPT_MUST_NOT_FALL_BACK_TO_LEGACY_SELECTION`.
+`LEGACY_COMPATIBILITY_REQUIRES_PROVEN_PHASE110_SCHEMA_ABSENCE`.
+`DENIED_ENTRY_EXCLUDED_FROM_ROWS != DENIED_ENTRY_EXCLUDED_FROM_EFFECTIVE_PREDICTION_POPULATION`.
+`PHASE110_NEW_INTERNAL_ENTRY_ID => PHASE110_SELECTION_DENIED`.
+`PHASE110_SELECTION_DENIAL != NULL_ENRICHMENT_STATE`.
+`ENRICHMENT_COMPLETION != SELECTION_AUTHORITY`.
+`PHASE110_ISSUED_ENTRY_REMAINS_DENIED_AFTER_ENRICHMENT`.
+`LEGACY_ENRICHMENT_MATCH != IDENTITY_ADOPTION_AUTHORITY`.
+`LEGACY_ENRICHMENT_MAY_UPDATE_NONIDENTITY_FIELDS_ONLY`.
+`PHASE110_ID_ISSUANCE_AND_PROVENANCE_MUST_SHARE_ONE_TRANSACTION`.
+`DERIVED_NAR_ENTRY_IDENTITY != PROVIDER_ISSUED_ENTRY_IDENTIFIER`.
+`IDENTITY_PERSISTENCE_PRECEDES_ENRICHMENT_WITHOUT_IDENTITY_REPLACEMENT`.
+`IDENTITY_ONLY_DENIAL_MUST_BE_DURABLE_NOT_INFERRED`.
+`IDENTITY_EXTRACTION != STATUS_INTERPRETATION`.
+`PHASE110_IMPLEMENTATION != PHASE95_STATUS_AUTHORITY`.
+`PHASE109_PRODUCTION_ENTRY_MAPPING_BLOCKED_BY_IDENTITY_COMPLETE_INGESTION`.
+`PHASE109_MAPPING_AUTHORITY_REQUIRES_STATUS_INDEPENDENT_ENTRY_IDENTITY_PERSISTENCE`.
+`PHASE110_COMPLETE_IDENTITY_PERSISTENCE != PHASE109_MAPPING_AUTHORITY`.
+`GENERIC_WRITER_CHECK_AND_WRITE_MUST_SHARE_ONE_SQLITE_WRITE_TRANSACTION`.
+`APPLICATION_LEVEL_CHECK_THEN_INSERT != ATOMIC_IDENTITY_AUTHORITY`.
+`PHASE110_MUST_NOT_RACE_UNREVIEWED_LEGACY_WRITER`.
+
+### Approved implementation boundary
+
+Phase110 implements only complete identity persistence from Phase111's read-only,
+same-byte qualified result: exact existing parent adoption; existing `horses.id`
+namespace reuse; SQLite-generated missing-entry IDs; immutable Phase111-to-Phase110
+provenance/receipt; durable denial for Phase110-issued IDs; controlled in-place legacy
+enrichment; and negative database-backed prediction/bet gates. It does not establish
+ACTIVE/CANCELLED authority, Phase95 status semantics, Phase41 market eligibility,
+Phase109 mapping authority, live campaign authorization, operational Delta, or complete
+production betting readiness.
+
+`save_race()` and `save_horse()` must perform lookup plus insertion/adoption or permitted
+enrichment through one SQLite connection under `BEGIN IMMEDIATE`; public compatibility
+helpers may remain, but cannot supply this safety proof. V018 must preflight duplicates
+before enforcing the reviewed natural-key uniqueness. A conflict raises and leaves no
+V018 registration, partial Phase110 object, or partial unique index: it is never
+selected, deleted, merged, renumbered, updated, or silently repaired.
+
+### Repository authority inventory
+
+| Area | Committed evidence | Finding / Phase110 consequence |
+| --- | --- | --- |
+| `races.id` origin | `scripts/database.py`: `races.id INTEGER PRIMARY KEY AUTOINCREMENT`; `save_race()` checks `race_exists()` then inserts on another connection. `scripts/parsers/nar_parser.py` retains a Deba URL from the RaceList title link. `scripts/simulation/repositories/sqlite_jra_race_replay_seed_repository.py` is another race writer, protected by its own `BEGIN IMMEDIATE` transaction and JRA seed proof. | `races.id` is a local surrogate race key, not provider identity. `(race_date, organization, place, race_no)` is only a local natural/concurrency key: `LOCAL_RACE_NATURAL_KEY_UNIQUENESS != EXTERNAL_RACE_BINDING_AUTHORITY`; `PLACE_TEXT != NAR_BABA_CODE_AUTHORITY`. Phase110 never issues `races.id`; the parent must preexist. Adoption requires exactly one natural-key candidate, NAR organization, exact date/race number, nonempty stored Deba URL canonicalized with the existing reviewed NAR URL semantics, exact equality to the Phase111 declaration/receipt/result canonical URL, and agreement of date/babaCode/raceNo parsed from that URL with the Phase111 external race identity. Missing/duplicate natural-key candidates, URL-less, noncanonical, or contradictory ancestry stops. V010 is not a substitute: `V010_RACE_MAPPING_ROW != PHASE110_PARENT_BINDING_AUTHORITY`. `SAVE_RACE_ATOMICITY != PHASE110_PARENT_RACE_AUTHORITY`. |
+| Race uniqueness / concurrency | Legacy `races` has no unique natural-key constraint. `save_race()` performs its existence read and insert in distinct transactions. JRA seed inserts races directly under `BEGIN IMMEDIATE`. | Proposed additive migration may add a unique partial index over populated `(race_date, organization, place, race_no)` values after duplicate preflight, and narrow `save_race()` check/insert serialization may be considered for compatibility. This only prevents local duplicate races; it does not authorize external binding. Existing conflicts are not merged/deleted; migration fails closed. Phase110 parent authority always requires exact Phase111 Deba ancestry. |
+| `horses.id` origin / meaning | `scripts/database.py` defines `horses.id INTEGER PRIMARY KEY AUTOINCREMENT`; `race_id` scopes it. `get_horse_id()` queries `(race_id, horse_no)`. `PastRace.horse_id`, prediction `horse_id`, V008/V009 `race_entry_id`, V010 and the Phase88 binder use `horses.id`. | In this architecture `horses.id` is effectively a per-race entry identity, not a global biological horse identity. Keep that existing ID namespace so downstream foreign keys and Phase109 can use it; do not create a second incompatible ID namespace or synthesize IDs. `horse_no` is only race-local. |
+| Existing entry writers / constraints | Legacy `save_horse()` calls `horse_exists()` on one connection and inserts on another. Base `horses` has no unique `(race_id, horse_no)` constraint. V010 supplies unique `(race_id,id)`, not race/number uniqueness. The JRA seed repository inserts minimal `horses(race_id,horse_no)` rows and binds them under an atomic JRA-specific seed; that is not NAR Phase110 origin. | Current legacy writer is not safe to race with Phase110. Add a migration-time unique partial index for populated `(race_id,horse_no)` keys, and make legacy save/create paths acquire one `BEGIN IMMEDIATE` before read/check/write. The Phase110 repository also uses one `BEGIN IMMEDIATE` for exact parent adoption, all entry allocations, origin/denial records, and receipt. The Phase110 repository—not generic `save_horse()`—inserts a missing ID and its origin/provenance/denial in one transaction. No process-local lock or likely-serial assumption. |
+| Legacy NAR parser | `scripts/parsers/horse_parser.py` advances over rows with `horseNum`, but `_is_cancelled()` skips rows containing cancellation/exclusion markers. `_parse_horse_block()` can return `None` and requires a nonempty horse name; optional fields default to zero/empty values. | It cannot define identity completeness and must remain unchanged. Phase110 runs the unchanged parser on the same qualified bytes only to obtain optional legacy enrichment for rows it already parses. A separate identity-only extractor enumerates the complete structural row set without reading status/odds/jockey/trainer/weight. No parser defaults are used to manufacture identity. |
+| Existing identity extraction candidates | `scripts/simulation/nar_historical_input_source.py` derives `external_entry_id = external_race_id + ':entry:' + horse_no` and canonical provider horse URLs, but its historical normalizer rejects cancellation markers and requires odds/jockey. Phase88's `_extract_source_entries()` uses the identity-bearing DOM primitives but freezes one fixture, one target, a 1..14 population, and fixed hashes. | Neither is a generic production extractor. Phase110 adds a generic extractor over Phase111 bytes, reusing only the reviewed low-level row selection and canonical horse-URL rules where compatible. It derives all rows from the exact supplied capture, has no frozen target/count/hash, and fails closed on malformed or duplicate identity structure. It does not import historical status semantics. |
+| Production prediction/read paths | `scripts/database.py:get_horses_by_race()` selects every horse row for a race. `scripts/cli/run_prediction.py:DatabaseRaceInputProvider.load()` places every returned row into `RacePredictionInput` and sets `race_horse_count = race.horse_count or len(horses)`; that count reaches `BetGenerator` and affects bet-type branches. `scripts/simulation/repositories/sqlite_race_entry_source.py` directly maps requested IDs from `horses` without a nonselection check; it feeds `RepositoryBackedRaceEntrySelectionResolver` / `SimulationBetPlanBuilder`. | These are the two discovered DB-backed candidate/selection boundaries. Row filtering alone is insufficient: when Phase110 denials exist, effective prediction/bet population count must be computed from post-gate candidate rows and must not use nominal persisted `races.horse_count` to expose a bet type. A narrow `run_prediction.py` change is required, but generic pipeline/predictor/strategy/value/bet-generator modules remain forbidden. Schema-absent compatibility may retain legacy count behavior only after the shared validator proves V018 is genuinely absent and no Phase110 objects exist. |
+| Other pipeline paths | `PredictionPipeline`, `BetGenerator`, and `BetStrategy` consume caller-supplied in-memory `RacePredictionInput`; persisted simulation request assembly also consumes a caller-authored request document rather than querying `horses`. | Phase110 must never feed the identity-complete universe into those inputs. These pure input APIs do not read the Phase110 registry and cannot infer persisted-row denial. Future composition that derives such inputs from Phase110 IDs must use an approved eligibility/status source; Phase95/41 remain blockers. No pipeline responsibility boundary is changed in Phase110. |
+| Existing mapping schemas | V010 external race/entry rows are used by snapshot save paths and can be snapshot-derived. V015's JRA seed schema has a distinct JRA provenance/seed contract. | `PERSISTED_RELATION != PROVENANCE_OF_RELATION`; `V010_MAPPING_ROW_EXISTENCE != INDEPENDENT_PRODUCTION_MAPPING_AUTHORITY`. Phase110 adds its own append-only NAR identity-origin evidence. It neither writes V010 nor converts V010/JRA rows into NAR authority. |
+
+No production database was queried. Existing duplicates in the deployed data are unknown; the future migration must detect conflicts and abort without cleanup or silent repair.
+
+### Answers to required implementation questions
+
+1. **Where extraction occurs.** A new pure `nar_identity_complete_entry_source.py` receives bytes returned by `read_qualified_deba_bytes(result=..., lineage_archive=..., capture_archive=...)`. It requires the exact Phase111 result/receipt and uses its external race identity. It strictly UTF-8 decodes the exact archive bytes. A generic row walk uses the reviewed Deba entry-table structure, collects every direct identity-bearing row, and never examines cancellation/status, odds, jockey, trainer, popularity, or weight.
+2. **How cancelled/excluded identities remain.** `horse_no` plus the exact parent external race yields derived `external_entry_id = <external_race_id>:entry:<canonical horse_no>`. Versioned algorithm `nar-entry-v1` concatenates the exact canonical Phase111 external race ID, literal `:entry:`, and the canonical ASCII decimal horse-number token matching `[1-9][0-9]*` (no sign, whitespace, zero, or leading zero). This is derived, not provider-issued: `DERIVED_NAR_ENTRY_IDENTITY != PROVIDER_ISSUED_ENTRY_IDENTIFIER`. The complete sorted set is built from every source row, including status-marked rows. Duplicate/malformed/zero/ambiguous horse numbers or ambiguous/missing row structure fail the whole extraction; no subset is silently accepted. A canonical horse-detail identity is recorded when exposed and remains optional if absent. It is not used to infer status.
+3. **Who issues an internal entry ID.** Only the Phase110 persistence application/repository, after validating Phase111 receipt and exact existing race parent. For genuinely absent `(race_id, horse_no)` it inserts one minimal identity-only row into the existing `horses` ID namespace and obtains SQLite's `lastrowid`; no enumeration/hash/external ID is used as an internal ID. Existing exact rows are adopted only after exact parent and canonical provider-horse identity agreement. Horse-number-only adoption is forbidden.
+4. **Atomicity/concurrency.** New migration `v018_nar_identity_complete_entry_schema` adds uniqueness for populated legacy race/number keys and Phase110 binding/origin tables. An all-or-nothing `BEGIN IMMEDIATE` transaction validates the complete population, exact parent, existing-row matches, allocates missing `horses.id` values, records every origin/denial binding, and publishes the immutable receipt. The unique index is the final defense against all writers; transaction locking serializes Phase110 against the repaired legacy writers and the already-transactional JRA seed writer. There is no row/receipt separation after crash.
+5. **Legacy writer coexistence.** `scripts/database.py:save_horse()` is changed narrowly to perform check and insert/update inside one `BEGIN IMMEDIATE` transaction. It receives no Phase111 identity authority. On an exact `(race_id, horse_no)` collision with a Phase110-issued row, it may update reviewed nonidentity enrichment columns only; it must not replace `horses.id`, change race membership or horse number, alter Phase110 external identity/provenance, or clear denial. Canonical horse-detail identity is checked against companion evidence where available; mismatch fails closed. `LEGACY_ENRICHMENT_MATCH != IDENTITY_ADOPTION_AUTHORITY` and `LEGACY_ENRICHMENT_MAY_UPDATE_NONIDENTITY_FIELDS_ONLY`.
+6. **Later enrichment.** A Phase110-issued ID is durably selection-denied even if the same Phase111 bytes also allow unchanged `HorseParser` to provide immediate enrichment. Later `save_horse()` enrichment stays on the same `horses.id`; it cannot mutate identity, provenance, or denial. `PHASE110_NEW_INTERNAL_ENTRY_ID => PHASE110_SELECTION_DENIED`; denial is not a null-field state, enrichment completion is not selection authority, and only a separately reviewed authority may supersede denial. `PHASE110_ISSUED_ENTRY_REMAINS_DENIED_AFTER_ENRICHMENT`.
+7. **Durable nonselection.** The companion model distinguishes an exact pre-existing/adopted legacy entry from a Phase110-issued entry. Every newly issued ID is explicitly marked `IDENTITY_ONLY_DENIED` (or an exactly equivalent fixed negative marker), even when optional enrichment is available immediately. This denial attaches to issuance, not to missing/null enrichment fields, and cannot be cleared by `save_horse()` or enrichment completion. It is never inferred from NULL/zero fields, name, cancellation text, or past-race count. Only a different, separately reviewed eligibility authority could supersede it; Phase110 cannot grant positive selection permission.
+8. **Readers.** One exact V018 schema-state validator is shared by `database.get_horses_by_race()` / relevant database helpers and `SQLiteRaceEntrySource`. It yields exactly: (A) `PHASE110_SCHEMA_NOT_INSTALLED` only when V018 registration is absent and no reserved Phase110 objects exist; legacy behavior is allowed only in this proven-absence compatibility mode. (B) `PHASE110_SCHEMA_ACTIVE` only when V018 is registered and every required table/index/constraint matches the reviewed topology; all denial gates are mandatory. (C) `PHASE110_SCHEMA_INTEGRITY_FAILURE` for any partial or contradictory state, including registered-but-missing objects, unregistered Phase110 objects, or wrong columns/keys/indexes/constraints; every reader fails closed and never falls back. Missing-table errors are not swallowed. `V018_ABSENT != V018_CORRUPT`; `V018_CORRUPT_MUST_NOT_FALL_BACK_TO_LEGACY_SELECTION`; `LEGACY_COMPATIBILITY_REQUIRES_PROVEN_PHASE110_SCHEMA_ABSENCE`. `get_horses_by_race()` excludes denied rows, while the CLI derives effective `race_horse_count` from post-gate candidate rows whenever active Phase110 denial rows exist. `SQLiteRaceEntrySource.load_race_entry_id_map()` rejects a requested identity-only ID. Historical artifact reads remain intact; pure pipeline/request-document APIs do not query `horses` and Phase110 never supplies identity-only candidates to them.
+9. **No additional provider send.** Phase110 accepts an already qualified Phase111 result and calls only its read-only archive byte accessor. The Phase110 source/application has no capture service, transport, provider, or `fetch_deba_table()` dependency. The same returned bytes feed strict decode/HorseParser enrichment and the identity extractor. Tests inject offline archives and assert zero transport calls; code must not call Phase111 `acquire()`.
+10. **Phase109 evidence.** Phase110 stores immutable receipt/entry bindings with organization/source system, canonical external race and entry IDs, internal `race_id`/`race_entry_id`, horse number, canonical external horse ID where observed, Phase111 declaration/receipt/capture IDs, exact Deba response digest, observation time/cutoff, source schema/version, complete population digest/count, and issuance disposition. Phase109 later exact-reloads Phase111 ancestry and Phase110 receipt and verifies both forward/reverse uniqueness and full entry-set equality. No V010 shortcut is permitted.
+
+### Proposed authority, persistence, and transaction contract
+
+| Option | Decision | Reason |
+| --- | --- | --- |
+| Put all identities directly into legacy `horses` and rely on nullable/default fields | Reject as a complete design. The row alone cannot preserve Phase111 provenance or durable negative selection authority, and current readers pass every row to prediction. It also leaves the uniqueness race open. |
+| Allocate Phase110 IDs in a separate identity-only table/namespace | Reject. Phase109 and existing result/plan foreign keys require the same internal `horses.id`/race-entry ID basis; a parallel ID namespace would require a second unreviewed mapping. |
+| Change `HorseParser` to include every cancellation row as a normal `Horse` | Reject. It couples identity existence to legacy enrichment/status behavior and risks default values entering prediction. Phase111 bytes instead feed a separate status-independent extractor plus unchanged optional parser enrichment. |
+| Add a provenance/denial companion registry while retaining `horses.id`, with unique natural keys and atomic legacy-writer compatibility | Recommend for review. It preserves the established ID namespace, makes origin and identity-only denial durable, permits exact adoption/enrichment in place, and can fail closed on legacy collisions without inventing IDs. |
+
+Input causal chain:
+
+`Phase111 qualified result -> exact archive byte reload -> strict UTF-8 -> complete status-independent identity extraction + unchanged optional HorseParser enrichment -> exact canonical parent-race adoption -> exact existing-entry adoption or controlled missing horses.id issuance -> immutable Phase110 provenance/denial rows + receipt -> exact reload`.
+
+The parent race must already exist; Phase110 cannot issue `races.id`. The local `(race_date, organization, place, race_no)` key is only a candidate/concurrency key, never external authority. Phase110 requires exactly one candidate, `organization=NAR`, exact date and race number, a nonempty stored `deba_table_url`, canonicalization through the existing reviewed NAR URL semantics, exact equality with the Phase111 declaration/receipt/result canonical URL, and exact date/babaCode/raceNo agreement between that URL and the Phase111 external race identity. Missing or duplicate candidate, URL-less/noncanonical value, wrong host/page, or contradiction stops. Place text is not baba-code evidence; no V010 row can replace this contract. Atomic `save_race()` is compatibility hardening only, not Phase110 parent authority.
+
+For each captured entry, exact existing `horses` candidates are scoped to that exact parent plus horse number. More than one is ambiguous. Adoption requires the row's canonical `horse_detail_url` to equal the captured canonical provider-horse identity whenever that identity is present; a missing/malformed URL cannot be adopted by horse number. If a row is absent, create an identity-only row only when the complete exact parent/entry identity is valid and the unique key is free. If the row exists but identity cannot be proved, stop rather than issue a second ID.
+
+The immutable companion receipt binds Phase111 declaration/receipt/capture IDs, external race/entry/horse identities, internal IDs, canonical parent ancestry, source digest/observed_at/cutoff, complete canonical ordered population and its digest, schema version and issuance time. The companion registry is append-only/restrictive. Same exact receipt replay may be idempotent; conflicting content or ancestry is rejected. No response body is copied from the Phase111 archive. Cross-archive lineage is stored as exact identities/digests and revalidated via Phase111 read APIs; no cross-database foreign key is assumed.
+
+Migration `v018` is additive and registered in `scripts/migrations/runner.py`. It validates the exact prior v017 registry, creates restrictive append-only race/entry/receipt provenance tables, and adds unique populated legacy-key indexes. Before index creation it detects duplicate `(race_date, organization, place, race_no)` and `(race_id, horse_no)` groups and aborts with bounded classification; it never merges, deletes, renumbers, or repairs existing rows. Migration is explicit; constructors/readers never install it implicitly. One exact shared schema-state validator is used by database helper reads and `SQLiteRaceEntrySource`, distinguishing proven V018 absence from exact activation and integrity failure. Runtime Phase110 writer requires exact V018 topology; it does not use V010 as parent authority.
+
+`save_race()` and `save_horse()` must put key lookup plus write in one SQLite `BEGIN IMMEDIATE` transaction where approved compatibility changes apply. Unique indexes close races against direct writers and concurrent connections; race-key uniqueness is not parent authority. For a newly issued entry, the Phase110 repository itself inserts the SQLite-generated `horses.id` and, in that same transaction, writes external identity, Phase111 ancestry, explicit selection denial, complete bindings, and immutable receipt. It must not call generic `save_horse()` to issue IDs. Any failure rolls back every newly allocated ID and authority row: `PHASE110_ID_ISSUANCE_AND_PROVENANCE_MUST_SHARE_ONE_TRANSACTION`.
+
+### Approved Allowed Files
+
+The following is the complete authorized Phase110 implementation set. Any additional
+path requires a contract amendment and a stop before modification.
+
+- `docs/CURRENT_PHASE.md`
+- `docs/LATEST_CODEX_REPORT.md`
+- `scripts/migrations/runner.py`
+- `scripts/migrations/versions/v018_nar_identity_complete_entry_schema.py`
+- `scripts/database.py`
+- `scripts/cli/run_prediction.py`
+- `scripts/simulation/nar_identity_complete_entry_source.py`
+- `scripts/simulation/nar_identity_complete_entry_persistence.py`
+- `scripts/simulation/repositories/sqlite_nar_identity_complete_entry_repository.py`
+- `scripts/simulation/repositories/sqlite_race_entry_source.py`
+- `scripts/simulation/repositories/sqlite_nar_daily_replay_result_repository.py`
+- `scripts/simulation/nar_pre_c_operational_envelope_harness.py`
+- `tests/test_v018_nar_identity_complete_entry_schema.py`
+- `tests/test_nar_identity_complete_entry_source.py`
+- `tests/test_nar_identity_complete_entry_persistence.py`
+- `tests/test_sqlite_nar_identity_complete_entry_repository.py`
+- `tests/test_database_identity_only_entries.py`
+- `tests/test_nar_identity_only_prediction_gate.py`
+- `tests/test_simulation_migrations.py`
+- `tests/test_historical_input_snapshot_migration.py`
+- `tests/test_simulation_bet_plan_migration.py`
+- `tests/test_nar_official_response_capture_migration.py`
+- `tests/test_cli_run_persisted_simulation.py`
+- `tests/test_historical_replay_mixed_provider_acceptance.py`
+- `tests/test_jra_race_historical_replay.py`
+- `tests/test_nar_daily_replay_result_persistence.py`
+- `tests/test_nar_pre_c_operational_envelope.py`
+- `tests/test_persisted_simulation_integration.py`
+- `tests/test_simulation_repositories.py`
+- `tests/test_sqlite_historical_input_snapshot_repository.py`
+- `tests/test_sqlite_jra_race_replay_seed_repository.py`
+- `tests/test_sqlite_nar_daily_evidence_resolver.py`
+- `tests/test_sqlite_nar_daily_replay_result_repository.py`
+- `tests/test_sqlite_persisted_simulation_application.py`
+- `tests/test_sqlite_persisted_simulation_composition.py`
+- `tests/test_sqlite_race_entry_source.py`
+- `tests/test_sqlite_simulation_bet_plan_snapshot_repository.py`
+- `tests/test_persisted_simulation_request_application.py`
+
+The existing regression-test additions are limited to V018 full-migration fixture
+compatibility, exact unrestricted registry/schema-object expectations, and the
+SQLiteRaceEntrySource schema-validation structural contract. Schema-authority reads
+do not count as selection queries; one batched `FROM horses AS h` selection query
+remains required. Historical-prefix migration tests retain their historical scope.
+No existing assertion may be removed or weakened. This correction does not alter
+the approved Phase110 architecture or V018 migration requirements.
+
+The NAR daily replay result repository must compare its complete applied application
+migration mapping with the current standard `scripts.migrations.runner.MIGRATIONS`
+registry. It retains independent exact V016 and V017 schema checks. Missing, renamed,
+and unknown migration registrations fail closed; V018 is not treated as an unknown
+future migration merely because V017 was previously the terminal version.
+
+The Phase108 no-network rehearsal harness's synthetic main-DB fixture uses the same
+canonical 2026-07-04 NAR race 11 Deba target and the existing 101/102 mapping for
+horse numbers 1/2. It supplies V018's required parent columns while retaining the
+normal unrestricted application migration runner. This fixture compatibility does
+not give Phase110 any Phase108 timing or root authority.
+
+The empty file-backed persisted-request test retains the real application chain and
+unrestricted migration runner while declaring V018-compatible empty parent tables.
+Other repository fixture tests may insert a parent ID through an explicit `races(id)`
+column list; such a test row is not Phase110 external race binding authority.
+
+### Approved Forbidden Files
+
+Every repository path not listed in the Approved Allowed Files is forbidden. In
+particular, Phase110 must not modify:
+
+- `scripts/parsers/horse_parser.py`, `scripts/parsers/nar_parser.py`,
+  `scripts/providers/nar_provider.py`, `scripts/fetch_local.py`,
+  `scripts/fetch_races.py`, or `scripts/models.py`;
+- Phase111 transport/capture/declaration/archive modules;
+- Phase109 mapping/receipt modules or Phase108 timing/root modules;
+- V010 schema/meaning or V015 JRA seed schema/repository;
+- Phase95 status, Phase41 market-eligibility, prediction engine/generator/strategy,
+  value engine, generic `scripts/prediction/prediction_pipeline.py`, other generic
+  prediction modules, or strategy responsibility boundaries;
+- `scripts/simulation/repositories/sqlite_bet_plan_snapshot_repository.py` and
+  V008/V009/V010/V011/V012/V013/V014/V015/V016/V017 migrations;
+- `database/**`, `logs/**`, production database files, and every test not listed in
+  Approved Allowed Files.
+
+Existing modules outside the exact Allowed Files may be read/imported through their
+existing APIs only; no parser/provider/transport semantics may be altered.
+
+### Required Tests
+
+Add focused offline tests in the approved new modules and require:
+
+1. Phase111 result and exact Phase111 archive reload are mandatory; forged/manual result, receipt or capture cannot authorize persistence.
+2. Phase110 performs zero provider/capture-service calls and never invokes legacy `fetch_deba_table()`.
+3. Exact same archive bytes are used for strict decode, unchanged HorseParser enrichment and generic identity extraction.
+4. Status-like text does not affect row identity; cancelled/withdrawn/excluded fixture rows remain in the complete identity set without status assertions.
+5. Odds, popularity, jockey, trainer, weight and positive status are not required for identity existence.
+6. Missing/malformed number, duplicate number, ambiguous table/horse link, duplicate canonical horse identity where disallowed, malformed URL, wrong target ancestry, and any silently dropped identity-bearing row fail closed.
+7. Entry IDs are exactly `<external_race_id>:entry:<horse_no>`; no enumeration, row index, hash, or synthetic internal-ID derivation occurs.
+8. Canonical race URL resolves to exactly one NAR race row; missing, duplicate, wrong URL/date/race number/organization are rejected; approximate place/name matching is never used.
+9. Existing entry adoption requires exact parent race, exact horse number under that parent, and canonical provider-horse identity agreement; horse-number-only, wrong-race, missing-URL, and conflicting URL adoption fail.
+10. Complete set equality is required; subset, extra internal rows, duplicate external/internal binding, duplicate reverse mapping, and parent mismatch fail closed.
+11. SQLite `horses.id` issuance is stable, positive, database-generated and unique; no ID is issued outside the persistence transaction.
+12. `v018` migration exact prior-schema gate, deterministic topology, duplicate-key preflight, unique indexes, append-only provenance, foreign keys, and migration rollback on conflict.
+13. Concurrent Phase110 issuers cannot allocate two IDs for one `(race_id, horse_no)`; concurrent `save_horse()` / Phase110 / JRA-seed writers cannot create duplicate natural keys.
+14. `save_race()` natural-key race is closed by transaction and DB uniqueness; exact Phase110 URL binding remains stricter than legacy lookup.
+15. Crash/failure between row insert, origin row, complete binding set, and receipt rolls back the whole Phase110 transaction; no qualified orphan ID remains.
+16. Existing exact legacy rows are adopted without ID replacement; unknown-origin/ambiguous rows are not elevated to Phase110 authority.
+17. A later `save_horse()` enriches an identity-only row in place only after exact identity match; it does not duplicate/replace the ID or clear the persisted denial marker; mismatch fails closed.
+18. Identity-only nonselection uses the explicit durable disposition only, never NULL/zero/name/status/past-race heuristics; enrichment cannot imply ACTIVE or eligibility.
+19. `database.get_horses_by_race()` and `DatabaseRaceInputProvider` omit/deny identity-only rows before `RacePredictionInput`; missing/incompatible v018 schema fails closed.
+20. `SQLiteRaceEntrySource` rejects direct resolution of identity-only IDs, including requests aimed at bet-plan creation; other saved-artifact reads preserve historical rows.
+21. Pure pipeline/input-document APIs are not claimed as DB readers; Phase110 never derives their candidate population from identity-only rows.
+22. Phase110 receipt exact reload, deterministic content identity, canonical ordering, complete population count/digest, append-only conflicts, and exact Phase111 ancestry.
+23. Phase109-consumable exact forward/reverse fields are available, while V010 row existence is neither read as origin nor written as mapping authority.
+24. Phase95 status and Phase41 market eligibility remain unmodified and unasserted.
+25. No-network tests use temporary/in-memory SQLite only, make no production DB access/write, no provider HTTP, and leave no changes outside the Approved Allowed Files.
+26. A local `(race_date, organization, place, race_no)` match alone cannot authorize parent adoption; exact canonical stored Deba URL equality and Phase111 external-race ancestry are mandatory.
+27. Parent adoption rejects absent and duplicate natural-key candidates, wrong organization/date/race number, missing or empty stored Deba URL, noncanonical URL, and URL/external-race/date/babaCode/raceNo contradiction.
+28. V018 absent with no Phase110 objects yields `PHASE110_SCHEMA_NOT_INSTALLED` and preserves legacy compatibility; exact V018 yields `PHASE110_SCHEMA_ACTIVE` and enforces denial; registered-but-incomplete, unregistered Phase110 objects, malformed topology, or any contradictory schema yields `PHASE110_SCHEMA_INTEGRITY_FAILURE` and fails closed.
+29. Phase110-issued entries are denied even when immediately enriched from the same bytes; later `save_horse()` enrichment preserves internal ID, identity, provenance, and denial; enrichment cannot mutate identity-bearing fields.
+30. Phase110 repository atomically creates each missing `horses.id` together with provenance and denial; no qualified ID/origin split can survive a failure.
+31. `database.get_horses_by_race()` excludes denied entries, and `SQLiteRaceEntrySource` rejects denied IDs; both use the same exact V018 schema-state validator.
+32. DB-backed `DatabaseRaceInputProvider` effective candidate count excludes Phase110-denied entries. A denied row cannot alter candidates or unlock a bet type merely through nominal `races.horse_count`.
+33. No generic prediction pipeline, predictor, strategy, value-engine, or bet-generator module change is needed or permitted; only the explicit CLI composition boundary may use the post-gate effective population.
+
+Related regression set must include existing database save/get, race-entry-source, CLI prediction provider, JRA seed repository, Phase111 read-only result, and existing V010/immutable simulation repository tests; do not modify those out-of-scope files. Run the full pytest suite after focused and related tests.
+
+### Stop Condition
+
+STOP rather than broadening scope if:
+
+- complete identity cannot be extracted without Phase95 status semantics or qualified Phase111 bytes are insufficient;
+- the Phase111 bytes/archive cannot be consumed read-only without a new provider request;
+- a Phase110 parent `races.id` must be created, a second internal entry-ID namespace is needed, or destructive duplicate repair is proposed;
+- exact canonical NAR parent race or exact existing entry identity cannot be established;
+- the local race natural key is the only evidence for parent binding, or the exact existing parent is absent, duplicated, URL-less, noncanonical, or contradicts the Phase111 URL/external-race identity;
+- V018 is partial/corrupt and a reader would need to fall back to legacy selection, or one shared exact schema-state validator cannot be used by both database readers and `SQLiteRaceEntrySource`;
+- migration preflight finds duplicate legacy race/entry natural keys (do not merge/delete/renumber);
+- safe issuance requires an unreviewed destructive/core schema redesign or a second internal-ID namespace;
+- legacy writer coexistence cannot be made race-safe with the additive unique keys and atomic transactions;
+- enrichment would replace identity, clear identity-only denial, or imply ACTIVE;
+- prediction/betting reader coverage extends beyond the audited DB-backed boundaries and cannot be closed within the Approved Allowed Files;
+- denied rows are filtered from returned rows but nominal `races.horse_count` can still affect effective candidates or unlock a bet-type branch, and this cannot be fixed within the approved `run_prediction.py` boundary;
+- `HorseParser`, NAR provider/fetcher behavior, a generic prediction/betting engine, Phase109, V010 authority, or Phase95/41 authority must be modified or promoted;
+- identity-only rows could enter a Phase109/Phase108 prediction population absent separate status/eligibility authority;
+- V010 must be reinterpreted or Phase109 must be implemented simultaneously;
+- an additional Deba request, production DB access during design, Phase95/41 authority, or unrelated KeibaAI change is required.
+
+### Downstream relationship
+
+`Phase111 qualified acquisition -> Phase110 complete identity persistence -> Phase109 production external/internal mapping receipt -> Phase108 prestaged manifest -> PRE_C root / operational timing audit`.
+
+Phase110 consumes Phase111 only by read-only byte retrieval and does not create acquisition authority. Phase110 persistence does not self-authenticate V010 rows. Phase95 status authority, Phase41 market eligibility, live campaign authorization and concrete operational timing/Delta remain separate.
+
+`PHASE110_REVISED_ARCHITECTURAL_REVIEW_PASS`.
+`PHASE110_IMPLEMENTATION_DESIGN_APPROVED`.
+`PHASE110_IMPLEMENTATION_READY`.
+`PHASE110_IMPLEMENTATION_APPROVAL = GRANTED`.
+`PHASE110_DESIGN_APPROVED_FOR_CODEX`.
+
+### Implementation verification for independent review
+
+Independent review returned `CHANGES_REQUIRED`; the follow-up repair adds a global
+exact-URL parent ambiguity check independent of caller-supplied place, protects a
+Phase110-bound `horses.id` as well as `race_id`/`horse_no` even when foreign keys are
+off on the mutating connection, proves rollback after ID and receipt insert attempts
+with a non-schema-changing SQLite authorizer, and proves two real Phase110 issuers
+cannot publish duplicate authority against one file-backed database.
+
+V018 is registered in the standard migration runner. It preflights duplicate legacy
+natural keys, adds uniqueness and immutable Phase110 identity/provenance/denial
+storage, and supplies one shared absent/active/corrupt schema-state validator.
+The Phase110 source reads only exact Phase111 qualified archive bytes and retains
+identity-bearing cancelled/excluded rows without interpreting status. The repository
+adopts one pre-existing exact NAR parent, issues missing `horses.id` values through
+SQLite in a single `BEGIN IMMEDIATE` transaction with provenance and denial, and
+publishes an exact complete-population receipt. Generic writers use serialized
+lookup/write transactions; enrichment preserves identity and denial. Database,
+SQLiteRaceEntrySource and CLI input gates exclude denied candidates and use the
+effective post-gate population count. The daily replay result repository validates
+the current complete application migration registry while retaining V016/V017
+schema gates. The Phase108 rehearsal synthetic DB and full-migration test fixtures
+are compatible with V018 without changing historical migration prefixes.
+
+Post-repair direct finding tests `5 passed`; Phase110 focused `142 passed, 51 subtests
+passed`; the complete related regression set `406 passed, 145 subtests passed`; full
+repository suite `4836 passed, 4 skipped, 2846 subtests passed` using
+`KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=48dcc0a359a9b48b7f32fbe3fef846db1da31009`.
+The prior Phase108/pre-C set passed `35 passed, 2 skipped`. Final static audit found
+no new provider transport, legacy Deba refetch, apparent-encoding fallback, fixed
+production DB path in Phase110 simulation modules, destructive repair, Phase109/V010
+write, or status/eligibility authority. V018 restrictive UPDATE/DELETE triggers and
+SQLite-generated `lastrowid` issuance were confirmed. All 38 dirty paths are within
+the exact Approved Allowed Files; index is empty and `git diff --check` passes.
+
+Phase95 status authority, Phase41 market eligibility, Phase109 mapping authority,
+live campaign activation, and formal Phase110 completion remain outside this phase.
+The first repair verification did not itself grant review PASS or commit approval;
+subsequent independent review granted both for the exact repaired implementation.
+
+Next: `CHATGPT_VERIFY_PHASE110_COMMIT` after the approved local commit.
+
+---
+
+## Frozen predecessor — POST_V0_8_DAILY_REPLAY_111
+
+### POST_V0_8_DAILY_REPLAY_111
 
 Title: NAR Trusted Single-Send Deba Acquisition and Identity-Ingestion Boundary
 

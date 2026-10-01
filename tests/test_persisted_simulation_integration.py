@@ -147,12 +147,12 @@ class PersistedSimulationIntegrationTests(unittest.TestCase):
         )
 
     def _create_parent_schema_and_seed(self) -> None:
-        self.connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY)")
+        self.connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY, race_date TEXT, organization TEXT, place TEXT, race_no INTEGER, deba_table_url TEXT)")
         self.connection.execute(
             "CREATE TABLE horses (id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL, horse_no INTEGER NOT NULL)",
         )
         race_ids = (101, 102, 103, 104, 105, 106)
-        self.connection.executemany("INSERT INTO races (id) VALUES (?)", ((race_id,) for race_id in race_ids))
+        self.connection.executemany("INSERT INTO races (id, race_date, organization, place, race_no, deba_table_url) VALUES (?, '2025-01-01', 'JRA', '東京', ?, ?)", ((race_id, race_id, f'https://example.test/{race_id}') for race_id in race_ids))
         self.connection.executemany(
             "INSERT INTO horses (id, race_id, horse_no) VALUES (?, ?, ?)",
             ((self.horse_id_for(race_id), race_id, 1) for race_id in race_ids),

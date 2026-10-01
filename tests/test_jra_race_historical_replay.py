@@ -434,7 +434,7 @@ def test_exact_v3_archive_enrichment_and_restart_never_substitute_latest(
         """CREATE TABLE races(
             id INTEGER PRIMARY KEY, race_date TEXT, organization TEXT, place TEXT, race_no INTEGER,
             race_name TEXT, distance INTEGER, track TEXT, weather TEXT, track_condition TEXT,
-            horse_count INTEGER
+            horse_count INTEGER, deba_table_url TEXT
         )"""
     )
     seed_connection.execute(

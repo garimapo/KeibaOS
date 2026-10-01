@@ -516,10 +516,21 @@ def run_phase108_no_network_rehearsal(*, repository_root, bundle_root, commit_sh
         apply_capture_schema_migrations(capture_connection)
         capture_archive = SQLiteNAROfficialResponseCaptureRepository(connection=capture_connection)
         # Explicit fixture DB identities match the exact predeclared fixture mapping.
-        snapshot_connection.execute("CREATE TABLE races(id INTEGER PRIMARY KEY)")
-        snapshot_connection.execute("CREATE TABLE horses(id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL)")
-        snapshot_connection.execute("INSERT INTO races VALUES(1)")
-        snapshot_connection.executemany("INSERT INTO horses VALUES(?,1)", ((101,), (102,)))
+        snapshot_connection.execute(
+            "CREATE TABLE races(id INTEGER PRIMARY KEY, race_date TEXT, organization TEXT, "
+            "place TEXT, race_no INTEGER, deba_table_url TEXT)"
+        )
+        snapshot_connection.execute(
+            "CREATE TABLE horses(id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL, horse_no INTEGER)"
+        )
+        snapshot_connection.execute(
+            "INSERT INTO races VALUES(1, '2026-07-04', 'NAR', '川崎', 11, "
+            "'https://www.keiba.go.jp/KeibaWeb/TodayRaceInfo/DebaTable?"
+            "k_babaCode=19&k_raceDate=2026%2F07%2F04&k_raceNo=11')"
+        )
+        snapshot_connection.executemany(
+            "INSERT INTO horses VALUES(?, 1, ?)", ((101, 1), (102, 2))
+        )
         snapshot_connection.commit()
         apply_migrations(snapshot_connection)
         snapshot_repository = SQLiteHistoricalInputSnapshotRepository(connection=snapshot_connection)

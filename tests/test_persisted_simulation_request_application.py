@@ -140,7 +140,10 @@ class PersistedSimulationRequestApplicationTests(unittest.TestCase):
             database_path = directory / "simulation.db"
             connection = sqlite3.connect(database_path)
             try:
-                connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY)")
+                connection.execute(
+                    "CREATE TABLE races (id INTEGER PRIMARY KEY, race_date TEXT, "
+                    "organization TEXT, place TEXT, race_no INTEGER, deba_table_url TEXT)"
+                )
                 connection.execute(
                     "CREATE TABLE horses ("
                     "id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL, horse_no INTEGER NOT NULL)",

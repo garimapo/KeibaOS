@@ -87,10 +87,10 @@ def _capture(no=1, *, observed=_SETTLEMENT, requested=None, stored=None, body=b"
 
 
 def _initialize(main, archive, snapshots, captures):
-    main.execute("CREATE TABLE races(id INTEGER PRIMARY KEY)")
-    main.execute("CREATE TABLE horses(id INTEGER PRIMARY KEY,race_id INTEGER NOT NULL)")
-    main.executemany("INSERT INTO races VALUES(?)", ((n,) for n in range(1, 21)))
-    main.executemany("INSERT INTO horses VALUES(?,?)", ((n * 10 + 1, n) for n in range(1, 21)))
+    main.execute("CREATE TABLE races(id INTEGER PRIMARY KEY,race_date TEXT,organization TEXT,place TEXT,race_no INTEGER,deba_table_url TEXT)")
+    main.execute("CREATE TABLE horses(id INTEGER PRIMARY KEY,race_id INTEGER NOT NULL,horse_no INTEGER)")
+    main.executemany("INSERT INTO races VALUES(?,'2025-01-01','NAR','川崎',?,?)", ((n, n, f'https://example.test/{n}') for n in range(1, 21)))
+    main.executemany("INSERT INTO horses VALUES(?,?,1)", ((n * 10 + 1, n) for n in range(1, 21)))
     main.commit()
     apply_migrations(main)
     apply_capture_schema_migrations(archive)

@@ -6,6 +6,9 @@ import sqlite3
 from typing import Mapping, Sequence
 
 from scripts.simulation.race_entry_source import RaceEntrySource
+from scripts.migrations.versions.v018_nar_identity_complete_entry_schema import (
+    PHASE110_SCHEMA_ACTIVE, PHASE110_SCHEMA_INTEGRITY_FAILURE, phase110_schema_state,
+)
 
 from .errors import RepositoryDataIntegrityError, RepositoryValidationError
 
@@ -28,12 +31,20 @@ class SQLiteRaceEntrySource:
         horse_ids: Sequence[int],
     ) -> Mapping[int, int]:
         requested_horse_ids = self._validate_request(race_id=race_id, horse_ids=horse_ids)
+        state = phase110_schema_state(self._connection)
+        if state == PHASE110_SCHEMA_INTEGRITY_FAILURE:
+            raise RepositoryDataIntegrityError("Phase110 schema integrity failure")
         placeholders = ", ".join("?" for _ in requested_horse_ids)
+        denial_clause = (
+            "AND NOT EXISTS (SELECT 1 FROM nar_identity_complete_denials AS d WHERE d.horse_id=h.id)"
+            if state == PHASE110_SCHEMA_ACTIVE else ""
+        )
         query = f"""
             SELECT h.id AS prediction_horse_id, h.id AS race_entry_id
             FROM horses AS h
             WHERE h.race_id = ?
               AND h.id IN ({placeholders})
+              {denial_clause}
         """
         try:
             rows = self._connection.execute(query, (race_id, *requested_horse_ids)).fetchall()

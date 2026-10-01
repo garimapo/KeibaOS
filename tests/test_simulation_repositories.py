@@ -25,9 +25,9 @@ class RepositoryTestCase(unittest.TestCase):
         mutate(c); c.commit(); return c
     def setUp(self) -> None:
         self.connection = sqlite3.connect(":memory:")
-        self.connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY)")
+        self.connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY, race_date TEXT, organization TEXT, place TEXT, race_no INTEGER, deba_table_url TEXT)")
         self.connection.execute("CREATE TABLE horses (id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL, horse_no INTEGER NOT NULL)")
-        self.connection.executemany("INSERT INTO races VALUES (?)", [(1,), (2,)])
+        self.connection.executemany("INSERT INTO races VALUES (?, '2025-01-01', 'JRA', '東京', ?, ?)", [(1, 1, 'https://example.test/1'), (2, 2, 'https://example.test/2')])
         self.connection.executemany("INSERT INTO horses VALUES (?,?,?)", [(11,1,1),(12,1,2),(13,1,3),(14,1,4),(21,2,1),(22,2,2),(23,2,3)])
         self.connection.commit()
         apply_migrations(self.connection)
@@ -122,7 +122,7 @@ class RepositoryTestCase(unittest.TestCase):
         repo=SQLiteRaceResultRepository(self.connection)
         for index,status in enumerate(RaceResultStatus, 1):
             result=PersistedRaceResult(index,status,NOW if status is RaceResultStatus.COMPLETE else None,NOW,"s",())
-            if index > 2: self.connection.execute("INSERT OR IGNORE INTO races VALUES (?)",(index,)); self.connection.commit()
+            if index > 2: self.connection.execute("INSERT OR IGNORE INTO races(id) VALUES (?)",(index,)); self.connection.commit()
             repo.save_race_result(result); self.assertEqual(repo.get_race_result(index).result_status,status)
 
     def test_race_normalizes_entry_order(self) -> None:
@@ -265,7 +265,7 @@ class RepositoryTestCase(unittest.TestCase):
     def test_repositories_preserve_caller_transaction(self) -> None:
         cases=((SQLiteRaceResultRepository(self.connection),"save_race_result",PersistedRaceResult(1,RaceResultStatus.PARTIAL,None,NOW,"s",())),(SQLiteOddsSnapshotRepository(self.connection),"save_odds_batch",OddsSnapshotBatch(1,"単勝",NOW,True,"s",(OddsSnapshotEntry((11,),Decimal("2")),))),(SQLitePayoutRepository(self.connection),"save_payout_publication",PayoutPublication(1,"単勝",NOW,NOW,True,"s",())))
         for repo,method,value in cases:
-            self.connection.execute("BEGIN"); self.connection.execute("INSERT INTO races VALUES (99)")
+            self.connection.execute("BEGIN"); self.connection.execute("INSERT INTO races(id) VALUES (99)")
             with self.assertRaises(RepositoryValidationError): getattr(repo,method)(value)
             self.assertTrue(self.connection.in_transaction); self.assertIsNotNone(self.connection.execute("SELECT 1 FROM races WHERE id=99").fetchone()); self.connection.rollback(); self.assertIsNone(self.connection.execute("SELECT 1 FROM races WHERE id=99").fetchone())
 

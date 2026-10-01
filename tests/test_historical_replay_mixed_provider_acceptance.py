@@ -360,12 +360,12 @@ def _setup_main_database(
 ) -> None:
     connection = sqlite3.connect(path)
     try:
-        connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY)")
+        connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY, race_date TEXT, organization TEXT, place TEXT, race_no INTEGER, deba_table_url TEXT)")
         connection.execute(
             "CREATE TABLE horses ("
             "id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL, horse_no INTEGER NOT NULL)"
         )
-        connection.executemany("INSERT INTO races(id) VALUES(?)", ((700,), (800,)))
+        connection.executemany("INSERT INTO races(id,race_date,organization,place,race_no,deba_table_url) VALUES(?,?,?,?,?,?)", ((700, '2025-01-01', 'NAR', '川崎', 1, 'https://example.test/700'), (800, '2025-01-01', 'JRA', '東京', 1, 'https://example.test/800')))
         connection.executemany(
             "INSERT INTO horses(id,race_id,horse_no) VALUES(?,?,?)",
             tuple((1000 + value, 700, value) for value in range(1, 14))

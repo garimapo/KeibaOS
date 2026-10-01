@@ -336,7 +336,7 @@ class PersistedSimulationCliTests(unittest.TestCase):
             database_path = directory / "simulation.db"
             connection = sqlite3.connect(database_path)
             try:
-                connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY)")
+                connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY, race_date TEXT, organization TEXT, place TEXT, race_no INTEGER, deba_table_url TEXT)")
                 connection.execute(
                     "CREATE TABLE horses ("
                     "id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL, horse_no INTEGER NOT NULL)",
@@ -385,12 +385,12 @@ class PersistedSimulationCliTests(unittest.TestCase):
             database_path = directory / "simulation.db"
             connection = sqlite3.connect(database_path)
             try:
-                connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY)")
+                connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY, race_date TEXT, organization TEXT, place TEXT, race_no INTEGER, deba_table_url TEXT)")
                 connection.execute(
                     "CREATE TABLE horses ("
                     "id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL, horse_no INTEGER NOT NULL)",
                 )
-                connection.execute("INSERT INTO races (id) VALUES (101)")
+                connection.execute("INSERT INTO races (id, race_date, organization, place, race_no, deba_table_url) VALUES (101, '2026-08-05', 'JRA', '東京', 1, 'https://example.test/race/101')")
                 connection.execute(
                     "INSERT INTO horses (id, race_id, horse_no) VALUES (1011, 101, 1)",
                 )
@@ -452,9 +452,9 @@ class PersistedSimulationCliTests(unittest.TestCase):
             database_path = directory / "simulation.db"
             connection = sqlite3.connect(database_path)
             try:
-                connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY)")
+                connection.execute("CREATE TABLE races (id INTEGER PRIMARY KEY, race_date TEXT, organization TEXT, place TEXT, race_no INTEGER, deba_table_url TEXT)")
                 connection.execute("CREATE TABLE horses (id INTEGER PRIMARY KEY, race_id INTEGER NOT NULL, horse_no INTEGER NOT NULL)")
-                connection.execute("INSERT INTO races (id) VALUES (101)")
+                connection.execute("INSERT INTO races (id, race_date, organization, place, race_no, deba_table_url) VALUES (101, '2026-08-05', 'JRA', '東京', 1, 'https://example.test/race/101')")
                 connection.execute("INSERT INTO horses (id, race_id, horse_no) VALUES (1011, 101, 1)")
                 connection.commit()
                 apply_migrations(connection)
