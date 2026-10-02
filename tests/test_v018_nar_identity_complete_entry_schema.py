@@ -23,7 +23,7 @@ def legacy_db():
 
 
 def through_v017(connection):
-    apply_migrations(connection, MIGRATIONS[:-1])
+    apply_migrations(connection, tuple(migration for migration in MIGRATIONS if migration.VERSION <= 17))
     return connection
 
 

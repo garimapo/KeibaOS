@@ -1,6 +1,385 @@
 # Current Phase
 
-## POST_V0_8_DAILY_REPLAY_110
+## POST_V0_8_DAILY_REPLAY_109
+
+Title: NAR Production External/Internal Mapping Authority
+
+Status: `APPROVED_FOR_COMMIT`
+
+Formal Status: `APPROVED_FOR_COMMIT`
+
+State: `APPROVED_FOR_COMMIT`
+
+Outcome: `APPROVED_FOR_LOCAL_COMMIT`
+
+Base Commit: `bc47f59f0372b0de65b2786b6003c55acfda9e02`
+
+Base Tree: `ab22ebda36667a6698d47cc824637d8036c30564`
+
+Branch: `feature/post-v0.8-daily-replay`
+
+`PHASE109_POST_PHASE110_REENTRY_AUDIT_COMPLETE`.
+`PHASE109_POST_PHASE110_REENTRY_DESIGN_REVIEW_PASS`.
+`PHASE109_IMPLEMENTATION_DESIGN_APPROVED`.
+`PHASE109_IMPLEMENTATION_APPROVAL = GRANTED`.
+`PHASE109_ALLOWED_FILES = 16_PATH_SCOPE`.
+`PHASE109_TEST_SCOPE_EXTENSION_APPROVED`.
+`PHASE109_IMPLEMENTATION_RESUME_APPROVED`.
+`PHASE109_V010_MODEL = B`.
+`PHASE109_V019_REQUIRED`.
+`CHATGPT_REVIEW_PHASE109_IMPLEMENTATION = PASS`.
+`PHASE109_IMPLEMENTATION_REVIEW_PASS`.
+`PHASE109_COMMIT_APPROVED`.
+The former `PHASE109_PRODUCTION_ENTRY_MAPPING_BLOCKED_BY_IDENTITY_COMPLETE_INGESTION`
+and `PHASE109_IMPLEMENTATION = BLOCKED_NOT_AUTHORIZED` remain in the historical
+audit below. Their *identity-ingestion prerequisite* is now satisfied by remotely
+verified `POST_V0_8_DAILY_REPLAY_110 = FORMALLY_COMPLETE`. The Phase109 design
+has now passed independent architectural review and is approved for implementation.
+Implementation began within the original 15-path scope and stopped at the first
+proven out-of-scope regression. That stop and its work preservation are historical;
+the approved 16-path implementation has now passed verification and is review-ready.
+
+`PHASE109_IMPLEMENTATION_STOPPED_FOR_SCOPE_EXTENSION`.
+The V019 standard-runner registration changed `MIGRATIONS[:-1]` in the then-forbidden
+`tests/test_v018_nar_identity_complete_entry_schema.py` from a through-V017
+prefix into a through-V018 prefix. Its
+`test_v018_installs_exact_registered_topology_and_rerun_is_noop` now expects
+`PHASE110_SCHEMA_NOT_INSTALLED` but correctly observes `PHASE110_SCHEMA_ACTIVE`.
+This is a historical-prefix fixture contract, not a reason to weaken V018 or
+remove V019 from the standard registry. ChatGPT approved exactly that test file
+as a 16th path. Its helper now selects `VERSION <= 17` explicitly; no V018
+assertion was weakened. Direct new Phase109 tests before resumption: `17 passed`.
+At that historical stop, the related regression run was interrupted for
+classification; the full suite and final static audit had not run. No stage,
+commit, or push occurred.
+
+### Current Phase109 implementation and verification
+
+`PHASE109_IMPLEMENTATION_REPAIR_READY_FOR_REVIEW`. The first independent
+implementation review returned the historical result
+`CHATGPT_REVIEW_PHASE109_IMPLEMENTATION = CHANGES_REQUIRED`; its two findings
+were repaired within the existing 16-path scope. Independent re-review of the
+exact repaired bytes passed and local implementation commit is approved.
+Finding 1 closed reverse-side V010 drift: covered V010 race/entry triggers now
+guard both external and internal race identities (including OLD and NEW on
+UPDATE) even with foreign keys OFF. Publication preflight and exact reload
+compare the full four-field V010 entry relation selected by either race side
+against the complete Phase110/V019 population. A reverse-side extra row fails
+closed before publication or on reload. Finding 2 makes V019 `apply()` compare
+the exact V010 mapping table/column/FK/index topology, including the prior V015
+exact-mapping index, against a reference before creating any V019 object.
+Pre-existing V010 drift leaves V019 unregistered, no V019 object, and the drift
+unchanged after runner rollback. The genuine post-write failure test also
+proves the transactionally inserted NAR source-identity row is rolled back.
+
+V019 is registered in the standard migration runner and installs the immutable
+`nar_production_mapping_receipts` and `nar_production_mapping_entries` authority
+with exact schema-state validation, uniqueness, append-only triggers, and covered
+V010 race/entry drift guards. The controlled publisher reloads exact Phase111
+archive ancestry read-only, then under `BEGIN IMMEDIATE` exact-reloads the Phase110
+receipt, validates the complete ordered mapping (including denied identities),
+reconciles V010 only as consistency/mirror data, publishes V019 atomically, and
+requires exact authority reload. Exact repeat is idempotent; contradictory or
+partial publication fails closed. No internal race/horse ID is issued and no Deba
+HTTP or HTML re-extraction is performed.
+
+The one-file scope extension changes only `through_v017` from the positional
+`MIGRATIONS[:-1]` to an explicit `VERSION <= 17` boundary; V018 assertions remain
+unchanged. V018 direct regression: `5 passed`. Final Phase109 direct tests:
+`27 passed`. Final related regression (all 17 required modules):
+`261 passed / 127 subtests passed`. Final full repository suite:
+`4863 passed / 4 skipped / 2846 subtests passed` using
+`KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=bc47f59f0372b0de65b2786b6003c55acfda9e02`
+and `python -m pytest -q --tb=short`. Static production audit: PASS; no provider
+transport, production DB path, internal ID issuance, destructive V010 repair,
+`INSERT OR REPLACE`, Phase95/41 authority, Phase108 fixture promotion, or live
+campaign authorization. `git diff --check`: PASS. Dirty paths remain exactly the
+approved 16; index is empty. Provider HTTP = 0; production DB access = 0;
+KeibaAI changes = 0; stage = 0; commit = 0; push = 0.
+The prior independent-review baseline (`23 passed` direct, `257 passed / 127
+subtests passed` related, `4859 passed / 4 skipped / 2846 subtests passed` full)
+is historical evidence and does not substitute for these post-repair results.
+
+`PHASE109_IMPLEMENTATION_REVIEW_PASS` and `PHASE109_COMMIT_APPROVED` authorize
+only the local implementation commit. Post-commit verification, push, remote
+verification, and formal Phase109 completion remain pending.
+
+### Re-entry evidence and exact input
+
+Committed V018 stores one Phase110 receipt per exact existing internal race and
+external race. `SQLiteNARIdentityCompleteEntryRepository.load_receipt(receipt_id=...)`
+reconstructs canonical JSON/content ID, compares its SQL projection and every
+ordered entry row, and verifies the issuance-denial topology. The receipt carries
+`NAR/nar_official`, canonical `nar:YYYYMMDD:babaCode:raceNo`, canonical Deba URL,
+one pre-existing `races.id`, every derived `nar-entry-v1` identity, canonical
+horse number, optional canonical external horse identity, exact `horses.id`,
+Phase111 declaration/receipt/capture IDs, response SHA-256, observation/cutoff,
+`issued_at`, population count and SHA-256. Its constructor rejects duplicate
+external IDs, internal IDs, and horse numbers, noncanonical ordering, and post-cutoff
+observation. V018 entry keys/FKs and Phase110's `BEGIN IMMEDIATE` issuance bind
+the complete population, including Phase110-issued denied identities. Thus the
+old missing-identity prerequisite is satisfied; receipt existence is not yet
+Phase109 mapping authority.
+
+The future issuer accepts an *exact Phase110 receipt ID*, exact expected target and
+cutoff for comparison, and the reviewed read-only Phase110/Phase111 archives. It
+does not accept caller mappings or internal IDs as authority. It exact-reloads the
+Phase110 receipt under active V018, and directly exact-reloads the Phase111
+declaration/claim/controlled receipt/capture ancestry to prove the referenced
+prospective qualified acquisition, digest, URL, target, and cutoff still agree.
+Phase110 receipt fields alone name that lineage but do not prove the Phase111
+archive is present. Direct reload adds that property; no provider HTTP, response
+body copy, or second HTML identity extraction is required. Any target/cutoff
+argument is an expected equality constraint, never a self-authorizing input.
+
+`PHASE110_COMPLETE_IDENTITY_PERSISTENCE != PHASE109_MAPPING_AUTHORITY`.
+`PERSISTED_RELATION != PROVENANCE_OF_RELATION`.
+`V010_MAPPING_ROW_EXISTENCE != INDEPENDENT_PRODUCTION_MAPPING_AUTHORITY`.
+`CURRENT_DB_MAPPING_EXISTENCE != HISTORICAL_MAPPING_AVAILABILITY_PROOF`.
+`PHASE109_MUST_NOT_CREATE_PROVIDER_REQUEST`.
+`PHASE109_MUST_NOT_REEXTRACT_PROVIDER_HTML_IF_PHASE110_RECEIPT_IS_SUFFICIENT`.
+
+### Complete relation and chosen V010 Model B
+
+The canonical relation is exactly one `external_race_id <-> races.id` and the
+complete ordered set `external_entry_id <-> horses.id` for that parent. Require
+set equality to the Phase110 receipt, forward and reverse uniqueness, same
+horse-number/parent membership, no extra or missing entry, no fuzzy/name/position
+matching, and no internal-ID issuance. Denied, cancelled, excluded, and otherwise
+nonselected identities remain mapped without any status interpretation.
+
+Choose **Model B**: Phase109's controlled publisher may reconcile/populate missing
+V010 `historical_input_source_identities`,
+`historical_input_external_races`, and `historical_input_external_entries`
+from *only* the exact Phase110 population, then publish an independent immutable
+Phase109 authority receipt in the **same main SQLite transaction**. Existing
+snapshot repository `save_snapshot() -> _ensure_mappings()` and the JRA replay
+seed repository can already write V010. Therefore V010 cannot be origin evidence.
+Exact matching pre-existing V010 rows may be adopted as consistency data, never
+as proof of origin; missing rows may be inserted only by the Phase109 publisher;
+conflicting, reverse-colliding, extra, or malformed rows fail closed with no
+repair. A snapshot-created exact row does not launder authority: only the new
+receipt issued after Phase110/Phase111 verification is authoritative. A
+snapshot-created *incomplete* V010 set may be completed atomically from Phase110,
+but an extra entry blocks publication. V010 may not remain wholly read-only if
+downstream snapshot compatibility needs the complete production relation.
+
+`SNAPSHOT_CREATED_V010_ROW != PHASE109_ORIGIN_AUTHORITY`.
+`ENTRY_IDENTITY_UNIVERSE != ENTRY_STATUS_AUTHORITY`.
+`IDENTITY_ONLY_DENIED_ENTRY != UNMAPPABLE_ENTRY`.
+`MAPPED_ENTRY != ACTIVE_ENTRY`.
+`MAPPED_ENTRY != PREDICTION_ELIGIBLE_ENTRY`.
+`MAPPED_ENTRY != MARKET_ELIGIBLE_ENTRY`.
+`MAPPING_AUTHORITY != ENTRY_STATUS_AUTHORITY`.
+`MAPPING_AUTHORITY != MARKET_ELIGIBILITY`.
+`MAPPING_AUTHORITY != LIVE_CAMPAIGN_AUTHORIZATION`.
+`MAPPING_AUTHORITY != PREDICTION_SELECTION_AUTHORITY`.
+
+### Approved V019 and publication transaction
+
+`PHASE109_V019_REQUIRED`. V010 has relational rows but
+no Phase110-origin or complete-population authority receipt. Proposed V019 is
+additive: `nar_production_mapping_receipts` (content ID, schema/version,
+NAR/nar_official, external/internal race, Phase110 receipt ID/count/digest,
+Phase111 declaration/receipt/capture IDs and response digest, observed/cutoff,
+canonical ordered mapping JSON/count/digest, `issued_at`) and
+`nar_production_mapping_entries` (receipt ID, external entry ID, internal
+`horses.id`, horse number, optional external horse ID, exact Phase110-entry
+reference). Unique forward/reverse keys, parent/entry FKs to Phase110 and V010,
+immutable row triggers, an exact V019 schema gate, and V010 update/delete/extra
+insert guards for Phase109-bound NAR mappings are required. The JSON and entry
+table must be exact projections of each other; neither may be a second source of
+truth. No response body or new internal ID is stored. V019 must reject partial or
+contradictory topology, run under migration-runner transaction ownership, and
+perform no destructive repair or `INSERT OR REPLACE`.
+
+One idle main-DB SQLite connection with foreign keys enabled acquires
+`BEGIN IMMEDIATE`; it exact-reloads Phase110 and compares preflighted Phase111 ancestry, verifies
+V018/V019/V010 topology and complete bijection, checks every existing V010 row,
+inserts only missing exact V010 rows, verifies no extra V010 row, then publishes
+the receipt and all entries. Any failure rolls back V010 and V019 together.
+Commit precedes exact receipt reload and qualified return. A crash after commit
+is recovered only by exact idempotent reload, never by rewriting. Same Phase110
+receipt can return the exact existing authority; a different receipt for the
+same external or internal race, a conflicting entry, or a different
+republication is rejected. Concurrency is serialized by `BEGIN IMMEDIATE`
+plus database uniqueness, not process-local locks.
+
+The Phase111 ancestry preflight is read-only and precedes the main-DB write
+transaction: exact-load its controlled receipt, declaration, claim, and capture;
+verify their mutual lineage and agreement with Phase110 on declaration/receipt/
+capture IDs, external race, canonical URL, response digest, observed time, and
+cutoff. It never invokes acquisition, provider HTTP, HorseParser, or another
+Deba extraction. Inside `BEGIN IMMEDIATE`, exact-reload Phase110 again before
+publication. The exact NAR/nar_official V010 source-identity row may be inserted
+transactionally as namespace scaffolding only, never as origin authority.
+`HISTORICAL_INPUT_SOURCE_IDENTITY_ROW != PHASE109_ORIGIN_AUTHORITY`.
+
+V019 must install triggers protecting Phase109-covered V010 race/entry rows
+from UPDATE/DELETE and rejecting extra covered entry INSERT even when foreign
+keys are OFF. Every successful Phase109 reload must independently compare the
+exact V010 source/race/entry set, V019 projection, and Phase110 population; drift
+fails closed. Its shared schema gate distinguishes `PHASE109_SCHEMA_NOT_INSTALLED`,
+`PHASE109_SCHEMA_ACTIVE`, and `PHASE109_SCHEMA_INTEGRITY_FAILURE`; corruption
+never becomes absence, while unexpected SQLite operational errors propagate.
+
+### Time, Phase108 handoff, and non-authorities
+
+Phase111 already proves `observed_at <= prediction_information_cutoff`.
+Phase109 must preserve that exact cutoff ancestry and require
+`Phase110 issued_at <= Phase109 issued_at`. Do **not** require Phase109 issuance
+before the prediction cutoff; that stronger rule is not approved. Phase109
+authority becomes available at its controlled `issued_at`, never at a
+caller-supplied backdated time. After commit, a downstream pre-root component
+must exact-reload the Phase109 receipt and record `available_at` no earlier
+than that reload; future production integration must prove receipt availability
+before manifest availability and manifest availability before Phase108 root start.
+Current DB presence, a backdated timestamp, or the root's current Deba capture
+cannot prove historical pre-root availability. The future manifest must bind
+the exact Phase109 receipt ID/content and target/cutoff before the root starts.
+
+Current `NARPreCPrestagedInputManifestV1` requires a reviewed Git fixture bundle,
+fixture-member `mapping_content_authority`, and a mapping literal verified by
+`nar_pre_c_operational_envelope_harness.py`. That is a diagnostic V1 fixture
+authority, not production mapping. Phase109 changes no Phase108 module. A later
+separately reviewed **production prestaged manifest version/adapter** must
+exact-reload the Phase109 receipt before root, bind its complete mapping and
+availability, and replace (not promote) the V1 fixture proof. A production root
+path is deferred; the existing Phase108 rehearsal remains unchanged.
+
+`ROOT_CURRENT_DEBA_CAPTURE != PRE_ROOT_MAPPING_AUTHORITY`.
+`POST_C_CAPTURE != PRE_C_IDENTITY_MAPPING_AUTHORITY`.
+`MAPPING_LOOKUP_AFTER_ENVELOPE_START != PRESTAGED_MAPPING_AUTHORITY`.
+`PHASE109_MAPPING_RECEIPT_MUST_PRECEDE_PHASE108_ROOT_START`.
+`PHASE108_V1_FIXTURE_MAPPING != PRODUCTION_MAPPING_AUTHORITY`.
+`MAPPING_RECEIPT != PHASE108_ROOT_AUTHORITY`.
+
+### Current reader/writer and V019 regression impact
+
+Required production changes: standard migration registry; new V019 migration;
+new Phase109 value/issuance module; new SQLite publication/reload repository.
+Existing snapshot repository is a V010 writer from caller snapshots, JRA replay
+seed is a separately authorized JRA writer, and V010 is read by the snapshot
+repository, NAR daily evidence resolver, and status-replay identity binder.
+Those paths are **read-only/forbidden to modify** for Phase109; future production
+Phase108 manifest/root integration is **deferred**. Optional convenience adapter
+or generic prediction changes are not needed. Phase111, Phase110, Phase95, Phase41,
+legacy fetch/parser, database writers, and current Phase108 harness are forbidden.
+No existing production reader is promoted to consume Phase109 authority merely
+because it can read V010.
+
+Whole-test-tree static scan before scope selection found unrestricted
+`apply_migrations(connection)` users in CLI/simulation/JRA/NAR repositories,
+Phase108 rehearsal, V010/V015/V016/V018 tests, and their fixtures. V018-compatible
+base races/horses shapes are already present for the full-chain fixtures; V019
+must add no new base-column prerequisite beyond exact V018/V010. Exact full
+registry expectations ending in V018 occur in
+`test_historical_input_snapshot_migration.py`,
+`test_simulation_bet_plan_migration.py`,
+`test_simulation_migrations.py`,
+`test_nar_official_response_capture_migration.py`,
+`test_sqlite_persisted_simulation_application.py`, and
+`test_sqlite_nar_daily_replay_result_repository.py` (including its terminal
+version assertion and `MIGRATIONS[-1]` use). Only current/full-registry assertions
+may be extended to V019; intentional historical `_through(11/13/15/17)`
+tests remain historical. Other unrestricted users are regressions to run, not
+preauthorized fixture edits. No blanket test-file permission is inferred.
+
+### Allowed Files
+
+This is the exact approved 16-path implementation scope, including the later
+one-file historical-prefix test extension. The prior 15-path stop remains
+recorded above.
+
+NEW FILES:
+- `scripts/migrations/versions/v019_nar_production_mapping_authority_schema.py`
+- `scripts/simulation/nar_production_mapping_authority.py`
+- `scripts/simulation/repositories/sqlite_nar_production_mapping_repository.py`
+
+MODIFIED FILES:
+- `scripts/migrations/runner.py`
+
+TEST FILES (new):
+- `tests/test_v019_nar_production_mapping_authority_schema.py`
+- `tests/test_nar_production_mapping_authority.py`
+- `tests/test_sqlite_nar_production_mapping_repository.py`
+
+TEST FILES (existing, exact current-registry expectations only):
+- `tests/test_historical_input_snapshot_migration.py`
+- `tests/test_simulation_bet_plan_migration.py`
+- `tests/test_simulation_migrations.py`
+- `tests/test_nar_official_response_capture_migration.py`
+- `tests/test_sqlite_persisted_simulation_application.py`
+- `tests/test_sqlite_nar_daily_replay_result_repository.py`
+- `tests/test_v018_nar_identity_complete_entry_schema.py` (the `through_v017`
+  helper only; explicit `VERSION <= 17`, with assertions preserved)
+
+DOCUMENTATION FILES:
+- `docs/CURRENT_PHASE.md`
+- `docs/LATEST_CODEX_REPORT.md`
+
+### Forbidden Files
+
+Every path not listed in Allowed Files is forbidden, notably Phase111/110 authority,
+V010/V018 migration sources, existing snapshot/JRA/NAR evidence repositories,
+Phase108 fixture/manifest/root/harness, Phase95/41, generic prediction, provider,
+fetcher/parser, `database/**`, `logs/**`, and unrelated existing tests.
+The six existing test files may change only for actual V019 current-registry or
+topology compatibility; historical-prefix assertions must remain historical.
+
+### Required Tests
+
+Focused tests must prove: (1) exact Phase110 receipt mandatory and
+missing/corrupt V018 rejected; (2) caller/forged mapping cannot authorize;
+(3) direct Phase111 reload catches declaration/receipt/capture/digest/target/cutoff
+contradiction without refetch or HTML re-extraction; (4) full Phase110 population
+equality including cancelled/denied identities; (5) forward/reverse uniqueness,
+parent membership, horse-number agreement and no synthesized IDs; (6) snapshot
+V010 rows alone never authorize; (7) exact existing V010 rows are consistency
+only, missing rows inserted exactly, extra/conflicting rows fail; (8) deterministic
+content ID, canonical ordering/count/digest, exact JSON/table projection and
+reload; (9) exact repeat idempotence and conflicting repeat/race/entry rejection;
+(10) rollback after partial V010/V019 publication and two-connection concurrent
+publisher exclusion; (11) Phase111 observed-at cutoff, Phase110-issued-at <=
+Phase109-issued-at, and rejection of backdated publication; (12) post-commit reload before
+downstream availability; (13) V019 clean migration, exact topology, partial-schema
+and migration rollback; (14) V010/current-registry regressions and historical
+prefix preservation; (15) no Phase108 fixture promotion, status/eligibility
+interpretation, denial clearing, provider HTTP, production DB, or ID issuance;
+(16) related regressions and full repository pytest. Use temporary/in-memory DBs
+and deterministic fakes only.
+
+Direct coverage must additionally prove Phase111 declaration/claim/capture exact
+reload; no HTML re-extraction; race and entry forward/reverse uniqueness;
+cross-race and horse-number-only rejection; transactional source-identity handling;
+V019 and covered V010 UPDATE/DELETE prevention, covered extra-entry INSERT
+prevention with foreign keys OFF; genuine post-write rollback leaving no partial
+V010 or V019 rows; same-exact publication idempotence; no Phase110 denial
+mutation; absent/active/corrupt V019 classification; unexpected SQLite locking
+error propagation; V010 snapshot repository compatibility; and no new internal
+race/entry IDs. Run the focused V019 tests, the exact related regression modules
+specified in the implementation instruction (including Phase111/110, V010,
+migration and Phase108 tests), then full `python -m pytest -q --tb=short` under
+the existing sealed-commit environment requirement. Finish with static audit,
+`git diff --check`, exact 16-path audit, and empty-index check.
+
+### Stop Condition
+
+STOP rather than broaden implementation if Phase110 or Phase111 exact reload is
+insufficient, the mapping is incomplete/non-bijective, status/eligibility or
+provider HTTP is needed, a second provider Deba load or HTML re-extraction is
+needed, production DB inspection is needed, Phase108 fixture authority must be
+promoted, V010 must be origin evidence, V010/V019 cannot publish atomically,
+arbitrary caller mapping can enter the authority path, destructive repair or
+new `races.id`/`horses.id` is needed, the scope cannot remain bounded, or any
+failing regression needs a 17th path. Preserve existing work and return the
+exact failure/path for scope review; do not stage, commit, or push.
+
+Next: `CHATGPT_VERIFY_PHASE109_COMMIT` after the approved local commit.
+
+---
+
+## Historical record — POST_V0_8_DAILY_REPLAY_110
 
 Title: NAR Identity-Complete Entry Persistence
 

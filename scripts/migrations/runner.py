@@ -14,6 +14,7 @@ from .versions import (
     v016_nar_daily_replay_result_schema,
     v017_nar_daily_replay_prediction_cutoff_schema,
     v018_nar_identity_complete_entry_schema,
+    v019_nar_production_mapping_authority_schema,
 )
 
 MIGRATIONS = (
@@ -28,6 +29,7 @@ MIGRATIONS = (
     v016_nar_daily_replay_result_schema,
     v017_nar_daily_replay_prediction_cutoff_schema,
     v018_nar_identity_complete_entry_schema,
+    v019_nar_production_mapping_authority_schema,
 )
 
 def _enable_foreign_keys(connection: sqlite3.Connection) -> None:

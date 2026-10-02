@@ -103,7 +103,7 @@ class SQLiteNARDailyReplayResultRepositoryTests(unittest.TestCase):
     def test_v016_identity_registration_schema_and_idempotent_runner(self) -> None:
         self.assertEqual(migration.VERSION, 16)
         self.assertEqual(migration.NAME, "v016_nar_daily_replay_result_schema")
-        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS)[-3:], (16, 17, 18))
+        self.assertEqual(tuple(item.VERSION for item in MIGRATIONS)[-4:], (16, 17, 18, 19))
         self.assertEqual(tuple(item for item in MIGRATIONS if item.VERSION == 16), (migration,))
         self.assertEqual(get_applied_versions(self.connection)[16], migration.NAME)
         expected = {item.VERSION: item.NAME for item in MIGRATIONS}
@@ -139,7 +139,7 @@ class SQLiteNARDailyReplayResultRepositoryTests(unittest.TestCase):
             )
         self.connection.execute(
             "UPDATE schema_migrations SET name=? WHERE version=18",
-            (MIGRATIONS[-1].NAME,),
+            (next(item.NAME for item in MIGRATIONS if item.VERSION == 18),),
         )
         self.connection.execute(
             "INSERT INTO schema_migrations(version,name,applied_at) VALUES(999,'unknown-future','2025-01-01')"

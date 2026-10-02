@@ -1,6 +1,343 @@
 # Latest Codex Report
 
-## Phase110 final remote verification and documentation audit
+## Phase109 independent implementation re-review passed — local commit approved
+
+Phase: `POST_V0_8_DAILY_REPLAY_109`.
+
+Status / Formal Status: `APPROVED_FOR_COMMIT`.
+
+State: `APPROVED_FOR_COMMIT`.
+
+Outcome: `APPROVED_FOR_LOCAL_COMMIT`.
+
+Base HEAD: `bc47f59f0372b0de65b2786b6003c55acfda9e02`.
+
+Base tree: `ab22ebda36667a6698d47cc824637d8036c30564`.
+
+`CHATGPT_REVIEW_PHASE109_IMPLEMENTATION = PASS`.
+`PHASE109_IMPLEMENTATION_REVIEW_PASS`.
+`PHASE109_COMMIT_APPROVED`.
+`PHASE109_ALLOWED_FILES = 16_PATH_SCOPE`.
+`PHASE109_IMPLEMENTATION_REPAIR_READY_FOR_REVIEW`.
+
+The independently reviewed repair bundle is
+`phase109_repair_review_bundle.txt`, SHA-256
+`862be4a2b487dcda3643a721ceacabc61da5d0a54b221e7976f4c9d3c3e66ec1`.
+All 14 reviewed non-documentation working-tree files matched the approved
+SHA-256 manifest before this documentation-only approval update.
+
+The first independent review's historical disposition was
+`CHATGPT_REVIEW_PHASE109_IMPLEMENTATION = CHANGES_REQUIRED`. Its two findings
+and the source-identity rollback proof were repaired and independently
+re-reviewed; the current disposition is PASS. This approval authorizes one
+local 16-path implementation commit only, not a push or formal completion.
+
+Finding 1 (reverse V010 drift) is repaired. V019's covered race and entry
+triggers recognize both the external and internal race sides, including OLD
+and NEW values on UPDATE, independently of foreign-key enforcement. The Model B
+publication preflight rejects any non-Phase110 four-field V010 entry tuple
+under either target dimension before filling missing rows. Exact receipt
+reload verifies that the same bidirectional V010 set equals the V019/Phase110
+population. New tests prove foreign-keys-OFF reverse INSERT/UPDATE rejection,
+pre-publication reverse extra rejection without authority, and reload rejection
+of reverse drift with exact V019 topology restored.
+
+Finding 2 (V019 installation on a pre-drifted V010 schema) is repaired. Before
+creating V019 objects, `apply()` compares V010 mapping tables, columns, foreign
+keys, and indexes against the exact reference, including the historical V015
+entry-mapping unique index. A drifted through-V018 fixture now proves failure
+with no version-19 registration, no partial V019 objects, preserved V010 drift,
+and a closed transaction. The existing post-install drift check remains.
+
+The authorizer-based genuine post-write rollback test now also proves a newly
+inserted `historical_input_source_identities('NAR','nar_official')` row does not
+survive failure, alongside V010 race/entry and V019 receipt/entry rollback.
+The Phase111/Phase110 lineage, V010 Model B, no-network and no-ID-issuance
+architecture is unchanged.
+
+Post-repair verification: direct Phase109 tests `27 passed`; related regression
+(17 approved modules) `261 passed / 127 subtests passed`; full repository suite
+`4863 passed / 4 skipped / 2846 subtests passed` with
+`KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=bc47f59f0372b0de65b2786b6003c55acfda9e02`
+and `python -m pytest -q --tb=short`. Static production audit: PASS, including
+external/internal V010 trigger coverage and pre-install V010 topology rejection.
+`git diff --check`: PASS. Dirty paths: exactly the approved 16. Index: empty.
+Provider HTTP = 0; production DB access = 0; KeibaAI changes = 0;
+stage = 0; commit = 0; push = 0.
+
+Post-commit verification, push, remote verification, and Phase109 formal
+completion are not yet claimed. No implementation/test bytes changed in this
+approval bookkeeping update; the accepted focused, related, full-suite, and
+static verification above remain the reviewed evidence.
+Next: `CHATGPT_VERIFY_PHASE109_COMMIT` after the approved local commit.
+
+---
+
+## Historical report — Phase109 first implementation ready for independent review — V019 / V010 Model B
+
+Phase: `POST_V0_8_DAILY_REPLAY_109`.
+
+Status / Formal Status: `READY_FOR_REVIEW`.
+
+State: `IMPLEMENTED_FOR_REVIEW`.
+
+Outcome: `READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`.
+
+Base HEAD: `bc47f59f0372b0de65b2786b6003c55acfda9e02`.
+
+Base tree: `ab22ebda36667a6698d47cc824637d8036c30564`.
+
+Branch: `feature/post-v0.8-daily-replay`.
+
+`PHASE109_TEST_SCOPE_EXTENSION_APPROVED`.
+`PHASE109_ALLOWED_FILES = 16_PATH_SCOPE`.
+`PHASE109_IMPLEMENTATION_RESUME_APPROVED`.
+`PHASE109_IMPLEMENTATION_READY_FOR_REVIEW`.
+
+The historical 15-path stop below was preserved. The sole extension was
+`tests/test_v018_nar_identity_complete_entry_schema.py`: its `through_v017`
+helper now selects migrations with `VERSION <= 17` instead of positional
+`MIGRATIONS[:-1]`. No V018 assertion or production behavior was weakened.
+
+V019 is registered in the standard runner. Its content-addressed receipt and
+entry projection are immutable, with exact schema-state validation and covered
+V010 race/entry drift triggers. The controlled Phase109 publication path exact-
+reloads Phase111 declaration/claim/receipt/capture ancestry read-only, then
+under `BEGIN IMMEDIATE` exact-reloads the Phase110 complete-population receipt,
+checks all forward/reverse relations, reconciles exact V010 Model B rows as a
+transactional compatibility mirror, publishes V019, and exact-reloads the
+authority. Denied Phase110 identities remain mapped but unselectable. Repeat
+identical publication is idempotent; contradiction, extra mapping, or partial
+write fails closed. Phase109 issues no `races.id` or `horses.id` and performs no
+provider send or Deba HTML re-extraction.
+
+Verification of the final implementation bytes:
+
+- V018 historical-prefix regression: `python -m pytest -q --tb=short tests/test_v018_nar_identity_complete_entry_schema.py` — `5 passed`.
+- Phase109 direct tests (three new modules) — `23 passed`.
+- Related regression (the 17 modules specified in the approved contract) — `257 passed / 127 subtests passed`.
+- Full repository suite — `4859 passed / 4 skipped / 2846 subtests passed` with `KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=bc47f59f0372b0de65b2786b6003c55acfda9e02` and `python -m pytest -q --tb=short`.
+- Static production audit: PASS. Lexical `UPDATE`/`DELETE` hits were restrictive foreign keys and V010 denial triggers, not repair statements. No provider/network call, production DB access, race/horse ID issuance, `INSERT OR REPLACE`, Phase95/41 authority, Phase108 fixture promotion, or live-campaign authorization.
+- `git diff --check`: PASS. Dirty paths: exactly the approved 16. Index: empty.
+
+Provider HTTP = 0; production DB access = 0; KeibaAI changes = 0;
+stage = 0; commit = 0; push = 0. Independent implementation review PASS,
+commit approval, and formal completion are **not** claimed.
+
+Next: `CHATGPT_REVIEW_PHASE109_IMPLEMENTATION`.
+
+---
+
+## Phase109 implementation stopped for out-of-scope V018 historical-prefix test
+
+Phase: `POST_V0_8_DAILY_REPLAY_109`.
+
+Status: `APPROVED_FOR_CODEX`.
+
+State: `IMPLEMENTATION_STOPPED_FOR_SCOPE_EXTENSION`.
+
+Base HEAD: `bc47f59f0372b0de65b2786b6003c55acfda9e02`.
+
+Base tree: `ab22ebda36667a6698d47cc824637d8036c30564`.
+
+The preflight matched branch/base/tree, found only the two approved documentation
+files dirty, and found an empty index. Work inside the exact 15-path scope began:
+V019 migration/registration, a content-addressed mapping receipt, the V010
+Model B publisher and exact-reload repository, three new focused test modules,
+and current-registry expectation updates in the six allowed existing tests.
+The new direct Phase109 tests reported `17 passed`.
+
+The related regression run exposed a scope conflict and was interrupted to
+classify the first failure. A focused `-x` rerun reported:
+
+`tests/test_v018_nar_identity_complete_entry_schema.py::test_v018_installs_exact_registered_topology_and_rerun_is_noop`
+
+Expected: `PHASE110_SCHEMA_NOT_INSTALLED`.
+Actual: `PHASE110_SCHEMA_ACTIVE`.
+
+The forbidden test helper calls `apply_migrations(connection, MIGRATIONS[:-1])`
+and names that operation `through_v017`. Once V019 is registered, the slice
+includes V018. The test's historical-prefix fixture therefore no longer means
+through V017. The correct minimum test change is an explicit version-bounded
+prefix, `VERSION <= 17`, within that existing test file. It is not in the
+approved 15 paths, so it was **not** modified. V018 schema behavior must not be
+distorted to satisfy the stale helper. This is a test-scope conflict, not
+Phase109 review completion.
+
+`PHASE109_IMPLEMENTATION_STOPPED_FOR_SCOPE_EXTENSION`.
+Proposed additional path for explicit review:
+`tests/test_v018_nar_identity_complete_entry_schema.py`.
+No further related/full pytest or final static production audit was run after
+the stop. The earlier multi-file related run did not complete successfully.
+All current code/test/documentation changes are preserved; no reset, restore,
+stash, clean, stage, commit, or push occurred. Provider HTTP = 0; production DB
+access = 0; KeibaAI changes = 0.
+
+Next: `CHATGPT_REVIEW_PHASE109_TEST_SCOPE_EXTENSION`.
+
+---
+
+## Historical report — Phase109 implementation-contract approval recorded; implementation not started
+
+Phase: `POST_V0_8_DAILY_REPLAY_109`.
+
+Base Commit: `bc47f59f0372b0de65b2786b6003c55acfda9e02`.
+
+Base Tree: `ab22ebda36667a6698d47cc824637d8036c30564`.
+
+Branch: `feature/post-v0.8-daily-replay`.
+
+Status: `APPROVED_FOR_CODEX`.
+
+Formal Status: `APPROVED_FOR_CODEX`.
+
+State: `IMPLEMENTATION_APPROVED`.
+
+Outcome: `READY_FOR_PHASE109_IMPLEMENTATION`.
+
+`PHASE109_POST_PHASE110_REENTRY_DESIGN_REVIEW_PASS`.
+`PHASE109_IMPLEMENTATION_DESIGN_APPROVED`.
+`PHASE109_IMPLEMENTATION_APPROVAL = GRANTED`.
+`PHASE109_ALLOWED_FILES = 15_PATH_SCOPE`.
+`PHASE109_V010_MODEL = B`.
+`PHASE109_V019_REQUIRED`.
+
+The independent design approval is recorded in `docs/CURRENT_PHASE.md` with
+exact Allowed Files, Forbidden Files, Required Tests, and Stop Condition. The
+approved correction keeps Phase111 observation before its prediction cutoff,
+requires Phase110 issuance no later than Phase109 issuance, and does **not**
+invent `Phase109.issued_at <= prediction_information_cutoff`. V019 must use
+read-only Phase111 ancestry preflight; a transactionally exact-reloaded Phase110
+receipt; atomic V010 consistency/addition and V019 publication; immutable V019
+receipt/entries; V010 drift triggers plus reload checks; and fail-closed schema
+classification without disguising operational SQLite errors. No internal race
+or horse ID, provider request, Phase95/41 authority, or Phase108 root authority
+is issued by this design.
+
+This turn's initial preflight found the local phase contract still at
+`DRAFT_FOR_REVIEW` with a **proposed** file scope. `AGENTS.md` forbids starting
+implementation until the current document has `APPROVED_FOR_CODEX` and exact
+implementation sections. Therefore this activity applied the approved contract
+to the two documentation files only and stopped before touching production or
+tests. The requested implementation, V019 creation, focused/regression/full
+tests, and static production audit were **not run**. A subsequent
+`EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_109` may begin only after a fresh
+preflight verifies this recorded contract and Git state.
+
+Provider HTTP = 0; production DB access = 0; live campaign = 0; KeibaAI changes
+= 0; stage = 0; commit = 0; push = 0.
+
+Next: `EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_109`.
+
+---
+
+## Historical report — Phase109 post-Phase110 re-entry architectural audit
+
+Phase: `POST_V0_8_DAILY_REPLAY_109` — NAR Production External/Internal Mapping Receipt.
+
+Status: `DRAFT_FOR_REVIEW` (the allowed `AGENTS.md` status for this architecture-only draft).
+
+Formal Status: `ARCHITECTURAL_REVIEW`.
+
+State: `POST_PHASE110_REENTRY_AUDIT`.
+
+Outcome: `READY_FOR_ARCHITECTURAL_REVIEW`.
+
+Base Commit: `bc47f59f0372b0de65b2786b6003c55acfda9e02`.
+
+Base Tree: `ab22ebda36667a6698d47cc824637d8036c30564`.
+
+Branch: `feature/post-v0.8-daily-replay`.
+
+`PHASE109_POST_PHASE110_REENTRY_AUDIT_COMPLETE`.
+`PHASE109_IMPLEMENTATION = NOT_YET_AUTHORIZED`.
+`POST_V0_8_DAILY_REPLAY_110 = FORMALLY_COMPLETE`.
+
+The historical `PHASE109_PRODUCTION_ENTRY_MAPPING_BLOCKED_BY_IDENTITY_COMPLETE_INGESTION`
+remains in the prior audit. Re-evaluation of committed Phase110 source, V018
+schema, and exact receipt reload shows that the missing complete-identity
+prerequisite is now satisfied: one pre-existing internal race, complete ordered
+external/internal entry relation including denied identities, Phase111 ancestry,
+observation/cutoff, count/digest, and exact reload. This does **not** itself
+establish Phase109 mapping authority or implementation approval.
+
+The narrow proposed input is an exact Phase110 receipt ID plus expected target
+and cutoff equality checks. Phase109 must exact-reload that receipt and directly
+verify its referenced Phase111 declaration/claim/controlled receipt/capture
+archives. The latter proves the named trusted lineage still exists and agrees;
+it requires neither a provider send nor another HTML extraction. No caller-authored
+mapping, V010 row, or arbitrary internal ID is an authority input.
+
+Chosen V010 model: **B**. The Phase109 controlled publisher validates the full
+Phase110 bijection, treats matching pre-existing V010 rows as consistency data
+only, inserts missing exact rows if needed, rejects extra/conflicting rows, and
+publishes a separate immutable receipt and entry set atomically in the same
+main-DB SQLite `BEGIN IMMEDIATE` transaction. Snapshot and JRA paths already
+write V010, so V010 existence cannot prove production origin. A snapshot-created
+exact mapping cannot launder authority; only the independently issued Phase109
+receipt can. Phase109 issues no `races.id` or `horses.id`, changes no status or
+denial, and makes no entry selectable or market-eligible.
+
+`PHASE109_PROPOSED_MIGRATION = V019 required`: additive immutable mapping receipt
+and entries with exact Phase110/Phase111 lineage, race/entry bijection,
+population count/digest, controlled issuance time, V010 consistency, exact
+schema gate, uniqueness/FKs, mutation guards, and exact content-addressed
+reload. Rollback must leave neither partial V010 population nor partial V019
+authority. Same exact receipt may reload idempotently; conflicting repeat fails.
+
+For PRE_C use, proposed ordering is Phase111 observation/storage before Phase110
+issuance, Phase110 issuance before controlled Phase109 issuance, Phase109 issuance
+no later than the prediction cutoff, and post-commit receipt availability before
+future root start. Current DB mapping presence cannot prove historical
+availability. Existing `NARPreCPrestagedInputManifestV1` remains fixture-bound;
+a separately reviewed production manifest version/adapter must later bind an
+exact Phase109 receipt before Phase108 root. Phase109 does not modify Phase108,
+Phase95, Phase41, prediction selection, live campaign, or Operational Delta.
+
+Current-reader/writer audit: V010 writers are the caller-snapshot repository and
+JRA replay-seed repository; readers include historical snapshot, NAR daily
+evidence resolution, and status-replay identity binding. These existing paths
+remain read-only during proposed Phase109 implementation. Whole-test-tree
+static scan found unrestricted migration users and six existing test modules
+with exact current registry expectations that may need V019-only updates;
+intentional historical migration prefixes remain unchanged. See the detailed
+current phase document for the exact path classification, 15-path proposed
+scope, test matrix, timing/transaction contract, and Stop Condition.
+
+Proposed new production files: `scripts/migrations/versions/v019_nar_production_mapping_authority_schema.py`,
+`scripts/simulation/nar_production_mapping_authority.py`, and
+`scripts/simulation/repositories/sqlite_nar_production_mapping_repository.py`.
+Proposed modified production file: `scripts/migrations/runner.py`.
+Proposed new focused tests: `tests/test_v019_nar_production_mapping_authority_schema.py`,
+`tests/test_nar_production_mapping_authority.py`, and
+`tests/test_sqlite_nar_production_mapping_repository.py`.
+Proposed registry-compatibility test files: `tests/test_historical_input_snapshot_migration.py`,
+`tests/test_simulation_bet_plan_migration.py`, `tests/test_simulation_migrations.py`,
+`tests/test_nar_official_response_capture_migration.py`,
+`tests/test_sqlite_persisted_simulation_application.py`, and
+`tests/test_sqlite_nar_daily_replay_result_repository.py`.
+Proposed documentation files: `docs/CURRENT_PHASE.md` and
+`docs/LATEST_CODEX_REPORT.md`. Every other path is proposed forbidden.
+This scope is **not approved** and no production or test file was modified.
+
+Proposed required tests cover exact Phase110/Phase111 reload, complete denied-
+inclusive bijection, V010 snapshot-laundering rejection and exact-match/conflict
+semantics, deterministic V019 receipt/reload, missing/extra rows, temporal PRE_C
+ordering, rollback, two-connection concurrency, V019 topology/current registry
+and historical-prefix regressions, no Phase108 fixture promotion, no status or
+eligibility inference, no provider HTTP/production DB/ID issuance, then related
+regressions and the full pytest suite. Stop if any required provenance,
+atomicity, no-network, identity completeness, or bounded scope cannot be proven.
+
+Activity boundary: architecture/repository inspection and documentation only.
+No pytest run in this audit. Provider HTTP = 0; production DB access = 0;
+live campaign = 0; KeibaAI changes = 0; stage = 0; commit = 0; push = 0.
+
+Next: `CHATGPT_REVIEW_PHASE109_POST_PHASE110_REENTRY_DESIGN`.
+
+---
+
+## Historical report — Phase110 final remote verification and documentation audit
 
 Phase: `POST_V0_8_DAILY_REPLAY_110`.
 
