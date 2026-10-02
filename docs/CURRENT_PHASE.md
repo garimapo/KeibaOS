@@ -4,13 +4,13 @@
 
 Title: NAR Production External/Internal Mapping Authority
 
-Status: `APPROVED_FOR_COMMIT`
+Status: `WAITING_FOR_PHASE_INSTRUCTION`
 
-Formal Status: `APPROVED_FOR_COMMIT`
+Formal Status: `FORMALLY_COMPLETE`
 
-State: `REMOTE_IMPLEMENTATION_ACCEPTED`
+State: `FORMALLY_COMPLETE`
 
-Outcome: `READY_FOR_FORMAL_CLOSURE`
+Outcome: `PHASE109_NAR_PRODUCTION_MAPPING_AUTHORITY_FORMALLY_INTEGRATED`
 
 Base Commit: `bc47f59f0372b0de65b2786b6003c55acfda9e02`
 
@@ -36,6 +36,10 @@ Branch: `feature/post-v0.8-daily-replay`
 `PHASE109_REMOTE_IMPLEMENTATION_VERIFICATION_PASS`.
 `PHASE109_IMPLEMENTATION_REMOTE_ACCEPTED`.
 `PHASE109_FORMAL_CLOSURE_APPROVED`.
+`PHASE109_CLOSURE_COMMIT_VERIFICATION_PASS`.
+`PHASE109_FORMAL_CLOSURE_REMOTE_VERIFICATION_PASS`.
+`PHASE109_CLOSURE_REMOTE_VERIFIED`.
+`POST_V0_8_DAILY_REPLAY_109 = FORMALLY_COMPLETE`.
 The former `PHASE109_PRODUCTION_ENTRY_MAPPING_BLOCKED_BY_IDENTITY_COMPLETE_INGESTION`
 and `PHASE109_IMPLEMENTATION = BLOCKED_NOT_AUTHORIZED` remain in the historical
 audit below. Their *identity-ingestion prerequisite* is now satisfied by remotely
@@ -60,13 +64,13 @@ At that historical stop, the related regression run was interrupted for
 classification; the full suite and final static audit had not run. No stage,
 commit, or push occurred.
 
-### Current Phase109 implementation and verification
+### Phase109 implementation and verification history
 
-`PHASE109_IMPLEMENTATION_REPAIR_READY_FOR_REVIEW`. The first independent
+Historical state: `PHASE109_IMPLEMENTATION_REPAIR_READY_FOR_REVIEW`. The first independent
 implementation review returned the historical result
 `CHATGPT_REVIEW_PHASE109_IMPLEMENTATION = CHANGES_REQUIRED`; its two findings
 were repaired within the existing 16-path scope. Independent re-review of the
-exact repaired bytes passed and local implementation commit is approved.
+exact repaired bytes passed and the local implementation commit was approved.
 Finding 1 closed reverse-side V010 drift: covered V010 race/entry triggers now
 guard both external and internal race identities (including OLD and NEW on
 UPDATE) even with foreign keys OFF. Publication preflight and exact reload
@@ -109,23 +113,37 @@ The prior independent-review baseline (`23 passed` direct, `257 passed / 127
 subtests passed` related, `4859 passed / 4 skipped / 2846 subtests passed` full)
 is historical evidence and does not substitute for these post-repair results.
 
-The accepted implementation commit is
-`47723c1229b8c3c9c8df80b64a1088a3ea3e1e0f` (tree
-`654db28bc3b78effb146b1c423accb2d9c4308f4`, parent
-`bc47f59f0372b0de65b2786b6003c55acfda9e02`). Independent post-commit
-review accepted Git's LF-normalized blobs: 14 reviewed non-documentation files,
+Implementation Commit: `47723c1229b8c3c9c8df80b64a1088a3ea3e1e0f`.
+Implementation Tree: `654db28bc3b78effb146b1c423accb2d9c4308f4`.
+Implementation Parent: `bc47f59f0372b0de65b2786b6003c55acfda9e02`.
+Formal Closure Commit: `9a20238584e4f3db3a02c8d8d4e2516b433d7cc4`.
+Formal Closure Tree: `1a8289f87d02725d8d17ef26763087102d4fecf5`.
+Formal Closure Parent: `47723c1229b8c3c9c8df80b64a1088a3ea3e1e0f`.
+Independent post-commit review accepted Git's LF-normalized blobs: 14 reviewed
+non-documentation files,
 8/14 raw blob SHA-256 matches, 6/14 EOL-only mismatches, zero non-EOL byte
 differences, and 14/14 exact matches after only CRLF-to-LF normalization.
 `REVIEWED_LOGICAL_CONTENT_PRESERVED = YES`. The implementation commit was
 pushed without force, and ChatGPT independently verified the remote branch at
 that exact commit/tree, ahead one and behind zero from the base, with exactly
-the approved 16 paths. `PHASE109_REMOTE_IMPLEMENTATION_VERIFICATION_PASS` and
-`PHASE109_IMPLEMENTATION_REMOTE_ACCEPTED` are granted. This documentation-only
-formal-closure commit is approved, but its own post-commit verification, push,
-and remote closure verification are still pending. Phase109 is not yet formally
-complete. The accepted direct/related/full-suite results and static audit above
-were not rerun for this documentation-only update. Provider HTTP = 0;
-production DB access = 0; KeibaAI changes = 0 for this activity.
+the approved 16 paths. The docs-only formal-closure commit was then verified,
+pushed normally without force, and independently verified on the remote at the
+exact closure commit/tree, ahead one and behind zero from the implementation
+commit, with only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`
+changed. `PHASE109_FORMAL_CLOSURE_REMOTE_VERIFICATION_PASS` and
+`PHASE109_CLOSURE_REMOTE_VERIFIED` establish Phase109 formal completion. The
+accepted direct/related/full-suite results and static audit above were not
+rerun for docs-only closure or this finalization. Provider HTTP = 0; production
+DB access = 0; KeibaAI changes = 0 for this activity.
+
+Phase109 completion grants only the reviewed production NAR external/internal
+mapping authority. It does not grant Phase95 status authority, Phase41 market
+eligibility, prediction-selection authority, live campaign authorization,
+Operational Delta, or Phase108 production root authority. Future production
+Phase108 integration requires a separately reviewed production prestaged
+manifest/version/adapter that exact-reloads the Phase109 receipt before root
+availability. This final documentation commit's own remote verification remains
+pending.
 
 ### Re-entry evidence and exact input
 
@@ -398,7 +416,7 @@ new `races.id`/`horses.id` is needed, the scope cannot remain bounded, or any
 failing regression needs a 17th path. Preserve existing work and return the
 exact failure/path for scope review; do not stage, commit, or push.
 
-Next: `CHATGPT_VERIFY_PHASE109_CLOSURE_COMMIT` after the approved docs-only commit.
+Next: `WAITING_FOR_PHASE_INSTRUCTION`.
 
 ---
 

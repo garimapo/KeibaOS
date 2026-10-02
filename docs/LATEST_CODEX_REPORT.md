@@ -1,14 +1,16 @@
 # Latest Codex Report
 
-## Phase109 remote implementation verified — docs-only formal closure approved
+## Phase109 formally complete — closure commit remotely verified
 
 Phase: `POST_V0_8_DAILY_REPLAY_109`.
 
-Status / Formal Status: `APPROVED_FOR_COMMIT`.
+Status: `WAITING_FOR_PHASE_INSTRUCTION`.
 
-State: `REMOTE_IMPLEMENTATION_ACCEPTED`.
+Formal Status: `FORMALLY_COMPLETE`.
 
-Outcome: `READY_FOR_FORMAL_CLOSURE`.
+State: `FORMALLY_COMPLETE`.
+
+Outcome: `PHASE109_NAR_PRODUCTION_MAPPING_AUTHORITY_FORMALLY_INTEGRATED`.
 
 Base HEAD: `bc47f59f0372b0de65b2786b6003c55acfda9e02`.
 
@@ -23,8 +25,12 @@ Base tree: `ab22ebda36667a6698d47cc824637d8036c30564`.
 `PHASE109_REMOTE_IMPLEMENTATION_VERIFICATION_PASS`.
 `PHASE109_IMPLEMENTATION_REMOTE_ACCEPTED`.
 `PHASE109_FORMAL_CLOSURE_APPROVED`.
+`PHASE109_CLOSURE_COMMIT_VERIFICATION_PASS`.
+`PHASE109_FORMAL_CLOSURE_REMOTE_VERIFICATION_PASS`.
+`PHASE109_CLOSURE_REMOTE_VERIFIED`.
+`POST_V0_8_DAILY_REPLAY_109 = FORMALLY_COMPLETE`.
 `PHASE109_ALLOWED_FILES = 16_PATH_SCOPE`.
-`PHASE109_IMPLEMENTATION_REPAIR_READY_FOR_REVIEW`.
+Historical implementation state: `PHASE109_IMPLEMENTATION_REPAIR_READY_FOR_REVIEW`.
 
 The independently reviewed repair bundle is
 `phase109_repair_review_bundle.txt`, SHA-256
@@ -41,6 +47,17 @@ commit is `47723c1229b8c3c9c8df80b64a1088a3ea3e1e0f`, tree
 `bc47f59f0372b0de65b2786b6003c55acfda9e02`. It was pushed without force.
 ChatGPT independently verified the remote branch at that commit/tree, ahead
 one and behind zero from the base, with exactly the approved 16 paths.
+
+Implementation Commit: `47723c1229b8c3c9c8df80b64a1088a3ea3e1e0f`.
+Implementation Tree: `654db28bc3b78effb146b1c423accb2d9c4308f4`.
+Implementation Parent: `bc47f59f0372b0de65b2786b6003c55acfda9e02`.
+Formal Closure Commit: `9a20238584e4f3db3a02c8d8d4e2516b433d7cc4`.
+Formal Closure Tree: `1a8289f87d02725d8d17ef26763087102d4fecf5`.
+Formal Closure Parent: `47723c1229b8c3c9c8df80b64a1088a3ea3e1e0f`.
+The closure commit was pushed normally without force. ChatGPT independently
+verified the remote branch at that exact closure commit/tree: compared with
+the implementation commit, ahead one, behind zero, with only
+`docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` changed.
 
 Post-commit byte review found 14 reviewed non-documentation files: 8/14 raw
 committed blob SHA-256 matches and 6/14 EOL-only mismatches. The six differences
@@ -82,12 +99,17 @@ external/internal V010 trigger coverage and pre-install V010 topology rejection.
 `git diff --check`: PASS for the reviewed implementation. Provider HTTP = 0;
 production DB access = 0; KeibaAI changes = 0 for this documentation-only step.
 
-Only documentation is changed for formal-closure bookkeeping. Tests were not
-rerun; the accepted direct, related, full-suite, and static verification above
-remain the evidence for unchanged implementation bytes. This docs-only closure
-commit is approved but has not yet been independently verified or pushed.
-Phase109 formal completion and final remote closure verification are not yet
-claimed. Next: `CHATGPT_VERIFY_PHASE109_CLOSURE_COMMIT` after the local commit.
+Only documentation changed for formal-closure bookkeeping and this finalization.
+Tests were not rerun; the accepted direct, related, full-suite, and static
+verification above remain the evidence for unchanged implementation bytes.
+`POST_V0_8_DAILY_REPLAY_109 = FORMALLY_COMPLETE` records only the reviewed
+production NAR external/internal mapping authority. It does not grant Phase95
+status authority, Phase41 market eligibility, prediction-selection authority,
+live campaign authorization, Operational Delta, or Phase108 production root
+authority. Future production Phase108 integration requires a separately
+reviewed production prestaged manifest/version/adapter that exact-reloads the
+Phase109 receipt before root availability. This final documentation commit's
+own remote verification remains pending. Next: `WAITING_FOR_PHASE_INSTRUCTION`.
 
 ---
 
