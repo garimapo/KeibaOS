@@ -8,9 +8,9 @@ Status: `APPROVED_FOR_COMMIT`
 
 Formal Status: `APPROVED_FOR_COMMIT`
 
-State: `APPROVED_FOR_COMMIT`
+State: `REMOTE_IMPLEMENTATION_ACCEPTED`
 
-Outcome: `APPROVED_FOR_LOCAL_COMMIT`
+Outcome: `READY_FOR_FORMAL_CLOSURE`
 
 Base Commit: `bc47f59f0372b0de65b2786b6003c55acfda9e02`
 
@@ -30,14 +30,21 @@ Branch: `feature/post-v0.8-daily-replay`
 `CHATGPT_REVIEW_PHASE109_IMPLEMENTATION = PASS`.
 `PHASE109_IMPLEMENTATION_REVIEW_PASS`.
 `PHASE109_COMMIT_APPROVED`.
+`PHASE109_COMMITTED_BLOB_MISMATCH_ACCEPTED_EOL_ONLY`.
+`REVIEWED_LOGICAL_CONTENT_PRESERVED = YES`.
+`PHASE109_POST_COMMIT_VERIFICATION_PASS`.
+`PHASE109_REMOTE_IMPLEMENTATION_VERIFICATION_PASS`.
+`PHASE109_IMPLEMENTATION_REMOTE_ACCEPTED`.
+`PHASE109_FORMAL_CLOSURE_APPROVED`.
 The former `PHASE109_PRODUCTION_ENTRY_MAPPING_BLOCKED_BY_IDENTITY_COMPLETE_INGESTION`
 and `PHASE109_IMPLEMENTATION = BLOCKED_NOT_AUTHORIZED` remain in the historical
 audit below. Their *identity-ingestion prerequisite* is now satisfied by remotely
 verified `POST_V0_8_DAILY_REPLAY_110 = FORMALLY_COMPLETE`. The Phase109 design
-has now passed independent architectural review and is approved for implementation.
+passed independent architectural review before implementation.
 Implementation began within the original 15-path scope and stopped at the first
 proven out-of-scope regression. That stop and its work preservation are historical;
-the approved 16-path implementation has now passed verification and is review-ready.
+the approved 16-path implementation later passed review, was committed, and was
+independently verified at the remote branch.
 
 `PHASE109_IMPLEMENTATION_STOPPED_FOR_SCOPE_EXTENSION`.
 The V019 standard-runner registration changed `MIGRATIONS[:-1]` in the then-forbidden
@@ -93,16 +100,32 @@ unchanged. V018 direct regression: `5 passed`. Final Phase109 direct tests:
 and `python -m pytest -q --tb=short`. Static production audit: PASS; no provider
 transport, production DB path, internal ID issuance, destructive V010 repair,
 `INSERT OR REPLACE`, Phase95/41 authority, Phase108 fixture promotion, or live
-campaign authorization. `git diff --check`: PASS. Dirty paths remain exactly the
-approved 16; index is empty. Provider HTTP = 0; production DB access = 0;
-KeibaAI changes = 0; stage = 0; commit = 0; push = 0.
+campaign authorization. At the pre-commit implementation verification,
+`git diff --check` passed, dirty paths were exactly the approved 16, and the
+index was empty. Provider HTTP = 0; production DB access = 0;
+KeibaAI changes = 0 for that verification. The subsequent approved local commit
+and normal push are recorded below.
 The prior independent-review baseline (`23 passed` direct, `257 passed / 127
 subtests passed` related, `4859 passed / 4 skipped / 2846 subtests passed` full)
 is historical evidence and does not substitute for these post-repair results.
 
-`PHASE109_IMPLEMENTATION_REVIEW_PASS` and `PHASE109_COMMIT_APPROVED` authorize
-only the local implementation commit. Post-commit verification, push, remote
-verification, and formal Phase109 completion remain pending.
+The accepted implementation commit is
+`47723c1229b8c3c9c8df80b64a1088a3ea3e1e0f` (tree
+`654db28bc3b78effb146b1c423accb2d9c4308f4`, parent
+`bc47f59f0372b0de65b2786b6003c55acfda9e02`). Independent post-commit
+review accepted Git's LF-normalized blobs: 14 reviewed non-documentation files,
+8/14 raw blob SHA-256 matches, 6/14 EOL-only mismatches, zero non-EOL byte
+differences, and 14/14 exact matches after only CRLF-to-LF normalization.
+`REVIEWED_LOGICAL_CONTENT_PRESERVED = YES`. The implementation commit was
+pushed without force, and ChatGPT independently verified the remote branch at
+that exact commit/tree, ahead one and behind zero from the base, with exactly
+the approved 16 paths. `PHASE109_REMOTE_IMPLEMENTATION_VERIFICATION_PASS` and
+`PHASE109_IMPLEMENTATION_REMOTE_ACCEPTED` are granted. This documentation-only
+formal-closure commit is approved, but its own post-commit verification, push,
+and remote closure verification are still pending. Phase109 is not yet formally
+complete. The accepted direct/related/full-suite results and static audit above
+were not rerun for this documentation-only update. Provider HTTP = 0;
+production DB access = 0; KeibaAI changes = 0 for this activity.
 
 ### Re-entry evidence and exact input
 
@@ -375,7 +398,7 @@ new `races.id`/`horses.id` is needed, the scope cannot remain bounded, or any
 failing regression needs a 17th path. Preserve existing work and return the
 exact failure/path for scope review; do not stage, commit, or push.
 
-Next: `CHATGPT_VERIFY_PHASE109_COMMIT` after the approved local commit.
+Next: `CHATGPT_VERIFY_PHASE109_CLOSURE_COMMIT` after the approved docs-only commit.
 
 ---
 
