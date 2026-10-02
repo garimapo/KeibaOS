@@ -39,6 +39,7 @@ Branch: `feature/post-v0.8-daily-replay`
 `PHASE109_CLOSURE_COMMIT_VERIFICATION_PASS`.
 `PHASE109_FORMAL_CLOSURE_REMOTE_VERIFICATION_PASS`.
 `PHASE109_CLOSURE_REMOTE_VERIFIED`.
+`PHASE109_FINAL_DOCUMENTATION_REMOTE_VERIFICATION_PASS`.
 `POST_V0_8_DAILY_REPLAY_109 = FORMALLY_COMPLETE`.
 The former `PHASE109_PRODUCTION_ENTRY_MAPPING_BLOCKED_BY_IDENTITY_COMPLETE_INGESTION`
 and `PHASE109_IMPLEMENTATION = BLOCKED_NOT_AUTHORIZED` remain in the historical
@@ -119,6 +120,9 @@ Implementation Parent: `bc47f59f0372b0de65b2786b6003c55acfda9e02`.
 Formal Closure Commit: `9a20238584e4f3db3a02c8d8d4e2516b433d7cc4`.
 Formal Closure Tree: `1a8289f87d02725d8d17ef26763087102d4fecf5`.
 Formal Closure Parent: `47723c1229b8c3c9c8df80b64a1088a3ea3e1e0f`.
+Final Documentation Commit: `f4d5451b2e7bc5bf6e217263d64ed3cc3bbdb649`.
+Final Documentation Tree: `7145ad4e8ed04fe534f85e093078628d22f1a79b`.
+Final Documentation Parent: `9a20238584e4f3db3a02c8d8d4e2516b433d7cc4`.
 Independent post-commit review accepted Git's LF-normalized blobs: 14 reviewed
 non-documentation files,
 8/14 raw blob SHA-256 matches, 6/14 EOL-only mismatches, zero non-EOL byte
@@ -142,8 +146,12 @@ eligibility, prediction-selection authority, live campaign authorization,
 Operational Delta, or Phase108 production root authority. Future production
 Phase108 integration requires a separately reviewed production prestaged
 manifest/version/adapter that exact-reloads the Phase109 receipt before root
-availability. This final documentation commit's own remote verification remains
-pending.
+availability. ChatGPT independently verified the final documentation commit
+`f4d5451b2e7bc5bf6e217263d64ed3cc3bbdb649` on the remote at tree
+`7145ad4e8ed04fe534f85e093078628d22f1a79b`, parent
+`9a20238584e4f3db3a02c8d8d4e2516b433d7cc4`: ahead one, behind zero,
+one commit, and only `docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md`
+changed. `PHASE109_FINAL_DOCUMENTATION_REMOTE_VERIFICATION_PASS` is recorded.
 
 ### Re-entry evidence and exact input
 
