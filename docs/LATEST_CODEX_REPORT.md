@@ -1,5 +1,257 @@
 # Latest Codex Report
 
+## Phase112 independent implementation review passed — local commit approved
+
+Phase: `POST_V0_8_DAILY_REPLAY_112`.
+
+Status / Formal Status: `APPROVED_FOR_COMMIT`.
+
+State: `IMPLEMENTATION_REVIEW_PASSED`.
+
+Implementation: `REVIEWED_AND_ACCEPTED_PENDING_REMOTE_VERIFICATION`.
+
+Base HEAD/tree: `fa648f7d17aa9f79dc21e9ed51d6c01d0d2e6a84` /
+`d53ff1859a03d725251faec0d8ad681c97a241f3`.
+
+The first independent implementation review returned
+`CHATGPT_REVIEW_PHASE112_IMPLEMENTATION = CHANGES_REQUIRED`. All three
+findings were repaired within the approved 10 paths, without changing the
+two-stage architecture or Phase108/109/110/111 code:
+
+1. Exact schema topology uses `name NOT GLOB 'sqlite_*'`, excluding only the
+   literal SQLite-reserved prefix. A present `sqliteXunreviewed` object now
+   yields `PHASE112_SCHEMA_INTEGRITY_FAILURE`.
+2. New transaction tests allow the Stage A manifest INSERT and Stage B
+   availability INSERT to succeed, record one completed SQLite write at each
+   COMMIT callback, then deny COMMIT. Rollback leaves Stage A at 0/0 rows and
+   Stage B at the unchanged inert manifest/0 availability. Retry attaches one
+   truthful availability receipt; completed repeat reuses it without a new
+   clock sample. The earlier pre-INSERT-denial tests remain as separate cases.
+3. Availability receipt validation now accepts only the exact manifest
+   identity prefix plus 64 lowercase hex characters; direct tests reject an
+   extra colon segment, 63/65 characters, and uppercase hex.
+
+Four focused modules: **35 passed**. The focused plus ten approved related
+modules: **170 passed, 2 skipped, 55 subtests passed**. Full repository
+`python -m pytest -q --tb=short` with
+`KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=fa648f7d17aa9f79dc21e9ed51d6c01d0d2e6a84`:
+**4898 passed, 4 skipped, 2846 subtests passed**. Static production audit:
+PASS; no provider transport, HTML parser/refetch, Phase111 direct archive
+reload, fixed path/main-DB write, internal-ID issuance, status/eligibility,
+root/live authority, or `INSERT OR REPLACE`. The three previously reviewed
+files that did not need repair remain byte-identical to their recorded hashes.
+
+Independent re-review disposition:
+`CHATGPT_REVIEW_PHASE112_IMPLEMENTATION = PASS`.
+`PHASE112_IMPLEMENTATION_REVIEW_PASS`.
+`PHASE112_COMMIT_APPROVED`.
+The first-review `CHANGES_REQUIRED` result above remains historical. The
+accepted repaired verification is 35 focused passes; 170 passed, 2 skipped,
+55 subtests passed in focused plus related; 4898 passed, 4 skipped, 2846
+subtests passed in the full suite; and static production audit PASS.
+`POST_V0_8_DAILY_REPLAY_112 != FORMALLY_COMPLETE`.
+`PHASE112_REMOTE_IMPLEMENTATION_VERIFICATION_PASS = NOT_YET_GRANTED`.
+`PHASE112_IMPLEMENTATION_REMOTE_ACCEPTED = NOT_YET_GRANTED`.
+Only the exact reviewed 10-path local implementation commit is authorized.
+No push, remote verification, formal closure, or formal completion is claimed.
+Provider HTTP = 0; production DB access = 0; KeibaAI changes = 0;
+stage = 0; commit = 0; push = 0 during review evidence collection. Next:
+local implementation commit, then independent post-commit verification.
+
+---
+
+## Historical report — Phase112 implementation before first review
+
+## Phase112 implementation ready for independent review
+
+Phase: `POST_V0_8_DAILY_REPLAY_112`.
+
+Status / Formal Status: `READY_FOR_REVIEW`.
+
+State: `IMPLEMENTED_FOR_REVIEW`.
+
+Outcome: `READY_FOR_INDEPENDENT_IMPLEMENTATION_REVIEW`.
+
+Base HEAD: `fa648f7d17aa9f79dc21e9ed51d6c01d0d2e6a84`.
+
+Base tree: `d53ff1859a03d725251faec0d8ad681c97a241f3`.
+
+The approved 10-path implementation adds only four Phase112 production modules,
+four focused test modules, and updates the two approved documentation files.
+The production manifest is derived solely from exact Phase109 receipt reload;
+the separate availability receipt is issued through an injected SQLite
+companion archive. Its standalone version-1 schema enforces exact topology,
+forward/reverse target/cutoff uniqueness, and immutable evidence. The two
+`BEGIN IMMEDIATE` publication stages commit and exact-reload the manifest
+before sampling availability time, preserve an inert manifest after Stage B
+failure, and reuse the original receipt/timestamp on an exact repeat. The
+Phase109 main DB is read-only, and no Phase111 archive parameters or Phase108
+diagnostic V1/root integration were added.
+
+Verification: four new focused modules **28 passed**. Combined focused and
+the ten approved unchanged related regression modules **163 passed, 2 skipped,
+55 subtests passed**. Full repository command
+`python -m pytest -q --tb=short`, with
+`KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=fa648f7d17aa9f79dc21e9ed51d6c01d0d2e6a84`:
+**4891 passed, 4 skipped, 2846 subtests passed**. Static production audit:
+PASS; no provider transport, Deba HTML parser/refetch, Phase111 archive load,
+fixed DB path, main-DB write, internal race/horse ID issuance,
+status/eligibility/root/live authority, `INSERT OR REPLACE`, or silent repair.
+New inserts are confined to the injected companion archive.
+
+Provider HTTP = 0; production DB access = 0; KeibaAI changes = 0;
+stage = 0; commit = 0; push = 0. The index is empty. Independent
+implementation review PASS, commit approval, and formal completion are not
+claimed. Next: `CHATGPT_REVIEW_PHASE112_IMPLEMENTATION`.
+
+---
+
+## Historical report — Phase112 architectural approval
+
+## Phase112 architectural review passed — implementation contract approved
+
+Phase: `POST_V0_8_DAILY_REPLAY_112`.
+
+Title: NAR Production PRE_C Prestaged Mapping Manifest Authority.
+
+Status: `APPROVED_FOR_CODEX`.
+
+State: `IMPLEMENTATION_APPROVED`.
+
+Implementation: `AUTHORIZED_BY_APPROVED_CONTRACT`.
+
+Base HEAD: `fa648f7d17aa9f79dc21e9ed51d6c01d0d2e6a84`.
+
+Base tree: `d53ff1859a03d725251faec0d8ad681c97a241f3`.
+
+Branch: `feature/post-v0.8-daily-replay`.
+
+`PHASE112_ARCHITECTURAL_REVIEW_CORRECTIONS_REQUIRED = RESOLVED`.
+`PHASE112_ARCHITECTURAL_REVIEW_PASS`.
+`PHASE112_IMPLEMENTATION_DESIGN_APPROVED`.
+`PHASE112_IMPLEMENTATION_APPROVAL = GRANTED`.
+`PHASE112_ALLOWED_FILES = 10_PATH_SCOPE`.
+
+The approved architecture uses a distinct
+`NARPreCProductionPrestagedInputManifestV1` mapping-content record and
+`NARPreCProductionPrestagedAvailabilityReceiptV1` in a separate injected
+SQLite companion archive. It does not add V020 to the main DB or modify
+Phase108's exact diagnostic archive topology. The manifest has no
+`available_at`; the availability receipt binds the controlled post-commit
+observation. Both are required for Phase112 prestaged authority, and neither
+grants root execution permission.
+
+The issuance contract has two `BEGIN IMMEDIATE` archive stages. Stage A
+exact-reloads the accepted Phase109 receipt, derives only its exact complete
+mapping, checks forward/reverse target/cutoff uniqueness, commits or accepts
+exact existing manifest content, then exact-reloads the committed manifest.
+Stage B first checks for an existing receipt under the write transaction;
+an exact repeat returns its original time without calling the clock. Only a
+first publication samples the aware-UTC clock while holding that transaction,
+requires `Phase109.issued_at <= availability_receipt.available_at`, commits
+one immutable receipt, and exact-reloads the pair and Phase109 before success.
+A crash after Stage A leaves an inert manifest; no repair or backdating is
+permitted. Unexpected SQLite lock/operational errors propagate.
+
+Phase109 publication previously directly verified Phase111 declaration,
+claim, acquisition-receipt and official-capture ancestry. Ordinary Phase109
+`load_receipt()` validates V019, Phase110 complete population, and V010 mirror
+consistency; it does not reopen Phase111 archives. Phase112 trusts the formally
+accepted Phase109 boundary and has no Phase111 archive/capture input or direct
+reload. Claim/session binding, one-claim consumption, production plan/root
+semantics, and pre-root causal/clock ordering remain for a separately reviewed
+future phase. Existing Phase108 fixture V1, AST-reviewed mapping, diagnostic
+rehearsal, and `DIAGNOSTIC_ONLY_NO_NETWORK` remain unchanged.
+
+The approved implementation scope is exactly four new production modules,
+four new test modules, and these two documentation files, enumerated in
+`docs/CURRENT_PHASE.md`. No existing production or regression test file may be
+modified. Focused tests must additionally cover no Phase111 inputs, separate
+availability field, no clock sampling on exact repeat, orphan retry,
+two-connection timestamp uniqueness, forward/reverse conflict, inert rollback,
+and failure after availability commit before successful reload. Existing
+related regressions remain run-only; the full suite belongs to the later
+implementation activity.
+
+This activity changed documentation only and ran no tests. It does not claim
+implementation complete, independent implementation review, commit approval,
+or Phase112 formal completion. Provider HTTP = 0; Deba refetch = 0; HTML
+parsing = 0; Phase111 direct archive reload = 0; production DB access = 0;
+main simulation DB mutation = 0; KeibaAI changes = 0; stage = 0; commit = 0;
+push = 0.
+
+Next: await a separate `EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_112`
+instruction.
+
+---
+
+## Historical report — Phase112 architectural preparation — production PRE_C prestaged mapping manifest
+
+Phase: `POST_V0_8_DAILY_REPLAY_112`.
+
+Title: NAR Production PRE_C Prestaged Mapping Manifest Authority.
+
+Status: `DRAFT_FOR_REVIEW`. Implementation: `NOT_AUTHORIZED`.
+
+Base HEAD: `fa648f7d17aa9f79dc21e9ed51d6c01d0d2e6a84`.
+
+Base tree: `d53ff1859a03d725251faec0d8ad681c97a241f3`.
+
+Branch: `feature/post-v0.8-daily-replay`.
+
+`POST_V0_8_DAILY_REPLAY_109 = FORMALLY_COMPLETE` and
+`PHASE109_FINAL_DOCUMENTATION_REMOTE_VERIFICATION_PASS` remain the predecessor
+record; this PREPARE action does not advance Phase109 authority or authorize a
+production root. The Phase112 draft is at the top of `docs/CURRENT_PHASE.md`;
+the historical Phase109 material remains below it.
+
+Repository audit confirmed that Phase109's immutable V019 receipt and
+`SQLiteNARProductionMappingRepository.load_receipt()` provide a complete,
+ordered, bidirectionally unique production mapping with exact Phase110 reload
+and V010 mirror verification. Phase109 publication already verified Phase111
+archive ancestry. Caller-authored mapping tuples, V010 row existence, and the
+current main DB state do not independently prove PRE_C availability.
+
+The current `NARPreCPrestagedInputManifestV1` is fixture-specific: its fixture
+bundle, fixture-member mapping SHA, history, claim, V1 plan/root, and AST-reviewed
+fixture mapping are required by the diagnostic harness. Its archive's class
+table and schema topology are exact. Phase112 should therefore use a distinct
+`NARPreCProductionPrestagedInputManifestV1`, not reinterpret the V1 fixture
+semantic or modify the Phase108 archive. The recommended location is a separate,
+injected append-only SQLite companion archive with exact schema validation.
+No V020 main-DB migration or existing production/test modification is proposed.
+
+The draft recommends a content-addressed mapping manifest derived solely from
+an exact Phase109 receipt, followed by a separate immutable availability
+receipt. Controlled `available_at` is sampled only *after* the manifest has
+committed and exact-reloaded, then the availability receipt commits and
+exact-reloads. A crash between the two leaves only an inert manifest; retry
+uses a fresh truthful time. Successful authority requires both records and an
+exact Phase109 reload. This deliberately avoids assuming cross-database
+atomicity or claiming an uncommitted timestamp proves availability. The future
+root adapter must exact-reload before root, bind one claim, and prove strict
+`manifest.available_at < root.started_at`; it is outside Phase112.
+
+The Phase112 draft proposes 10 exact paths: four new production modules, four
+new focused test modules, and the two documentation files. Existing Phase108
+diagnostic, Phase109/V019, Phase110/V018, V010/historical snapshot, and
+sealed-child tests are related run-only regressions. No production or test file
+was edited during this preparation. No pytest was run. The only repository
+changes authorized for this activity are `docs/CURRENT_PHASE.md` and this
+report. Architectural decisions on the separate archive, post-commit
+availability receipt, and deferred one-claim/root binding await ChatGPT review.
+
+Frozen exclusions: mapping/prestaging is not entry status, Phase41 market
+eligibility, prediction selection, live campaign authorization, Phase108 root
+authority, or Operational Delta. Phase110-issued denied entries remain in the
+mapping and remain denied. Provider HTTP = 0; production DB access = 0;
+KeibaAI changes = 0; stage = 0; commit = 0; push = 0.
+
+Next: `CHATGPT_REVIEW_PHASE112_ARCHITECTURE`. No implementation approval is
+claimed.
+
+---
+
 ## Phase109 formally complete — closure commit remotely verified
 
 Phase: `POST_V0_8_DAILY_REPLAY_109`.
