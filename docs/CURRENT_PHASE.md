@@ -8,11 +8,11 @@ Status: `APPROVED_FOR_COMMIT`
 
 Formal Status: `APPROVED_FOR_COMMIT`
 
-State: `IMPLEMENTATION_REVIEW_PASSED`
+State: `FORMAL_CLOSURE_APPROVED`
 
-Outcome: `READY_FOR_LOCAL_IMPLEMENTATION_COMMIT`
+Outcome: `READY_FOR_FORMAL_CLOSURE_COMMIT`
 
-Implementation: `REVIEWED_AND_ACCEPTED_PENDING_REMOTE_VERIFICATION`
+Implementation: `REMOTELY_VERIFIED`
 
 Base Commit: `fa648f7d17aa9f79dc21e9ed51d6c01d0d2e6a84`
 
@@ -47,18 +47,39 @@ Independent re-review disposition:
 `CHATGPT_REVIEW_PHASE112_IMPLEMENTATION = PASS`.
 `PHASE112_IMPLEMENTATION_REVIEW_PASS`.
 `PHASE112_COMMIT_APPROVED`.
+`PHASE112_POST_COMMIT_VERIFICATION_PASS`.
+`PHASE112_REMOTE_IMPLEMENTATION_VERIFICATION_PASS`.
+`PHASE112_IMPLEMENTATION_REMOTE_ACCEPTED`.
+`PHASE112_FORMAL_CLOSURE_APPROVED`.
 The accepted repair verification is 35 focused passes; 170 passed, 2 skipped,
 55 subtests passed in focused plus related; 4898 passed, 4 skipped, 2846
 subtests passed in the full suite; and static production audit PASS. The
 first-review `CHANGES_REQUIRED` disposition above remains historical.
 
 `POST_V0_8_DAILY_REPLAY_112 != FORMALLY_COMPLETE`.
-`PHASE112_REMOTE_IMPLEMENTATION_VERIFICATION_PASS = NOT_YET_GRANTED`.
-`PHASE112_IMPLEMENTATION_REMOTE_ACCEPTED = NOT_YET_GRANTED`.
-Local implementation commit is authorized; push, remote verification, formal
-closure, and formal completion are not claimed. Next: local implementation
-commit, followed by independent post-commit verification. The Phase109
-formal-completion record below remains historical and unchanged.
+The implementation was pushed normally and independently verified on GitHub;
+ChatGPT accepted it and approved documentation-only formal closure.
+
+Implementation Commit: `cb71b8482105017aaa362221513db10e42a27f14`
+
+Implementation Tree: `4db5c9b0e1655f4f2cecef35da474e94e28643cd`
+
+Implementation Parent: `fa648f7d17aa9f79dc21e9ed51d6c01d0d2e6a84`
+
+Current closure bookkeeping may change only `docs/CURRENT_PHASE.md` and
+`docs/LATEST_CODEX_REPORT.md`. The closure documentation commit is authorized
+locally; its push is not authorized. Formal completion remains pending
+independent closure-commit verification and closure remote verification.
+Next: `CHATGPT_VERIFY_PHASE112_FORMAL_CLOSURE_COMMIT` after the local
+closure commit is created. The Phase109 formal-completion record below
+remains historical and unchanged.
+
+Phase112 grants only production PRE_C mapping-prestaging authority. It does
+not grant root execution permission, claim/session consumption authority,
+entry status authority, market eligibility, prediction-selection authority,
+live campaign authorization, or Operational Delta authority.
+No tests are rerun for this documentation-only closure bookkeeping; the
+accepted implementation verification below remains the evidence.
 
 ### Implementation verification for independent review
 

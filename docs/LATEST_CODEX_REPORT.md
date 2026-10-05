@@ -1,14 +1,16 @@
 # Latest Codex Report
 
-## Phase112 independent implementation review passed — local commit approved
+## Phase112 remote implementation accepted — local formal closure commit approved
 
 Phase: `POST_V0_8_DAILY_REPLAY_112`.
 
 Status / Formal Status: `APPROVED_FOR_COMMIT`.
 
-State: `IMPLEMENTATION_REVIEW_PASSED`.
+State: `FORMAL_CLOSURE_APPROVED`.
 
-Implementation: `REVIEWED_AND_ACCEPTED_PENDING_REMOTE_VERIFICATION`.
+Outcome: `READY_FOR_FORMAL_CLOSURE_COMMIT`.
+
+Implementation: `REMOTELY_VERIFIED`.
 
 Base HEAD/tree: `fa648f7d17aa9f79dc21e9ed51d6c01d0d2e6a84` /
 `d53ff1859a03d725251faec0d8ad681c97a241f3`.
@@ -45,18 +47,40 @@ Independent re-review disposition:
 `CHATGPT_REVIEW_PHASE112_IMPLEMENTATION = PASS`.
 `PHASE112_IMPLEMENTATION_REVIEW_PASS`.
 `PHASE112_COMMIT_APPROVED`.
+`PHASE112_POST_COMMIT_VERIFICATION_PASS`.
+`PHASE112_REMOTE_IMPLEMENTATION_VERIFICATION_PASS`.
+`PHASE112_IMPLEMENTATION_REMOTE_ACCEPTED`.
+`PHASE112_FORMAL_CLOSURE_APPROVED`.
 The first-review `CHANGES_REQUIRED` result above remains historical. The
 accepted repaired verification is 35 focused passes; 170 passed, 2 skipped,
 55 subtests passed in focused plus related; 4898 passed, 4 skipped, 2846
 subtests passed in the full suite; and static production audit PASS.
 `POST_V0_8_DAILY_REPLAY_112 != FORMALLY_COMPLETE`.
-`PHASE112_REMOTE_IMPLEMENTATION_VERIFICATION_PASS = NOT_YET_GRANTED`.
-`PHASE112_IMPLEMENTATION_REMOTE_ACCEPTED = NOT_YET_GRANTED`.
-Only the exact reviewed 10-path local implementation commit is authorized.
-No push, remote verification, formal closure, or formal completion is claimed.
+The accepted implementation was pushed normally and independently verified
+on GitHub. Its exact implementation identity is:
+
+Implementation Commit: `cb71b8482105017aaa362221513db10e42a27f14`
+
+Implementation Tree: `4db5c9b0e1655f4f2cecef35da474e94e28643cd`
+
+Implementation Parent: `fa648f7d17aa9f79dc21e9ed51d6c01d0d2e6a84`
+
+Preflight confirmed the local HEAD/tree/branch, clean working tree and empty
+index. A fresh fetch confirmed origin at that implementation commit, with
+ahead/behind 0/0. This closure activity changes only the two approved docs.
+No production/test bytes change and no tests are rerun. One normal local
+commit is authorized with subject `docs: record Phase112 formal closure`.
+Its push is not authorized; formal completion remains pending independent
+closure-commit verification and closure remote verification.
+
+Phase112 grants only production PRE_C mapping-prestaging authority. It does
+not grant root execution permission, claim/session consumption authority,
+entry status authority, market eligibility, prediction-selection authority,
+live campaign authorization, or Operational Delta authority.
 Provider HTTP = 0; production DB access = 0; KeibaAI changes = 0;
-stage = 0; commit = 0; push = 0 during review evidence collection. Next:
-local implementation commit, then independent post-commit verification.
+production/test changes = 0; push = 0; force push = 0 during this closure
+activity. Next: `CHATGPT_VERIFY_PHASE112_FORMAL_CLOSURE_COMMIT` after the
+local documentation commit is created.
 
 ---
 
