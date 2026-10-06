@@ -1,14 +1,16 @@
 # Latest Codex Report
 
-## Phase112 remote implementation accepted — local formal closure commit approved
+## Phase112 formal closure remotely verified — formal completion recorded
 
 Phase: `POST_V0_8_DAILY_REPLAY_112`.
 
-Status / Formal Status: `APPROVED_FOR_COMMIT`.
+Status: `WAITING_FOR_PHASE_INSTRUCTION`.
 
-State: `FORMAL_CLOSURE_APPROVED`.
+Formal Status: `FORMALLY_COMPLETE`.
 
-Outcome: `READY_FOR_FORMAL_CLOSURE_COMMIT`.
+State: `FORMALLY_COMPLETE`.
+
+Outcome: `PHASE112_NAR_PRODUCTION_PRE_C_MAPPING_PRESTAGING_AUTHORITY_FORMALLY_INTEGRATED`.
 
 Implementation: `REMOTELY_VERIFIED`.
 
@@ -51,11 +53,15 @@ Independent re-review disposition:
 `PHASE112_REMOTE_IMPLEMENTATION_VERIFICATION_PASS`.
 `PHASE112_IMPLEMENTATION_REMOTE_ACCEPTED`.
 `PHASE112_FORMAL_CLOSURE_APPROVED`.
+`PHASE112_CLOSURE_COMMIT_VERIFICATION_PASS`.
+`PHASE112_FORMAL_CLOSURE_REMOTE_VERIFICATION_PASS`.
+`PHASE112_CLOSURE_REMOTE_VERIFIED`.
+`PHASE112_FORMAL_COMPLETION_APPROVED`.
 The first-review `CHANGES_REQUIRED` result above remains historical. The
 accepted repaired verification is 35 focused passes; 170 passed, 2 skipped,
 55 subtests passed in focused plus related; 4898 passed, 4 skipped, 2846
 subtests passed in the full suite; and static production audit PASS.
-`POST_V0_8_DAILY_REPLAY_112 != FORMALLY_COMPLETE`.
+`POST_V0_8_DAILY_REPLAY_112 = FORMALLY_COMPLETE`.
 The accepted implementation was pushed normally and independently verified
 on GitHub. Its exact implementation identity is:
 
@@ -65,22 +71,34 @@ Implementation Tree: `4db5c9b0e1655f4f2cecef35da474e94e28643cd`
 
 Implementation Parent: `fa648f7d17aa9f79dc21e9ed51d6c01d0d2e6a84`
 
-Preflight confirmed the local HEAD/tree/branch, clean working tree and empty
-index. A fresh fetch confirmed origin at that implementation commit, with
-ahead/behind 0/0. This closure activity changes only the two approved docs.
-No production/test bytes change and no tests are rerun. One normal local
-commit is authorized with subject `docs: record Phase112 formal closure`.
-Its push is not authorized; formal completion remains pending independent
-closure-commit verification and closure remote verification.
+Formal Closure Commit: `7a7f6a20679347fa1ff332ba36f4bc9862907a77`
+
+Formal Closure Tree: `63c2820fbd28c4a9f9724f6d01af2bcceacb544e`
+
+Formal Closure Parent: `cb71b8482105017aaa362221513db10e42a27f14`
+
+The docs-only closure commit was independently verified, pushed normally,
+and independently verified on GitHub. The pre-creation wording noted during
+closure-commit verification was accepted as nonblocking. ChatGPT granted
+formal completion after closure remote verification.
+
+Finalization preflight confirmed the local HEAD/tree/branch, clean working
+tree and empty index. A fresh fetch confirmed origin at the exact closure
+commit, with ahead/behind 0/0. This activity changes only the two approved
+docs and preserves all production/test bytes. No tests were rerun for
+docs-only closure or this finalization. One normal local final documentation
+commit is authorized with subject `docs: finalize Phase112 formal completion`.
+Its push is not authorized and its own remote verification remains pending.
 
 Phase112 grants only production PRE_C mapping-prestaging authority. It does
-not grant root execution permission, claim/session consumption authority,
+not grant root execution permission, claim/session binding or consumption,
 entry status authority, market eligibility, prediction-selection authority,
-live campaign authorization, or Operational Delta authority.
+live campaign authorization, or Operational Delta authority. A future
+separately reviewed phase owns production PRE_C execution integration.
 Provider HTTP = 0; production DB access = 0; KeibaAI changes = 0;
-production/test changes = 0; push = 0; force push = 0 during this closure
-activity. Next: `CHATGPT_VERIFY_PHASE112_FORMAL_CLOSURE_COMMIT` after the
-local documentation commit is created.
+production/test changes = 0; push = 0; force push = 0 during this finalization.
+Next: independent ChatGPT verification of the final documentation commit;
+then `WAITING_FOR_PHASE_INSTRUCTION`.
 
 ---
 

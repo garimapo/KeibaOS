@@ -4,13 +4,13 @@
 
 Title: NAR Production PRE_C Prestaged Mapping Manifest Authority
 
-Status: `APPROVED_FOR_COMMIT`
+Status: `WAITING_FOR_PHASE_INSTRUCTION`
 
-Formal Status: `APPROVED_FOR_COMMIT`
+Formal Status: `FORMALLY_COMPLETE`
 
-State: `FORMAL_CLOSURE_APPROVED`
+State: `FORMALLY_COMPLETE`
 
-Outcome: `READY_FOR_FORMAL_CLOSURE_COMMIT`
+Outcome: `PHASE112_NAR_PRODUCTION_PRE_C_MAPPING_PRESTAGING_AUTHORITY_FORMALLY_INTEGRATED`
 
 Implementation: `REMOTELY_VERIFIED`
 
@@ -51,12 +51,16 @@ Independent re-review disposition:
 `PHASE112_REMOTE_IMPLEMENTATION_VERIFICATION_PASS`.
 `PHASE112_IMPLEMENTATION_REMOTE_ACCEPTED`.
 `PHASE112_FORMAL_CLOSURE_APPROVED`.
+`PHASE112_CLOSURE_COMMIT_VERIFICATION_PASS`.
+`PHASE112_FORMAL_CLOSURE_REMOTE_VERIFICATION_PASS`.
+`PHASE112_CLOSURE_REMOTE_VERIFIED`.
+`PHASE112_FORMAL_COMPLETION_APPROVED`.
 The accepted repair verification is 35 focused passes; 170 passed, 2 skipped,
 55 subtests passed in focused plus related; 4898 passed, 4 skipped, 2846
 subtests passed in the full suite; and static production audit PASS. The
 first-review `CHANGES_REQUIRED` disposition above remains historical.
 
-`POST_V0_8_DAILY_REPLAY_112 != FORMALLY_COMPLETE`.
+`POST_V0_8_DAILY_REPLAY_112 = FORMALLY_COMPLETE`.
 The implementation was pushed normally and independently verified on GitHub;
 ChatGPT accepted it and approved documentation-only formal closure.
 
@@ -66,20 +70,28 @@ Implementation Tree: `4db5c9b0e1655f4f2cecef35da474e94e28643cd`
 
 Implementation Parent: `fa648f7d17aa9f79dc21e9ed51d6c01d0d2e6a84`
 
-Current closure bookkeeping may change only `docs/CURRENT_PHASE.md` and
-`docs/LATEST_CODEX_REPORT.md`. The closure documentation commit is authorized
-locally; its push is not authorized. Formal completion remains pending
-independent closure-commit verification and closure remote verification.
-Next: `CHATGPT_VERIFY_PHASE112_FORMAL_CLOSURE_COMMIT` after the local
-closure commit is created. The Phase109 formal-completion record below
-remains historical and unchanged.
+Formal Closure Commit: `7a7f6a20679347fa1ff332ba36f4bc9862907a77`
+
+Formal Closure Tree: `63c2820fbd28c4a9f9724f6d01af2bcceacb544e`
+
+Formal Closure Parent: `cb71b8482105017aaa362221513db10e42a27f14`
+
+The docs-only closure commit was independently verified, pushed normally,
+and independently verified on GitHub. ChatGPT approved formal completion.
+This final documentation activity changes only `docs/CURRENT_PHASE.md` and
+`docs/LATEST_CODEX_REPORT.md`. Its own local commit is authorized, but its
+push is not authorized and its own remote verification remains pending.
+Next: `WAITING_FOR_PHASE_INSTRUCTION`; the final documentation commit must
+first receive independent ChatGPT verification. The Phase109 formal-completion
+record below remains historical and unchanged.
 
 Phase112 grants only production PRE_C mapping-prestaging authority. It does
-not grant root execution permission, claim/session consumption authority,
+not grant root execution permission, claim/session binding or consumption,
 entry status authority, market eligibility, prediction-selection authority,
 live campaign authorization, or Operational Delta authority.
-No tests are rerun for this documentation-only closure bookkeeping; the
-accepted implementation verification below remains the evidence.
+A future separately reviewed phase owns production PRE_C execution
+integration. No tests were rerun for docs-only closure or this finalization;
+the accepted implementation verification below remains the evidence.
 
 ### Implementation verification for independent review
 
