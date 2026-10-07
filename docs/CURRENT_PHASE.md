@@ -1,5 +1,542 @@
 # Current Phase
 
+## POST_V0_8_DAILY_REPLAY_113
+
+Title: NAR Production PRE_C Claim-Bound Prestaged Authority Binding
+
+Status: `APPROVED_FOR_COMMIT`
+
+State: `IMPLEMENTATION_REVIEW_PASSED`
+
+Implementation: `COMPLETE_REVIEWED_UNCOMMITTED`
+
+Base Commit: `9c1bd2b643826bd62551a326c61884a161672f8e`
+
+Base Tree: `e67ec5d76cbc59e0f6ebb026047efc82b49206bd`
+
+Branch: `feature/post-v0.8-daily-replay`
+
+Architectural disposition:
+`CHATGPT_REVIEW_PHASE113_DESIGN = PASS_WITH_REQUIRED_CONTRACT_CORRECTIONS`.
+The six required contract corrections below have been applied.
+`PHASE113_ARCHITECTURAL_REVIEW_PASS`.
+`PHASE113_IMPLEMENTATION_DESIGN_APPROVED`.
+`PHASE113_ALLOWED_FILES = 10_PATH_SCOPE`.
+`PHASE113_DESIGN_APPROVAL_VERIFICATION_PASS` and `PHASE113_EXECUTION_APPROVED`
+were supplied by ChatGPT for this execution. The approved binding-only contract
+has been implemented and verified. ChatGPT independently passed implementation
+review and explicitly approved one local implementation commit. Independent
+post-commit verification, push approval, remote acceptance and formal completion
+remain pending; this approval does not grant any of those later dispositions.
+
+### Independent implementation review and local commit approval — current disposition
+
+`CHATGPT_REVIEW_PHASE113_IMPLEMENTATION = PASS`.
+`PHASE113_IMPLEMENTATION_REVIEW_PASS`.
+`PHASE113_COMMIT_APPROVED`.
+The accepted review evidence is the external
+`phase113_implementation_review_bundle.txt`, SHA-256
+`6111ba23860138268560355be9d678b1e7a1435992aaa37945d6af342dbcd914`,
+257774 bytes / 3304 lines. It is not a repository or commit path.
+
+Accepted verification: focused **100 passed**; focused + all fourteen approved
+related modules **231 passed / 2 skipped**; full **4998 passed / 4 skipped /
+2846 subtests passed**; static production audit **PASS**. The review-evidence
+rerun retained `100 passed in 27.05s`, `231 passed, 2 skipped in 1063.03s`, and
+`4998 passed, 4 skipped, 2846 subtests passed in 1321.56s`. The full-suite
+environment remained
+`KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=9c1bd2b643826bd62551a326c61884a161672f8e`.
+No tests were rerun solely for this review-bookkeeping documentation edit.
+
+Before bookkeeping, exact local HEAD/tree/branch, fetched origin at the reviewed
+base, exact ten dirty/untracked paths and EMPTY index were verified. All eight
+production/test raw SHA-256 values match the independently reviewed manifest.
+Only these two documents change after review; production and test bytes remain
+frozen. Stage only the exact ten approved paths, check the staged set and diff,
+then create one normal local commit with subject
+`feat: add NAR PRE_C claim-bound prestaging authority`. No amend or push.
+Committed production/test blobs must match all eight reviewed hashes exactly.
+Local structural checks and an external post-commit verification bundle are
+evidence only; independent ChatGPT post-commit verification is still required.
+
+Phase113 is NOT formally complete. No push, remote implementation acceptance,
+formal closure, root execution permission, current-process capability, status/
+eligibility, prediction/betting/live authority or Phase114 integration is granted.
+Provider HTTP = 0; production DB access = 0; KeibaAI changes = 0; push = 0;
+force push = 0. Next: approved local commit and independent post-commit review.
+
+### Historical Phase113 execution evidence — before independent implementation review
+
+`PHASE113_IMPLEMENTATION_READY_FOR_CHATGPT_REVIEW`.
+Preflight matched exact HEAD/tree/branch and fetched origin at the base above;
+initial dirty paths were exactly the two approved documentation files and index
+EMPTY. Existing approval/audit work was preserved; no reset or destructive Git
+operation occurred. All implementation/test changes are additive within the
+eight new approved paths; no predecessor production/test API or registry changed.
+
+The frozen 13-field `NARPreCProductionClaimBindingV1` uses canonical JSON and
+`nar-pre-c-production-claim-binding-v1:<64 lowercase hex>`. Issuance exact-loads
+claim/binding/session/configuration/readiness, requires readiness <= session
+start (equality accepted), then exact-loads Phase112's complete pair through its
+existing Phase109 repository. No clock, caller mapping, horse IDs, copied
+lineage/times, root scope, process capability or execution permission is added.
+
+The injected version-1 companion has registry/binding tables, five semantic
+unique keys (identity, manifest, availability, external target/cutoff, internal
+target/cutoff) and four immutable registry/binding UPDATE/DELETE triggers.
+Claim/session/runtime-binding/readiness columns are NONUNIQUE. One genuine
+claim was proved to bind two independently valid Phase112 targets. A manifest
+cannot be transferred to another claim. Absent/active/corrupt topology, literal
+`name NOT GLOB 'sqlite_*'` filtering, visible sqliteXunreviewed and FK-OFF guards
+are tested. No main migration is registered.
+
+Publication uses one companion BEGIN IMMEDIATE, checks every collision key,
+inserts once or exact-adopts idempotently, commits, then exact-reloads the binding
+and all upstream authority before success. Genuine post-write COMMIT denial
+observed SQLite total_changes +1 and one uncommitted row, followed by zero rows,
+no open transaction and byte-for-byte equivalent upstream dumps. Postcommit
+local/upstream reload failures return no success and retain the immutable row.
+Two independent file-backed connections proved one exact immutable winner plus
+exact loser reload, or one winner plus permanent contradictory-claim conflict.
+
+Successful verification (exact commands/module set in LATEST_CODEX_REPORT):
+
+- Focused: `100 passed in 27.71s`; no skipped tests/subtests reported.
+- Focused + all 14 approved related modules: `231 passed, 2 skipped in 1066.14s`;
+  no subtests reported.
+- Full: `4998 passed, 4 skipped, 2846 subtests passed in 1320.27s`.
+- Related/full environment: `KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=9c1bd2b643826bd62551a326c61884a161672f8e`.
+- Static production audit: PASS. SQL receivers write only the Phase113 companion;
+  upstream stores use existing exact-load APIs. Prohibited transport/parser/
+  Phase111/fixed-path/clock/internal-ID/replace calls and patterns: zero.
+- Final `git diff --check`: PASS; exactly 10 approved dirty paths; index EMPTY.
+
+The first test-construction run was 86 passed / 8 failed. New tests were corrected
+to expect existing upstream-specific domain exceptions and to inject upstream
+reread failure only after the binding was actually committed. No predecessor or
+production behavior was changed to satisfy those tests. The new fixture reuses
+one exact immutable existing Git-object bundle only to avoid repeated fixture IO;
+authoritative Phase113/upstream reloads are never cached.
+
+Provider HTTP = 0; production DB access = 0; KeibaAI changes = 0; stage = 0;
+commit = 0; push = 0. Runtime/main/Phase112 mutation, new race/horse IDs, denial
+clearing, current-clock samples, status/eligibility promotion, root/start/live
+authority, INSERT OR REPLACE and silent repair = 0. No cross-store atomicity or
+rollback is claimed. This precommit suite is not final sealed-source verification
+for older phases. Phase114 execution/root-scope/consumption remains deferred.
+Historical next step at EXECUTE completion: independent ChatGPT implementation
+review; no commit or push authorization had then been supplied. The current
+independent PASS and local-only commit approval above supersede that disposition.
+
+### Historical predecessor reconciliation and approval-activity boundary
+
+ChatGPT independently accepted the Phase112 final documentation on the remote:
+`POST_V0_8_DAILY_REPLAY_112 = FORMALLY_COMPLETE` and
+`PHASE112_FINAL_DOCUMENTATION_REMOTE_VERIFICATION_PASS`.
+Final documentation commit/tree are the Phase113 base above; its parent is
+`7a7f6a20679347fa1ff332ba36f4bc9862907a77`. This acceptance is supplied by
+ChatGPT, not a new Codex remote-verification claim. Earlier Phase112 reports
+below remain historical, including their then-pending push/verification wording.
+
+Historical PREPARE: initial HEAD/tree/branch matched, working tree was CLEAN
+and index EMPTY. AGENTS.md and the detailed Ver0.8 design's identity/time/
+immutable repository boundaries were consulted; the architecture was drafted
+as DRAFT_FOR_REVIEW / NOT_AUTHORIZED. The preparation report is preserved.
+This activity is APPROVE_PHASE only: preflight matched the same base/branch,
+only the two existing dirty phase-control documents and empty index.
+Only those two documents are writable now. No implementation, tests, migrations,
+database inspection, provider work, stage, commit or push during this activity.
+Wait for ChatGPT verification before a later EXECUTE_APPROVED_PHASE.
+
+### Audit finding 1 — campaign claim cardinality is B, not one race
+
+The existing claim is campaign/session-scoped and supports multiple sequential
+race targets; it is not a one-race claim. Evidence is structural and executable
+contract evidence, not inference from its name:
+
+- `nar_operational_timing_runtime_execution.py`,
+  `NAROperationalTimingCampaignExecutionClaim`, binds configuration, session,
+  activation declaration/verification, runtime binding, bundle and lock scope;
+  it has no race ID or prediction cutoff.
+- `nar_operational_timing_runtime_execution_archive_migration.py:40` gives
+  claims UNIQUE session and UNIQUE runtime binding, not UNIQUE race. Readiness
+  is one per claim. `CONTROLLED_ONE_SHOT_CAMPAIGN_RUNNER_V1` means one issued
+  campaign claim per session, not one operation/race per campaign.
+- `nar_operational_timing_campaign_runner.py:149`, `next_attempt_sequence()`,
+  increments for each operation under the same current capability.
+  `nar_operational_timing_passive_wrapper.py:74`, `measure_nar_operation()`,
+  accepts a separate correlation on each call. `NARTimingCorrelation` in
+  `nar_operational_timing_observability.py` supports PROVIDER, TARGET_SET and
+  RACE scopes. `nar_operational_timing_attempt_archive_migration.py:29` uses
+  UNIQUE(claim_identity, attempt_sequence), not UNIQUE claim.
+- Configuration V2's `max_concurrent_target_workflows = 1` is simultaneous
+  serial-workflow capacity, not a limit of one total target for the session.
+- Even diagnostic Phase108 has UNIQUE(claim_identity, scope_identity) for
+  manifests and per-manifest roots, not a globally UNIQUE root claim. Its
+  `publish()` replay check is claim + scope. This is supporting cardinality
+  evidence only, not authority to reuse the diagnostic root in production.
+- `test_claim_and_readiness_precede_process_capability_and_old_claim_cannot_resume`
+  proves one claim/session and inability to resurrect saved claims;
+  passive-wrapper tests and diagnostic PRESTAGED/GENERATED tests exercise
+  multiple operations under one claim. The inspected tests do not themselves
+  prove an end-to-end live multi-race scheduler; Phase113 does not add one.
+
+Approved correction 1: `ONE_CAMPAIGN_EXECUTION_CLAIM_MAY_COVER_MULTIPLE_TARGETS`.
+Approved binding cardinality: one manifest -> at most one claim binding;
+one availability receipt -> the same binding ancestry; same pair + same exact
+claim -> original binding idempotently; same pair + different claim -> conflict.
+One claim may bind multiple distinct accepted target/cutoff manifests.
+`claim_identity`, `session_identity`, `runtime_binding_identity` and
+`campaign_readiness_receipt_identity` MUST NOT be UNIQUE in Phase113.
+All four may repeat across distinct target bindings under the same claim,
+including the same readiness receipt. No claim-global or readiness-global
+uniqueness, or equivalent constraint collapsing a campaign to one target.
+Same external or internal target/cutoff
+with contradictory content must fail closed, even across different claims.
+No target or execution permission follows from a claim's correlation alone.
+
+### Audit finding 2 — exact upstream authority and readiness qualification
+
+Approved issuer inputs: injected exact runtime archive, exact Phase112 archive,
+existing exact Phase109 repository, session identity, expected claim identity,
+Phase112 manifest identity and expected availability-receipt identity. Optional
+external-target/cutoff expectations are equality constraints only. No caller
+value/mapping/internal race ID, clock, available_at, capability or Phase111
+archive may be an authority input. These are already trusted/reviewed upstream
+archive boundaries; Phase113 does not create or independently remote-approve a
+runtime claim/source bundle.
+
+Use the unchanged existing runtime APIs:
+
+1. `SQLiteNAROperationalTimingRuntimeExecutionArchive.load_claim_for_session()`;
+   require present and exact requested claim/session equality. There is no
+   public claim-by-ID loader; session lookup plus exact claim check suffices.
+2. `load_binding(binding_identity=claim.binding_identity)`; require exact
+   claim/binding/session/configuration/declaration/verification/bundle/lock
+   agreement. Explicitly exact-load the measurement session through the
+   runtime archive's V2 `load_session()` and require session/configuration
+   agreement. The binding's existing ancestry validator reloads the V2 session,
+   activation declaration/verification, bundle, dependency and transport
+   profiles and requires qualifying activation and declared source agreement.
+3. `load_readiness_for_claim(claim_identity=claim.claim_identity)`; require
+   exact canonical receipt, claim/binding/session/configuration agreement.
+   Explicitly require `readiness_verified_at <= session.measurement_start_at`.
+   Ordinary runtime readiness reload verifies ancestry, NOT this timing gate.
+   `test_equality_qualifies_and_late_readiness_consumes_session` proves that a
+   late failed issuance can leave claim/readiness rows; those must not qualify
+   Phase113. Equality qualifies, as in the existing runner/attempt contracts.
+4. `SQLiteNARPreCProductionPrestagedManifestArchive.load_authority()` with
+   the existing Phase109 repository; require exact manifest and availability
+   identities, complete pair and expected target/cutoff. This reloads Phase109,
+   reconstructs the full manifest and validates mapping equality. Phase109's
+   ordinary reload verifies V019, Phase110 population and V010 consistency;
+   it does NOT directly reopen Phase111 archives.
+5. Require NAR/nar_official throughout. Missing/corrupt/contradictory upstream
+   evidence fails closed. Reject upstream connections with caller-owned active
+   transactions so uncommitted upstream rows cannot qualify; no upstream writes.
+
+Approved correction 2: readiness must match exact claim, runtime binding,
+session and configuration; before/equal session start qualifies, after start
+is NONQUALIFYING even when claim/readiness are durably present. No clock sample.
+
+Approved correction 3:
+`PERSISTED_RUNTIME_CLAIM != CURRENT_PROCESS_EXECUTION_CAPABILITY`.
+`PHASE113_CLAIM_BINDING != CURRENT_PROCESS_EXECUTION_CAPABILITY`.
+`PHASE113_CLAIM_BINDING != ROOT_EXECUTION_PERMISSION`.
+Phase113 does not create, reconstruct, consume or substitute for
+`NARCurrentProcessExecutionCapability`; runner/process/lock liveness is not
+Phase113 authority. A durable binding remains execution-inert when the original
+capability disappears, even if its immutable ancestry continues to exact-load.
+Archived claims may prove the binding relationship but cannot revive execution.
+Neither timely readiness nor successful Phase113 reload proves a current lock,
+live process capability, an unconsumed root, or current session admission.
+Phase111 direct reload, provider capture/refetch and HTML parsing remain zero.
+
+### Approved value and canonical content
+
+Distinct frozen value: `NARPreCProductionClaimBindingV1`, schema version 1,
+content identity `nar-pre-c-production-claim-binding-v1:<64 lowercase hex>`.
+Canonical UTF-8 JSON and exact field set bind:
+
+```text
+claim_identity
+runtime_binding_identity
+session_identity
+campaign_readiness_receipt_identity
+phase112_manifest_identity
+phase112_availability_receipt_identity
+phase109_receipt_id
+organization = NAR
+source_system = nar_official
+external_race_id
+internal_race_id
+prediction_cutoff
+schema_version = 1
+```
+
+All fields derive from exact upstream loads. Use exact identity prefix/digest
+shapes, strict positive internal ID type and canonical aware UTC cutoff.
+No arbitrary caller JSON is issuance authority. No entry_mapping, horse IDs,
+copied Phase110/111 ancestry, generic authorized flag, issued_at, bound_at,
+available_at copy, started_at, new service-clock timestamp, root/claim-consumption
+state or execution capability in the value.
+The Phase112 identities already content-bind complete mapping and availability.
+Raw value construction/JSON parsing establishes canonical content only, not
+qualified authority; authoritative issuance/load always revalidates upstream.
+
+### Audit finding 3 — separate exact companion persistence
+
+New explicitly injected SQLite companion connection; own version-1 registry
+and one immutable binding table. No main migration (no V020), no objects in
+runtime, Phase108 or Phase112 archives, no fixed filename or self-opened DB.
+Their exact topology validators prohibit adding Phase113 there. Cross-store
+references are canonical identities verified by loaders, not cross-DB FKs.
+
+Approved persistence model, with objects: `nar_pre_c_production_claim_binding_schema_migrations` and
+`nar_pre_c_production_claim_bindings`, exact registry VERSION=1 and reviewed
+DDL; immutable UPDATE/DELETE guards on registry and bindings independently of
+foreign_keys. Identity PK, manifest identity UNIQUE, availability identity
+UNIQUE, external target/cutoff UNIQUE and internal target/cutoff UNIQUE, each
+target constraint including organization/source_system. Claim, session, runtime
+binding and campaign readiness receipt are all nonunique in this archive.
+Full payload plus scalar projection must agree exactly on reload; no entry
+projection table is necessary because Phase112 exact reload owns population.
+
+Distinguish NOT_INSTALLED (empty uninstalled companion), ACTIVE (exact registry,
+objects, canonical/projection integrity) and INTEGRITY_FAILURE (partial/unknown/
+drifted schema). Literal internal-prefix exclusion, e.g.
+`name NOT GLOB 'sqlite_*'`, must expose legal sqliteX... objects. Corruption is
+never absence. Unexpected SQLite operational/lock errors propagate unchanged.
+No INSERT OR REPLACE, UPDATE-to-fit, DELETE-to-fit or silent repair.
+
+### Approved publication, exact load, idempotence and failure contract
+
+Approved correction 4: manifest-to-claim binding is permanent. The exact
+claim + manifest + availability + target/cutoff may reload idempotently.
+Same manifest + different claim fails closed permanently, even if the first
+process exited, capability was lost, no production root started or the original
+claim became unusable. Do not delete/rewrite/transfer/rebind the manifest,
+repair onto another session, or rescue it after failure. Root consumption is
+still deferred; loss of execution capability does not release the binding.
+
+Approved correction 6: exact-reload runtime claim/binding/session/readiness and
+qualify readiness, then exact Phase112 complete authority (therefore Phase109),
+before deriving content and publication. No new time authority.
+Exact-reload upstream runtime/readiness and Phase112/109 first, derive value;
+then one companion-owned `BEGIN IMMEDIATE`. Require exact Phase113 schema,
+look up identity/manifest/availability/external+cutoff/internal+cutoff collisions.
+Exact existing full content returns the original binding; any contradiction
+fails closed. Otherwise insert once. COMMIT, exact-reload the binding scalar
+projection/JSON/content identity, exact-reload runtime claim/binding/session/
+readiness again, enforce readiness qualification again, exact-reload Phase112
+complete authority again (therefore reverify Phase109), and require the same
+derived value before returning success.
+Idempotent return must also perform final exact upstream validation.
+
+Own write transaction only: no upstream writes, locks or cross-store atomicity
+claim. Reject caller-owned transactions. Roll back every pre-commit failure,
+including a genuine post-INSERT/pre-COMMIT failure, leaving no new binding and
+`in_transaction=False`. Post-commit load/upstream failure returns no qualified
+success, but does not delete the committed immutable row; a later exact load
+may qualify it only if all upstream checks succeed. Concurrent publishers
+serialize by SQLite and uniqueness, not a process-local lock: exact losers
+reload the same binding, contradictory losers fail closed. Immutable upstream
+rows plus final revalidation support this split; it is not an atomic snapshot
+of all stores nor root execution admission.
+
+`NO_CROSS_STORE_ATOMICITY_CLAIMED`.
+`NO_CROSS_STORE_ROLLBACK`.
+`NO_SILENT_REPAIR`.
+`NO_INSERT_OR_REPLACE`.
+Post-commit upstream reload failure means `RETURN_SUCCESS = NO`, not deletion
+or rewrite of the committed row; exact retry requires all upstream reloads.
+
+### Clock model and deferred Phase114 boundary
+
+NO NEW CLOCK SAMPLE. No existing binding ancestry contract requires a new
+Phase113 timestamp. Static readiness qualification uses stored upstream times;
+Phase112's availability receipt remains the only prestaging availability time.
+Do not require Phase112 availability <= cutoff or invent binding-issued time.
+Phase113 need not decide whether a root could start now or in a past session.
+`PHASE113_CLOCK_SAMPLES = 0`.
+Reference the exact availability receipt identity; only authoritative Phase112
+reload supplies `availability_receipt.available_at`, not a copied binding time.
+
+Approved correction 5:
+`PHASE113_BINDING != COMPLETE_PRODUCTION_ROOT_SCOPE_AUTHORITY`.
+`PREDICTION_CUTOFF_VALUE != PREDICTION_CUTOFF_PLAN_AUTHORITY`.
+Phase113 verifies only Phase112's NAR/source/external race/internal race/cutoff
+projection. Diagnostic Phase108 scope also includes target-set content SHA,
+cutoff-plan SHA, canonical cutoff-plan JSON, cutoff-policy ancestry and dataset
+identity; Phase112 does not supply that complete authority. Do not copy, invent
+or infer it in Phase113. A separately reviewed successor must exact-bind accepted
+target-set/cutoff-plan/dataset authorities before production root construction.
+Phase113 closes runtime claim <-> Phase112 mapping authority only.
+
+Future separately reviewed Phase114 must own: exact Phase113 and upstream
+reload immediately before root start; current locked process capability for
+the same claim; one binding -> at most one production root; consumption/replay
+protection; saved rows never recreate permission; strict
+`availability_receipt.available_at < root.started_at` on an accepted clock/order
+basis; accepted half-open session admission at root.started_at; durable root
+publication and exact reload BEFORE all causal provider work. No request before
+that boundary. Recording these invariants is not a Phase114 implementation
+design or authorization. Complete production root-scope authority, target-set/
+cutoff-plan/dataset binding, production root identity, campaign-lock ownership
+and current-process capability validation also belong to that successor.
+Existing diagnostic Phase108 V1 remains untouched.
+
+Phase113 establishes binding only, NOT root execution permission, request-family
+authorization, provider work, historical snapshot/freeze/prediction/bets, entry
+status, market/prediction/betting eligibility, live campaign, Operational Delta,
+provider historical availability or prediction-source availability. Phase110
+identity-only denials remain intact; mapped/bound identity is not ACTIVE.
+
+`MAPPING_AUTHORITY != ENTRY_STATUS_AUTHORITY`.
+`MAPPING_AUTHORITY != MARKET_ELIGIBILITY`.
+`MAPPING_AUTHORITY != PREDICTION_SELECTION_AUTHORITY`.
+`MAPPING_AUTHORITY != LIVE_CAMPAIGN_AUTHORIZATION`.
+`MAPPING_AUTHORITY != OPERATIONAL_DELTA_AUTHORITY`.
+
+### Historical Allowed Files — the preceding APPROVE activity
+
+`docs/CURRENT_PHASE.md` and `docs/LATEST_CODEX_REPORT.md` only.
+
+### Allowed Files — executed approved 10-path scope
+
+1. `scripts/simulation/nar_pre_c_production_claim_binding.py` — new value.
+2. `scripts/simulation/nar_pre_c_production_claim_binding_issuance.py` — new controlled issuer.
+3. `scripts/simulation/nar_pre_c_production_claim_binding_archive_migration.py` — new standalone version-1 schema.
+4. `scripts/simulation/sqlite_nar_pre_c_production_claim_binding_archive.py` — new exact persistence/reload.
+5. `tests/test_nar_pre_c_production_claim_binding.py` — new value tests.
+6. `tests/test_nar_pre_c_production_claim_binding_issuance.py` — new authority tests.
+7. `tests/test_nar_pre_c_production_claim_binding_archive_migration.py` — new topology tests.
+8. `tests/test_sqlite_nar_pre_c_production_claim_binding_archive.py` — new transactional tests.
+9. `docs/CURRENT_PHASE.md`.
+10. `docs/LATEST_CODEX_REPORT.md`.
+
+Audit finds these additive paths sufficient; no existing API modification is
+required. `PHASE113_ALLOWED_FILES = 10_PATH_SCOPE`: exact set above, no 11th path.
+Historical approval was documentation-only. The subsequent explicit
+EXECUTE_APPROVED_PHASE authorized these exact ten paths; implementation is now
+uncommitted, independently reviewed and approved for a local commit without
+expanding that scope. The implementation/test bytes remain unchanged.
+
+### Forbidden Files
+
+Every other repository path, particularly runtime/session/attempt/lock modules,
+all Phase108 V1/harness/archive/bootstrap/reconciliation, Phase109/V019,
+Phase110/V018, Phase111, V010/snapshot, migration runner, database, prediction,
+betting, live-campaign and all existing tests. Related tests are run-only.
+`C:\Users\garim\Desktop\KeibaAI`, production DBs, logs and external review
+bundles are forbidden. The preceding APPROVE activity did not edit implementation.
+
+### Required Tests — approved implementation contract
+
+1. Exact archived claim/session mandatory; caller claim/value/mapping is not authority.
+2. Missing/corrupt runtime binding, activation, bundle/profile or mismatched claim fails.
+3. Exact readiness mandatory; wrong claim/session/binding/configuration fails;
+   before and equality at session start both PASS, after start FAIL CLOSED
+   without a clock sample; persisted late claim/readiness presence alone rejects.
+4. Exact Phase112 complete pair mandatory; orphan manifest/availability alone rejects.
+5. Corrupt Phase112 or V018/V019/V010/Phase109, wrong availability/receipt ancestry rejects.
+6. Target/cutoff/NAR/source equality and full upstream-derived scalar agreement.
+7. Canonical deterministic JSON/content ID; malformed identities/types/naive cutoff,
+   extra fields/noncanonical JSON and stored projection/identity mismatch reject.
+8. Exact repeated pair + claim returns original identity; all upstream reloads repeat.
+9. Same manifest/availability with different claim rejects; contradictory external
+   and internal target/cutoff conflicts reject independently (forward/reverse).
+   Different-claim rejection is permanent even when the first binding has no
+   root and the first process/capability is gone; delete/rewrite/rebind cannot rescue it.
+10. Same real claim accepts two distinct, independently valid Phase112 targets;
+    the SAME claim/session/runtime binding/readiness identities across both
+    rows are accepted. Prove each of these four identities is NOT globally
+    unique; no root or target scheduling implied.
+11. Empty absent, exact active and partial/corrupt schema; exact registry/objects,
+    missing/extra objects and legal sqliteXunreviewed presence -> integrity failure.
+12. Immutable registry/binding UPDATE/DELETE rejected with foreign_keys OFF.
+13. Caller transactions/uncommitted upstream rejected; missing schema not repaired.
+14. Genuine post-write rollback: allow binding INSERT, observe completed write,
+    deny COMMIT; zero bindings and no open transaction, upstream unchanged.
+15. Two independent file-backed publishers: exact race yields one binding and
+    exact winner reload; contradictory claim race yields one winner + conflict.
+16. Post-commit binding reload AND upstream reread failures never return success;
+    durable row remains immutable and retry requires complete validation.
+17. Operational SQLite/lock errors propagate; no broad error-to-absence conversion.
+18. No clock argument/sample, caller time, available_at/started_at or root capability.
+    Also no issued_at/bound_at/time copy, no capability reconstruction/consumption,
+    root/root start/provider request/attempt creation, or complete root-scope claims.
+19. Zero provider transport/refetch/parser/Phase111 direct archive load.
+20. Zero main/runtime/Phase112 DB mutation, new race/horse IDs or denial clearing.
+21. Zero status/market/prediction/live/Operational Delta promotion or fixed DB path.
+22. Phase108 V1 remains diagnostic-only, untouched, including sealed-child regression.
+
+Executed focused command: `python -m pytest -q --tb=short` followed by the four
+new test modules listed above. Executed focused + related command adds all:
+
+```text
+tests/test_nar_pre_c_production_prestaged_manifest.py
+tests/test_nar_pre_c_production_prestaged_manifest_issuance.py
+tests/test_nar_pre_c_production_prestaged_manifest_archive_migration.py
+tests/test_sqlite_nar_pre_c_production_prestaged_manifest_archive.py
+tests/test_nar_operational_timing_runtime_execution_archive.py
+tests/test_nar_operational_timing_campaign_runner.py
+tests/test_nar_operational_timing_observability_v2.py
+tests/test_nar_operational_timing_session_activation_v2.py
+tests/test_nar_operational_timing_v2_authority_archive_migration.py
+tests/test_sqlite_nar_operational_timing_v2_authority_archive.py
+tests/test_nar_operational_timing_attempt_archive_migration.py
+tests/test_nar_operational_timing_passive_wrapper.py
+tests/test_nar_pre_c_operational_envelope.py
+tests/test_nar_pre_c_operational_envelope_sealed_child.py
+```
+
+Then full `python -m pytest -q --tb=short` was executed. Existing
+`test_real_sealed_child_rehearses_production_capture_and_normalization_without_network`
+requires the sealed-smoke env commit equal HEAD. At this unchanged approved
+preparation base the required value is
+`KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=9c1bd2b643826bd62551a326c61884a161672f8e`;
+this follows the committed test, not a new source identity. Phase108's separately
+approved reviewed-commit env gate remains unchanged; do not relabel precommit
+mechanics as final sealed-source verification or invent that approval.
+Static audit all four new modules for transport/parser/Phase111/fixed path/main
+write/ID issuance/clock/caller mapping/status/root/live/replace/repair. Final
+diff check, exact dirty-scope and empty-index audits; no stage/commit/push.
+No pytest or SQLite experiment was run during the historical architecture-only
+activity. The subsequent authorized implementation verification is recorded above.
+
+### Stop Condition and review disposition
+
+Stop for ChatGPT if cardinality cannot be proven or one-race contracts conflict;
+binding needs execution consumption atomically; any predecessor exact topology,
+API or semantics must change; any path outside the approved 10 needs edits;
+new ambiguous timestamp, cross-DB atomicity, fixed path, provider/parser/Phase111
+reload, ID issuance, status/eligibility/prediction/Operational Delta/root/live
+authority becomes necessary; tests fail out of scope; or unexpected dirty paths
+appear. No migration implementation or additional authority may be guessed.
+
+No concrete repository blocker found for this additive binding-only contract.
+Historical preparation stopped for `CHATGPT_REVIEW_PHASE113_DESIGN`. ChatGPT
+returned PASS_WITH_REQUIRED_CONTRACT_CORRECTIONS; all six corrections were
+recorded and the design approved. At that historical approval point implementation
+had not been executed; the current execution/review disposition supersedes it.
+Historical EXECUTE disposition: no implementation review PASS, commit approval
+or Phase113 formal completion had then been supplied. Independent implementation
+PASS and local commit approval are now recorded above; formal completion is not.
+APPROVE final checks: git diff --check PASS; only the two documentation files
+dirty; index EMPTY; HEAD/tree/branch unchanged. Provider HTTP = 0; production DB
+access = 0; live campaign = 0; KeibaAI changes = 0; stage = 0; commit = 0; push = 0.
+Historical next step was approval verification and separate EXECUTE_APPROVED_PHASE.
+That execution authorization was supplied and executed. Its historical next step
+was independent ChatGPT implementation review, without stage/commit/push.
+ChatGPT has since passed that review and authorized the exact local commit only.
+After local commit and structural evidence collection, stop for independent
+ChatGPT post-commit verification; push remains unauthorized.
+
+---
+
+## Historical Record — Phase112 finalization before final remote acceptance
+
 ## POST_V0_8_DAILY_REPLAY_112
 
 Title: NAR Production PRE_C Prestaged Mapping Manifest Authority
