@@ -1,5 +1,93 @@
 # Latest Codex Report
 
+## Phase113 formal closure remotely verified — formal completion recorded
+
+Phase: `POST_V0_8_DAILY_REPLAY_113`.
+
+Status: `WAITING_FOR_PHASE_INSTRUCTION`.
+
+Formal Status: `FORMALLY_COMPLETE`.
+
+State: `FORMALLY_COMPLETE`.
+
+Outcome: `PHASE113_NAR_PRODUCTION_PRE_C_CLAIM_BOUND_PRESTAGING_AUTHORITY_FORMALLY_INTEGRATED`.
+
+Implementation: `REMOTELY_VERIFIED`.
+
+`CHATGPT_REVIEW_PHASE113_IMPLEMENTATION = PASS`.
+`PHASE113_IMPLEMENTATION_REVIEW_PASS`.
+`PHASE113_COMMIT_APPROVED`.
+`PHASE113_POST_COMMIT_VERIFICATION_PASS`.
+`PHASE113_REMOTE_IMPLEMENTATION_VERIFICATION_PASS`.
+`PHASE113_IMPLEMENTATION_REMOTE_ACCEPTED`.
+`PHASE113_FORMAL_CLOSURE_APPROVED`.
+`PHASE113_CLOSURE_COMMIT_VERIFICATION_PASS`.
+`PHASE113_FORMAL_CLOSURE_REMOTE_VERIFICATION_PASS`.
+`PHASE113_CLOSURE_REMOTE_VERIFIED`.
+`PHASE113_FORMAL_COMPLETION_APPROVED`.
+`POST_V0_8_DAILY_REPLAY_113 = FORMALLY_COMPLETE`.
+
+### Exact accepted implementation and closure chain
+
+Implementation Commit: `3fb0d719d2688cd9cb42d7b854b4bee40dc2cc75`.
+Implementation Tree: `245692d709482926e58977af0d13975f812bb870`.
+Implementation Parent: `9c1bd2b643826bd62551a326c61884a161672f8e`.
+Implementation Subject: `feat: add NAR PRE_C claim-bound prestaging authority`.
+Closure Commit: `39bca435a374d32a93b474baa08f50b93bb754d8`.
+Closure Tree: `3f0ca61f561c729aa91ec188b6095dd5c1790fd1`.
+Closure Parent: `3fb0d719d2688cd9cb42d7b854b4bee40dc2cc75`.
+Closure Subject: `docs: record Phase113 formal closure`.
+
+Both commits were pushed normally without force. ChatGPT independently accepted
+the implementation on GitHub, then independently verified the docs-only closure
+commit locally and remotely and granted formal completion approval. These
+independent dispositions are supplied by ChatGPT, not inferred from local refs.
+
+Finalization preflight verified exact closure HEAD/tree/branch, CLEAN working tree
+and EMPTY index. Fetch confirmed origin at that same closure commit and relation
+0 / 0. Only CURRENT_PHASE.md and LATEST_CODEX_REPORT.md may change. All historical
+preparation, approval, implementation, review, tests and closure evidence below
+is preserved; its earlier pending wording is not the current disposition.
+
+### Accepted verification — no test rerun for docs-only finalization
+
+- Focused: **100 passed**.
+- Focused + related: **231 passed / 2 skipped**.
+- Full: **4998 passed / 4 skipped / 2846 subtests passed**.
+- Static production audit: **PASS**.
+- Accepted full-suite environment:
+  `KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=9c1bd2b643826bd62551a326c61884a161672f8e`.
+
+Tests were not rerun for this docs-only finalization. No production/test bytes
+changed from the accepted implementation; this is documentation bookkeeping only.
+
+### Authority boundary and final documentation verification still pending
+
+Phase113 creates durable claim <-> Phase112 prestaging binding only. It DOES NOT
+grant current-process execution capability, campaign-lock ownership, complete
+production root scope, target-set/cutoff-plan/dataset authority, root consumption/
+replay authority, root.started_at, provider-work permission, prediction/betting/
+live authority or Operational Delta authority. These remain Phase114-or-successor
+responsibilities under separately reviewed authorization.
+
+Create exactly one normal local commit, `docs: finalize Phase113 formal completion`,
+with the accepted closure commit as parent and only the two approved documents.
+Require exact two-doc scope, zero production/test diff, one parent, diff-check PASS,
+CLEAN tree, EMPTY index, origin still at the closure commit and local ahead 1 /
+behind 0. Generate the external final-documentation commit verification bundle
+from that committed snapshot. Do not amend or push; stop for independent ChatGPT
+final-documentation commit verification before push.
+
+The final documentation commit's own independent remote verification remains
+NOT YET GRANTED and is not claimed by this report. Next:
+`WAITING_FOR_PHASE_INSTRUCTION`. Provider HTTP = 0; production DB access = 0;
+KeibaAI changes = 0; production/test changes = 0; push = 0; force push = 0 during
+this activity. No subsequent-phase implementation is authorized.
+
+---
+
+## Historical report — Phase113 local closure approval before remote closure verification
+
 ## Phase113 remote implementation accepted — local formal closure commit approved
 
 Phase: `POST_V0_8_DAILY_REPLAY_113`.

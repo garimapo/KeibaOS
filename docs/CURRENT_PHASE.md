@@ -4,11 +4,13 @@
 
 Title: NAR Production PRE_C Claim-Bound Prestaged Authority Binding
 
-Status: `APPROVED_FOR_COMMIT`
+Status: `WAITING_FOR_PHASE_INSTRUCTION`
 
-State: `FORMAL_CLOSURE_APPROVED`
+Formal Status: `FORMALLY_COMPLETE`
 
-Outcome: `READY_FOR_FORMAL_CLOSURE_COMMIT`
+State: `FORMALLY_COMPLETE`
+
+Outcome: `PHASE113_NAR_PRODUCTION_PRE_C_CLAIM_BOUND_PRESTAGING_AUTHORITY_FORMALLY_INTEGRATED`
 
 Implementation: `REMOTELY_VERIFIED`
 
@@ -28,11 +30,65 @@ The six required contract corrections below have been applied.
 were supplied by ChatGPT for this execution. The approved binding-only contract
 has been implemented and verified. ChatGPT independently passed implementation
 review, post-commit verification and GitHub remote implementation verification.
-The implementation is remotely accepted and this docs-only local formal closure
-commit is approved. Closure-commit verification, its push and remote verification,
-and Phase113 formal completion remain pending.
+The implementation and docs-only formal closure commit are independently
+verified and remotely accepted. ChatGPT approved recording Phase113 formal
+completion. The final documentation commit's own push and independent remote
+verification remain pending; that later verification is not claimed here.
 
-### Remote implementation accepted — current formal closure disposition
+### Formal closure remotely verified — current formal completion disposition
+
+`CHATGPT_REVIEW_PHASE113_IMPLEMENTATION = PASS`.
+`PHASE113_IMPLEMENTATION_REVIEW_PASS`.
+`PHASE113_COMMIT_APPROVED`.
+`PHASE113_POST_COMMIT_VERIFICATION_PASS`.
+`PHASE113_REMOTE_IMPLEMENTATION_VERIFICATION_PASS`.
+`PHASE113_IMPLEMENTATION_REMOTE_ACCEPTED`.
+`PHASE113_FORMAL_CLOSURE_APPROVED`.
+`PHASE113_CLOSURE_COMMIT_VERIFICATION_PASS`.
+`PHASE113_FORMAL_CLOSURE_REMOTE_VERIFICATION_PASS`.
+`PHASE113_CLOSURE_REMOTE_VERIFIED`.
+`PHASE113_FORMAL_COMPLETION_APPROVED`.
+`POST_V0_8_DAILY_REPLAY_113 = FORMALLY_COMPLETE`.
+
+Implementation Commit: `3fb0d719d2688cd9cb42d7b854b4bee40dc2cc75`.
+Implementation Tree: `245692d709482926e58977af0d13975f812bb870`.
+Implementation Parent: `9c1bd2b643826bd62551a326c61884a161672f8e`.
+Implementation Subject: `feat: add NAR PRE_C claim-bound prestaging authority`.
+Closure Commit: `39bca435a374d32a93b474baa08f50b93bb754d8`.
+Closure Tree: `3f0ca61f561c729aa91ec188b6095dd5c1790fd1`.
+Closure Parent: `3fb0d719d2688cd9cb42d7b854b4bee40dc2cc75`.
+Closure Subject: `docs: record Phase113 formal closure`.
+
+The implementation and closure commits were pushed normally without force.
+ChatGPT independently granted implementation acceptance, closure-commit
+verification, formal closure remote verification and formal completion approval.
+Those dispositions are supplied by ChatGPT, not inferred from local Git refs.
+This finalization preflight verified exact local closure HEAD/tree/branch, CLEAN
+working tree and EMPTY index, fetched origin at the exact closure commit and
+required local/remote relation 0 / 0. Earlier pending records below are historical
+and are superseded only as current disposition; their audit evidence is retained.
+
+Accepted verification: focused **100 passed**; focused + related **231 passed /
+2 skipped**; full **4998 passed / 4 skipped / 2846 subtests passed**; static
+production audit **PASS**. Tests were not rerun for this docs-only finalization.
+Production/test content is unchanged from the accepted implementation.
+
+Phase113 creates durable claim <-> Phase112 prestaging binding only. It DOES NOT
+grant current-process execution capability, campaign-lock ownership, complete
+production root scope, target-set/cutoff-plan/dataset authority, root consumption/
+replay authority, root.started_at, provider-work permission, prediction/betting/
+live authority or Operational Delta authority. These remain Phase114-or-successor
+responsibilities under separate review; formal completion grants none of them.
+
+Create only one local final docs commit, `docs: finalize Phase113 formal completion`,
+with the accepted closure commit as parent. Its push is NOT authorized here and
+its own independent final documentation remote verification is NOT YET GRANTED.
+Stop for ChatGPT final-documentation commit verification before any push.
+Next: `WAITING_FOR_PHASE_INSTRUCTION`.
+Provider HTTP = 0; production DB access = 0; KeibaAI changes = 0;
+production/test changes = 0; push = 0; force push = 0 during this finalization.
+
+### Historical remote implementation acceptance — before closure remote verification
 
 `CHATGPT_REVIEW_PHASE113_IMPLEMENTATION = PASS`.
 `PHASE113_IMPLEMENTATION_REVIEW_PASS`.
