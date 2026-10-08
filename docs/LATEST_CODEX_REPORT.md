@@ -1,12 +1,13 @@
 # Latest Codex Report
 
-## Phase114 remote implementation accepted — local formal closure approved
+## Phase114 formal completion approved — final documentation recorded locally
 
 Phase: `POST_V0_8_DAILY_REPLAY_114`
 Title: NAR Production PRE_C Root-Scope Admission Authority
-Status: `APPROVED_FOR_COMMIT`
-State: `FORMAL_CLOSURE_APPROVED`
-Outcome: `READY_FOR_FORMAL_CLOSURE_COMMIT`
+Status: `WAITING_FOR_PHASE_INSTRUCTION`
+Formal Status: `FORMALLY_COMPLETE`
+State: `FORMALLY_COMPLETE`
+Outcome: `PHASE114_NAR_PRODUCTION_PRE_C_ROOT_SCOPE_ADMISSION_AUTHORITY_FORMALLY_COMPLETE`
 Implementation: `REMOTELY_VERIFIED`
 
 Base HEAD: `860724f2a27c166effeb53c9efae4b47dc245382`
@@ -14,10 +15,12 @@ Base Tree: `316ce13a1292b8eca660b2744199ef9abc885c71`
 Branch: `feature/post-v0.8-daily-replay`
 Historical EXECUTE preflight: origin matched base, relation 0 0, initial dirty state
 two approved docs, index EMPTY. No reset/restore/stash/discard of approved docs.
-Current closure preflight: HEAD/tree/origin equal the accepted implementation below,
+Historical closure preflight: HEAD/tree/origin equal the accepted implementation below,
+relation 0 0, working tree CLEAN, index EMPTY.
+Current final-completion preflight: HEAD/tree/origin equal the accepted closure below,
 relation 0 0, working tree CLEAN, index EMPTY.
 
-### Granted remote implementation acceptance / local closure authorization
+### Granted closure remote acceptance / formal completion
 
 `PHASE114_DESIGN_APPROVAL_VERIFICATION_PASS`
 `PHASE114_EXECUTION_APPROVED`
@@ -30,15 +33,22 @@ relation 0 0, working tree CLEAN, index EMPTY.
 `PHASE114_REMOTE_IMPLEMENTATION_VERIFICATION_PASS`
 `PHASE114_IMPLEMENTATION_REMOTE_ACCEPTED`
 `PHASE114_FORMAL_CLOSURE_APPROVED`
+`PHASE114_CLOSURE_COMMIT_VERIFICATION_PASS`
+`PHASE114_CLOSURE_REMOTE_VERIFICATION_PASS`
+`PHASE114_CLOSURE_REMOTE_ACCEPTED`
+`PHASE114_FORMAL_COMPLETION_APPROVED`
+`POST_V0_8_DAILY_REPLAY_114 = FORMALLY_COMPLETE`
 
 ChatGPT independently accepted the implementation review, post-commit verification
 and remote implementation. The ONE normal implementation push is COMPLETE and must
-not be repeated. Only CURRENT_PHASE and LATEST_CODEX_REPORT change in this closure
-activity. Production/test bytes remain unchanged. Tests were NOT rerun for this
-docs-only closure activity. Only one local two-document closure commit is authorized.
-Closure-commit verification, closure remote verification, formal completion and
-final documentation remote verification remain pending. Push is NOT authorized.
-Phase114 is NOT yet formally complete. Phase115 is NOT started.
+not be repeated. ChatGPT also independently verified the pushed formal closure and
+approved Phase114 formal completion. Only CURRENT_PHASE and LATEST_CODEX_REPORT
+change in this final documentation activity. Production/test bytes remain unchanged.
+Tests were NOT rerun during closure or push, nor for docs-only completion bookkeeping.
+Only one local two-document final documentation commit is authorized; no push.
+That new commit's own independent local verification and remote verification remain
+pending. Formal completion is approved; it is distinct from final-docs verification.
+No successor phase is authorized.
 Historical implementation evidence, APPROVE and both PREPARE audits remain,
 including the valid original root/start STOP and rescoping findings.
 The complete frozen contract and 28-row Required Tests are preserved in CURRENT_PHASE.
@@ -50,6 +60,31 @@ Commit: 5d38ffcea0d031134a3e98c7f95ead98e9a2394d
 Tree: b4c8dc9530dd67caf1da950fac9cd40262736aa0
 Parent: 860724f2a27c166effeb53c9efae4b47dc245382
 Subject: feat: add NAR PRE_C root-scope admission authority
+```
+
+Accepted remote formal closure identity:
+
+```text
+Commit: 04975f4eb157883438d0e66be5686daf79648b94
+Tree: 9fee07b276fe867122a752edcc04d5de6a74aa3d
+Parent: 5d38ffcea0d031134a3e98c7f95ead98e9a2394d
+Subject: docs: record Phase114 formal closure
+```
+
+Independent GitHub verification supplied by ChatGPT:
+
+```text
+Branch HEAD: 04975f4eb157883438d0e66be5686daf79648b94
+Tree: 9fee07b276fe867122a752edcc04d5de6a74aa3d
+Parent count: 1
+Parent: 5d38ffcea0d031134a3e98c7f95ead98e9a2394d
+Changed paths: 2 EXACT
+Paths: docs/CURRENT_PHASE.md; docs/LATEST_CODEX_REPORT.md
+Additions: 85
+Deletions: 41
+Production/test diff: EMPTY
+Normal closure push: 1
+Force push: 0
 ```
 
 Accepted implementation review bundle:
@@ -137,14 +172,28 @@ migration registry, Phase108/109/110/111/112/113/runtime topology or KeibaAI cha
 Historical implementation checkpoint: git diff --check PASS; index EMPTY;
 HEAD/tree/origin unchanged, relation 0 0.
 At the historical EXECUTE acceptance checkpoint: no stage, commit or push.
-Current activity authorizes only exact two-document staging and one local closure
-commit, followed by an external closure-commit verification bundle; no push.
+Current activity authorizes only exact two-document staging and one local final
+documentation commit, followed by its external verification bundle; no push.
 Current Allowed Files: docs/CURRENT_PHASE.md and docs/LATEST_CODEX_REPORT.md ONLY.
 
 Phase115 root/start/current-process execution remains deferred.
 Phase116-or-successor provider gating remains deferred.
 `PHASE114_ROOT_START_IMPLEMENTATION = DEFERRED_TO_PHASE115`
 `PHASE114_PROVIDER_GATE = DEFERRED_TO_PHASE116_OR_SEPARATELY_REVIEWED_SUCCESSOR`
+
+```text
+CUTOFF_POLICY_IDENTITY != PRE_OUTCOME_POLICY_AUTHORITY
+ROOT_SCOPE_ADMISSION != CURRENT_PROCESS_EXECUTION_CAPABILITY
+ROOT_SCOPE_ADMISSION != ROOT_START
+ROOT_SCOPE_ADMISSION != PROVIDER_WORK_PERMISSION
+PHASE115 = NOT_STARTED
+PHASE116 = NOT_STARTED
+NEXT_PHASE = WAITING_FOR_EXPLICIT_INSTRUCTION
+```
+
+Phase114 formal completion is NOT execution permission, provider authorization,
+prediction/betting/live authority, snapshot correctness/freeze completion or
+authorization to begin a successor phase.
 Phase108 stays DIAGNOSTIC_ONLY_NO_NETWORK. No snapshot validity/freeze is asserted.
 
 External bundle:
@@ -156,11 +205,12 @@ Digest, bytes and lines are reported externally.
 
 Provider HTTP = 0; production DB access = 0; KeibaAI changes = 0.
 Historical EXECUTE activity: stage = 0; commit = 0; push = 0.
-Current docs-only/local-closure activity: no production/test edits, no test
+Current docs-only/final-documentation activity: no production/test edits, no test
 rerun, no provider HTTP, no production DB access and no KeibaAI changes.
-push = 0; force push = 0 for this closure activity.
-STOP after local closure commit/bundle for independent ChatGPT closure-commit verification;
+push = 0; force push = 0 for this final documentation activity.
+STOP after local final documentation commit/bundle for independent ChatGPT commit verification;
 do not push, create a second commit or advance to Phase115/116.
+The new final documentation commit's own remote verification remains pending.
 
 ---
 

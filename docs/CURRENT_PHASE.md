@@ -4,11 +4,13 @@
 
 Title: NAR Production PRE_C Root-Scope Admission Authority
 
-Status: `APPROVED_FOR_COMMIT`
+Status: `WAITING_FOR_PHASE_INSTRUCTION`
 
-State: `FORMAL_CLOSURE_APPROVED`
+Formal Status: `FORMALLY_COMPLETE`
 
-Outcome: `READY_FOR_FORMAL_CLOSURE_COMMIT`
+State: `FORMALLY_COMPLETE`
+
+Outcome: `PHASE114_NAR_PRODUCTION_PRE_C_ROOT_SCOPE_ADMISSION_AUTHORITY_FORMALLY_COMPLETE`
 
 Implementation: `REMOTELY_VERIFIED`
 
@@ -18,7 +20,7 @@ Base Tree: `316ce13a1292b8eca660b2744199ef9abc885c71`
 
 Branch: `feature/post-v0.8-daily-replay`
 
-### Remote implementation acceptance / local formal closure authorization
+### Independently accepted formal completion / final documentation bookkeeping
 
 - `PHASE114_DESIGN_APPROVAL_VERIFICATION_PASS`
 - `PHASE114_EXECUTION_APPROVED`
@@ -31,14 +33,20 @@ Branch: `feature/post-v0.8-daily-replay`
 - `PHASE114_REMOTE_IMPLEMENTATION_VERIFICATION_PASS`
 - `PHASE114_IMPLEMENTATION_REMOTE_ACCEPTED`
 - `PHASE114_FORMAL_CLOSURE_APPROVED`
+- `PHASE114_CLOSURE_COMMIT_VERIFICATION_PASS`
+- `PHASE114_CLOSURE_REMOTE_VERIFICATION_PASS`
+- `PHASE114_CLOSURE_REMOTE_ACCEPTED`
+- `PHASE114_FORMAL_COMPLETION_APPROVED`
+- `POST_V0_8_DAILY_REPLAY_114 = FORMALLY_COMPLETE`
 
 ChatGPT independently accepted the implementation review, local post-commit
 verification and remote implementation. The implementation was pushed normally
 once; that push activity is COMPLETE and must not be repeated.
-This activity authorizes only a two-document local formal closure commit.
-Closure-commit verification, closure remote verification, Phase114 formal completion
-and final documentation remote verification remain pending. No push is authorized.
-Phase114 is NOT yet formally complete. Phase115 is NOT started.
+ChatGPT independently verified and accepted the pushed formal closure and approved
+Phase114 formal completion. This activity records that approval in exactly one
+local two-document final documentation commit. The final documentation commit's
+own independent local verification and remote verification remain pending.
+No push is authorized in this activity. No successor phase is authorized.
 The original implementation evidence, approved design contract and both PREPARE
 audits are preserved. Their earlier pending/future/no-code wording is historical,
 superseded only by the accepted dispositions recorded here.
@@ -54,12 +62,38 @@ Parent: 860724f2a27c166effeb53c9efae4b47dc245382
 Subject: feat: add NAR PRE_C root-scope admission authority
 ```
 
+Accepted remote formal closure identity:
+
+```text
+Commit: 04975f4eb157883438d0e66be5686daf79648b94
+Tree: 9fee07b276fe867122a752edcc04d5de6a74aa3d
+Parent: 5d38ffcea0d031134a3e98c7f95ead98e9a2394d
+Subject: docs: record Phase114 formal closure
+```
+
+Independent GitHub verification supplied by ChatGPT:
+
+```text
+Branch HEAD: 04975f4eb157883438d0e66be5686daf79648b94
+Tree: 9fee07b276fe867122a752edcc04d5de6a74aa3d
+Parent count: 1
+Parent: 5d38ffcea0d031134a3e98c7f95ead98e9a2394d
+Changed paths: 2 EXACT
+Paths: docs/CURRENT_PHASE.md; docs/LATEST_CODEX_REPORT.md
+Additions: 85
+Deletions: 41
+Production/test diff: EMPTY
+Normal closure push: 1
+Force push: 0
+```
+
 Accepted review bundle: `phase114_implementation_review_bundle.txt`.
 SHA-256: `55b940cfff20d7d212ccc4986654fe8c8a918ac384b6b7b0b4d89359b321545f`.
 Bytes: `388783`; lines: `7635`.
 All eight reviewed production/test files were verified from the committed blobs:
 **8 / 8 RAW_BYTE_MATCH**, with zero EOL-only or non-EOL differences.
-Tests were NOT rerun for this docs-only closure activity.
+Tests were NOT rerun during closure or push, nor for this docs-only completion
+bookkeeping. All reported test/static results are retained implementation evidence.
 Production/test bytes remain unchanged. Current Allowed Files are ONLY
 docs/CURRENT_PHASE.md and docs/LATEST_CODEX_REPORT.md; no implementation/test edits.
 
@@ -180,6 +214,8 @@ Static production audit: **PASS**.
 Historical implementation verification: git diff --check **PASS**; index **EMPTY**;
 dirty union **10 EXACT**. Closure preflight: accepted implementation HEAD/tree/origin
 matched, ahead/behind 0/0, working tree CLEAN and index EMPTY.
+Final-completion preflight: HEAD/tree/origin matched the accepted closure identity,
+ahead/behind 0/0, working tree CLEAN and index EMPTY.
 Full/related sealed environment:
 KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=860724f2a27c166effeb53c9efae4b47dc245382
 (the existing sealed-child test requires the supplied commit to equal actual HEAD).
@@ -195,8 +231,25 @@ No test rerun is needed solely for this final documentation report.
 
 ### Authority firewall / deferrals / safety
 
+```text
+CUTOFF_POLICY_IDENTITY != PRE_OUTCOME_POLICY_AUTHORITY
+ROOT_SCOPE_ADMISSION != CURRENT_PROCESS_EXECUTION_CAPABILITY
+ROOT_SCOPE_ADMISSION != ROOT_START
+ROOT_SCOPE_ADMISSION != PROVIDER_WORK_PERMISSION
+```
+
 `PHASE114_ROOT_START_IMPLEMENTATION = DEFERRED_TO_PHASE115`
 `PHASE114_PROVIDER_GATE = DEFERRED_TO_PHASE116_OR_SEPARATELY_REVIEWED_SUCCESSOR`
+
+```text
+PHASE115 = NOT_STARTED
+PHASE116 = NOT_STARTED
+NEXT_PHASE = WAITING_FOR_EXPLICIT_INSTRUCTION
+```
+
+Formal completion does NOT grant execution permission, provider authorization,
+prediction/betting/live authority, snapshot correctness/freeze completion or
+authorization to begin any successor phase.
 
 Root-scope admission is NOT process capability, campaign lock, root/start,
 provider-work permission, status/market/selection/prediction/betting/live authority,
@@ -209,15 +262,16 @@ Provider HTTP = 0; production DB access = 0; KeibaAI changes = 0.
 new internal race/horse IDs = 0; main/upstream mutation by Phase114 = 0.
 Historical EXECUTE activity: stage = 0; commit = 0; push = 0.
 Current authorization: explicitly stage the two named docs and create one normal
-local closure commit only; no push, amend, rebase or source/test edits.
+local final documentation commit only; no push, amend, rebase or source/test edits.
 
 Review bundle: C:\Users\garim\Desktop\phase114_implementation_review_bundle.txt
 Full sources/tests/docs diff, schema, field/identity/index/clock/load/failure evidence,
 retained test outputs, per-file SHA-256 and final Git invariants included.
 Bundle digest/bytes/lines are reported externally, not self-referenced.
 
-After the authorized local closure commit and external verification bundle, STOP
-for independent ChatGPT closure-commit verification. Do not push or advance phases.
+After the authorized local final documentation commit and external verification
+bundle, STOP for independent ChatGPT final-documentation commit verification.
+Final documentation remote verification remains pending. Do not push or advance phases.
 
 ---
 
