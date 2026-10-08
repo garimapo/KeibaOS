@@ -1,6 +1,562 @@
 # Latest Codex Report
 
-## Phase113 formal closure remotely verified — formal completion recorded
+## Phase114 independent implementation review PASS — local commit approved
+
+Phase: `POST_V0_8_DAILY_REPLAY_114`
+Title: NAR Production PRE_C Root-Scope Admission Authority
+Status: `APPROVED_FOR_COMMIT`
+State: `IMPLEMENTATION_REVIEW_PASSED`
+Implementation: `COMPLETE_REVIEWED_UNCOMMITTED`
+
+Base HEAD: `860724f2a27c166effeb53c9efae4b47dc245382`
+Base Tree: `316ce13a1292b8eca660b2744199ef9abc885c71`
+Branch: `feature/post-v0.8-daily-replay`
+Origin matched base; preflight relation 0 0; initial dirty state two approved docs;
+index EMPTY. No reset/restore/stash/discard of prior approved documentation.
+
+### Granted independent review / local commit authorization
+
+`PHASE114_DESIGN_APPROVAL_VERIFICATION_PASS`
+`PHASE114_EXECUTION_APPROVED`
+`PHASE114_ALLOWED_FILES = 10_PATH_SCOPE`
+
+`CHATGPT_REVIEW_PHASE114_IMPLEMENTATION = PASS`
+`PHASE114_IMPLEMENTATION_REVIEW_PASS`
+`PHASE114_COMMIT_APPROVED`
+
+ChatGPT independently accepted the exact implementation and explicitly authorized
+one ten-path local commit. Only CURRENT_PHASE and LATEST_CODEX_REPORT change for
+this review bookkeeping; all eight production/test bytes are frozen. Post-commit
+verification, remote verification/acceptance, formal closure and formal completion
+remain pending. Push is NOT authorized.
+Historical implementation evidence, APPROVE and both PREPARE audits remain,
+including the valid original root/start STOP and rescoping findings.
+The complete frozen contract and 28-row Required Tests are preserved in CURRENT_PHASE.
+
+Accepted implementation review bundle:
+`phase114_implementation_review_bundle.txt`
+SHA-256: `55b940cfff20d7d212ccc4986654fe8c8a918ac384b6b7b0b4d89359b321545f`
+Bytes: `388783`; lines: `7635`.
+Pre-edit reviewed production/test hashes: 8 / 8 exact match; recheck required before
+staging and from committed blobs. Tests were NOT rerun solely for these two
+documentation review-bookkeeping edits; the accepted results below bind to the
+unchanged independently reviewed bytes.
+
+### Actual architecture
+
+Exactly the four approved public persisted values; deterministic canonical identities,
+closed fields, full set/plan/namespace/date/cutoff equality; no fifth persisted semantic.
+One standalone injected version-one companion: registry + four tables, six unique
+indexes, ten immutable UPDATE/DELETE guards (including FK OFF), local FKs, exact
+topology/projection/parents. sqliteXunreviewed is visible via literal NOT GLOB filter.
+Absent/active/integrity failure separated; operational/lock errors propagate.
+
+Policy content is inert irreversible full-set/offset-policy/full-plan/provenance
+selection. Issuer uses existing pure policy/plan producer and exact archived original
+declaration/daily-source reconstruction. Original declaration issued_at and capture
+stored_at are lower-bound provenance, NOT approval times. After content COMMIT/exact
+reload/source proof, a controlled service-clock observation must be between all
+original-source floors and the FULL plan's earliest cutoff, inclusive. Expired orphan
+cannot be upgraded or replaced. No caller plan/set/mapping/internal-ID/timestamp input.
+
+Scope exclusively derives from exact approved policy + unchanged Phase113/112/109
+authority + target declaration/full-set publication proof. Dataset string is merely
+requested canonical future snapshot scope until immutably admitted; no global
+dataset uniqueness, provider-origin or snapshot correctness/freeze claim.
+Scope admitted_at follows policy approval and Phase112 availability, but may follow
+prediction cutoff. No root-order inference.
+
+Both publications use content Stage A BEGIN IMMEDIATE/collisions/insert-or-exact-reuse/
+precommit validation/COMMIT/exact reload, then a separate Stage B BEGIN IMMEDIATE/
+existing receipt BEFORE clock/first sample if absent/bounds/insert/COMMIT/exact local
+and upstream/source revalidation. Completed repeats preserve original timestamp and
+sample zero times. Orphans remain; contradictions permanently fail. Postcommit failure
+retains durable rows but never returns qualified success. No cross-store atomicity
+or rollback. All required injected connections must be idle for authoritative reads.
+
+Ordinary authoritative load_admission needs only exact receipt/expected Phase113 ID
+and existing Phase113/runtime/Phase112/Phase109 readers, not Phase111/daily archives
+or parsing. Publication deep-source proof is distinct from this accepted boundary.
+
+### Actual tests
+
+Focused four new modules: **134 passed**.
+Focused + related four new / 36 unchanged existing modules:
+**598 passed / 2 skipped / 75 subtests passed**.
+Full: **5132 passed / 4 skipped / 2846 subtests passed**.
+Sealed environment for full/related:
+KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=860724f2a27c166effeb53c9efae4b47dc245382
+Existing sealed-child test requires the supplied commit to match actual HEAD;
+no sealed baseline was invented or changed.
+
+Acceptance proofs include all four genuine observed INSERT-then-denied-COMMIT
+rollbacks (actual row visible before denial), upstream fingerprints unchanged,
+postcommit local/upstream/source failure retention and recovery, independent
+two-connection exact/conflicting policy/scope races, zero-clock completed repeats,
+orphan semantics, full-set cutoff equality/late rejection, ordinary no-source-reopen
+handoff, canonical JSON/identity rejection, FK OFF immutability and exact topology.
+
+One REAL claim with two REAL valid Phase113 member bindings admits two scopes sharing
+the exact approved complete plan and dataset, without global claim/runtime/readiness
+cardinality. Missing/forged/active source parents and API caller authority rejected.
+The initial development fixture scope clock was corrected to follow existing Phase112
+availability; production floors were not weakened. Final results above are actual
+acceptance runs, not assumed earlier counts. No rerun for this docs-only final report.
+
+### Static audit / Git / scope
+
+Static production audit: **PASS**. No provider HTTP/refetch/Deba parsing, fixed DB
+connection/path, main/upstream writes, internal ID issuance, runner/lock/capability/
+root/start/provider execution, status/market/selection/betting/live/Operational Delta
+authority, replacement insert or destructive repair. Archive-backed daily source
+normalization is permitted only for controlled publication, not ordinary load.
+Clock sampling is controlled issuer composition, not a cryptographic malicious-clock
+or arbitrary-SQL defense. No historical production target was upgraded by test times.
+
+Exact dirty union: four new production + four new tests + two existing docs.
+All ten paths are the current approved Allowed Files; no existing production/test,
+migration registry, Phase108/109/110/111/112/113/runtime topology or KeibaAI changed.
+git diff --check PASS; index EMPTY; HEAD/tree/origin unchanged, relation 0 0.
+At the historical EXECUTE acceptance checkpoint: no stage, commit or push.
+This activity authorizes only exact ten-path staging and one local commit, followed
+by an external post-commit verification bundle; no push.
+
+Phase115 root/start/current-process execution remains deferred.
+Phase116-or-successor provider gating remains deferred.
+Phase108 stays DIAGNOSTIC_ONLY_NO_NETWORK. No snapshot validity/freeze is asserted.
+
+External bundle:
+C:\Users\garim\Desktop\phase114_implementation_review_bundle.txt
+Includes complete source/tests/current records/full docs + untracked diffs, actual
+DDL/fields/identities/semantic keys/publication/reload/clock/rollback/concurrency index,
+retained final test outputs and commands, per-file hashes and final Git/safety proof.
+Digest, bytes and lines are reported externally.
+
+Provider HTTP = 0; production DB access = 0; KeibaAI changes = 0.
+Historical EXECUTE activity: stage = 0; commit = 0; push = 0.
+Current review-bookkeeping/local-commit activity: no production/test edits, no test
+rerun, no provider HTTP, no production DB access and no KeibaAI changes.
+STOP after local commit/bundle for independent ChatGPT post-commit verification;
+do not push, create a second commit or advance to Phase115/116.
+
+---
+
+
+## Historical Phase114 root-scope design APPROVE — docs-only contract freeze
+
+Phase: `POST_V0_8_DAILY_REPLAY_114`
+
+Title: NAR Production PRE_C Root-Scope Admission Authority
+
+Status: `APPROVED_FOR_CODEX`
+
+State: `IMPLEMENTATION_DESIGN_APPROVED`
+
+Implementation: `AUTHORIZED_ONLY_BY_FUTURE_EXPLICIT_EXECUTE_APPROVED_PHASE`
+
+Base HEAD: `860724f2a27c166effeb53c9efae4b47dc245382`
+Base Tree: `316ce13a1292b8eca660b2744199ef9abc885c71`
+Branch: `feature/post-v0.8-daily-replay`
+
+### Approved disposition / execution still withheld
+
+`CHATGPT_REVIEW_PHASE114_ROOT_SCOPE_PREPARE = PASS`
+`PHASE114_ARCHITECTURAL_REVIEW_PASS`
+`PHASE114_IMPLEMENTATION_DESIGN_APPROVED`
+`PHASE114_EXECUTION_APPROVAL = NOT_YET_GRANTED`
+
+`PHASE114_ROOT_START_IMPLEMENTATION = DEFERRED_TO_PHASE115`
+`PHASE114_PROVIDER_GATE = DEFERRED_TO_PHASE116_OR_SEPARATELY_REVIEWED_SUCCESSOR`
+
+This records ChatGPT's architectural approval, not Codex's self-review. No Phase114
+implementation exists or test has been run/passed. No implementation review PASS,
+commit approval, push/remote verification or Phase114 formal completion is claimed.
+Do not start Phase114 implementation or Phase115/116 until separately instructed.
+
+### Preflight and retained history
+
+Exact HEAD/tree/branch/origin matched; origin...HEAD raw relation 0 0; expected dirty
+docs/CURRENT_PHASE.md and docs/LATEST_CODEX_REPORT.md only; index EMPTY.
+No reset, restore, discard, stash, checkout, stage, commit or push.
+The first root/start PREPARE STOP and second root-scope PREPARE are preserved below
+as historical audits, including all original findings, matrices and pending wording.
+Their complete pre-existing document fingerprints are verified in the new bundle,
+restoring only the relabeled first heading for normalized-text comparison.
+
+### Frozen authority / publication contract
+
+Four public persisted semantics are approved and must not be renamed/split:
+
+- NARPreCProductionCutoffPolicyApprovalContentV1
+- NARPreCProductionCutoffPolicyApprovalV1
+- NARPreCProductionRootScopeAdmissionV1
+- NARPreCProductionRootScopeAdmissionAvailabilityReceiptV1
+
+All identities: canonical content-addressed versioned prefix + exactly 64 lowercase hex.
+No additional persisted authority semantic without review.
+
+Policy content: one irrevocable exact NAR/nar_official target-set/full-policy/plan
+selection, canonical complete set/provenance, anchor declaration, reviewed fixed-offset
+rule and complete derived plan. Content alone inert; even an orphan stays reserved.
+Controlled approval clock is sampled only after policy content COMMIT/exact reload/
+source verification. Require >= declaration issued_at and EVERY source stored_at,
+and <= earliest cutoff of the FULL plan; equality accepted. Historical set/expired
+orphan cannot be rescued by backdating/Git/mtime/fixtures/metadata/reapproval.
+
+Deep PUBLICATION source verification: exact committed idle Phase111 declaration and
+all named daily capture reloads; original declaration reconstruction equals persisted
+value; full daily population/date/scope/order/digest/schedule/disposition agreement.
+Archived daily-target normalization is allowed only for that controlled publication,
+not live acquisition or Deba refetch/parser work. Plan derived solely by existing
+fixed-offset producer; caller plan/target/mapping/internal-ID/timestamp authority rejected.
+Exact Phase113/accepted declaration cutoff must equal its unique plan decision.
+
+Dataset: canonical requested NFC namespace/intended FUTURE snapshot scope; raw string
+inert. Immutable admission does not attest snapshot existence/content/correctness/freeze
+or data authenticity. Dataset/scope need only precede FUTURE root, not prediction cutoff.
+No global dataset uniqueness or status/market/prediction/live authority.
+
+Scope content binds the approved Phase113/policy/declaration/target/date/plan/dataset
+fields exactly. Runtime/readiness/Phase112/109 populations are supplied by unchanged
+Phase113 authoritative reload, not duplicated. Availability receipt binds scope/policy/
+binding/admitted_at; require admitted_at >= approved_at and Phase112 availability.
+No root identity or generic authorization flags. Phase115 owns strict admitted_at <
+root.started_at and causal pre-root authoritative reload.
+
+Both POLICY and SCOPE: source preflight -> content BEGIN IMMEDIATE/collision checks/
+reuse-or-insert -> COMMIT/exact committed reload -> second BEGIN IMMEDIATE/existing
+receipt BEFORE clock -> first controlled sample if absent -> receipt insert/COMMIT ->
+exact local/upstream revalidation. Completed repeats sample ZERO times, preserve winner's
+original timestamp and still revalidate upstream. Failures before commit rollback locally;
+inert content persists after Stage A; postcommit reload failures keep immutable rows
+but return no qualified success; no cross-store atomicity/rollback or repair.
+
+One standalone injected version-1 companion, exact registry plus approved four tables,
+local unique/FK/projection topology, append-only UPDATE/DELETE guards even FK OFF,
+literal NOT GLOB 'sqlite_*', absent/active/corrupt distinction and unchanged operational
+error propagation. No fixed path, main migration or predecessor topology modification.
+Ordinary accepted-authority LOAD verifies local policy/scope/plan and Phase113/112/109;
+it does NOT reopen Phase111/daily archives. Future Phase115 consumes exact admission
+receipt ID + expected Phase113 binding, no caller reconstruction.
+
+### Exact approved future implementation paths
+
+1. scripts/simulation/nar_pre_c_production_root_scope_admission.py
+2. scripts/simulation/nar_pre_c_production_root_scope_admission_issuance.py
+3. scripts/simulation/nar_pre_c_production_root_scope_admission_archive_migration.py
+4. scripts/simulation/sqlite_nar_pre_c_production_root_scope_admission_archive.py
+5. tests/test_nar_pre_c_production_root_scope_admission.py
+6. tests/test_nar_pre_c_production_root_scope_admission_issuance.py
+7. tests/test_nar_pre_c_production_root_scope_admission_archive_migration.py
+8. tests/test_sqlite_nar_pre_c_production_root_scope_admission_archive.py
+9. docs/CURRENT_PHASE.md
+10. docs/LATEST_CODEX_REPORT.md
+
+TEN EXACT for later EXECUTE only; no 11th path. No candidate source/test file created.
+All existing upstream production/tests remain read-only; Phase108 diagnostic stays unchanged.
+One real claim may serve multiple distinct legitimate target bindings; no global
+claim/session/runtime/readiness/dataset/set-plan uniqueness. Same-binding/forward/
+reverse/target-set contradictory content is a permanent conflict including orphan rows.
+
+### Tests, static audit and verification
+
+CURRENT_PHASE freezes the entire original 28-row required-test matrix plus the
+explicit approved test proof classes, regression/full-suite requirement, static audit,
+Forbidden Files and Stop Condition. Genuine observed INSERT then denied COMMIT,
+postcommit failure retention, independent concurrency, zero-clock completed repeat
+and source/load trust-boundary proofs remain mandatory for future implementation.
+
+Tests: NOT RUN (docs-only APPROVE); no Phase114 test success is claimed.
+No source/parser/DB/provider routine was executed; no sealed-source environment changed.
+Final required checks are recorded as actual outputs in the external bundle:
+diff --check PASS; only two dirty docs; index EMPTY; scripts/tests diff empty;
+HEAD/tree/origin unchanged; raw relation 0 0. No production/test edits or new authority
+files, runner/lock/capability/root/start/provider permission were introduced.
+
+External approval bundle:
+C:\Users\garim\Desktop\phase114_design_approval_verification_bundle.txt.
+Includes full approved current section/report/docs diff, four semantics, all contracts,
+ten paths, complete tests/static checks, history preservation and final Git outputs.
+Final bundle identity is reported externally.
+
+Provider HTTP = 0
+production DB access = 0
+KeibaAI changes = 0
+production/test changes = 0
+stage = 0
+commit = 0
+push = 0
+
+Stop for independent approval-bundle verification BEFORE any explicit future EXECUTE.
+
+---
+
+## Historical Phase114 second PREPARE report — root-scope admission rescoping
+
+Phase: `POST_V0_8_DAILY_REPLAY_114`
+
+Title: NAR Production PRE_C Root-Scope Admission Authority
+
+Status: `DRAFT_FOR_REVIEW`
+
+State: `ARCHITECTURAL_PREPARATION`
+
+Implementation: `NOT_AUTHORIZED`
+
+Base HEAD: `860724f2a27c166effeb53c9efae4b47dc245382`
+Base Tree: `316ce13a1292b8eca660b2744199ef9abc885c71`
+Branch: `feature/post-v0.8-daily-replay`
+
+### Disposition and preflight
+
+ChatGPT supplied:
+`CHATGPT_REVIEW_PHASE114_PREPARE = PASS_WITH_REQUIRED_RESCOPING`;
+`PHASE114_ROOT_SCOPE_PREREQUISITE_REQUIRED = CONFIRMED`;
+`PHASE114_ROOT_START_IMPLEMENTATION = DEFERRED_TO_PHASE115`;
+`PHASE114_EXECUTION_APPROVAL = NOT_GRANTED`.
+
+Verified HEAD/tree/branch/origin exactly; raw origin...HEAD count 0 0; only the two
+expected dirty PREPARE docs; index EMPTY. No reset/discard of existing audit work.
+The first root/start PREPARE body/report is preserved below with a historical heading.
+Its missing-authority STOP remains correct; Phase114 itself is now the prerequisite.
+No architectural PASS or implementation authorization has been granted by this revision.
+
+### Explicit conclusions for questions 1–10
+
+1. Policy needs a distinct controlled content/approval pair. Choose narrow exact
+   target-set/full-plan-specific approval, not generic global algorithm authorization.
+   Require truthful post-committed-selection observation <= EVERY complete plan cutoff
+   (equivalently the earliest cutoff). Equality qualifies. Present-day action cannot
+   approve old target cutoffs. No caller timestamp/Git/file/fixture laundering.
+   Exact set-member targets may share one approval; other sets/dates require independent
+   approval. Service clock is a trusted injected composition dependency, not the runner.
+
+2. Exact load_declaration plus named load_capture evidence reconstructs the full
+   NAR daily target-set/date/digest/canonical membership; scope publication also matches
+   the declaration named by exact accepted Phase109/113. No provider re-fetch, new Deba
+   parsing or acquisition. Pure existing archive-backed daily-target normalization is
+   needed for source reconstruction and is not mislabeled as zero HTML-normalization
+   at eventual publication. No such parser was executed during this PREPARE.
+
+3. Canonical complete plan is derived only by the existing pure producer from the
+   exact source-reconstructed set and exact approved fixed-offset rule. Caller policy
+   parameters are requested selection, not existing authority; target/plan JSON, mapping,
+   internal IDs and timestamps cannot be authoritative caller inputs. Phase113 target/
+   cutoff and accepted declaration cutoff must exactly match its unique plan decision.
+
+4. Dataset_id may be a requested canonical namespace/intended FUTURE snapshot scope,
+   made authority only by immutable controlled admission. It is not provider-derived,
+   snapshot content/freeze/existence/correctness. Scope need be admitted before future
+   root, not prediction cutoff; it cannot change the pre-outcome policy or grant status.
+
+5. Distinct scope content and admission availability receipt content-bind Phase113,
+   policy approval and target/declaration/set/plan/dataset projection. Phase113's exact
+   reload suffices for claim/session/Phase112/109 ancestry; do not duplicate populations.
+   No root/process capability or generic authorization flags.
+
+6. One binding -> one scope; forward/reverse target+cutoff uniqueness; one receipt
+   per content. No global claim/session/runtime/readiness/dataset uniqueness. A real
+   claim may admit multiple real distinct member bindings. Same-binding contradiction
+   is permanent, including an inert-content reservation.
+
+7. Both policy and scope have content Stage A commit/exact reload, THEN receipt Stage B
+   BEGIN IMMEDIATE/existing check/first controlled clock/insert/commit/final reread.
+   Completed repeat takes no extra clock sample and returns original timestamp.
+   Receipt failure leaves inert content; expired policy orphan cannot be rescued.
+   Postcommit failure returns no success without deleting committed immutable evidence.
+
+8. One injected standalone version-1 companion with registry plus four authority
+   tables is justified by the deliberately coupled, set-specific policy product.
+   Cross-date/general reusable policy is NOT part of this design; if required, STOP
+   for separate authority/storage review. Main/runtime/Phase108/112/113 topology untouched.
+   Exact schema/FK-off immutable guards/literal sqlite_ filtering and fail-closed states.
+
+9. A = policy pre-outcome observation; B = committed scope availability awaiting
+   future pre-root proof; C = future causal provider gate. They do not imply each other.
+   No dataset/admission <= cutoff rule, main issued_at <= cutoff rule, or root/provider
+   permission is invented. Phase115 must exact-load pair before start and prove strict
+   admitted_at < started_at on its reviewed clock/order basis.
+
+10. Phase115 receives exact Phase114 admission identity + expected Phase113 identity
+    and uses authoritative frozen reload. Ordinary admitted-scope load does not re-open
+    Phase111/daily archives; publication deep verification does. Runner lifetime/TOCTOU
+    is explicitly deferred to Phase115, NOT a blocker to the scope design.
+    Phase116 is only a separately reviewed provider-gating candidate, not started.
+
+### Proposed exact implementation set / required tests
+
+Bounded one-companion proposal: four new root_scope_admission production modules
+(values, issuance, standalone migration, SQLite archive), four correspondingly named
+focused tests and the two docs: TEN PROPOSED paths, fully enumerated in CURRENT_PHASE.
+No candidate files were created; current authorized modifications remain TWO DOCS ONLY.
+This is not PHASE114_ALLOWED_FILES implementation approval.
+
+CURRENT_PHASE contains all value fields/cardinality/storage/publication/time/crash/
+handoff decisions, authority matrix, 28-row focused test contract, run-only regression
+areas, static requirements and explicit stop conditions. No architecture choices are
+silently delegated to an implementation; independent ChatGPT review remains necessary.
+
+### Verification and safety
+
+Tests NOT RUN: architecture-only inspection resolved source, clock and namespace
+contracts. No SQLite DB/provider APIs/parser routines were executed. No existing source
+or test bytes were changed. No sealed-source baseline/environment was changed.
+
+Final Git verification is recorded in the external bundle: only CURRENT_PHASE and
+LATEST_CODEX_REPORT dirty; index EMPTY; scripts/tests diff empty; diff --check PASS;
+HEAD/tree/origin unchanged at the accepted base; raw relation 0 0.
+History preservation is verified against the initial normalized SHA of the complete
+pre-existing documents, restoring only the relabeled first heading for comparison.
+
+External bundle:
+C:\Users\garim\Desktop\phase114_root_scope_prepare_review_bundle.txt.
+Contains full revised draft/report/docs diff, source/test line evidence, policy temporal/
+dataset/cardinality/firewall analysis, ten proposed paths and test/stop matrices.
+Final bundle SHA/bytes/lines are reported externally.
+
+Provider HTTP = 0
+production DB access = 0
+KeibaAI changes = 0
+production/test changes = 0
+stage = 0
+commit = 0
+push = 0
+
+Stop for independent ChatGPT architectural review; do not implement Phase114/115/116.
+
+---
+
+## Historical Phase114 first PREPARE report — production root-scope prerequisite identified
+
+Phase: `POST_V0_8_DAILY_REPLAY_114`
+
+Title: NAR Production PRE_C Root Start and Execution Admission Authority
+
+Status: `DRAFT_FOR_REVIEW`
+
+State: `ARCHITECTURAL_PREPARATION`
+
+Implementation: `NOT_AUTHORIZED`
+
+Base HEAD: `860724f2a27c166effeb53c9efae4b47dc245382`
+Base Tree: `316ce13a1292b8eca660b2744199ef9abc885c71`
+Branch: `feature/post-v0.8-daily-replay`
+
+### Preflight and accepted predecessor
+
+Initial HEAD/tree/branch matched; working tree CLEAN; index EMPTY.
+Fetched origin/feature/post-v0.8-daily-replay at the same HEAD; raw left/right count
+`0 0`. Recent history contains final Phase113 docs, closure, implementation and
+accepted Phase112 docs/closure. No checkout/reset/repair was performed.
+
+ChatGPT supplied `PHASE113_FINAL_DOCUMENTATION_REMOTE_VERIFICATION_PASS` and
+`POST_V0_8_DAILY_REPLAY_113 = FORMALLY_COMPLETE`. This preparation uses that
+accepted upstream disposition; no extra Phase113 bookkeeping commit is created.
+Historical preceding reports below retain their original then-pending wording.
+
+### Result — mandatory stop condition met
+
+`PHASE114_ROOT_SCOPE_PREREQUISITE_REQUIRED`.
+
+Phase114 production implementation design is STOPPED for independent architectural
+review. Daily captures plus exact Phase111 declaration support real target-set
+reconstruction/membership, and Phase109/112/113 supply exact mapping/target/cutoff.
+They do not establish a combined prospectively admitted production root scope.
+
+The cutoff-policy module expressly separates deterministic policy identity from
+pre-outcome policy authority. The plan builder/parser validate content and coverage,
+not authorization provenance. Dataset ID is caller/run-context identity; snapshot
+and freeze receipts prove saved content/freeze observation, not pre-root dataset
+admission. Therefore policy provenance and dataset/root-scope admission remain
+required upstream authority, not fields to be copied from Phase108 fixtures.
+
+Proposed prerequisite for ChatGPT to scope/number: Production PRE_C Root-Scope
+Admission Authority, binding exact daily target evidence, qualified policy ancestry,
+canonical complete plan/digest and admitted dataset namespace/intended scope to the
+Phase113 target/cutoff, with provable availability before root. No production data
+inspection or provider request is necessary to identify this repository gap.
+
+### Explicit answers A–I
+
+A. Field-by-field authority matrix is in the current draft. Org/source/external and
+internal IDs/cutoff have accepted production authority; daily target provenance is
+reconstructable; plan/policy identity and dataset content are not root admission.
+Missing provenance/admission triggers STOP, not an invented authority.
+
+B. A distinct NARPreCProductionOperationalRootV1 could bind exact Phase113/upstream
+and scope-admission identities/scalars; no generic authorized/active booleans.
+Its schema cannot be frozen until the prerequisite exists.
+
+C. Conditional preference is distinct root content/start receipt published atomically
+in a new companion transaction, one binding/root/start. No inert restartable root.
+This is a review candidate, not an approved implementation choice.
+
+D. Runner UTC clock and half-open session admission are existing contracts. Require
+strict Phase112 availability < started_at plus causal pre-root exact reload.
+Clock-basis acceptance and lifetime serialization remain unresolved review items.
+No Phase109/112 issued_at <= prediction cutoff requirement is invented.
+
+E. Same runner object/current-process lock/active claim checks are exact source facts.
+Require prepublication and postcommit live checks, but repeated point checks alone
+do not close concurrent release/expiry TOCTOU. A reviewed owner-lifetime protocol is
+needed. No persistent rows may reconstruct a live context.
+
+F. Provider entrypoints and Phase105 guards are not a universal production-root gate.
+Recommend explicit prerequisite/root-start/provider-adapter split, with successor
+phase designation controlled by ChatGPT. Root-only success cannot claim all provider
+families gated or grant generic live work.
+
+G. Committed start is permanent consumed history. Exact repeats/concurrent losers
+may load history, not recreate execution. One claim may own multiple distinct target
+roots; no UNIQUE(claim_identity). Postcommit loss/crash never permits rebind/restart.
+
+H. Conditional separate injected version-1 production root companion, exact topology,
+immutable FK-OFF guards and absence/corruption distinction; no main/predecessor
+schema change or cross-store atomicity.
+
+I. Genuine postwrite/precommit failure must rollback locally; postcommit local/upstream/
+live-check failure must return no qualified success and retain consumed rows.
+Independent SQLite connections/unique keys, not process-local mutex, govern publication.
+
+### Scope, tests and verification
+
+Current exact allowed set: docs/CURRENT_PHASE.md and docs/LATEST_CODEX_REPORT.md.
+Future production/test implementation path set WITHHELD / NOT_AUTHORIZED because
+the critical prerequisite prevents a safely bounded frozen implementation proposal.
+All required test areas, conditional failure/timing/concurrency contracts, forbidden
+surfaces, static audit and deferred work are documented in CURRENT_PHASE.
+No production/test candidate files were created.
+
+Tests: NOT RUN. This is PREPARE only; the explicit authority disclaimer and
+test-source inspection establish the blocker and boundaries. No full-suite or
+sealed-source environment was changed or invented.
+
+Repository/static inspection only: no DB opened; no provider/network/parser/production
+entrypoint invoked; no main or upstream archive written; no new IDs; diagnostic
+Phase108 preserved; no status/market/selection/live/Operational Delta authority raised.
+Final expected checks: git diff --check PASS; scripts/tests diff empty; dirty paths
+exactly the two docs; index EMPTY; HEAD/tree/origin unchanged.
+
+External review bundle:
+C:\Users\garim\Desktop\phase114_prepare_review_bundle.txt.
+It contains full new draft/report and docs diff, source/test inventory and line-numbered
+evidence, required-test matrix, stop analysis and actual final Git outputs.
+Its finalized digest/bytes/lines are reported externally, not self-referenced.
+
+Provider HTTP = 0
+production DB access = 0
+KeibaAI changes = 0
+production/test changes = 0
+stage = 0
+commit = 0
+push = 0
+
+Stop for independent ChatGPT architectural review. No implementation authorization,
+commit approval or Phase114 formal completion is claimed.
+
+---
+
+## Historical predecessor report — Phase113 formal closure remotely verified — formal completion recorded
 
 Phase: `POST_V0_8_DAILY_REPLAY_113`.
 

@@ -1,6 +1,1976 @@
 # Current Phase
 
-## POST_V0_8_DAILY_REPLAY_113
+## POST_V0_8_DAILY_REPLAY_114
+
+Title: NAR Production PRE_C Root-Scope Admission Authority
+
+Status: `APPROVED_FOR_COMMIT`
+
+State: `IMPLEMENTATION_REVIEW_PASSED`
+
+Implementation: `COMPLETE_REVIEWED_UNCOMMITTED`
+
+Base Commit: `860724f2a27c166effeb53c9efae4b47dc245382`
+
+Base Tree: `316ce13a1292b8eca660b2744199ef9abc885c71`
+
+Branch: `feature/post-v0.8-daily-replay`
+
+### Independent implementation review / local commit authorization
+
+- `PHASE114_DESIGN_APPROVAL_VERIFICATION_PASS`
+- `PHASE114_EXECUTION_APPROVED`
+- `PHASE114_ALLOWED_FILES = 10_PATH_SCOPE`
+
+- `CHATGPT_REVIEW_PHASE114_IMPLEMENTATION = PASS`
+- `PHASE114_IMPLEMENTATION_REVIEW_PASS`
+- `PHASE114_COMMIT_APPROVED`
+
+ChatGPT independently accepted the implementation and explicitly authorized one
+exact ten-path local implementation commit. This docs-only review bookkeeping
+changes no reviewed production/test bytes. Post-commit verification, remote
+implementation verification/acceptance, formal closure and Phase114 formal
+completion remain pending; push is NOT authorized.
+The original implementation evidence, approved design contract and both PREPARE
+audits are preserved. Their earlier pending/future/no-code wording is historical,
+superseded only by this accepted review disposition.
+The complete frozen 28-row test matrix, Allowed/Forbidden Files and Stop Condition
+remain the approved implementation contract; none was weakened or redesigned.
+
+Accepted review bundle: `phase114_implementation_review_bundle.txt`.
+SHA-256: `55b940cfff20d7d212ccc4986654fe8c8a918ac384b6b7b0b4d89359b321545f`.
+Bytes: `388783`; lines: `7635`.
+All eight reviewed production/test working-tree SHA-256 values were independently
+checked before documentation edits and must be checked again before staging.
+Tests were NOT rerun solely for the two documentation review-bookkeeping edits.
+
+### Implemented authority / canonical values
+
+Exactly four public persisted semantic values:
+
+1. NARPreCProductionCutoffPolicyApprovalContentV1
+2. NARPreCProductionCutoffPolicyApprovalV1
+3. NARPreCProductionRootScopeAdmissionV1
+4. NARPreCProductionRootScopeAdmissionAvailabilityReceiptV1
+
+All use canonical deterministic JSON and versioned prefix + exactly 64 lowercase
+hex identity, strict field sets and exact canonical parse/reload. Values/content
+alone are inert; no public issuer accepts caller target-set/plan/mapping/internal
+IDs or timestamps. Requested offset and canonical NFC dataset namespace are
+selection inputs only, never raw origin authority.
+
+Policy content binds the exact complete daily set/provenance, original anchor
+declaration, existing fixed-offset policy and exclusively pure-derived full plan.
+Original declaration issued_at plus a complete sorted capture_id/stored_at
+projection are frozen lower-bound provenance, NOT reconstructed approval time.
+Approval is a controlled service-clock observation after content COMMIT/exact
+reload/source revalidation, >= original declaration issued_at and every source
+stored_at, <= earliest decision cutoff of the ENTIRE plan. Equality qualifies.
+A late/expired historical orphan stays inert; there is no backdating/rescue path.
+
+Scope content references the exact Phase113 binding, accepted policy approval,
+target declaration, target/date/provider/internal race/cutoff, full plan/set IDs
+and requested dataset scope. It does not duplicate upstream entry/claim/session
+populations. Scope availability carries admitted_at after committed scope reload,
+>= policy approval and Phase112 availability. It may be after prediction cutoff.
+Dataset admission is intended FUTURE snapshot namespace only: no snapshot existence,
+historical correctness, freeze completion or source-authentication assertion.
+
+### Publication and authoritative load
+
+NARPreCProductionRootScopeAdmissionIssuer is trusted injected composition.
+publish_policy / publish_scope each use separate content Stage A and receipt Stage B.
+
+Stage A: deep exact source/upstream preflight -> exclusively derive content ->
+companion BEGIN IMMEDIATE -> permanent semantic collisions -> reuse exact content
+or insert once -> exact schema/projection checks -> COMMIT -> exact committed reload.
+No clock is sampled before this reload.
+
+Stage B: a SECOND BEGIN IMMEDIATE -> existing receipt check BEFORE clock.
+Completed pair: zero clock samples, original receipt reused.
+Absent receipt: one controlled aware-UTC sample under write serialization ->
+temporal bounds -> insert once -> exact local schema/projection validation ->
+COMMIT -> exact local pair + required upstream/source reread -> return only then.
+
+Local precommit failures rollback. Stage A committed / Stage B failed leaves inert
+immutable content. Postcommit reload/reread failures return no qualified success
+but retain committed rows; exact retry validates again without resampling completed
+receipts. No cross-store atomicity/rollback, automatic cleanup or destructive repair.
+
+Publication _source exact-loads Phase111 declaration and all declaration-named
+daily captures, reconstructs ORIGINAL declaration fields, and rebuilds the FULL
+canonical daily target set using existing archived-source normalization only.
+Policy anchor and accepted Phase109 target declaration must match their unique
+complete-plan decision; scope target declaration reconstructs the same entire
+frozen policy set even when its member differs from the approval anchor.
+
+Ordinary load_policy / load_admission do not accept/reopen Phase111/daily archives
+or parse their HTML. They validate local canonical bytes/SQL projections/full
+policy/plan/parents and unchanged authoritative Phase113 -> Phase112 -> Phase109
+reload. Phase115 handoff: exact availability receipt ID + expected Phase113 binding.
+No caller reconstruction of target set, policy, plan or dataset scope.
+
+Clock/issuer/archive ownership is trusted composition, not a cryptographic defense
+against malicious replacement clocks or arbitrary Python/SQL. Synthetic prospective
+fixture times are tests only; no historical production target was upgraded.
+
+### Standalone companion / cardinality
+
+VERSION = 1; NAME = v001_nar_pre_c_production_root_scope_admission_companion.
+Five tables: registry, policy contents, policy approvals, scope contents, availability.
+Six explicit semantic unique indexes; ten UPDATE/DELETE immutability triggers,
+including registry, effective with foreign_keys OFF. Local FKs only.
+Exact SQL objects/columns/checks/indexes/FKs/projections/registry and local parent
+relationships are verified. Literal NOT GLOB 'sqlite_*'; sqliteXunreviewed is visible.
+NOT_INSTALLED / ACTIVE / INTEGRITY_FAILURE remain distinct; unexpected operational
+and lock errors propagate unchanged. No fixed path, main migration or upstream
+topology change.
+
+One full target set -> one irrevocable policy/plan/provenance reservation.
+One policy content -> one approval; one Phase113 binding -> one scope; one scope
+-> one availability. Forward/reverse target+cutoff conflicts permanently fail,
+including content-only orphans. No global claim/session/runtime/readiness/dataset/
+set-plan uniqueness. One real claim successfully admits two distinct valid targets.
+
+### Allowed Files — actual exact scope
+
+```text
+scripts/simulation/nar_pre_c_production_root_scope_admission.py
+scripts/simulation/nar_pre_c_production_root_scope_admission_issuance.py
+scripts/simulation/nar_pre_c_production_root_scope_admission_archive_migration.py
+scripts/simulation/sqlite_nar_pre_c_production_root_scope_admission_archive.py
+tests/test_nar_pre_c_production_root_scope_admission.py
+tests/test_nar_pre_c_production_root_scope_admission_issuance.py
+tests/test_nar_pre_c_production_root_scope_admission_archive_migration.py
+tests/test_sqlite_nar_pre_c_production_root_scope_admission_archive.py
+docs/CURRENT_PHASE.md
+docs/LATEST_CODEX_REPORT.md
+```
+
+All other paths remain Forbidden Files. Existing production/tests are read-only.
+Stop conditions and complete Required Tests remain frozen in the approved contract
+below; no predecessor edit, 11th path, root or provider integration was required.
+
+### Actual verification
+
+Focused (four new modules): **134 passed**.
+Focused + related (four new + 36 unchanged regression modules):
+**598 passed / 2 skipped / 75 subtests passed**.
+Full: **5132 passed / 4 skipped / 2846 subtests passed**.
+Static production audit: **PASS**.
+git diff --check: **PASS**; index **EMPTY**; dirty union **10 EXACT**.
+Full/related sealed environment:
+KEIBAOS_PHASE106_SEALED_COMMIT_SMOKE=860724f2a27c166effeb53c9efae4b47dc245382
+(the existing sealed-child test requires the supplied commit to equal actual HEAD).
+
+Genuine rollback proof covers all FOUR publication transactions: successful INSERT
+observed as a visible row inside the transaction, THEN COMMIT denied. Local rows/
+idle state and unchanged upstream fingerprints checked. Postcommit local/upstream/
+source failure retention, exact retry and independent file-backed exact/conflicting
+policy/scope races all PASS. Aggregate concurrent clock samples = 1 per completed pair.
+Development fixture initialization was corrected to respect the existing Phase112
+availability floor; the production temporal rule was not relaxed.
+No test rerun is needed solely for this final documentation report.
+
+### Authority firewall / deferrals / safety
+
+`PHASE114_ROOT_START_IMPLEMENTATION = DEFERRED_TO_PHASE115`
+`PHASE114_PROVIDER_GATE = DEFERRED_TO_PHASE116_OR_SEPARATELY_REVIEWED_SUCCESSOR`
+
+Root-scope admission is NOT process capability, campaign lock, root/start,
+provider-work permission, status/market/selection/prediction/betting/live authority,
+Operational Delta, snapshot correctness or snapshot freeze.
+Future Phase115 owns causal pre-root reload, clock/order acceptance and strict
+admitted_at < root.started_at. Phase108 remains DIAGNOSTIC_ONLY_NO_NETWORK and unchanged.
+No runner-lifetime/TOCTOU behavior was introduced.
+
+Provider HTTP = 0; production DB access = 0; KeibaAI changes = 0.
+new internal race/horse IDs = 0; main/upstream mutation by Phase114 = 0.
+Historical EXECUTE activity: stage = 0; commit = 0; push = 0.
+Current authorization: explicitly stage ten named paths and create one normal local
+commit only; no push, amend, rebase or source/test edits.
+
+Review bundle: C:\Users\garim\Desktop\phase114_implementation_review_bundle.txt
+Full sources/tests/docs diff, schema, field/identity/index/clock/load/failure evidence,
+retained test outputs, per-file SHA-256 and final Git invariants included.
+Bundle digest/bytes/lines are reported externally, not self-referenced.
+
+After the authorized local commit and external verification bundle, STOP for
+independent ChatGPT post-commit verification. Do not push or advance phases.
+
+---
+
+
+## Historical Phase114 APPROVE — frozen implementation design contract
+
+Title: NAR Production PRE_C Root-Scope Admission Authority
+
+Status: `APPROVED_FOR_CODEX`
+
+State: `IMPLEMENTATION_DESIGN_APPROVED`
+
+Implementation: `AUTHORIZED_ONLY_BY_FUTURE_EXPLICIT_EXECUTE_APPROVED_PHASE`
+
+Base Commit: `860724f2a27c166effeb53c9efae4b47dc245382`
+
+Base Tree: `316ce13a1292b8eca660b2744199ef9abc885c71`
+
+Branch: `feature/post-v0.8-daily-replay`
+
+Independent disposition supplied by ChatGPT:
+
+- `CHATGPT_REVIEW_PHASE114_ROOT_SCOPE_PREPARE = PASS`
+- `PHASE114_ARCHITECTURAL_REVIEW_PASS`
+- `PHASE114_IMPLEMENTATION_DESIGN_APPROVED`
+- `PHASE114_EXECUTION_APPROVAL = NOT_YET_GRANTED`
+
+Deferred responsibilities:
+
+- `PHASE114_ROOT_START_IMPLEMENTATION = DEFERRED_TO_PHASE115`
+- `PHASE114_PROVIDER_GATE = DEFERRED_TO_PHASE116_OR_SEPARATELY_REVIEWED_SUCCESSOR`
+
+The root-scope rescoping and implementation DESIGN are now approved. This activity
+is docs-only APPROVE, NOT EXECUTE. No Phase114 production module or test has been
+created; no tests have run or passed for Phase114. Implementation, implementation
+review, commit/push and formal completion are not claimed.
+
+The first root/start STOP is valid historical evidence. Both prior Phase114 PREPARE
+audits remain below with historical headings and otherwise unchanged text. The
+current approved contract supersedes their then-current proposal/pending wording,
+not their recorded findings. No Phase113 bookkeeping commit is created.
+
+### Approval Activity / Execution Boundary
+
+Current authorized edits: docs/CURRENT_PHASE.md and docs/LATEST_CODEX_REPORT.md ONLY.
+The ten Allowed Files below are frozen solely for a later explicit
+`EXECUTE_APPROVED_PHASE POST_V0_8_DAILY_REPLAY_114`, after independent approval-bundle
+verification. Do not create those candidate files or start Phase115/116 in APPROVE.
+
+Clock/API trust remains controlled injected composition, not a claim that hashes,
+arbitrary Python/SQL or a malicious replacement clock authenticate approval.
+Requested policy/dataset selection is not origin authority. Historical cutoffs cannot
+be upgraded by present-day declarations. Phase115's live-runner/lock/clock TOCTOU
+belongs to Phase115, not to this scope-only approved contract.
+
+### Freeze the approved Phase114 semantic boundary
+
+Phase114 answers only:
+
+```text
+Which exact complete target-set,
+which prospectively approved prediction-cutoff policy,
+which canonical complete cutoff plan,
+which requested dataset namespace/intended future snapshot scope,
+and which exact Phase113 target binding
+have been immutably admitted for a future production PRE_C root?
+```
+
+Freeze:
+
+```text
+CUTOFF_POLICY_IDENTITY != PRE_OUTCOME_POLICY_AUTHORITY
+
+ROOT_SCOPE_ADMISSION != CURRENT_PROCESS_EXECUTION_CAPABILITY
+
+ROOT_SCOPE_ADMISSION != ROOT_START
+
+ROOT_SCOPE_ADMISSION != PROVIDER_WORK_PERMISSION
+```
+
+No runner/capability/lock/root/provider permission exists in Phase114.
+
+---
+
+### Approved public authority semantics
+
+Freeze these four semantic values:
+
+```text
+NARPreCProductionCutoffPolicyApprovalContentV1
+NARPreCProductionCutoffPolicyApprovalV1
+NARPreCProductionRootScopeAdmissionV1
+NARPreCProductionRootScopeAdmissionAvailabilityReceiptV1
+```
+
+Do not rename or split these semantics during implementation without STOP/review.
+
+Additional private/nonpersistent helper values may exist only if they add no new authority semantic and remain within an approved path.
+
+No additional persisted authority type without review.
+
+All public persisted identities must be canonical content-addressed versioned identities ending in exactly 64 lowercase hex.
+
+---
+
+### Approved policy-approval contract
+
+`NARPreCProductionCutoffPolicyApprovalContentV1` is inert immutable policy-selection content.
+
+It binds:
+
+```text
+NAR
+nar_official
+target date
+target_set_content_sha256
+canonical full target-set projection/provenance
+anchor Phase111 declaration identity
+exact reviewed fixed-offset policy content/identity
+canonical complete derived cutoff plan JSON
+cutoff_plan_sha256
+schema_version = 1
+```
+
+The exact canonical projection/evidence representation may use typed canonical structures defined in the approved value module, but it must preserve complete set membership/date/source/evidence identity and be deterministic.
+
+Caller does NOT supply authoritative:
+
+```text
+target set
+plan JSON
+approval time
+mapping
+internal IDs
+historical provenance
+```
+
+Requested fixed-offset policy parameters are selection input only.
+
+They acquire authority only through controlled publication.
+
+##### Selection semantics
+
+For one exact:
+
+```text
+NAR/nar_official + target_set_content_sha256
+```
+
+there is one irrevocable policy/full-plan selection.
+
+Contradictory policy/plan/provenance for the same exact target set permanently fails.
+
+A content-only committed orphan remains reserved and cannot be replaced/deleted/rewritten.
+
+This irreversibility is intentional.
+
+##### Approval receipt
+
+`NARPreCProductionCutoffPolicyApprovalV1` binds:
+
+```text
+policy content identity
+policy_approved_at
+schema_version = 1
+```
+
+`policy_approved_at` is NOT caller supplied.
+
+It is one trusted injected aware-UTC service-clock observation sampled only after:
+
+```text
+policy content committed
+-> exact committed content reload
+-> exact source verification
+```
+
+The causal meaning is:
+
+```text
+the immutable policy selection already existed before the sampled approval observation
+```
+
+Do NOT reinterpret the timestamp as the content commit timestamp.
+
+Require:
+
+```text
+policy_approved_at >= anchor declaration issued_at
+
+policy_approved_at >= every required source capture stored_at
+
+policy_approved_at <= min(
+    decision.prediction_information_cutoff
+    for every decision in the complete derived plan
+)
+```
+
+Equality at cutoff is accepted.
+
+Because approval is set-wide, it must qualify every target decision in the complete plan.
+
+Do not remove targets to make a plan qualify.
+
+Present-day approval after the earliest cutoff cannot qualify an already-historical set.
+
+No backdating/reapproval/Git timestamp/file mtime/fixture timestamp/metadata timestamp rescue.
+
+A policy-content orphan whose valid approval window has expired remains inert forever.
+
+---
+
+### Approved authoritative target-set reconstruction
+
+Policy publication must deep-verify the exact archived source evidence.
+
+Use injected existing read-only archives.
+
+Require committed idle upstream connections.
+
+Start from exact archived Phase111 declaration identity.
+
+Load the exact declaration and all declaration-named daily-target evidence/captures.
+
+Reconstruct the original declaration using ORIGINAL persisted fields and require equality.
+
+Build the FULL canonical `DailyHistoricalReplayTargetSet` from exact archived daily-target captures using existing pure/archive-backed normalization.
+
+Verify:
+
+```text
+target date
+NAR/nar_official provider scope
+complete evidence population
+complete target membership
+canonical order
+no duplicate targets
+target_set_content_sha256
+schedule/disposition references
+exact anchor target membership
+```
+
+No provider/network refetch.
+
+No new live acquisition.
+
+No new internal IDs.
+
+No Deba provider work.
+
+Archive-backed parsing/normalization necessary to reconstruct the stored daily-target evidence is allowed only during Phase114 controlled publication.
+
+Do not modify existing source/parser modules.
+
+---
+
+### Approved cutoff-plan contract
+
+The issuer constructs the exact existing:
+
+```text
+NARHistoricalReplayPredictionCutoffPolicy
+```
+
+from requested fixed-offset parameters and uses the existing pure:
+
+```text
+build_nar_historical_replay_prediction_cutoff_plan
+```
+
+against the FULL reconstructed target set.
+
+The caller cannot supply authoritative plan JSON.
+
+Freeze exact equality among:
+
+```text
+target_set_content_sha256
+cutoff_policy_identity
+canonical cutoff_plan_json
+cutoff_plan_sha256
+complete canonical coverage
+exact target membership
+Phase113 external target
+Phase113 prediction_information_cutoff
+accepted source declaration target cutoff
+```
+
+The selected external target must occur exactly once.
+
+Partial plan / duplicate coverage / reordered-noncanonical plan / altered plan JSON fails.
+
+---
+
+### Approved dataset semantics
+
+`dataset_id` is a requested canonical namespace, not provider-derived source authority.
+
+Require exact canonical NFC nonempty text.
+
+No surrounding/control whitespace.
+
+No silent normalization.
+
+The raw string itself has NO authority.
+
+Phase114 root-scope admission freezes its intended FUTURE snapshot use for the exact:
+
+```text
+Phase113 binding
+NAR/nar_official
+external race
+internal race
+prediction cutoff
+target set
+approved policy
+cutoff plan
+```
+
+It does NOT claim:
+
+```text
+snapshot exists
+snapshot is historically correct
+snapshot is frozen
+dataset_id authenticates source data
+entry status is valid
+market is eligible
+prediction is executable
+```
+
+Dataset/root-scope admission need only precede the future production root.
+
+It does NOT need to precede prediction cutoff.
+
+Later snapshot/freeze qualification remains separate.
+
+No global UNIQUE(dataset_id).
+
+---
+
+### Approved root-scope content
+
+`NARPreCProductionRootScopeAdmissionV1` must bind exactly the approved scope semantics, including:
+
+```text
+phase113_binding_identity
+policy_approval_identity
+target_declaration_id
+
+organization = NAR
+source_system = nar_official
+
+external_race_id
+internal_race_id
+prediction_information_cutoff
+
+target_date
+target_set_content_sha256
+
+cutoff_policy_identity
+cutoff_plan_sha256
+canonical cutoff_plan_json
+
+dataset_id
+schema_version = 1
+```
+
+Phase113 authoritative reload supplies runtime/readiness/Phase112/Phase109 ancestry.
+
+Do not duplicate full claim/session/runtime/readiness/Phase112/Phase109 populations into this value.
+
+No:
+
+```text
+authorized
+active
+can_execute
+root_started
+```
+
+flags.
+
+No production root identity.
+
+---
+
+### Approved scope availability receipt
+
+`NARPreCProductionRootScopeAdmissionAvailabilityReceiptV1` binds:
+
+```text
+scope content identity
+policy approval identity
+phase113 binding identity
+admitted_at
+schema_version = 1
+```
+
+`admitted_at` is a controlled injected service-clock observation after committed scope-content exact reload.
+
+No caller timestamp.
+
+Require:
+
+```text
+admitted_at >= policy_approved_at
+admitted_at >= Phase112 availability_receipt.available_at
+```
+
+Do NOT require:
+
+```text
+admitted_at <= prediction cutoff
+Phase112 available_at <= prediction cutoff
+Phase109 issued_at <= prediction cutoff
+```
+
+Phase115 later owns:
+
+```text
+admitted_at < root.started_at
+```
+
+on its separately reviewed causal/clock basis.
+
+---
+
+### Approved cardinality
+
+Freeze:
+
+```text
+one exact target set -> one immutable policy/full-plan selection
+
+one policy content -> at most one policy approval receipt
+
+one Phase113 binding -> at most one scope content
+
+one scope content -> at most one scope availability receipt
+
+one campaign claim -> multiple legitimate target bindings/scopes allowed
+```
+
+Required semantic conflicts:
+
+```text
+NAR/source + target_set_content_sha256
+    -> one policy/full-plan selection
+
+phase113_binding_identity
+    -> one scope
+
+NAR/source + external_race_id + prediction_cutoff
+    -> one scope conflict key
+
+NAR/source + internal_race_id + prediction_cutoff
+    -> one reverse scope conflict key
+```
+
+Do NOT globally unique:
+
+```text
+claim_identity
+session_identity
+runtime_binding_identity
+readiness identity
+dataset_id
+target-set/plan pair across scope rows
+```
+
+Exact completed repeat may reuse immutable authority.
+
+Contradictory repeat permanently fails.
+
+Inert Stage-A reservations are not deleted or reassigned.
+
+---
+
+### Approved publication model
+
+Use ONE injected standalone version-1 Phase114 companion.
+
+No fixed production filename.
+
+No main DB migration.
+
+No Phase108/112/113/runtime topology modification.
+
+No cross-store FK/transaction/rollback claim.
+
+#### POLICY Stage A
+
+Order:
+
+```text
+exact source/declaration/capture preflight
+-> reconstruct exact complete target set
+-> derive requested exact policy/full plan
+-> BEGIN IMMEDIATE on Phase114 companion
+-> semantic collision checks
+-> exact existing reuse OR insert policy content
+-> COMMIT
+-> exact committed policy-content reload
+-> exact source verification
+```
+
+NO clock sample before completed exact reload.
+
+#### POLICY Stage B
+
+```text
+BEGIN IMMEDIATE
+-> inspect exact existing approval receipt BEFORE clock
+```
+
+If exact completed receipt exists:
+
+```text
+clock samples = 0
+reuse original receipt
+```
+
+Otherwise:
+
+```text
+sample trusted clock exactly once while serialized
+-> enforce approved temporal inequalities
+-> insert receipt
+-> COMMIT
+-> exact local pair reload
+-> exact source verification
+```
+
+Only the exact completed pair qualifies.
+
+#### SCOPE Stage A
+
+```text
+exact approved policy pair
++ exact Phase113/112/109
++ corresponding declaration/daily-set deep publication verification
+-> derive complete scope
+-> BEGIN IMMEDIATE
+-> binding/forward/reverse/local-policy collision checks
+-> exact existing reuse OR insert scope content
+-> COMMIT
+-> exact committed scope reload
+```
+
+No admission clock sample yet.
+
+#### SCOPE Stage B
+
+```text
+BEGIN IMMEDIATE
+-> inspect exact existing availability receipt BEFORE clock
+```
+
+If exact completed receipt exists:
+
+```text
+clock samples = 0
+reuse original receipt
+```
+
+Otherwise:
+
+```text
+sample trusted clock exactly once
+-> enforce admitted_at floors
+-> insert receipt
+-> COMMIT
+-> exact local scope/receipt/policy reload
+-> exact Phase113/112/109 reload
+-> publication-source revalidation
+```
+
+Only then return qualified Phase114 authority.
+
+Upstream reads occur outside unnecessary Phase114 write-lock duration.
+
+Caller-owned active transactions on Phase114 or required upstream stores are rejected where existing architecture requires committed authoritative reads.
+
+No cross-store rollback.
+
+---
+
+### Approved crash/failure behavior
+
+Before content commit:
+local transaction rollback; no local authority.
+
+Content committed / receipt absent:
+content remains inert forever until truthful first receipt succeeds.
+
+Policy receipt retry after cutoff:
+must fail permanently as qualified authority; never backdate.
+
+Receipt committed then local/upstream reload failure:
+return NO qualified success;
+committed records remain immutable.
+
+Completed exact retry:
+reuse original timestamp and sample clock zero times;
+still repeat required final authoritative validation.
+
+Contradictory retry:
+permanent fail closed.
+
+Two independent connections:
+local `BEGIN IMMEDIATE` + semantic unique keys serialize each Phase114 publication;
+one exact winner/original timestamp;
+loser may reuse exact authority but never create a second timestamp.
+
+No `INSERT OR REPLACE`.
+
+No update/delete-to-fit.
+
+No destructive repair.
+
+---
+
+### Approved ordinary load / trust boundary
+
+Controlled Phase114 PUBLICATION performs deep Phase111/daily-target source verification.
+
+After accepted immutable Phase114 publication, ordinary authoritative Phase114 load validates:
+
+```text
+Phase114 exact schema
+canonical value bytes
+SQL projections
+policy content/receipt
+scope content/availability
+internal target/policy/plan consistency
+Phase113 authoritative reload
+Phase112/109 ancestry
+```
+
+Ordinary load does NOT reopen Phase111/daily archives.
+
+Phase115 receives exact Phase114 admission receipt identity + expected Phase113 binding identity.
+
+Phase115 does not accept caller reconstructed:
+
+```text
+target set
+policy
+plan
+dataset scope
+```
+
+This frozen boundary is approved.
+
+---
+
+### Approved standalone schema direction
+
+One injected companion:
+
+```text
+VERSION = 1
+NAME = v001_nar_pre_c_production_root_scope_admission_companion
+```
+
+Approved object set:
+
+```text
+nar_pre_c_production_root_scope_registry
+nar_pre_c_production_root_scope_policy_contents
+nar_pre_c_production_root_scope_policy_approvals
+nar_pre_c_production_root_scope_contents
+nar_pre_c_production_root_scope_availability
+```
+
+The future migration must freeze exact column/check/index/FK/trigger topology.
+
+Required:
+
+```text
+exact registry version/name row
+append-only authority rows
+restrict UPDATE/DELETE even foreign_keys=OFF
+semantic unique conflict keys
+exact canonical projections
+no replace/repair
+```
+
+Schema validation must distinguish:
+
+```text
+NOT_INSTALLED
+ACTIVE
+INTEGRITY_FAILURE
+```
+
+Reserved SQLite handling must literally exclude:
+
+```text
+name NOT GLOB 'sqlite_*'
+```
+
+so a legal object such as:
+
+```text
+sqliteXunreviewed
+```
+
+remains visible and causes integrity failure.
+
+Unexpected operational/locking errors propagate.
+
+---
+
+### Phase114 explicit non-authority
+
+Phase114 grants NONE of:
+
+```text
+current-process execution capability
+campaign-lock authority
+session/root-start authority
+provider work
+entry status authority
+market eligibility
+prediction-selection authority
+betting authority
+live campaign authority
+Operational Delta authority
+snapshot correctness
+snapshot freeze completion
+prediction execution
+bet-plan execution
+settlement
+```
+
+Preserve:
+
+```text
+MAPPING_AUTHORITY != ENTRY_STATUS_AUTHORITY
+MAPPING_AUTHORITY != MARKET_ELIGIBILITY
+MAPPING_AUTHORITY != PREDICTION_SELECTION_AUTHORITY
+MAPPING_AUTHORITY != LIVE_CAMPAIGN_AUTHORIZATION
+MAPPING_AUTHORITY != OPERATIONAL_DELTA_AUTHORITY
+```
+
+Phase108 stays `DIAGNOSTIC_ONLY_NO_NETWORK`.
+
+---
+
+### Allowed Files — approved exact implementation paths
+
+Freeze exactly these TEN paths for the later EXECUTE activity:
+
+```text
+1. scripts/simulation/nar_pre_c_production_root_scope_admission.py
+2. scripts/simulation/nar_pre_c_production_root_scope_admission_issuance.py
+3. scripts/simulation/nar_pre_c_production_root_scope_admission_archive_migration.py
+4. scripts/simulation/sqlite_nar_pre_c_production_root_scope_admission_archive.py
+5. tests/test_nar_pre_c_production_root_scope_admission.py
+6. tests/test_nar_pre_c_production_root_scope_admission_issuance.py
+7. tests/test_nar_pre_c_production_root_scope_admission_archive_migration.py
+8. tests/test_sqlite_nar_pre_c_production_root_scope_admission_archive.py
+9. docs/CURRENT_PHASE.md
+10. docs/LATEST_CODEX_REPORT.md
+```
+
+No 11th path.
+
+No modification of any existing production/test file outside these ten.
+
+Existing upstream modules are read-only dependencies.
+
+If implementation requires another path or predecessor modification, STOP.
+
+---
+
+### Required Tests — approved implementation contract
+
+Preserve the complete 28-row PREPARE test matrix.
+
+At minimum Phase114 implementation acceptance requires all of the following classes of proof:
+
+```text
+policy identity alone is inert
+content without receipt is inert
+no caller/backdated approval time
+approval after any full-plan cutoff rejects
+equality at earliest cutoff qualifies
+historical target cannot be retroactively rescued
+exact declaration/daily population reconstruction
+arbitrary/partial/contradictory target set rejects
+plan is exclusively derived from exact set + requested policy
+Phase113 target/cutoff/internal ID equality
+dataset raw string has no authority
+scope need not precede prediction cutoff
+exact repeat keeps original timestamp with zero new clock samples
+same-binding contradictions permanent
+real claim with two valid target bindings works
+no global claim/session/runtime/readiness/dataset uniqueness
+schema absent/active/corrupt
+sqliteXunreviewed detected
+FK-OFF update/delete immutability
+genuine observed INSERT then COMMIT denial rollback
+postcommit reload/upstream failure keeps immutable rows but returns no success
+independent file-backed concurrent exact/conflicting publishers
+no runner/capability/root/start/provider work imports or APIs
+Phase108 unchanged
+Phase112/113/109/Phase111/daily reader regressions unchanged
+orphan content survives and retry semantics are truthful
+post-content exact reload occurs before first clock sample
+scope availability after prediction cutoff is permitted
+ordinary handoff does not require Phase111/daily archive
+no cross-store atomicity claim
+```
+
+Run focused tests, related regression tests, static audit and full suite during EXECUTE according to the existing repository workflow.
+
+No tests run in this APPROVE activity.
+
+---
+
+### Complete preserved 28-row required-test matrix
+
+| # | Required proof |
+| --- | --- |
+| 1 | Pure policy identity/value alone cannot authorize; content without receipt is inert. |
+| 2 | Missing approval/content/daily evidence fails closed. |
+| 3 | Public/manual approval record, caller timestamp, backdating and metadata substitution rejected; naive/invalid/backward service sample fails. |
+| 4 | approval time > ANY complete plan cutoff rejects set-wide pre-outcome qualification; equality qualifies; historical retry cannot upgrade. |
+| 5 | One approved set/policy/plan serves its member targets only; other set/date/digest/contradictory policy rejected. |
+| 6 | Exact declaration/daily capture reconstruction proves date/scope/digests/complete canonical membership once. |
+| 7 | Forged, extra/missing/partial/mismatched target-set/capture/source population fails. |
+| 8 | Plan exclusively pure-derived; arbitrary JSON/partial/reordered/duplicate coverage or digest rejected. |
+| 9 | Exact Phase113/Phase109 declaration target/cutoff/internal ID equals admitted plan decision; wrong parent rejected. |
+| 10 | Raw dataset text not authority; canonical requested namespace may be admitted; no snapshot/source-authenticity claim. |
+| 11 | Exact completed policy/scope repeat keeps original pair/timestamps and ZERO additional clock samples. |
+| 12 | Contradictory same binding, external/internal target+cutoff, policy or dataset permanent conflict; inert reservation also protected. |
+| 13 | One REAL campaign claim, two REAL Phase113 member bindings share exact approved plan/dataset and produce two valid scope pairs. |
+| 14 | No global claim/session/runtime/readiness/dataset/set-plan uniqueness in scope. |
+| 15 | Empty/active/partial/corrupt schema and registry; exact topology; sqliteXunreviewed visibly corrupts. |
+| 16 | Authority/registry UPDATE/DELETE blocked with foreign_keys OFF; forged local projections/missing parents detected. |
+| 17 | Observed successful INSERT then COMMIT denial rolls back each of policy-content, policy-receipt, scope-content and scope-receipt transactions; connection idle/upstream unchanged. |
+| 18 | Postcommit local reload/upstream reread failure returns NO qualified success; committed rows remain; exact retry validates all parents. |
+| 19 | Two independent file-backed connections: exact and contradictory policy/scope publishers; one immutable winner; one receipt/time per content. |
+| 20 | Signatures/imports expose no runner/capability/root/start/provider work or caller mapping. |
+| 21 | No status/market/prediction/betting/live/Operational Delta grant or Phase110 denial clearing. |
+| 22 | Phase108 diagnostic/fixture/sealed-child behavior and bytes unchanged. |
+| 23 | Existing Phase112/113/109/daily capture/Phase111 readers unchanged; full related regression. |
+| 24 | Orphan content survives; first successful receipt retry samples once; completed retry samples zero; expired policy orphan never backdated. |
+| 25 | Post-content exact reload precedes clock; clock sampled inside second serialized transaction; own operational/lock errors propagate. |
+| 26 | Dataset/scope availability AFTER prediction cutoff is allowed when earlier policy pair qualifies; root ordering NOT claimed. |
+| 27 | Ordinary Phase114/115 handoff reload needs no Phase111/daily archive or parser; publication deep-source verification IS required. |
+| 28 | No cross-store atomicity/rollback: all upstream fingerprints unchanged after local failure; current main topology unchanged. |
+
+
+### Static implementation audit
+
+Future execution must prove no:
+
+```text
+provider HTTP/network/refetch
+new Deba acquisition
+fixed DB path
+main/upstream writes
+internal race/horse ID issuance
+runner/lock/capability/root/start authority
+caller mapping authority
+caller timestamps
+generic authorization booleans
+global claim/dataset uniqueness
+INSERT OR REPLACE
+repair update/delete
+Phase108 semantic promotion
+status/market/prediction/betting/live/Operational Delta promotion
+```
+
+Archive-backed daily-target reconstruction during controlled PUBLICATION is allowed.
+
+Ordinary Phase114 LOAD must not reopen Phase111/daily source archives.
+
+---
+
+### Related Regression / Full-Suite Requirement
+
+The preserved test matrix and approved proof classes above remain mandatory.
+Existing policy/plan, daily-target source/archive, trusted Deba declaration/archive,
+snapshot identity/freeze, Phase109 mapping/schema, Phase112/113, Phase108 diagnostic/
+sealed-child and runtime/readiness tests are run-only dependencies, not edit-authorized.
+During a later EXECUTE, run all four new focused modules, related regressions, static
+audit and full suite under the existing reviewed sealed-source environment contract.
+Do not invent a baseline or weaken predecessor tests. No test is run in APPROVE.
+
+### Forbidden Files
+
+For this approval activity, EVERY path except the two docs is forbidden to edit.
+For future EXECUTE, EVERY path outside the exact ten Allowed Files is forbidden,
+including all existing production/test files, predecessor parsers/archives, main
+migration runner/topology, databases/logs/fixtures, prediction/betting/settlement/live
+code and all of KeibaAI. External review bundles remain outside repository/Git.
+Existing upstream repositories and archive-backed normalizers are read-only dependencies.
+
+### Stop Condition
+
+STOP if base/tree/branch/origin/relation differs; index is nonempty; any unexpected
+dirty path exists; future implementation needs an 11th path or predecessor mutation;
+the four approved public persisted semantics need renaming/splitting or another
+persisted authority type; deep source/Phase113/plan equality cannot be proven;
+policy time cannot truthfully precede EVERY complete-plan cutoff; a requested
+historical timestamp/backdating/rescue is needed; clock trust would be guessed;
+generic independently reusable policy authority/storage becomes necessary; runner/
+capability/root/provider work is required; fixed production path/new internal IDs/
+cross-store atomicity or destructive repair becomes necessary; or approved tests fail
+for an out-of-scope reason. Preserve work and stop for review, not speculative repair.
+
+Content/receipt/publication APIs must preserve the exact approved Stage A/B ordering,
+original completed timestamp and zero extra clock samples on exact repeats.
+No caller reconstructed target-set/plan/mapping or raw timestamp may enter authority.
+Ordinary handoff cannot require Phase111/daily archives or live parser/provider access.
+
+### Approval Verification / Safety
+
+Before stopping: git diff --check PASS; exact two-doc dirty set; index EMPTY;
+scripts/tests diff EMPTY; HEAD/tree/origin unchanged and raw relation 0 0.
+Approval verification bundle:
+C:\Users\garim\Desktop\phase114_design_approval_verification_bundle.txt.
+It records the full current contract/report/docs diff and history fingerprints.
+Bundle digest/bytes/lines are reported externally, not self-referenced.
+
+Provider HTTP = 0; production DB access = 0; KeibaAI changes = 0;
+production/test changes = 0; stage = 0; commit = 0; push = 0.
+
+Stop for independent ChatGPT approval-bundle verification.
+Do not execute until a later explicit EXECUTE_APPROVED_PHASE instruction.
+
+---
+
+## Historical Phase114 second PREPARE — root-scope admission rescoping
+
+Title: NAR Production PRE_C Root-Scope Admission Authority
+
+Status: `DRAFT_FOR_REVIEW`
+
+State: `ARCHITECTURAL_PREPARATION`
+
+Implementation: `NOT_AUTHORIZED`
+
+Base Commit: `860724f2a27c166effeb53c9efae4b47dc245382`
+
+Base Tree: `316ce13a1292b8eca660b2744199ef9abc885c71`
+
+Branch: `feature/post-v0.8-daily-replay`
+
+Review disposition supplied by ChatGPT:
+
+- `CHATGPT_REVIEW_PHASE114_PREPARE = PASS_WITH_REQUIRED_RESCOPING`
+- `PHASE114_ROOT_SCOPE_PREREQUISITE_REQUIRED = CONFIRMED`
+- `PHASE114_ROOT_START_IMPLEMENTATION = DEFERRED_TO_PHASE115`
+- `PHASE114_EXECUTION_APPROVAL = NOT_GRANTED`
+
+This is a second architecture-only PREPARE. The first root/start STOP finding remains
+valid and is preserved verbatim below apart from its explicitly historical heading.
+The newly proposed authority fills that prerequisite; it does not authorize any code.
+No Phase114 architectural PASS, implementation approval or formal completion is claimed.
+
+### Goal and Phase Boundaries
+
+Freeze which complete target-set, prospective prediction-cutoff policy, canonical
+complete plan, requested dataset namespace/intended future snapshot scope and exact
+Phase113 target binding have been admitted for a future production PRE_C root.
+
+Separate `CONTENT_IDENTITY`, `PROSPECTIVE_POLICY_AUTHORITY`,
+`ROOT_SCOPE_ADMISSION` and `ROOT_EXECUTION_PERMISSION`.
+
+- `CUTOFF_POLICY_IDENTITY != PRE_OUTCOME_POLICY_AUTHORITY`
+- `ROOT_SCOPE_ADMISSION != CURRENT_PROCESS_EXECUTION_CAPABILITY`
+- `ROOT_SCOPE_ADMISSION != ROOT_START`
+- `ROOT_SCOPE_ADMISSION != PROVIDER_WORK_PERMISSION`
+
+Phase114 publishes/loads no process-local execution context and takes no runner,
+capability, campaign lock, session-clock or root-start input. Phase115 owns production
+root/start, current-process lifetime/lock/session/clock-order admission and consumption.
+Provider-family gating is reserved for a separately reviewed successor, candidate
+Phase116. Neither phase is started here.
+
+### Repository Audit and Predecessor Authority
+
+Accepted Phase113 final documentation base is the HEAD/tree above; ChatGPT supplied
+`PHASE113_FINAL_DOCUMENTATION_REMOTE_VERIFICATION_PASS` and
+`POST_V0_8_DAILY_REPLAY_113 = FORMALLY_COMPLETE`.
+Phase113 authoritative load verifies durable runtime/readiness plus Phase112/109,
+not current runner liveness. Ordinary Phase109 load verifies V019/Phase110/V010,
+not a direct Phase111 archive reload.
+
+Key current contracts:
+
+- `nar_historical_replay_prediction_cutoff_policy.py:1-7,40-132`: existing exact
+  fixed-positive-offset policy, deterministic canonical bytes/ID and pure plan builder;
+  expressly not policy approval provenance.
+- `nar_historical_replay_prediction_cutoff.py:68-200`: complete canonical target
+  coverage and plan digest; parsing alone cannot grant authority.
+- `nar_trusted_deba_acquisition.py:97-140,233-266`: exact prospective declaration
+  captures/date/digest/membership and reconstruction; declaration issued_at <= its
+  cutoff, exact daily captures must have stored before declaration.
+- `sqlite_nar_trusted_deba_acquisition_archive.py:30-77`:
+  load_declaration/load_receipt/load_claim are exact immutable archive readers.
+- `sqlite_nar_daily_target_evidence_archive.py:65-97`: exact load_capture and
+  load_supplier_capture. `nar_historical_daily_target_source.py:832-853` builds
+  complete target-set from archived MonthlyConveneInfo plus all required RaceLists.
+- `historical_daily_targets.py:268-353`: canonical full population, completeness
+  evidence, date, provider scope, schedule/disposition references and content digest.
+- `sqlite_nar_pre_c_production_claim_binding_archive.py:36-135`: public load_binding
+  exact-revalidates durable parents without a live capability.
+- `sqlite_nar_pre_c_production_prestaged_manifest_archive.py:99-190`: two-stage
+  content/availability, completed repeat keeps timestamp and does not sample clock.
+- `historical_input_snapshots.py:158-167` and
+  `VER0.8_SIMULATOR_DESIGN.md:3919`: dataset is caller/run-context namespace.
+  Snapshot/freeze receipts remain separate saved-content/time qualification.
+
+The injected archive/service and controlled issuer are trusted composition boundaries,
+not cryptographic authentication against malicious Python, arbitrary SQL writes or a
+malicious clock. The design does not pretend content hashes prove who approved a rule.
+
+### Authority Matrix
+
+| Property | Current source | Proposed Phase114 origin / limit |
+| --- | --- | --- |
+| Complete target-set/date/NAR scope | Exact daily captures reconstructed against an archived Phase111 declaration | Controlled publication freezes producer-derived canonical projection and capture/declaration IDs. No caller target-set authority. |
+| Policy identity/parameters | Reviewed fixed-offset value semantics | Requested exact policy content becomes prospective authority only through controlled immutable target-set-specific approval pair. |
+| Policy pre-outcome provenance | Absent before this new authority | Truthful service observation after committed policy selection, before every decision cutoff in its approved complete plan; no retrospective upgrade. |
+| Canonical full plan/hash | Existing pure producer/validator | Derived from exact reconstructed set and approved exact policy; issuer never accepts authoritative plan JSON. |
+| Exact target/cutoff/internal ID | Phase113 -> Phase112 -> Phase109 | Authoritative reload equality with selected plan decision; internal ID never issued here. |
+| Dataset namespace/intended scope | Caller requested canonical string | Immutable controlled admission freezes future use for this binding/plan; not source-data authenticity or snapshot correctness. |
+| Admission availability | No current Phase114 record | Separate controlled post-scope-commit observation; future Phase115 must prove pre-root exact reload/order. |
+| Root/current process/provider permission | Not granted by scope evidence | Entirely outside Phase114. |
+
+### Decision 1 — Narrow Prospective Policy Approval
+
+Propose distinct values following the reviewed production V1 naming/content-ID style:
+
+1. `NARPreCProductionCutoffPolicyApprovalContentV1`: exact NAR/nar_official,
+   target date/set digest, canonical full target-set projection and evidence references,
+   anchor Phase111 declaration ID, exact canonical existing policy bytes/identity,
+   complete derived plan JSON/hash and schema version. No timestamp.
+2. `NARPreCProductionCutoffPolicyApprovalV1`: that content identity and
+   `policy_approved_at`, schema version. This is controlled post-commit observation
+   of the exact irrevocably selected policy content, not a caller's historical approval.
+
+Qualified policy authority requires BOTH records, exact reload and temporal validation.
+The content-only record is inert for admission. Its immutable selection cannot be
+changed after observing outcomes even if receipt publication fails.
+
+Approval scope is **one exact complete target-set and one exact fixed-offset policy/
+derived plan**, not reusable organization-wide approval of an algorithm for all dates.
+One policy content per NAR/nar_official + target_set_content_sha256; a contradictory
+policy/plan or different anchor projection for that exact set is a permanent conflict.
+A changed target-set digest/date requires a new independent approval. The same policy
+parameters alone cannot reuse the old approval for another set.
+
+The pair may serve multiple later Phase113 member-target admissions within that exact
+set/plan. Because its semantic approves the entire complete plan prospectively, require:
+
+`policy_approved_at <= min(decision.prediction_information_cutoff for all decisions)`.
+
+This deliberately implies approved_at <= cutoff for EVERY consuming target, including
+equality. The stronger full-plan condition is justified by the chosen set-wide
+approval semantic, not added to dataset or root admission. Do not remove earlier
+targets to make a partial plan qualify.
+
+Missing schedule/unsupported policy/unrepresentable arithmetic/full coverage failure
+fails closed using the current pure builder; do not invent a cutoff for a denied or
+unscheduled target. Provider disposition is preserved as evidence, not status promotion.
+
+Already-historical targets/sets cannot acquire strict pre-outcome approval from a
+present-day action. An inert selection whose truthful first approval clock has passed
+the earliest cutoff cannot be rescued by backdating, reapproval or overwriting.
+Prospective future sets may qualify if their evidence and policy selection are actually
+committed/observed before every cutoff. Existing code/fixtures/Git times are not an
+alternative historical approval source.
+
+### Decision 2 — Exact Target-Set Origin and Reload APIs
+
+Policy publication takes an exact anchor declaration ID and injected
+SQLiteNARTrustedDebaAcquisitionArchive / SQLiteNARDailyTargetEvidenceArchive.
+Use load_declaration(declaration_id=...) from committed idle upstream connections,
+not a caller-authored declaration value. Exact-load the declaration's envelope_capture_id
+and canonical race_list_capture_ids with load_capture(capture_id=...).
+Verify exact identities/types/date/NAR source, response/content digests, stored-time
+ancestry and disposition reference; reconstruct_declaration(...) with the ORIGINAL
+stored fields must equal the original declaration, never a newly issued declaration.
+
+Build the FULL target-set with build_nar_historical_daily_replay_target_set using
+those exact captured bytes. Preserve existing archive-backed daily-target normalization;
+no new acquisition, provider refetch or Deba HTML parsing occurs. Pure archived
+MonthlyConveneInfo/RaceList parsing is permitted for this necessary reconstruction,
+not a live provider operation. Validate completeness, canonical unique order, digest,
+date and exact selected anchor-target membership once. Missing/extra captures, incomplete
+envelope coverage or contradictory schedule/evidence fail closed.
+
+Freeze producer-derived canonical target-set projection and exact capture ID/digest
+provenance inside policy content; no copied raw provider HTML is required in the new
+archive. Canonical round-trip validation may use the existing typed target/evidence
+dataclasses and exact target-set canonical-byte semantics; any decoder belongs only
+in proposed new files. No change to predecessor modules is required.
+
+At scope publication exact-load Phase113 and Phase109; Phase109 names the target's
+accepted Phase111 declaration. Exact-load THAT declaration and its daily-target evidence
+also, reconstruct it and require the same entire set/projection as policy content.
+The approval anchor may be another member declaration but cannot justify a different
+capture population/date/schedule. Match selected target/declaration cutoff with
+Phase113 and the derived plan. Phase109's prior accepted Deba capture lineage need not
+be re-acquired or reparsed; Phase114 uses declaration/daily evidence for target scope.
+
+Ordinary authoritative Phase114 reload later validates its frozen target/policy/plan
+projection plus Phase113/112/109, without re-opening Phase111/daily archives.
+Publication performs the deep source verification; accepted immutable Phase114 becomes
+the frozen boundary. This is not called a transitive Phase111 reload. Phase115 will
+not need those archive parameters or caller reconstruction.
+
+### Decision 3 — Canonical Cutoff Plan
+
+Policy request may specify only the existing exact fixed-offset policy parameters as
+a REQUESTED rule selection. The controlled approval issuer reconstructs canonical
+NARHistoricalReplayPredictionCutoffPolicy, exact-matches identity/bytes, and calls
+build_nar_historical_replay_prediction_cutoff_plan on the reconstructed FULL target-set.
+The requested rule itself confers no authority; controlled prospective acceptance does.
+At policy publication the anchor declaration's unique plan decision must also equal
+its already archived prediction_information_cutoff; an unrelated requested policy
+cannot freeze a plan contradicting the pre-existing anchor target cutoff.
+
+Scope publication takes policy approval identity, Phase113 binding identity and requested
+dataset_id, with optional expected IDs/digests/target/cutoff as equality constraints.
+No authoritative target object, mapping, internal race/horse ID, policy approval
+timestamp, target-set JSON or plan JSON is accepted from the caller.
+
+Exact reload derives the plan again from the frozen typed set/policy and compares
+canonical JSON/hash, full canonical coverage, policy identity and set digest. Exactly
+one selected external target decision must match Phase113 prediction_cutoff and
+the accepted source declaration cutoff. No retrospective mutation or partial plan.
+JSON validity alone never substitutes for approved policy provenance.
+
+### Decision 4 — Dataset Admission
+
+A nonempty exact canonical NFC dataset_id may be caller selected as a REQUESTED
+namespace (no surrounding/control whitespace or silent normalization). It identifies
+intended FUTURE snapshot scope: exact binding, external/internal race, cutoff,
+target-set and plan under NAR/nar_official. These bound scalars/reference IDs define
+the intended scope; no free-form caller claim of historical data correctness is needed.
+
+The raw string has no authority. Authority arises only after controlled scope content
+and its admission availability receipt are committed and exact-reloaded. No global
+dataset uniqueness: the same requested dataset namespace may contain multiple
+legitimate target scopes. Contradictory dataset for the same Phase113 binding conflicts
+permanently; never UPDATE-to-fit.
+
+Dataset admission need only precede the FUTURE production root, not prediction cutoff:
+it freezes the intended namespace/use before root work and does not select the
+prediction-time policy or attest earlier snapshot contents. Scope availability may
+therefore be after cutoff. Do not claim snapshot already exists, is historically correct,
+already frozen, or authenticated by dataset_id. Later snapshot/freeze qualification
+remains a separate responsibility. Admission does not resurrect an expired runtime
+session; Phase115 separately decides whether root execution can occur.
+
+### Decision 5 — Scope Content and Admission Receipt
+
+Propose:
+
+- `NARPreCProductionRootScopeAdmissionV1`: immutable SCOPE CONTENT, containing
+  phase113_binding_identity; policy_approval_identity; target_declaration_id;
+  NAR/nar_official; external_race_id; internal_race_id; prediction_information_cutoff;
+  target_date; target_set_content_sha256; cutoff_policy_identity; cutoff_plan_sha256;
+  canonical cutoff_plan_json; requested dataset_id; schema_version.
+- `NARPreCProductionRootScopeAdmissionAvailabilityReceiptV1`: scope content
+  identity, policy approval identity, phase113 binding identity, admitted_at
+  (controlled post-commit availability observation), schema_version.
+
+Qualified admission is the exact scope/receipt pair + exact policy pair + authoritative
+Phase113 reload. The content value alone is not admitted scope. Neither timestamp is
+embedded in scope/policy content. Both receipt identities are content-addressed,
+canonical and immutable; prefixes end in exactly 64 lowercase hex.
+
+Claim/session/runtime/readiness and Phase112/109 identities are already content-bound
+by the exact Phase113 identity and authoritative reload; do not duplicate these
+populations or add global claim fields/uniqueness. The returned qualified aggregate
+may expose the loaded Phase113 parents for equality checks, not new execution authority.
+Plan JSON is an exact verified projection in scope; full target population is kept once
+in policy content and referenced/digest-bound, not copied into every member admission.
+No authorized/active/can_execute/root_started booleans, root identity or execution object.
+
+### Decision 6 — Cardinality
+
+| Key | Proposed cardinality |
+| --- | --- |
+| Policy content identity | Unique. |
+| NAR/source + target-set digest | One exact immutable policy/plan selection; contradiction fails. |
+| Policy approval receipt / policy content | One receipt, original timestamp reused. |
+| Phase113 binding / scope content | At most one exact scope; exact repeats reuse, contradictions permanent. |
+| NAR/source + external target + cutoff | Unique scope conflict key. |
+| NAR/source + internal target + cutoff | Unique reverse scope conflict key. |
+| Scope content / admission availability | One immutable receipt. |
+| Claim/session/runtime/readiness | NOT globally unique; one real claim may admit multiple valid target bindings. |
+| dataset_id | Not globally unique. |
+| target-set/plan/policy pair | May be shared across member admissions; not globally unique in scope rows. |
+
+All keys apply from content Stage A, including inert content; orphan reservation is
+not deleted/reassigned. Changed dataset/policy/provenance/plan for same binding fails.
+Same exact completed publication is immutable/idempotent admission only, not root
+consumption or execution idempotence.
+
+### Decision 7 — Controlled Publication, Clocks and Crash Semantics
+
+One explicitly injected trusted aware-UTC service clock is owned by the NEW issuance
+composition, not the campaign runner. No per-request admitted_at/policy_approved_at,
+clock object, historical time override or metadata-derived time. Tests may inject
+hermetic clocks; fixture time is NEVER evidence for production historical approval.
+Require exact aware UTC samples, reject naive/non-UTC-invalid values and backward
+values against the prerequisite evidence/previous completed authority floors.
+
+A controlled clock is a trust assumption like Phase112's issuer clock, not proof
+against a malicious replacement clock or arbitrary forged DB writes. Issuer APIs
+must not expose arbitrary-record publication; controlled composition/issuance markers
+must guard low-level writes. Requested policy parameters are selected through that
+route, not treated as already approved. No cryptographic approval signer is invented.
+
+POLICY Stage A: exact archived source preflight -> derive set/policy/full plan ->
+BEGIN IMMEDIATE on companion -> semantic collision check -> exact reuse or insert
+policy content -> COMMIT -> exact committed content reload + source verification.
+The chosen content is irrevocably frozen. No approval clock sampled before that proof.
+
+POLICY Stage B: second BEGIN IMMEDIATE -> inspect exact existing receipt BEFORE clock.
+If complete, retain original observation and sample zero times. Otherwise sample once
+while serialized, after the committed content observation; require sample >= anchor
+declaration.issued_at and all relevant capture.stored_at, and sample <= every plan
+cutoff; insert approval receipt -> COMMIT -> exact pair/source reload -> return.
+policy_approved_at denotes the controlled observation/acceptance of the ALREADY
+COMMITTED irrevocable policy selection, not Git time or the receipt's commit timestamp.
+Do not claim the receipt itself committed at that exact instant; its completed exact
+reload is also mandatory. Content-only or failed receipt insertion never qualifies.
+
+SCOPE Stage A: exact accepted policy pair plus Phase113/112/109 and corresponding
+declaration/daily-set preflight -> derive complete scope -> BEGIN IMMEDIATE -> check
+exact binding/forward/reverse collisions + local policy pair -> reuse or insert scope ->
+COMMIT -> exact committed scope reload. No admission clock sampled yet.
+
+SCOPE Stage B: second BEGIN IMMEDIATE -> existing receipt check before sampling.
+Exact existing receipt: no clock; reuse original. Otherwise sample trusted clock once
+and require admitted_at >= policy_approved_at and Phase112 availability_receipt.available_at;
+insert receipt -> COMMIT -> exact pair/policy/Phase113/112/109 reload and publication
+source revalidation -> return only if every check succeeds.
+
+Upstream work is read-only outside unnecessary companion write locks; no caller-owned
+transactions in companion or upstream are accepted. Only local policy/scope records
+are transactionally serialized. No cross-store FK, atomicity or rollback claim.
+On exact completed retries all final upstream checks still run; their failure suppresses
+qualified success without resampling timestamps or deleting rows.
+
+Failure before content commit: local writes rollback. Content commit then receipt
+failure/crash: exact inert content remains; retry may issue its first truthful receipt.
+If policy cutoff window has expired on retry it remains inert, not historically rescued.
+Receipt commit then local/upstream reload failure: no qualified success, immutable
+records stay; later retry may succeed only after full validation, using original time.
+Two independent connections serialize receipt creation; loser returns winner's exact
+pair with zero extra samples, not a second timestamp. Operational/lock errors propagate.
+
+### Decision 8 — One Narrow Standalone Companion
+
+One companion safely owns these two closely coupled authorities because policy
+approval is target-set/plan-specific and feeds ONLY that exact scope admission path.
+There is no independently reusable global policy approval product/API. Many member
+targets sharing that SAME immutable approval is internal reuse, not a separate trust
+or deployment/storage boundary. A later organization-wide/cross-date policy approval
+design would require separate review; do not add it for convenience here.
+
+Proposed injected version-1 standalone topology (no fixed production path):
+
+- nar_pre_c_production_root_scope_registry
+- nar_pre_c_production_root_scope_policy_contents
+- nar_pre_c_production_root_scope_policy_approvals
+- nar_pre_c_production_root_scope_contents
+- nar_pre_c_production_root_scope_availability
+
+VERSION = 1; proposed NAME =
+v001_nar_pre_c_production_root_scope_admission_companion.
+Exact column/check/unique/FK/index/trigger topology and sole version/name registry row.
+Local FKs: policy approval -> policy content; scope content -> policy approval; scope
+availability -> scope content and matching policy approval. Cross-record identities
+and canonical projections must also exact-validate, including when FK is OFF.
+Registry and authority rows get restrictive UPDATE/DELETE guards independent of FK
+settings; semantic unique keys enforce duplicates/conflicts. No INSERT OR REPLACE,
+repair UPDATE/DELETE, automatic orphan cleanup or database/ID issuance.
+
+Use literal `name NOT GLOB 'sqlite_*'`; sqliteXunreviewed must remain visible.
+NOT_INSTALLED / ACTIVE / INTEGRITY_FAILURE distinct; corruption is not absence.
+Unexpected operational/locking errors in NEW schema/archive propagate unchanged.
+Do not relabel predecessor reader errors or change legacy code to fit this phase.
+Existing Phase108/112/113/runtime/main topology is untouched.
+
+### Decision 9 — Temporal / Causal Firewall
+
+A. Phase114 qualified POLICY pair proves irrevocable exact content selection was
+committed and observed through controlled approval before every cutoff in its plan.
+It cannot qualify a new present-day approval for old cutoffs. Equality is allowed for
+policy-approved-before-or-at-cutoff semantics; no post-cutoff upgrade.
+
+B. Phase114 qualified SCOPE pair proves exact scope committed before its controlled
+admitted_at observation and exact pair/upstream reload before return. It does NOT
+yet prove relation to a nonexistent future root. Phase115 must independently exact-load
+the frozen qualified pair BEFORE root issuance and establish admitted_at < root.started_at
+on a separately reviewed accepted clock/order basis. Timestamp alone is not causal proof.
+
+C. Provider work after root is Phase115/Phase116-or-successor responsibility.
+Phase114 creates neither root nor provider permission; A does not imply B or C.
+
+No invented Phase109.issued_at <= prediction cutoff, Phase112.available_at <= cutoff,
+scope admitted_at <= cutoff, or snapshot-before-root correctness assertion.
+Dataset/time availability cannot clear Phase110 denials or status/market restrictions.
+
+### Decision 10 — Frozen Handoff to Phase115
+
+Future Phase115 input direction: one exact Phase114 admission identity (availability
+receipt identity selecting the complete pair), expected Phase113 binding identity,
+injected Phase114 + existing upstream repositories and live runner/capability inputs
+owned by Phase115, NOT Phase114.
+
+Phase114 authoritative load exact-validates companion schema/JSON/SQL projections,
+local complete policy/target/plan and approval time, scope/admission equality and unchanged
+Phase113 -> runtime/readiness/Phase112/109 reload, including Phase110/V010 integrity.
+Return exact immutable authority values only. Phase115 does not accept reconstructed
+target/policy/plan/dataset, re-open Phase111/daily archives, or execute based on content-only
+rows. Its separate trusted acceptance of formally reviewed Phase114 is required.
+
+Current runner-lifetime/lock-release/session-expiry TOCTOU is DEFERRED TO PHASE115
+and is no longer a blocker to this scope-authority proposal. No runner change is
+needed for Phase114. Repeated durable admissions confer no process resurrection.
+
+### Proposed Exact Implementation Paths — review proposal only
+
+The one-companion/narrow-policy boundary above permits a bounded **10-path proposal**:
+
+NEW PRODUCTION:
+
+1. scripts/simulation/nar_pre_c_production_root_scope_admission.py
+   (policy-content/approval and scope-content/availability values, pure canonical reload)
+2. scripts/simulation/nar_pre_c_production_root_scope_admission_issuance.py
+   (controlled policy/scope issuance, archived source verification and service clock)
+3. scripts/simulation/nar_pre_c_production_root_scope_admission_archive_migration.py
+   (own version-1 exact standalone schema)
+4. scripts/simulation/sqlite_nar_pre_c_production_root_scope_admission_archive.py
+   (serialized local publication/reload/immutability, no upstream mutation)
+
+NEW FOCUSED TESTS:
+
+5. tests/test_nar_pre_c_production_root_scope_admission.py
+6. tests/test_nar_pre_c_production_root_scope_admission_issuance.py
+7. tests/test_nar_pre_c_production_root_scope_admission_archive_migration.py
+8. tests/test_sqlite_nar_pre_c_production_root_scope_admission_archive.py
+
+DOCUMENTATION:
+
+9. docs/CURRENT_PHASE.md
+10. docs/LATEST_CODEX_REPORT.md
+
+No candidate file is created by PREPARE. This proposal is NOT an approved Allowed
+Files implementation contract; current authorized edits remain the TWO DOCS ONLY.
+No existing production/test change or main runner migration is proposed. If actual
+implementation requires any additional file, STOP for review, not automatic expansion.
+
+### Forbidden Files / Explicit Deferred Work
+
+All existing code/tests, migrations, archives, databases/logs/fixtures and KeibaAI are
+read-only. Phase108 remains DIAGNOSTIC_ONLY_NO_NETWORK. Phase109/V019, Phase110/V018,
+Phase111, Phase112 and Phase113 semantics/topologies are not rewritten.
+No provider acquisition, Deba parsing, IDs, status/market/selection authority,
+prediction/betting/live/Operational Delta, snapshot correctness/freeze or settlement.
+Phase115 root/start/liveness/session/clock/consumption and Phase116-or-successor gates
+are reserved responsibilities, not ongoing work.
+
+### Required Tests — eventual implementation acceptance
+
+| # | Required proof |
+| --- | --- |
+| 1 | Pure policy identity/value alone cannot authorize; content without receipt is inert. |
+| 2 | Missing approval/content/daily evidence fails closed. |
+| 3 | Public/manual approval record, caller timestamp, backdating and metadata substitution rejected; naive/invalid/backward service sample fails. |
+| 4 | approval time > ANY complete plan cutoff rejects set-wide pre-outcome qualification; equality qualifies; historical retry cannot upgrade. |
+| 5 | One approved set/policy/plan serves its member targets only; other set/date/digest/contradictory policy rejected. |
+| 6 | Exact declaration/daily capture reconstruction proves date/scope/digests/complete canonical membership once. |
+| 7 | Forged, extra/missing/partial/mismatched target-set/capture/source population fails. |
+| 8 | Plan exclusively pure-derived; arbitrary JSON/partial/reordered/duplicate coverage or digest rejected. |
+| 9 | Exact Phase113/Phase109 declaration target/cutoff/internal ID equals admitted plan decision; wrong parent rejected. |
+| 10 | Raw dataset text not authority; canonical requested namespace may be admitted; no snapshot/source-authenticity claim. |
+| 11 | Exact completed policy/scope repeat keeps original pair/timestamps and ZERO additional clock samples. |
+| 12 | Contradictory same binding, external/internal target+cutoff, policy or dataset permanent conflict; inert reservation also protected. |
+| 13 | One REAL campaign claim, two REAL Phase113 member bindings share exact approved plan/dataset and produce two valid scope pairs. |
+| 14 | No global claim/session/runtime/readiness/dataset/set-plan uniqueness in scope. |
+| 15 | Empty/active/partial/corrupt schema and registry; exact topology; sqliteXunreviewed visibly corrupts. |
+| 16 | Authority/registry UPDATE/DELETE blocked with foreign_keys OFF; forged local projections/missing parents detected. |
+| 17 | Observed successful INSERT then COMMIT denial rolls back each of policy-content, policy-receipt, scope-content and scope-receipt transactions; connection idle/upstream unchanged. |
+| 18 | Postcommit local reload/upstream reread failure returns NO qualified success; committed rows remain; exact retry validates all parents. |
+| 19 | Two independent file-backed connections: exact and contradictory policy/scope publishers; one immutable winner; one receipt/time per content. |
+| 20 | Signatures/imports expose no runner/capability/root/start/provider work or caller mapping. |
+| 21 | No status/market/prediction/betting/live/Operational Delta grant or Phase110 denial clearing. |
+| 22 | Phase108 diagnostic/fixture/sealed-child behavior and bytes unchanged. |
+| 23 | Existing Phase112/113/109/daily capture/Phase111 readers unchanged; full related regression. |
+| 24 | Orphan content survives; first successful receipt retry samples once; completed retry samples zero; expired policy orphan never backdated. |
+| 25 | Post-content exact reload precedes clock; clock sampled inside second serialized transaction; own operational/lock errors propagate. |
+| 26 | Dataset/scope availability AFTER prediction cutoff is allowed when earlier policy pair qualifies; root ordering NOT claimed. |
+| 27 | Ordinary Phase114/115 handoff reload needs no Phase111/daily archive or parser; publication deep-source verification IS required. |
+| 28 | No cross-store atomicity/rollback: all upstream fingerprints unchanged after local failure; current main topology unchanged. |
+
+Proposed run-only regressions include existing policy/plan, daily-target source/archive,
+trusted Deba declaration/archive, snapshot identity/freeze, Phase109 mapping/schema,
+all Phase112/113 modules, Phase108 diagnostic/sealed-child and runtime/readiness tests.
+Full suite only after later implementation authorization, using the then-existing
+reviewed sealed-source environment, never an invented baseline.
+
+### Static Audit and Stop Conditions
+
+PREPARE text/Git only; no tests run, SQLite DB opened, provider request or parsing
+operation executed. Eventual new production imports/API audit must prove no provider
+transport/refetch/Deba parser, fixed DB path, upstream/main writes, IDs, runner/lock/
+capability/root/start/clock-session execution, caller mapping or authority booleans,
+global claim/dataset uniqueness, replacement or destructive repair. Distinguish allowed
+read-only archive-backed DAILY target normalization at publication from Deba parsing
+or live provider work. No Phase111 reload occurs in ordinary admitted-scope handoff.
+
+STOP for historical timestamp laundering; policy/plan provenance that cannot be
+controlled before all cutoffs; incomplete source population; guessed clock trust;
+need for generic independent policy archive/product; failed source/Phase113 equality;
+runner/capability/root/provider dependency; predecessor schema/code change; additional
+implementation path; fixed production path; guessed deployment DB contents; unexpected
+dirty path/base/index/remote change. Historical-target inability to qualify is intentional,
+not a reason to weaken time checks. Clock malicious-tamper authentication is outside
+the explicitly trusted composition model, not an unreported guarantee.
+
+Safety: Provider HTTP = 0; production DB access = 0; KeibaAI changes = 0;
+production/test changes = 0; stage = 0; commit = 0; push = 0.
+
+---
+
+## Historical Phase114 first PREPARE — root/start STOP audit
+
+Title: NAR Production PRE_C Root Start and Execution Admission Authority
+
+Status: `DRAFT_FOR_REVIEW`
+
+State: `ARCHITECTURAL_PREPARATION`
+
+Implementation: `NOT_AUTHORIZED`
+
+Base Commit: `860724f2a27c166effeb53c9efae4b47dc245382`
+
+Base Tree: `316ce13a1292b8eca660b2744199ef9abc885c71`
+
+Branch: `feature/post-v0.8-daily-replay`
+
+Preparation disposition: `PHASE114_ROOT_SCOPE_PREREQUISITE_REQUIRED`.
+The critical root-scope stop condition is met. Production implementation design is
+STOPPED, not approved. The conditional models below are audit requirements for
+ChatGPT review, not a frozen implementation contract.
+
+### Goal
+
+Audit whether a distinct production PRE_C root/start can admit a live controlled
+process only after exact qualified prestaging and complete production scope.
+No implementation, tests, migration, provider work, production DB inspection,
+stage, commit, or push is authorized by this PREPARE activity.
+
+### Predecessor Authority
+
+ChatGPT supplied `PHASE113_FINAL_DOCUMENTATION_REMOTE_VERIFICATION_PASS` and
+`POST_V0_8_DAILY_REPLAY_113 = FORMALLY_COMPLETE` for the accepted base.
+This preparation records that accepted predecessor disposition; it does not
+create another Phase113 bookkeeping commit or independently grant its markers.
+
+Accepted Phase113 implementation: `3fb0d719d2688cd9cb42d7b854b4bee40dc2cc75`,
+tree `245692d709482926e58977af0d13975f812bb870`.
+Accepted closure: `39bca435a374d32a93b474baa08f50b93bb754d8`,
+tree `3f0ca61f561c729aa91ec188b6095dd5c1790fd1`.
+Accepted final documentation: the Base Commit/Tree above.
+The predecessor records below remain historical, including their then-pending
+final remote wording, superseded for current preparation by ChatGPT's acceptance.
+
+Phase113 is durable claim/runtime binding/session/readiness-to-Phase112 ancestry;
+Phase112 is manifest plus availability receipt; Phase109 is mapping origin authority
+with exact Phase110/V010 consistency. Phase112 authoritative load calls unchanged
+Phase109 load. It does not re-open Phase111 archives. Phase111 direct ancestry
+verification was required at Phase109 publication, not Phase112/113 ordinary load.
+
+Freeze:
+
+- `PERSISTED_RUNTIME_CLAIM != CURRENT_PROCESS_EXECUTION_CAPABILITY`
+- `PHASE113_CLAIM_BINDING != CURRENT_PROCESS_EXECUTION_CAPABILITY`
+- `PHASE113_CLAIM_BINDING != ROOT_EXECUTION_PERMISSION`
+- `ONE_CAMPAIGN_EXECUTION_CLAIM_MAY_COVER_MULTIPLE_TARGETS`
+- `PHASE108_DIAGNOSTIC_ROOT != PRODUCTION_ROOT_AUTHORITY`
+
+### Repository Audit Findings
+
+1. Campaign runner capability requires the same runner object, current-process
+   campaign-lock ownership, and active claim equality
+   (`nar_operational_timing_campaign_runner.py:58-75`). Runner exit clears the
+   active claim and releases the lock (:134-141). These are live checks, not DB facts.
+2. V2 session admission is half-open start <= time < end
+   (`nar_operational_timing_observability_v2.py:239-268`). Readiness <= start
+   qualifies; Phase113 enforces it during authoritative upstream reload
+   (`sqlite_nar_pre_c_production_claim_binding_archive.py:36-93`).
+3. Phase113 values contain target/cutoff and durable ancestry, not dataset,
+   target-set admission, policy-provenance or plan authority
+   (`nar_pre_c_production_claim_binding.py:50-64`). Its archive exact-reloads
+   runtime/readiness and Phase112/109 after publication (:137-191).
+4. Daily-target captures and Phase111 declarations support exact reconstruction of
+   the complete target-set digest and membership
+   (`nar_trusted_deba_acquisition.py:233-266`). This is real evidence, not a
+   fixture-only source. It is not a combined prospective root-scope admission.
+5. Cutoff plans/policies are canonical deterministic content. The policy module
+   explicitly states `POLICY_IDENTITY != PRE_OUTCOME_POLICY_AUTHORITY`
+   (`nar_historical_replay_prediction_cutoff_policy.py:1-7`); its pure plan
+   builder accepts target_set and policy (:103-132), not approval provenance.
+6. Dataset ID is caller/run-context namespace, not a provider-derived authority
+   (`VER0.8_SIMULATOR_DESIGN.md:3910-3930`;
+   `historical_input_snapshots.py:158-167`;
+   `historical_input_snapshot_builder.py:141-155`). Snapshot/freeze exact reload
+   proves saved content/freeze observation, not prospective production root admission
+   (`historical_input_snapshot_freeze_receipt.py:112-148,167-192`).
+7. Phase108 fixture/AST mapping and root are explicitly diagnostic-only
+   (`nar_pre_c_operational_envelope.py:140-201,249-283`). Its harness lessons
+   (:390-442) do not authorize production scope or provider work.
+8. Phase105 guarded send/passive wrapper check live capability and archived attempt,
+   not this proposed production root. Standalone capture/acquisition entrypoints
+   also lack a universal production-root gate. No entrypoint was invoked.
+9. Searches across simulation sources for target-set, cutoff-policy provenance,
+   dataset admission and root-scope authority did not identify a qualified immutable
+   combined production root-scope publisher. This is a repository finding, not an
+   assertion about deployed DB contents.
+
+### Root-Scope Authority Matrix — question A
+
+| Required field | Classification | Exact existing evidence / missing property |
+| --- | --- | --- |
+| target_set_content_sha256 | EXISTING_PRODUCTION_AUTHORITY for archived daily-target evidence/membership; MISSING_AUTHORITY_REQUIRING_PREDECESSOR_PHASE for root admission | Exact Phase111 declaration plus named daily captures rebuild digest and full membership. A prospective root-scope admission binding that evidence to policy/plan/dataset is absent. |
+| cutoff_plan_sha256 | EXISTING_CONTENT_BUT_NOT_AUTHORITY | Canonical full-coverage plan digest is computable; policy approval ancestry/root admission is not proven. |
+| canonical cutoff-plan JSON | EXISTING_CONTENT_BUT_NOT_AUTHORITY | Exact JSON parser validates canonical content/coverage, not who authorized the policy before execution. |
+| cutoff_policy_identity | EXISTING_CONTENT_BUT_NOT_AUTHORITY | Deterministic policy ID; module explicitly denies equating it with pre-outcome policy authority. |
+| required policy ancestry | MISSING_AUTHORITY_REQUIRING_PREDECESSOR_PHASE | Reviewed prospective policy declaration/provenance and exact reload are not supplied by Phase113. |
+| prediction_information_cutoff | EXISTING_PRODUCTION_AUTHORITY for exact target scalar | Phase113 -> Phase112 -> Phase109 exact equality; equality with the future admitted plan still required. |
+| dataset_id | EXISTING_CONTENT_BUT_NOT_AUTHORITY; MISSING_AUTHORITY_REQUIRING_PREDECESSOR_PHASE for prospective scope admission | Caller namespace and exact snapshot identity are available; no reviewed pre-root dataset-scope admission. Existing snapshot correctness must not be overclaimed. |
+| organization | EXISTING_PRODUCTION_AUTHORITY | Accepted mapping/prestaging/binding exact NAR. |
+| source_system | EXISTING_PRODUCTION_AUTHORITY | Accepted exact nar_official namespace. |
+| external_race_id | EXISTING_PRODUCTION_AUTHORITY | Exact Phase109/112/113 target equality, no fuzzy reconstruction. |
+| internal_race_id | EXISTING_PRODUCTION_AUTHORITY | Exact existing Phase109/110 ID, no new ID issuance. |
+| Phase108 copies of any scope field | DIAGNOSTIC_ONLY | Fixture dataset, plan and target values cannot supply production admission. |
+
+Required prerequisite: a separately reviewed **Production PRE_C Root-Scope
+Admission Authority** activity/phase, whose phase number and design belong to
+ChatGPT. It must bind exact archived target-set provenance and membership, authorized
+cutoff-policy provenance, canonical complete plan/digest, dataset namespace/intended
+scope, and exact target/cutoff agreement with Phase113/112. It must establish admission
+availability/order before root and deny arbitrary caller content as origin authority.
+It need not claim provider-derived dataset naming or completed future snapshots.
+Do not issue production root from these presently missing properties.
+
+### Current-Process Capability Contract — question E
+
+Conditional future publication must take the actual runner and capability directly,
+not strings/serialized capability. Require current owner, exact claim/binding/session
+equality with Phase113, valid source profile and campaign-lock scope before admission.
+Repeat exact upstream and live-owner checks after commit/reload before returning any
+nonpersistent context, and before every gated operation. PID/process ownership and
+runner lifetime are not reconstructed from rows; process death/runner exit invalidates
+the context without erasing history.
+
+`require_current_owner()` is a point-in-time check. The current lock exposes release
+and has no root-publication lifetime lease (`nar_operational_timing_campaign_lock.py:
+54-106`). Repeating checks alone does not close concurrent release/session-expiry
+TOCTOU. A reviewed serialized owner/lifetime protocol or narrowly scoped runner API
+must be proved before finalizing implementation. No runner change is authorized now.
+
+### Root/Start Publication Model — questions B and C
+
+Conditional semantic candidate: `NARPreCProductionOperationalRootV1`, distinct
+from all Phase108 V1 values. It should content-bind Phase113 binding, claim, runtime
+binding, session and readiness identities; Phase112 manifest/availability and Phase109
+receipt identities; independently admitted target-set/plan/policy/dataset authority
+identities; exact NAR/nar_official, external/internal race, cutoff and schema.
+Use exact immutable references plus authoritative reload rather than duplicate whole
+upstream populations. No authorized/active/can_execute booleans.
+
+A distinct immutable start receipt should bind that root and fresh started_at plus the
+reviewed process/clock-order evidence. Conditional preference: publish root content and
+its single start receipt atomically in one new companion transaction. This avoids a
+restartable inert root and differs deliberately from Phase112 inert manifest semantics.
+This preference is NOT a final architecture choice until scope/lifetime/clock contracts
+are approved. One Phase113 target binding -> at most one root; one root -> at most one
+start; no restart/rebind/transfer/repair/saved-row resurrection.
+
+### Clock and Session Admission Model — question D
+
+Existing controlled runner owns injectable aware-UTC `utc_clock` (default datetime.now
+UTC) and monotonic time source; an issuer must not add a caller started_at argument.
+Phase112 clock and runner clock are separately injected. Timestamp comparison alone
+does not prove shared trustworthy clock basis or causal order.
+
+Conditional order: exact upstream/scope reload -> establish live owner/lifetime
+protection -> BEGIN IMMEDIATE -> collision/consumption checks -> repeat owner and
+fresh runner clock sample -> require strict availability_receipt.available_at <
+started_at and session.start <= started_at < session.end -> insert root/start ->
+precommit live/session check under reviewed lifetime discipline -> COMMIT ->
+exact local/upstream reload -> fresh live/session validation -> process-local context.
+No provider work occurs before all final checks succeed. Clock samples before lock
+acquisition or stale samples across a lock wait are not admission evidence.
+A further reviewed order/clock basis must establish that exact Phase112 authority was
+reloaded before start issuance. Do not copy Phase108's diagnostic equality behavior.
+Postcommit session expiry/loss must suppress context success and retain consumed history;
+do not assert that DB atomicity prevents wall-clock expiry or cross-store changes.
+
+### Replay/Consumption Model — question G
+
+| Situation | Required conditional behavior |
+| --- | --- |
+| Same exact request after committed start | History exact reload only; fail execution retry, no second context/start. |
+| Same binding with different scope | Permanent conflict, no update/delete-to-fit. |
+| Same manifest/target under another claim | Existing Phase113 permanent binding must reject; no rescue root. |
+| Same claim, distinct legitimate target binding | May admit separate root after complete independent scope; no UNIQUE(claim_identity). |
+| Process dies after commit | Durable consumed history remains; no capability resurrection. |
+| Postcommit reload failure | No qualified success; root/start remain consumed. |
+| Capability/lock lost or session ended after commit | No usable context; history remains consumed, no restart. |
+| Concurrent exact requests | One start winner; loser may read history, never receive execution admission. |
+| Concurrent contradictory requests | One winner, permanent fail-closed conflict for loser. |
+
+Phase113 publication idempotence does not imply production execution idempotence.
+Any attempt/request consumption ledger for later provider work needs its own reviewed
+one-shot contract; root history alone must not be misrepresented as provider replay control.
+
+### Storage Model — question H
+
+Conditional direction: separate injected standalone SQLite production root companion,
+own version-1 registry, exact root and start tables/projections/unique indexes and
+immutable UPDATE/DELETE triggers. Do not extend predecessor exact topologies or main DB.
+No fixed production filename, main migration V020, or cross-DB transaction assumption.
+Minimum uniqueness: root identity, Phase113 binding identity, exact external/internal
+target+cutoff+namespace conflict keys; start identity and root identity in starts.
+Claim/session/readiness/runtime binding are NOT globally UNIQUE.
+Final DDL/object names and keys cannot be frozen until admitted scope is specified.
+
+Require exact canonical content-addressed reload with upstream agreement; NOT_INSTALLED,
+ACTIVE and INTEGRITY_FAILURE must remain distinct. Unexpected operational/lock errors
+propagate, not absence/corruption. Literal reserved-prefix filtering such as NOT GLOB
+'sqlite_*'; FK-OFF-independent immutable guards; no replacement/destructive repair.
+All stores are independently committed; exact rereads detect inconsistency but do not
+make other archives part of the local SQLite transaction.
+
+### Provider-Work Gate — question F
+
+`NO_CAUSAL_PROVIDER_WORK_BEFORE_DURABLE_PRODUCTION_ROOT_START_AND_EXACT_RELOAD`.
+
+Inspected live families: official response capture, daily-target bootstrap captures,
+supplied daily-target captures, market-odds raw acquisition and trusted Deba acquisition.
+Their direct APIs do not consume a distinct production root context. Phase105 guarded
+session verifies capability/attempt; Phase108 provider guards apply only to diagnostic
+rehearsal. Neither can be relabeled complete production gating.
+
+Recommend explicit split, subject to ChatGPT phase management: root-scope prerequisite;
+then narrowly reviewed root/start and process-local admission; then separately reviewed
+provider-family adapters/gates (possible Phase115/successor, not automatically scheduled).
+A root-only implementation cannot claim all existing entrypoints are gated or authorize
+ungated work. A future result could confer only exact-scope admission to reviewed
+adapters, never generic live/prediction/betting permission. Existing providers are
+read-only during PREPARE; no broad surface modification is proposed now.
+
+### Failure/Concurrency Contract — question I
+
+- Upstream/schema/liveness/collision/pre-insert failure: no local root/start publication.
+- Post-write/precommit or COMMIT failure: genuine local rollback, no root/start rows;
+  connection leaves transaction. Test by observed successful INSERT then COMMIT denial.
+- Successful commit then local/upstream/liveness revalidation failure: no qualified
+  context, immutable consumed rows remain, no cross-store rollback claim.
+- A later exact history load is allowed, never execution recovery.
+- SQLite BEGIN IMMEDIATE + durable semantic unique keys serialize independent connections;
+  a process-local mutex is not authoritative consumption.
+- Concurrent lock loss and expiry need the reviewed lifetime/order protocol described
+  above, not a guessed runner implementation.
+
+### Proposed Allowed Files
+
+Current PREPARE exact allowed set:
+
+1. `docs/CURRENT_PHASE.md`
+2. `docs/LATEST_CODEX_REPORT.md`
+
+Production/test implementation path set: **WITHHELD / NOT_AUTHORIZED** because the
+mandatory root-scope prerequisite is missing. No smallest safe exact implementation
+set can be frozen before that prerequisite and the runner lifetime/provider split
+are reviewed. This is the critical stop result, not permission to create placeholder
+root APIs or new authority modules. Do not create candidate production/test files.
+
+### Forbidden Files
+
+Every non-documentation path, including existing Phase108/109/110/111/112/113 modules
+and tests, campaign runner/lock/runtime archives, target/policy/snapshot modules, main
+migrations/database, prediction/betting/settlement/live campaign, logs, fixtures and
+all of KeibaAI. External review bundles must remain outside Git. Production DB access
+and any interpretation of deployed data are forbidden.
+
+### Required Tests — prospective review matrix, not execution authorization
+
+| Area | Required proof before future implementation acceptance |
+| --- | --- |
+| Root scope | Exact qualified admission receipt required; arbitrary target-set/policy/plan/dataset rejected; missing policy provenance rejected; canonical plan full coverage/digest/target membership and cutoff equality. |
+| Upstream | Exact Phase113, runtime binding/claim/session/readiness, Phase112 pair and Phase109 reload; stale/corrupt/missing/contradictory ancestry rejected; no direct Phase111 reload added to accepted Phase112/113 path. |
+| Capability | Wrong runner/PID/claim/session/binding/lock/source profile rejected; DB-only reconstruction impossible; post-exit and reconstructed contexts cannot execute. |
+| TOCTOU | Owner release/transfer and expiry during lock wait, insertion, commit and postcommit exact reload produce no usable success; reviewed lifetime discipline tested. |
+| Time | Availability equality rejected; strict less qualifies; session start qualifies/end rejects; naive/backdated/untrusted clock basis rejected; causal pre-root reread, not timestamp-only proof. |
+| Cardinality | One binding/root/start; one real claim with two independent qualified targets accepted; no global UNIQUE(claim). |
+| Consumption | Exact repeated start cannot recreate context; conflicting scope/claim rejected; process death, postcommit loss/expiry cannot restart or rescue. |
+| Rollback | Prewrite and genuine observed postwrite COMMIT failure distinguished; both root/start rollback; connection idle; upstream unchanged. |
+| Postcommit | Local reload/upstream reread/capability/lock failure returns no success and retains immutable consumed history. |
+| Concurrency | Two independent file-backed publishers exact/contradictory races: one durable root/start; loser never gains duplicate context. |
+| Schema | Absent/active/corrupt; exact registry/topology; sqliteXunreviewed visible; FK-OFF guards; operational errors propagate; no repair/replacement. |
+| Gate | Provider callback cannot run before durable start and exact reload; no ungated family promoted; exact-scope attempts require future reviewed adapter/consumption contract. |
+| Regressions | Existing runner/lock/runtime/session/readiness, Phase112/113, Phase108 diagnostic/sealed-child and pure target/plan/snapshot contracts unchanged; full suite only after implementation authorization. |
+| Safety | No internal ID issuance, provider transport/parser during issuance, main/upstream writes, status/market/selection/live/Operational Delta promotion. |
+
+No pytest was run for PREPARE: the missing authority is explicit in repository contracts
+and test-source inspection resolved the executable boundaries without execution.
+Any later full suite must use the then-approved existing sealed-source contract, not
+an invented source identity.
+
+### Static Audit Requirements
+
+Future root code: no provider/network/parser, fixed DB path, upstream/main DB mutation,
+races/horse ID issuance, caller scope authority, serialized capability, direct Phase111
+archive reload, status/eligibility promotion, generic live authority, replacement or
+silent repair. Verify exact allowed scope, all imports/entrypoints, no global claim
+uniqueness, distinct production/diagnostic semantics, no test assertion weakening.
+
+PREPARE audit: only repository text/Git inspected; no SQLite DB opened, provider APIs
+called or tests executed. git diff --check must pass; index empty; dirty set exactly two
+docs; scripts/tests diff zero; KeibaAI untouched; no stage/commit/push.
+
+### Stop Conditions
+
+**TRIGGERED:** qualified complete production root scope is absent: policy approval
+provenance and prospective dataset/scope admission are not established by current
+target/cutoff binding. STOP production implementation design for prerequisite review.
+
+Additionally stop for any guessed authority; diagnostic promotion; serialized/DB-revived
+capability; inability to close lifetime/clock-order gap; global claim consumption;
+cross-store atomicity/rollback assumption; provider-gate scope expansion; fixed path;
+new internal IDs; schema repair; out-of-scope file; unexpected dirty path or remote/base
+movement. No implementation approval/review PASS/commit or formal completion marker
+for Phase114 is granted by this draft.
+
+### Explicit Deferred Work
+
+Separate reviewed root-scope admission prerequisite; final root/start value/DDL/path
+set; controlled runner lifetime/clock basis acceptance; complete provider-family wiring
+and attempt replay consumption; status authority, market eligibility, prediction-selection,
+betting/live authorization, Operational Delta, snapshot correctness, prediction execution,
+bet plans and settlement. No next phase is started automatically.
+
+Preserve `MAPPING_AUTHORITY != ENTRY_STATUS_AUTHORITY`,
+`MAPPING_AUTHORITY != MARKET_ELIGIBILITY`,
+`MAPPING_AUTHORITY != PREDICTION_SELECTION_AUTHORITY`,
+`MAPPING_AUTHORITY != LIVE_CAMPAIGN_AUTHORIZATION`,
+`MAPPING_AUTHORITY != OPERATIONAL_DELTA_AUTHORITY`.
+
+Safety: Provider HTTP = 0; production DB access = 0; KeibaAI changes = 0;
+production/test changes = 0; stage = 0; commit = 0; push = 0.
+
+---
+
+## Historical predecessor — POST_V0_8_DAILY_REPLAY_113
 
 Title: NAR Production PRE_C Claim-Bound Prestaged Authority Binding
 
