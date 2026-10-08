@@ -1,20 +1,23 @@
 # Latest Codex Report
 
-## Phase114 independent implementation review PASS — local commit approved
+## Phase114 remote implementation accepted — local formal closure approved
 
 Phase: `POST_V0_8_DAILY_REPLAY_114`
 Title: NAR Production PRE_C Root-Scope Admission Authority
 Status: `APPROVED_FOR_COMMIT`
-State: `IMPLEMENTATION_REVIEW_PASSED`
-Implementation: `COMPLETE_REVIEWED_UNCOMMITTED`
+State: `FORMAL_CLOSURE_APPROVED`
+Outcome: `READY_FOR_FORMAL_CLOSURE_COMMIT`
+Implementation: `REMOTELY_VERIFIED`
 
 Base HEAD: `860724f2a27c166effeb53c9efae4b47dc245382`
 Base Tree: `316ce13a1292b8eca660b2744199ef9abc885c71`
 Branch: `feature/post-v0.8-daily-replay`
-Origin matched base; preflight relation 0 0; initial dirty state two approved docs;
-index EMPTY. No reset/restore/stash/discard of prior approved documentation.
+Historical EXECUTE preflight: origin matched base, relation 0 0, initial dirty state
+two approved docs, index EMPTY. No reset/restore/stash/discard of approved docs.
+Current closure preflight: HEAD/tree/origin equal the accepted implementation below,
+relation 0 0, working tree CLEAN, index EMPTY.
 
-### Granted independent review / local commit authorization
+### Granted remote implementation acceptance / local closure authorization
 
 `PHASE114_DESIGN_APPROVAL_VERIFICATION_PASS`
 `PHASE114_EXECUTION_APPROVED`
@@ -23,24 +26,39 @@ index EMPTY. No reset/restore/stash/discard of prior approved documentation.
 `CHATGPT_REVIEW_PHASE114_IMPLEMENTATION = PASS`
 `PHASE114_IMPLEMENTATION_REVIEW_PASS`
 `PHASE114_COMMIT_APPROVED`
+`PHASE114_POST_COMMIT_VERIFICATION_PASS`
+`PHASE114_REMOTE_IMPLEMENTATION_VERIFICATION_PASS`
+`PHASE114_IMPLEMENTATION_REMOTE_ACCEPTED`
+`PHASE114_FORMAL_CLOSURE_APPROVED`
 
-ChatGPT independently accepted the exact implementation and explicitly authorized
-one ten-path local commit. Only CURRENT_PHASE and LATEST_CODEX_REPORT change for
-this review bookkeeping; all eight production/test bytes are frozen. Post-commit
-verification, remote verification/acceptance, formal closure and formal completion
-remain pending. Push is NOT authorized.
+ChatGPT independently accepted the implementation review, post-commit verification
+and remote implementation. The ONE normal implementation push is COMPLETE and must
+not be repeated. Only CURRENT_PHASE and LATEST_CODEX_REPORT change in this closure
+activity. Production/test bytes remain unchanged. Tests were NOT rerun for this
+docs-only closure activity. Only one local two-document closure commit is authorized.
+Closure-commit verification, closure remote verification, formal completion and
+final documentation remote verification remain pending. Push is NOT authorized.
+Phase114 is NOT yet formally complete. Phase115 is NOT started.
 Historical implementation evidence, APPROVE and both PREPARE audits remain,
 including the valid original root/start STOP and rescoping findings.
 The complete frozen contract and 28-row Required Tests are preserved in CURRENT_PHASE.
+
+Accepted implementation identity:
+
+```text
+Commit: 5d38ffcea0d031134a3e98c7f95ead98e9a2394d
+Tree: b4c8dc9530dd67caf1da950fac9cd40262736aa0
+Parent: 860724f2a27c166effeb53c9efae4b47dc245382
+Subject: feat: add NAR PRE_C root-scope admission authority
+```
 
 Accepted implementation review bundle:
 `phase114_implementation_review_bundle.txt`
 SHA-256: `55b940cfff20d7d212ccc4986654fe8c8a918ac384b6b7b0b4d89359b321545f`
 Bytes: `388783`; lines: `7635`.
-Pre-edit reviewed production/test hashes: 8 / 8 exact match; recheck required before
-staging and from committed blobs. Tests were NOT rerun solely for these two
-documentation review-bookkeeping edits; the accepted results below bind to the
-unchanged independently reviewed bytes.
+Reviewed production/test committed blobs: **8 / 8 RAW_BYTE_MATCH**; zero EOL-only
+or non-EOL differences. The accepted results below bind to these unchanged bytes.
+Prior implementation/commit/remote verification bundles remain external evidence.
 
 ### Actual architecture
 
@@ -113,16 +131,20 @@ normalization is permitted only for controlled publication, not ordinary load.
 Clock sampling is controlled issuer composition, not a cryptographic malicious-clock
 or arbitrary-SQL defense. No historical production target was upgraded by test times.
 
-Exact dirty union: four new production + four new tests + two existing docs.
-All ten paths are the current approved Allowed Files; no existing production/test,
+Historical implementation dirty union: four new production + four new tests + two
+existing docs. All ten were the approved implementation Allowed Files; no existing production/test,
 migration registry, Phase108/109/110/111/112/113/runtime topology or KeibaAI changed.
-git diff --check PASS; index EMPTY; HEAD/tree/origin unchanged, relation 0 0.
+Historical implementation checkpoint: git diff --check PASS; index EMPTY;
+HEAD/tree/origin unchanged, relation 0 0.
 At the historical EXECUTE acceptance checkpoint: no stage, commit or push.
-This activity authorizes only exact ten-path staging and one local commit, followed
-by an external post-commit verification bundle; no push.
+Current activity authorizes only exact two-document staging and one local closure
+commit, followed by an external closure-commit verification bundle; no push.
+Current Allowed Files: docs/CURRENT_PHASE.md and docs/LATEST_CODEX_REPORT.md ONLY.
 
 Phase115 root/start/current-process execution remains deferred.
 Phase116-or-successor provider gating remains deferred.
+`PHASE114_ROOT_START_IMPLEMENTATION = DEFERRED_TO_PHASE115`
+`PHASE114_PROVIDER_GATE = DEFERRED_TO_PHASE116_OR_SEPARATELY_REVIEWED_SUCCESSOR`
 Phase108 stays DIAGNOSTIC_ONLY_NO_NETWORK. No snapshot validity/freeze is asserted.
 
 External bundle:
@@ -134,9 +156,10 @@ Digest, bytes and lines are reported externally.
 
 Provider HTTP = 0; production DB access = 0; KeibaAI changes = 0.
 Historical EXECUTE activity: stage = 0; commit = 0; push = 0.
-Current review-bookkeeping/local-commit activity: no production/test edits, no test
+Current docs-only/local-closure activity: no production/test edits, no test
 rerun, no provider HTTP, no production DB access and no KeibaAI changes.
-STOP after local commit/bundle for independent ChatGPT post-commit verification;
+push = 0; force push = 0 for this closure activity.
+STOP after local closure commit/bundle for independent ChatGPT closure-commit verification;
 do not push, create a second commit or advance to Phase115/116.
 
 ---
